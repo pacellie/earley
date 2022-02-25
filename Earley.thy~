@@ -1,0 +1,39 @@
+theory Earley
+  imports 
+    LocalLexing.CFG
+    LocalLexing.Derivations
+    LocalLexing.LLEarleyParsing \<comment>\<open>TODO: Rewrite\<close>
+    LocalLexing.Validity \<comment>\<open>TODO: Rewrite\<close>
+    LocalLexing.TheoremD2 \<comment>\<open>TODO: Rewrite\<close>
+    LocalLexing.TheoremD4 \<comment>\<open>TODO: Rewrite\<close>
+    LocalLexing.TheoremD5 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD6 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD7 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD8 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD9 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.Ladder \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD10 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD11 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD12 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD13 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD14 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.PathLemmas \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.MainTheorems \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.InductRules \<comment>\<open>Needed?\<close>
+    LocalLexing.ListTools \<comment>\<open>Needed?\<close>
+begin
+
+section \<open>Auxiliary Lemmas\<close>
+
+lemma (in CFG) is_sentence_simp:
+  "is_sentence s \<longleftrightarrow> (\<forall>x \<in> set s. is_symbol x)"
+  unfolding is_sentence_def by (simp add: list_all_iff)
+
+lemma (in CFG) is_word_simp:
+  "is_word s \<longleftrightarrow> (\<forall>x \<in> set s. is_terminal x)"
+  unfolding is_word_def by (simp add: list_all_iff)
+
+section \<open>Earley Parsing Algorithm\<close>
+
+
+end
