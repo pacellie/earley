@@ -39,11 +39,6 @@ lemma (in CFG) is_word_simp:
 
 section \<open>List Auxiliary\<close>
 
-(* sets! *)
-fun contains :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> bool" where
-  "contains _ [] \<longleftrightarrow> False"
-| "contains f (x#xs) \<longleftrightarrow> (if f x then True else contains f xs)"
-
 \<comment>\<open>slice a b xs: a is inclusive, b is exclusive\<close>
 fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
   "slice _ _ [] = []"
@@ -124,10 +119,10 @@ datatype state =
     (index: nat) \<comment>\<open>active item index\<close>
 
 definition state_is_final :: "state \<Rightarrow> bool" where
-  "state_is_final s \<longleftrightarrow> bin s \<ge> length (bins s)"
+  "state_is_final s \<longleftrightarrow> bin s = length (bins s)"
 
 definition state_bin_is_finished :: "state \<Rightarrow> bool" where
-  "state_bin_is_finished s \<longleftrightarrow> index s \<ge> bin_size ((bins s)!(bin s))"
+  "state_bin_is_finished s \<longleftrightarrow> index s = bin_size ((bins s)!(bin s))"
 
 definition state_current_item :: "state \<Rightarrow> item" where
   "state_current_item s = (items ((bins s)!(bin s)))!index s"
@@ -235,14 +230,13 @@ definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
     (\<forall>x \<in> set (items b). wf_item x \<and> item_origin x \<le> k)"
 
 definition wf_bins :: "bins \<Rightarrow> bool" where
-  "wf_bins bs \<longleftrightarrow>
-    length bs = length doc + 1 \<and>
-    (\<forall>k < length bs. wf_bin k (bs!k))"
+  "wf_bins bs \<longleftrightarrow> (\<forall>k < length bs. wf_bin k (bs!k))"
 
 definition wf_state :: "state \<Rightarrow> bool" where
   "wf_state s \<longleftrightarrow>
     wf_bins (bins s) \<and>
-    (bin s) \<le> length doc \<and>
+    (bin s) \<le> length (bins s) \<and>
+    length (bins s) = length doc + 1 \<and>
     (index s) \<le> bin_size ((bins s)!(bin s))"
 
 subsubsection \<open>Auxiliary Lemmas\<close>
@@ -251,10 +245,23 @@ lemma wf_bin_bin_append:
   "wf_bin k b \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bin k (bin_append b is)"
   unfolding wf_bin_def bin_append_def using UnE by auto
 
+lemma bin_size_bin_append:
+  "bin_size (bin_append b is) \<ge> bin_size b"
+  unfolding bin_append_def bin_size_def by auto
+
 lemma wf_bins_bins_append:
   "wf_bins bs \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bins (bins_append bs k is)"
   unfolding wf_bins_def using wf_bin_bin_append
   by (metis bins_append_def length_list_update nth_list_update_eq nth_list_update_neq)
+
+lemma length_bins_append[simp]:
+  "length (bins_append bs k is) = length bs"
+  unfolding bins_append_def by simp
+
+lemma bin_size_bins_append:
+  "bin_size ((bins_append bs k is)!k) \<ge> bin_size (bs!k)"
+  unfolding bins_append_def using bin_size_bin_append
+  by (metis le_less_linear less_irrefl list_update_beyond nth_list_update_eq)
 
 lemma wf_empty_bin: 
   "wf_bin k (Bin [])"
@@ -272,6 +279,14 @@ lemma item_origin_inc_item[simp]:
   "item_origin (inc_item item) = item_origin item"
   unfolding inc_item_def by simp
 
+lemma inj_on_inc_item:
+  "distinct is \<Longrightarrow> inj_on inc_item (set is)"
+  unfolding inc_item_def by (meson item.expand item.inject add_right_imp_eq inj_onI)
+
+lemma wf_state_earley_step_finished_bin:
+  "wf_state s \<Longrightarrow> \<not> state_is_final s \<Longrightarrow> state_bin_is_finished s \<Longrightarrow> wf_state ((State (bins s) (bin s + 1) 0))"
+  by (simp add: state_is_final_def wf_state_def)
+
 subsubsection \<open>Initially wellformed\<close>
 
 lemma wf_init_items:
@@ -284,7 +299,8 @@ lemma wf_init_bins:
 
 lemma wf_init_state:
   "wf_state init_state"
-  by (simp add: init_state_def wf_init_bins wf_state_def)
+  apply (simp add: init_state_def wf_init_bins wf_state_def)
+  by (simp add: bins_append_def init_bins_def)
 
 subsubsection \<open>Earley step wellformed\<close>
 
@@ -302,12 +318,116 @@ proof -
     unfolding scan_def using assms(1) wf_bins_bins_append by simp
 qed
 
-(*
-definition predict :: "symbol \<Rightarrow> bins \<Rightarrow> nat \<Rightarrow> bins" where
-  "predict X bs k = (
-    let rules' = filter (\<lambda>rule. rule_head rule = X) rules in
-    let items = map (\<lambda>rule. init_item rule k) rules' in
-    bins_append bs k items)"*)
+lemma length_scan[simp]:
+  "length (scan x item bs k) = length bs"
+  unfolding scan_def by simp
+
+lemma bin_size_scan:
+  "bin_size ((scan x item bs k)!k) \<ge> bin_size (bs!k)"
+  unfolding scan_def using bin_size_bins_append by (simp add: bins_append_def)
+
+lemma wf_bins_predict:
+  assumes "wf_bins bs" "k \<le> length doc"
+  shows "wf_bins (predict X bs k)"
+proof -
+  define rules' where [simp]: "rules' = filter (\<lambda>rule. rule_head rule = X) rules"
+  define items where [simp]: "items = map (\<lambda>rule. init_item rule k) rules'"
+  have "distinct items"
+    using items_def rules'_def valid_rules inj_on_def init_item_def by (auto simp: distinct_map)
+  moreover have "\<forall>x \<in> set items. wf_item x \<and> item_origin x \<le> k"
+    by (auto simp: assms(2) init_item_def valid_rules wf_item_def)
+  ultimately show ?thesis
+    unfolding predict_def using assms(1) wf_bins_bins_append by simp
+qed
+
+lemma length_predict[simp]:
+  "length (predict X bs k) = length bs"
+  unfolding predict_def by simp
+
+lemma bin_size_predict:
+  "bin_size ((predict X bs k)!k) \<ge> bin_size (bs!k)"
+  unfolding predict_def using bin_size_bins_append by (simp add: bins_append_def)
+
+lemma wf_bins_complete:
+  assumes "wf_bins bs" "\<exists>i < length bs. item \<in> set (items (bs!i)) \<and> i \<le> k"
+  shows "wf_bins (complete item bs k)"
+proof -
+  define origin_bin where "origin_bin = bs!(item_origin item)"
+  define itms where "itms = filter (\<lambda>item'. next_symbol item' = Some (item_rule_head item)) (items origin_bin)"
+  define itms' where "itms' = map (\<lambda>item. inc_item item) itms"
+
+  have "distinct itms"
+    unfolding itms_def origin_bin_def
+    using wf_bin_def wf_bins_def wf_item_def valid_rules assms less_Suc_eq_le
+    by (meson Orderings.order_class.dual_order.strict_trans2 distinct_filter)
+  hence 0: "distinct itms'"
+    unfolding itms'_def using valid_rules inj_on_inc_item by (auto simp: distinct_map)
+
+  have "\<forall>x \<in> set itms. wf_item x \<and> item_origin x \<le> k"
+    unfolding itms_def origin_bin_def
+    using assms wf_bins_def wf_bin_def wf_item_def
+    by (metis Orderings.order_class.dual_order.trans filter_is_subset not_less origin_bin_def subset_code(1))
+  moreover have "\<forall>x \<in> set itms. item_dot x < length (item_rule_body x)"
+    using next_symbol_def by (simp add: is_complete_def itms_def)
+  ultimately have 1: "\<forall>x \<in> set itms'. wf_item x \<and> item_origin x \<le> k"
+    unfolding itms'_def by (simp add: wf_item_inc_item)
+
+  show ?thesis
+    using 0 1 origin_bin_def itms_def itms'_def complete_def wf_bins_bins_append assms(1) by auto
+qed
+
+lemma length_complete[simp]:
+  "length (complete item bs k) = length bs"
+  unfolding complete_def by simp
+
+lemma bin_size_complete:
+  "bin_size ((complete item bs k)!k) \<ge> bin_size (bs!k)"
+  unfolding complete_def using bin_size_bins_append by (simp add: bins_append_def)
+
+lemma wf_state_earley_step:
+  assumes "wf_state s"
+  shows "wf_state (earley_step s)"
+proof (cases "\<not>state_is_final s \<and> \<not>state_bin_is_finished s")
+  case True
+
+  define item where [simp]: "item = state_current_item s"
+  define bs where [simp]: "bs = (
+        case next_symbol item of
+          Some x \<Rightarrow>
+            if is_terminal x then scan x item (bins s) (bin s)
+            else predict x (bins s) (bin s)
+        | None \<Rightarrow> complete item (bins s) (bin s))"
+  define s' where [simp]: "s' = State bs (bin s) (index s + 1)"
+
+  have "\<exists>i < length (bins s). item \<in> set (items ((bins s) ! i)) \<and> i \<le> (bin s)"
+    using True item_def unfolding state_current_item_def state_is_final_def state_bin_is_finished_def
+    by (metis assms bin_size_def wf_state_def le_less list_update_id set_update_memI)
+  moreover have "bin s \<le> length doc"
+    using True assms state_is_final_def wf_state_def by auto
+  moreover have "\<exists>x. next_symbol item = Some x \<Longrightarrow> item_dot item < length (item_rule_body item)"
+    unfolding next_symbol_def by (auto simp: is_complete_def split: if_splits)
+  ultimately have 0: "wf_bins bs"
+    using assms wf_state_def wf_bins_scan wf_bins_predict wf_bins_complete by (auto split: option.split)
+
+  have 1: "bin s' \<le> length (bins s')" "length (bins s') = length doc + 1"
+    using assms wf_state_def by (auto split: option.split)
+
+  have "index s < bin_size ((bins s)!(bin s))"
+    by (meson True assms less_le state_bin_is_finished_def wf_state_def)
+  hence "index s + 1 \<le> bin_size (bs!(bin s))"
+    using bin_size_scan bin_size_predict bin_size_complete bs_def
+    apply (auto split: option.split)
+    by (meson Suc_leI le_trans)+
+  hence 2: "index s' \<le> bin_size ((bins s')!(bin s'))"
+    by simp
+
+  show ?thesis
+    unfolding wf_state_def earley_step_def using True 0 1 2 by (auto split: option.splits)
+next
+  case False
+  thus ?thesis
+    using assms earley_step_def wf_state_earley_step_finished_bin by force
+qed
 
 subsection \<open>Soundness\<close>
 
