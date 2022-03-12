@@ -8,8 +8,8 @@ theory Earley
     LocalLexing.LocalLexing \<comment>\<open>Done\<close>
     LocalLexing.LLEarleyParsing \<comment>\<open>Done\<close>
     LocalLexing.Validity \<comment>\<open>Done\<close>
-    LocalLexing.TheoremD2 \<comment>\<open>TODO: Rewrite\<close>
-    LocalLexing.TheoremD4 \<comment>\<open>TODO: Rewrite\<close>
+    LocalLexing.TheoremD2 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
+    LocalLexing.TheoremD4 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
     LocalLexing.TheoremD5 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
     LocalLexing.TheoremD6 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
     LocalLexing.TheoremD7 \<comment>\<open>TODO: Extract relevant lemmas?\<close>
@@ -25,6 +25,8 @@ theory Earley
     LocalLexing.MainTheorems \<comment>\<open>TODO: Extract relevant lemmas?\<close>
 begin
 
+declare [[names_short]]
+
 section \<open>Auxiliary Lemmas\<close>
 
 lemma (in CFG) is_sentence_simp:
@@ -37,17 +39,22 @@ lemma (in CFG) is_word_simp:
 
 section \<open>List Auxiliary\<close>
 
+(* sets! *)
 fun contains :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> bool" where
   "contains _ [] \<longleftrightarrow> False"
 | "contains f (x#xs) \<longleftrightarrow> (if f x then True else contains f xs)"
 
+\<comment>\<open>slice a b xs: a is inclusive, b is exclusive\<close>
 fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
   "slice _ _ [] = []"
 | "slice _ 0 (x#xs) = []"
 | "slice 0 (Suc b) (x#xs) = x # slice 0 b xs"
 | "slice (Suc a) (Suc b) (x#xs) = slice a b xs"
 
-lemma "slice a b xs = drop a (take b xs)"
+value "slice 1 3 [a,b,c,d,e]"
+
+lemma slice_drop_take:
+  "slice a b xs = drop a (take b xs)"
   by (induction a b xs rule: slice.induct) auto
 
 section \<open>Earley Parsing Algorithm\<close>
@@ -103,7 +110,7 @@ definition bin_size :: "bin \<Rightarrow> nat" where
   "bin_size b = length (items b)"
 
 definition bin_append :: "bin \<Rightarrow> item list \<Rightarrow> bin" where
-  "bin_append b is = Bin (items b @ (filter (\<lambda>i. \<not> contains (\<lambda>i'. i = i') (items b)) is))"
+  "bin_append b is = Bin (items b @ (filter (\<lambda>i. i \<notin> set (items b)) is))"
 
 type_synonym bins = "bin list"
 
@@ -151,7 +158,7 @@ definition complete :: "item \<Rightarrow> bins \<Rightarrow> nat \<Rightarrow> 
   "complete item bs k = (
     let origin_bin = bs!(item_origin item) in
     let items = filter (\<lambda>item'. next_symbol item' = Some (item_rule_head item)) (items origin_bin) in
-    bins_append bs k (map inc_item items))"
+    bins_append bs k (map (\<lambda>item. inc_item item) items))"
 
 definition earley_step :: "state \<Rightarrow> state" where
   "earley_step s = (
@@ -169,6 +176,12 @@ definition earley_step :: "state \<Rightarrow> state" where
         | None \<Rightarrow> complete item (bins s) (bin s)
       in State bins (bin s) (index s + 1))"
 
+
+(*
+while_option :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a option"
+while :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
+REMARK: state option \<Rightarrow> state option
+*)
 function earley :: "state \<Rightarrow> state" where \<comment>\<open>TODO: Termination, REMARK: use while combinator\<close>
   "earley s = (
     let s' = earley_step s in
@@ -193,9 +206,7 @@ definition init_state :: "state" where
   "init_state = State init_bins 0 0"
 
 definition earley_recognised :: "bool" where
-  "earley_recognised \<longleftrightarrow> (
-    let state = earley init_state in
-    contains is_finished (items ((bins state)!length doc)))"
+  "earley_recognised \<longleftrightarrow> (\<exists>item \<in> set (items ((bins (earley init_state))!length doc)). is_finished item)"
 
 subsection \<open>Termination\<close>
 
@@ -213,17 +224,10 @@ lemma earley_step_fixpoint:
 subsection \<open>Wellformedness\<close>
 
 definition wf_item :: "item \<Rightarrow> bool" where 
-  "wf_item item = (
+  "wf_item item \<longleftrightarrow>
     item_rule item \<in> \<RR> \<and>
     item_origin item \<le> length doc \<and>
-    item_dot item \<le> length (item_rule_body item))"
-
-lemma wf_init_items:
-  "\<forall>x \<in> set init_items. wf_item x"
-  by (auto simp: init_items_def init_rules_def valid_rules init_item_def wf_item_def)
-
-lemma is_word_subset: "is_word x \<Longrightarrow> set y \<subseteq> set x \<Longrightarrow> is_word y"
-  by (metis (mono_tags, hide_lams) in_set_conv_nth is_word_def list_all_length subsetCE)
+    item_dot item \<le> length (item_rule_body item)"
 
 definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
   "wf_bin k b \<longleftrightarrow>
@@ -232,12 +236,8 @@ definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
 
 definition wf_bins :: "bins \<Rightarrow> bool" where
   "wf_bins bs \<longleftrightarrow>
-    length bs = length doc \<and>
+    length bs = length doc + 1 \<and>
     (\<forall>k < length bs. wf_bin k (bs!k))"
-
-lemma wf_init_bins: \<comment>\<open>TODO\<close>
-  "wf_bins init_bins"
-  sorry
 
 definition wf_state :: "state \<Rightarrow> bool" where
   "wf_state s \<longleftrightarrow>
@@ -245,13 +245,72 @@ definition wf_state :: "state \<Rightarrow> bool" where
     (bin s) \<le> length doc \<and>
     (index s) \<le> bin_size ((bins s)!(bin s))"
 
-lemma wf_init_state: \<comment>\<open>TODO\<close>
+subsubsection \<open>Auxiliary Lemmas\<close>
+
+lemma wf_bin_bin_append:
+  "wf_bin k b \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bin k (bin_append b is)"
+  unfolding wf_bin_def bin_append_def using UnE by auto
+
+lemma wf_bins_bins_append:
+  "wf_bins bs \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bins (bins_append bs k is)"
+  unfolding wf_bins_def using wf_bin_bin_append
+  by (metis bins_append_def length_list_update nth_list_update_eq nth_list_update_neq)
+
+lemma wf_empty_bin: 
+  "wf_bin k (Bin [])"
+  unfolding wf_bin_def by simp
+
+lemma wf_empty_bins:
+  "wf_bins (replicate (length doc + 1) (Bin []))"
+  unfolding wf_bins_def using wf_empty_bin by (metis length_replicate nth_replicate)
+
+lemma wf_item_inc_item:
+  "wf_item item \<Longrightarrow> item_dot item < length (item_rule_body item) \<Longrightarrow> wf_item (inc_item item)"
+  unfolding wf_item_def inc_item_def by (simp add: item_rule_body_def)
+
+lemma item_origin_inc_item[simp]:
+  "item_origin (inc_item item) = item_origin item"
+  unfolding inc_item_def by simp
+
+subsubsection \<open>Initially wellformed\<close>
+
+lemma wf_init_items:
+  "distinct init_items \<and> (\<forall>x \<in> set init_items. wf_item x \<and> item_origin x = 0)"
+  by (auto simp: init_items_def distinct_map init_item_def inj_on_def wf_item_def init_rules_def valid_rules)
+
+lemma wf_init_bins:
+  "wf_bins init_bins"
+  using init_bins_def wf_bins_bins_append wf_empty_bins wf_init_items by auto
+
+lemma wf_init_state:
   "wf_state init_state"
-  sorry
+  by (simp add: init_state_def wf_init_bins wf_state_def)
+
+subsubsection \<open>Earley step wellformed\<close>
+
+lemma wf_bins_scan:
+  assumes "wf_bins bs" "\<exists>i < length bs. item \<in> set (items (bs!i)) \<and> i \<le> k"
+  assumes "item_dot item < length (item_rule_body item)"
+  shows "wf_bins (scan x item bs k)"
+proof -
+  define item' where [simp]: "item' = inc_item item"
+  have "wf_item item'"
+    using assms item'_def wf_bin_def wf_bins_def wf_item_inc_item by blast
+  moreover have "item_origin item' \<le> k"
+    using assms by (metis item'_def item_origin_inc_item le_trans wf_bin_def wf_bins_def)
+  ultimately show ?thesis
+    unfolding scan_def using assms(1) wf_bins_bins_append by simp
+qed
+
+(*
+definition predict :: "symbol \<Rightarrow> bins \<Rightarrow> nat \<Rightarrow> bins" where
+  "predict X bs k = (
+    let rules' = filter (\<lambda>rule. rule_head rule = X) rules in
+    let items = map (\<lambda>rule. init_item rule k) rules' in
+    bins_append bs k items)"*)
 
 subsection \<open>Soundness\<close>
 
-(* off by one ;) *)
 definition sound_item :: "nat \<Rightarrow> item \<Rightarrow> bool" where
   "sound_item k item = derives [item_rule_head item] (slice (item_origin item) k doc @ item_\<beta> item)"
 
