@@ -27,6 +27,8 @@ begin
 
 declare [[names_short]]
 
+\<comment>\<open>TODO: Cleanup\<close>
+
 section \<open>Auxiliary Lemmas\<close>
 
 lemma (in CFG) is_sentence_simp:
@@ -67,6 +69,10 @@ lemma slice_append_nth:
 lemma slice_empty:
   "b \<le> a \<Longrightarrow> slice a b xs = []"
   by (simp add: slice_drop_take)
+
+lemma slice_subset:
+  "set (slice a b xs) \<subseteq> set xs"
+  using slice_drop_take by (metis in_set_dropD in_set_takeD subsetI)
 
 section \<open>Earley Parsing Algorithm\<close>
 
@@ -463,6 +469,15 @@ definition sound_state :: "state \<Rightarrow> bool" where
 
 subsubsection \<open>Auxiliary Lemmas\<close>
 
+lemma sound_bin_append:
+  "sound_bin k b \<Longrightarrow> \<forall>x \<in> set is. sound_item k x \<Longrightarrow> sound_bin k (bin_append b is)"
+  unfolding bin_append_def sound_bin_def by auto
+
+lemma sound_bins_append:
+  "sound_bins bs \<Longrightarrow> \<forall>x \<in> set is. sound_item k x \<Longrightarrow> sound_bins (bins_append bs k is)"
+  unfolding sound_bins_def bins_append_def using sound_bin_append
+  by (metis length_list_update nth_list_update_eq nth_list_update_neq)
+
 lemma sound_item_inc_item:
   assumes "sound_item k item"
   assumes "next_symbol item = Some x"
@@ -492,14 +507,55 @@ proof -
     using item'_def sound_item_def by blast
 qed
 
-lemma sound_bin_append:
-  "sound_bin k b \<Longrightarrow> \<forall>x \<in> set is. sound_item k x \<Longrightarrow> sound_bin k (bin_append b is)"
-  unfolding bin_append_def sound_bin_def by auto
+lemma Derives1_prepend:
+  assumes "Derives1 u i r v" "is_sentence w"
+  shows "Derives1 (w@u) (i + length w) r (w@v)"
+proof -
+  obtain x y N \<alpha> where *: "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
+                          "is_sentence x" "is_sentence y"
+                          "(N, \<alpha>) \<in> \<RR>" "r = (N, \<alpha>)" "i = length x"
+    using assms Derives1_def by blast
 
-lemma sound_bins_append:
-  "sound_bins bs \<Longrightarrow> \<forall>x \<in> set is. sound_item k x \<Longrightarrow> sound_bins (bins_append bs k is)"
-  unfolding sound_bins_def bins_append_def using sound_bin_append
-  by (metis length_list_update nth_list_update_eq nth_list_update_neq)
+  hence "w@u = w @ x @ [N] @ y" "w@v = w @ x @ \<alpha> @ y" "is_sentence (w@x)"
+    using assms(2) is_sentence_concat by auto
+  thus ?thesis
+    unfolding Derives1_def using *
+    apply (rule_tac exI[where x="w@x"])
+    apply (rule_tac exI[where x="y"])
+    by simp
+qed
+
+lemma Derivation_prepend:
+  "Derivation b D b' \<Longrightarrow> is_sentence a \<Longrightarrow> Derivation (a@b) (map (\<lambda>(i, r). (i + length a, r)) D) (a@b')"
+  using Derives1_prepend by (induction D arbitrary: b b') (auto, blast)
+
+lemma Derives1_append:
+  assumes "Derives1 u i r v" "is_sentence w"
+  shows "Derives1 (u@w) i r (v@w)"
+proof -
+  obtain x y N \<alpha> where *: "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
+                          "is_sentence x" "is_sentence y"
+                          "(N, \<alpha>) \<in> \<RR>" "r = (N, \<alpha>)" "i = length x"
+    using assms Derives1_def by blast
+
+  hence "u@w = x @ [N] @ y @ w" "v@w = x @ \<alpha> @ y @ w" "is_sentence (y@w)"
+    using assms(2) is_sentence_concat by auto
+  thus ?thesis
+    unfolding Derives1_def using *
+    apply (rule_tac exI[where x="x"])
+    apply (rule_tac exI[where x="y@w"])
+    by blast
+qed
+
+lemma Derivation_append:
+  "Derivation a D a' \<Longrightarrow> is_sentence b \<Longrightarrow> Derivation (a@b) D (a'@b)"
+  using Derives1_append by (induction D arbitrary: a a') (auto, blast)
+
+lemma Derivation_append_rewrite:
+  assumes "is_sentence b" "is_sentence d"
+  assumes "Derivation a D (b @ c @ d) " "Derivation c E c'"
+  shows "\<exists>F. Derivation a F (b @ c' @ d)"
+  using assms Derivation_append Derivation_prepend Derivation_implies_append by fast
 
 subsection \<open>Earley step Soundness\<close>
 
@@ -554,15 +610,11 @@ proof -
     unfolding predict_def using assms(1) sound_bins_append sound_item_def by simp
 qed
 
-lemma
-  "Derivation [N] E c \<Longrightarrow> Derivation a D (b @ [N] @ d) \<Longrightarrow> \<exists>F. Derivation a F (b @ c @ d)"
-  sorry
-
 lemma sound_bins_complete:
   assumes "wf_bins bs" "sound_bins bs"
   assumes "item \<in> set (items (bs!k))" "k < length bs"
   assumes "next_symbol item = None"
-  shows "wf_bins (complete item bs k)"
+  shows "sound_bins (complete item bs k)"
 proof -
   define origin_bin where "origin_bin = bs!(item_origin item)"
   define itms where "itms = filter (\<lambda>item'. next_symbol item' = Some (item_rule_head item)) (items origin_bin)"
@@ -572,7 +624,7 @@ proof -
     using sound_bins_def sound_bin_def sound_item_def assms(2-4) by blast
   hence "derives [item_rule_head item] (slice (item_origin item) k doc)"
     using assms(5) unfolding next_symbol_def by (auto split: if_splits simp: is_complete_def item_\<beta>_def)
-  then obtain E where "Derivation [item_rule_head item] E (slice (item_origin item) k doc)"
+  then obtain E where E_def: "Derivation [item_rule_head item] E (slice (item_origin item) k doc)"
     using derives_implies_Derivation by blast
 
   {
@@ -581,24 +633,59 @@ proof -
 
     have "next_symbol itm = Some (item_rule_head item)"
       using \<open>itm \<in> set itms\<close> itms_def by fastforce
+    hence 0: "item_\<beta> itm = (item_rule_head item) # (tl (item_\<beta> itm))"
+      unfolding next_symbol_def apply (auto split: if_splits simp: is_complete_def item_\<beta>_def)
+      by (metis List.list.collapse drop_all_iff hd_drop_conv_nth leI)
 
-    have "itm \<in> set (items (bs!(item_origin item)))"
+    have 1: "itm \<in> set (items (bs!(item_origin item)))"
       using * itms_def origin_bin_def by force
-    moreover have "item_origin item \<le> k"
+    moreover have 2: "item_origin item \<le> k"
       using assms(1,3,4) wf_bin_def wf_bins_def by blast
     ultimately have "derives [item_rule_head itm] (slice (item_origin itm) (item_origin item) doc @ item_\<beta> itm)"
       using sound_bins_def sound_bin_def sound_item_def assms(2-4) by simp
     then obtain D where "Derivation [item_rule_head itm] D (slice (item_origin itm) (item_origin item) doc @ item_\<beta> itm)"
       using derives_implies_Derivation by blast
+    hence D_def: "Derivation [item_rule_head itm] D (slice (item_origin itm) (item_origin item) doc @ [item_rule_head item] @ (tl (item_\<beta> itm)))"
+      using 0 by simp
 
-    find_theorems Derivation
+    have 3: "item_origin itm \<le> item_origin item"
+      using 1 2 assms(1,4) wf_bins_def wf_bin_def by simp
 
+    have "wf_item itm"
+      by (meson 1 2 Orderings.order_class.dual_order.strict_trans2 assms(1) assms(4) wf_bin_def wf_bins_def)
+    hence "is_sentence (tl (item_\<beta> itm))"
+      unfolding item_\<beta>_def item_rule_body_def rule_body_def is_sentence_simp
+      by (metis Product_Type.prod.collapse drop_Suc in_set_dropD is_sentence_simp rule_\<alpha>_type tl_drop wf_item_def)
+    moreover have "is_sentence (slice (item_origin itm) (item_origin item) doc)"
+      using is_sentence_simp valid_doc unfolding is_symbol_def is_terminal_def by (meson slice_subset subsetD)
+    ultimately obtain G where "Derivation [item_rule_head itm] G (slice (item_origin itm) (item_origin item) doc @ slice (item_origin item) k doc @ (tl (item_\<beta> itm)))"
+      using D_def E_def Derivation_append_rewrite by blast
+    hence "Derivation [item_rule_head itm] G (slice (item_origin itm) k doc @ (tl (item_\<beta> itm)))"
+      using slice_append 2 3 append_assoc by metis
     hence "derives [item_rule_head itm] (slice (item_origin itm) k doc @ (tl (item_\<beta> itm)))"
-      sorry
+      using Derivation_implies_derives by blast
+  }
+  hence 4: "\<forall>itm \<in> set itms. derives [item_rule_head itm] (slice (item_origin itm) k doc @ (tl (item_\<beta> itm)))"
+    by blast
+
+  {
+    fix itm'
+    assume *: "itm' \<in> set itms'"
+    then obtain itm where "itm' = inc_item itm" "itm \<in> set itms"
+      using itms'_def by auto
+    have "item_rule_head itm' = item_rule_head itm"
+      by (simp add: \<open>itm' = inc_item itm\<close> inc_item_def item_rule_head_def)
+    have "\<not> is_complete itm"
+      using \<open>itm \<in> set itms\<close> itms_def next_symbol_def by force
+    hence "item_\<beta> itm' = tl (item_\<beta> itm)"
+      using \<open>itm' = inc_item itm\<close> unfolding inc_item_def by (simp add: drop_Suc item_\<beta>_def item_rule_body_def tl_drop)
+    hence "derives [item_rule_head itm'] (slice (item_origin itm') k doc @ item_\<beta> itm')"
+      unfolding itms'_def inc_item_def using 4
+      using \<open>item_rule_head itm' = item_rule_head itm\<close> \<open>itm \<in> set itms\<close> \<open>itm' = inc_item itm\<close> by fastforce 
   }
 
-  show ?thesis
-    sorry
+  thus ?thesis
+    unfolding complete_def using sound_bins_append assms(2) itms'_def itms_def origin_bin_def sound_item_def by simp
 qed
 
 end
