@@ -29,7 +29,7 @@ declare [[names_short]]
 
 \<comment>\<open>TODO: Cleanup\<close>
 
-section \<open>Auxiliary Lemmas\<close>
+section \<open>Auxiliary lemmas\<close>
 
 lemma (in CFG) is_sentence_simp:
   "is_sentence s \<longleftrightarrow> (\<forall>x \<in> set s. is_symbol x)"
@@ -39,7 +39,7 @@ lemma (in CFG) is_word_simp:
   "is_word s \<longleftrightarrow> (\<forall>x \<in> set s. is_terminal x)"
   unfolding is_word_def by (simp add: list_all_iff)
 
-section \<open>List Auxiliary\<close>
+section \<open>List slices\<close>
 
 \<comment>\<open>slice a b xs: a is inclusive, b is exclusive\<close>
 fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
@@ -70,13 +70,17 @@ lemma slice_empty:
   "b \<le> a \<Longrightarrow> slice a b xs = []"
   by (simp add: slice_drop_take)
 
+lemma slice_id[simp]:
+  "slice 0 (length xs) xs = xs"
+  by (simp add: slice_drop_take)
+
 lemma slice_subset:
   "set (slice a b xs) \<subseteq> set xs"
   using slice_drop_take by (metis in_set_dropD in_set_takeD subsetI)
 
-section \<open>Earley Parsing Algorithm\<close>
+section \<open>Earley parsing\<close>
 
-subsection \<open>Earley Items, Bin(s), State\<close>
+subsection \<open>Earley items, bin(s), state\<close>
 
 definition rule_head :: "rule \<Rightarrow> symbol" where
   "rule_head = fst"
@@ -149,7 +153,7 @@ definition state_bin_is_finished :: "state \<Rightarrow> bool" where
 definition state_current_item :: "state \<Rightarrow> item" where
   "state_current_item s = (items ((bins s)!(bin s)))!index s"
 
-subsection \<open>Earley Algorithm\<close>
+subsection \<open>Earley algorithm\<close>
 
 locale Earley = CFG +
   fixes doc :: "symbol list"
@@ -222,8 +226,8 @@ definition init_bins :: "bins" where
 definition init_state :: "state" where
   "init_state = State init_bins 0 0"
 
-definition earley_recognised :: "bool" where
-  "earley_recognised \<longleftrightarrow> (\<exists>item \<in> set (items ((bins (earley init_state))!length doc)). is_finished item)"
+definition earley_recognized :: "bool" where
+  "earley_recognized \<longleftrightarrow> (\<exists>item \<in> set (items ((bins (earley init_state))!length doc)). is_finished item)"
 
 subsection \<open>Termination\<close>
 
@@ -261,7 +265,7 @@ definition wf_state :: "state \<Rightarrow> bool" where
     length (bins s) = length doc + 1 \<and>
     (index s) \<le> bin_size ((bins s)!(bin s))"
 
-subsubsection \<open>Auxiliary Lemmas\<close>
+subsubsection \<open>Auxiliary lemmas\<close>
 
 lemma wf_bin_bin_append:
   "wf_bin k b \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bin k (bin_append b is)"
@@ -304,10 +308,6 @@ lemma item_origin_inc_item[simp]:
 lemma inj_on_inc_item:
   "distinct is \<Longrightarrow> inj_on inc_item (set is)"
   unfolding inc_item_def by (meson item.expand item.inject add_right_imp_eq inj_onI)
-
-lemma wf_state_earley_step_finished_bin:
-  "wf_state s \<Longrightarrow> \<not> state_is_final s \<Longrightarrow> state_bin_is_finished s \<Longrightarrow> wf_state ((State (bins s) (bin s + 1) 0))"
-  by (simp add: state_is_final_def wf_state_def)
 
 subsubsection \<open>Initially wellformed\<close>
 
@@ -450,8 +450,14 @@ proof (cases "\<not>state_is_final s \<and> \<not>state_bin_is_finished s")
 next
   case False
   thus ?thesis
-    using assms earley_step_def wf_state_earley_step_finished_bin by force
+    using assms earley_step_def state_is_final_def wf_state_def by force
 qed
+
+subsubsection "Earley wellformed"
+
+lemma wf_state_earley:
+  "wf_state s \<Longrightarrow> wf_state (earley s)"
+  by (induction s rule: earley.induct) (auto simp: Let_def wf_state_earley_step)
 
 subsection \<open>Soundness\<close>
 
@@ -467,7 +473,7 @@ definition sound_bins :: "bins \<Rightarrow> bool" where
 definition sound_state :: "state \<Rightarrow> bool" where
   "sound_state s = sound_bins (bins s)"
 
-subsubsection \<open>Auxiliary Lemmas\<close>
+subsubsection \<open>Auxiliary lemmas\<close>
 
 lemma sound_bin_append:
   "sound_bin k b \<Longrightarrow> \<forall>x \<in> set is. sound_item k x \<Longrightarrow> sound_bin k (bin_append b is)"
@@ -557,7 +563,43 @@ lemma Derivation_append_rewrite:
   shows "\<exists>F. Derivation a F (b @ c' @ d)"
   using assms Derivation_append Derivation_prepend Derivation_implies_append by fast
 
-subsection \<open>Earley step Soundness\<close>
+subsubsection \<open>Initial soundness\<close>
+
+lemma derives1_valid_rule:
+  "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> derives1 [N] \<alpha>"
+  unfolding derives1_def
+  apply (rule_tac exI[where x="[]"])
+  apply (rule_tac exI[where x="[]"])
+  by simp
+
+lemma derives_valid_rule:
+  "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> derives [N] \<alpha>"
+  using derives1_valid_rule by simp
+
+lemma sound_init_items:
+  "\<forall>item \<in> set init_items. sound_item 0 item"
+proof standard
+  fix item
+  assume *: "item \<in> set init_items"
+  hence "item_dot item = 0"
+    using init_item_def init_items_def by auto
+  hence "(item_rule_head item, item_\<beta> item) \<in> \<RR>"
+    unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
+    using * wf_init_items wf_item_def by simp
+  thus "sound_item 0 item"
+    using derives_valid_rule by (simp add: slice_empty sound_item_def)
+qed
+
+lemma sound_init_bins:
+  "sound_bins init_bins"
+  using sound_bins_def sound_bin_def init_bins_def sound_init_items sound_bins_append
+  by (metis Earley.bin.sel List.list.set(1) empty_iff length_replicate nth_replicate)
+
+lemma sound_init_state:
+  "sound_state init_state"
+  using sound_init_bins sound_state_def init_state_def by simp
+
+subsubsection \<open>Earley step soundness\<close>
 
 lemma sound_bins_scan:
   assumes "wf_bins bs" "sound_bins bs"
@@ -686,6 +728,35 @@ proof -
 
   thus ?thesis
     unfolding complete_def using sound_bins_append assms(2) itms'_def itms_def origin_bin_def sound_item_def by simp
+qed
+
+lemma sound_state_earley_step:
+  assumes "wf_state s" "sound_state s"
+  shows "sound_state (earley_step s)"
+  using assms wf_state_def sound_state_def state_is_final_def state_bin_is_finished_def state_current_item_def
+        bin_size_def earley_step_def sound_bins_scan sound_bins_predict sound_bins_complete
+  by (auto simp: Let_def split: if_splits option.splits)
+
+subsubsection "Earley soundness"
+
+lemma sound_state_earley:
+  "wf_state s \<Longrightarrow> sound_state s \<Longrightarrow> sound_state (earley s)"
+  by (induction s rule: earley.induct) (auto simp: Let_def wf_state_earley_step sound_state_earley_step)
+
+theorem soundness:
+  assumes "earley_recognized"
+  shows "derives [\<SS>] doc"
+proof -
+  obtain item where *: "item \<in> set (items ((bins (earley init_state))!length doc))" "is_finished item"
+    using assms unfolding earley_recognized_def by blast
+  have "sound_state (earley init_state)"
+    using sound_init_state sound_state_earley wf_init_state by blast
+  moreover have "length doc < length (bins (earley init_state))"
+    using wf_state_earley wf_init_state wf_state_def by simp
+  ultimately have "derives [item_rule_head item] (slice (item_origin item) (length doc) doc @ item_\<beta> item)"
+    unfolding sound_state_def sound_bins_def sound_bin_def sound_item_def using *(1) by blast
+  thus ?thesis
+    using *(2) is_finished_def is_complete_def item_\<beta>_def by auto
 qed
 
 end

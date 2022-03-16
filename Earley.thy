@@ -78,7 +78,7 @@ lemma slice_subset:
   "set (slice a b xs) \<subseteq> set xs"
   using slice_drop_take by (metis in_set_dropD in_set_takeD subsetI)
 
-section \<open>Earley parsing\<close>
+section \<open>Earley recognizer\<close>
 
 subsection \<open>Earley items, bin(s), state\<close>
 
@@ -123,6 +123,8 @@ definition next_symbol :: "item \<Rightarrow> symbol option" where
 definition inc_item :: "item \<Rightarrow> item" where
   "inc_item x = Item (item_rule x) (item_dot x + 1) (item_origin x)"
 
+lemmas item_defs = item_rule_head_def item_rule_body_def item_\<alpha>_def item_\<beta>_def rule_head_def rule_body_def
+
 datatype bin =
   Bin
     (items: items)
@@ -137,6 +139,8 @@ type_synonym bins = "bin list"
 
 definition bins_append :: "bins \<Rightarrow> nat \<Rightarrow> item list \<Rightarrow> bins" where
   "bins_append bs k is = bs[k := bin_append (bs!k) is]"
+
+lemmas bin_defs = bins_append_def bin_append_def bin_size_def
 
 datatype state =
   State
@@ -227,8 +231,10 @@ definition init_state :: "state" where
   "init_state = State init_bins 0 0"
 
 definition earley_recognized :: "bool" where
-  "earley_recognized \<longleftrightarrow> (\<exists>item \<in> set (items ((bins (earley init_state))!length doc)). is_finished item)"
-
+  "earley_recognized \<longleftrightarrow> (
+    let last_bin = bins (earley init_state) ! length doc in
+    \<exists>item \<in> set (items last_bin). is_finished item)"
+    
 subsection \<open>Termination\<close>
 
 lemma earley_step_fixpoint':
@@ -265,41 +271,43 @@ definition wf_state :: "state \<Rightarrow> bool" where
     length (bins s) = length doc + 1 \<and>
     (index s) \<le> bin_size ((bins s)!(bin s))"
 
+lemmas wf_defs = wf_state_def wf_bins_def wf_bin_def wf_item_def
+
 subsubsection \<open>Auxiliary lemmas\<close>
 
 lemma wf_bin_bin_append:
   "wf_bin k b \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bin k (bin_append b is)"
-  unfolding wf_bin_def bin_append_def using UnE by auto
+  unfolding wf_defs(3) bin_defs(2) using UnE by auto
 
 lemma bin_size_bin_append:
   "bin_size (bin_append b is) \<ge> bin_size b"
-  unfolding bin_append_def bin_size_def by auto
+  unfolding bin_defs(2,3) by auto
 
 lemma wf_bins_bins_append:
   "wf_bins bs \<Longrightarrow> (\<forall>x \<in> set is. wf_item x \<and> item_origin x \<le> k) \<Longrightarrow> distinct is \<Longrightarrow> wf_bins (bins_append bs k is)"
-  unfolding wf_bins_def using wf_bin_bin_append
-  by (metis bins_append_def length_list_update nth_list_update_eq nth_list_update_neq)
+  unfolding wf_defs(1,2) bin_defs(1) using wf_bin_bin_append
+  by (metis length_list_update nth_list_update_eq nth_list_update_neq)
 
 lemma length_bins_append[simp]:
   "length (bins_append bs k is) = length bs"
-  unfolding bins_append_def by simp
+  unfolding bin_defs(1) by simp
 
 lemma bin_size_bins_append:
   "bin_size ((bins_append bs k is)!k) \<ge> bin_size (bs!k)"
-  unfolding bins_append_def using bin_size_bin_append
+  unfolding bin_defs(1) using bin_size_bin_append
   by (metis le_less_linear less_irrefl list_update_beyond nth_list_update_eq)
 
 lemma wf_empty_bin: 
   "wf_bin k (Bin [])"
-  unfolding wf_bin_def by simp
+  unfolding wf_defs(3) by simp
 
 lemma wf_empty_bins:
   "wf_bins (replicate (length doc + 1) (Bin []))"
-  unfolding wf_bins_def using wf_empty_bin by (metis length_replicate nth_replicate)
+  unfolding wf_defs(2) using wf_empty_bin by (metis length_replicate nth_replicate)
 
 lemma wf_item_inc_item:
   "wf_item item \<Longrightarrow> item_dot item < length (item_rule_body item) \<Longrightarrow> wf_item (inc_item item)"
-  unfolding wf_item_def inc_item_def by (simp add: item_rule_body_def)
+  unfolding wf_defs(4) inc_item_def by (simp add: item_defs)
 
 lemma item_origin_inc_item[simp]:
   "item_origin (inc_item item) = item_origin item"
@@ -334,9 +342,9 @@ lemma wf_bins_scan:
 proof -
   define item' where [simp]: "item' = inc_item item"
   have "wf_item item'"
-    using assms item'_def wf_bin_def wf_bins_def wf_item_inc_item by blast
+    using assms wf_defs wf_item_inc_item by simp
   moreover have "item_origin item' \<le> k"
-    using assms item'_def wf_bin_def wf_bins_def item_origin_inc_item by simp
+    using assms wf_defs item_origin_inc_item by simp
   ultimately show ?thesis
     unfolding scan_def using assms(1) wf_bins_bins_append by simp
 qed
@@ -381,15 +389,13 @@ proof -
   define itms' where "itms' = map (\<lambda>item. inc_item item) itms"
 
   have "distinct itms"
-    unfolding itms_def origin_bin_def
-    using wf_bin_def wf_bins_def wf_item_def valid_rules assms less_Suc_eq_le
+    unfolding itms_def origin_bin_def using wf_defs valid_rules assms less_Suc_eq_le
     by (meson Orderings.order_class.dual_order.strict_trans2 distinct_filter)
   hence 0: "distinct itms'"
     unfolding itms'_def using valid_rules inj_on_inc_item by (auto simp: distinct_map)
 
   have "\<forall>x \<in> set itms. wf_item x \<and> item_origin x \<le> k"
-    unfolding itms_def origin_bin_def
-    using assms wf_bins_def wf_bin_def wf_item_def
+    unfolding itms_def origin_bin_def using assms wf_defs
     by (metis Orderings.order_class.dual_order.trans filter_is_subset not_less origin_bin_def subset_code(1))
   moreover have "\<forall>x \<in> set itms. item_dot x < length (item_rule_body x)"
     using next_symbol_def by (simp add: is_complete_def itms_def)
@@ -472,6 +478,8 @@ definition sound_bins :: "bins \<Rightarrow> bool" where
 
 definition sound_state :: "state \<Rightarrow> bool" where
   "sound_state s = sound_bins (bins s)"
+
+lemmas sound_defs = sound_state_def sound_bins_def sound_bin_def sound_item_def
 
 subsubsection \<open>Auxiliary lemmas\<close>
 
@@ -563,18 +571,18 @@ lemma Derivation_append_rewrite:
   shows "\<exists>F. Derivation a F (b @ c' @ d)"
   using assms Derivation_append Derivation_prepend Derivation_implies_append by fast
 
-subsubsection \<open>Initial soundness\<close>
-
-lemma derives1_valid_rule:
+lemma derives1_if_valid_rule:
   "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> derives1 [N] \<alpha>"
   unfolding derives1_def
   apply (rule_tac exI[where x="[]"])
   apply (rule_tac exI[where x="[]"])
   by simp
 
-lemma derives_valid_rule:
+lemma derives_if_valid_rule:
   "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> derives [N] \<alpha>"
-  using derives1_valid_rule by simp
+  using derives1_if_valid_rule by simp
+
+subsubsection \<open>Initial soundness\<close>
 
 lemma sound_init_items:
   "\<forall>item \<in> set init_items. sound_item 0 item"
@@ -587,12 +595,12 @@ proof standard
     unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
     using * wf_init_items wf_item_def by simp
   thus "sound_item 0 item"
-    using derives_valid_rule by (simp add: slice_empty sound_item_def)
+    using derives_if_valid_rule by (simp add: slice_empty sound_item_def)
 qed
 
 lemma sound_init_bins:
   "sound_bins init_bins"
-  using sound_bins_def sound_bin_def init_bins_def sound_init_items sound_bins_append
+  using sound_defs init_bins_def sound_init_items sound_bins_append
   by (metis Earley.bin.sel List.list.set(1) empty_iff length_replicate nth_replicate)
 
 lemma sound_init_state:
@@ -637,7 +645,7 @@ proof -
     have "wf_item item"
       using * by (auto simp: assms(2) init_item_def valid_rules wf_item_def)
     hence "(item_rule_head item, item_rule_body item) \<in> \<RR>"
-      by (simp add: item_rule_body_def item_rule_head_def rule_body_def rule_head_def wf_item_def)
+      by (simp add: item_defs wf_item_def)
     hence "derives1 [item_rule_head item] (item_rule_body item)"
       unfolding derives1_def
       apply (rule_tac exI[where x="[]"])
@@ -663,7 +671,7 @@ proof -
   define itms' where "itms' = map (\<lambda>item. inc_item item) itms"
 
   have "derives [item_rule_head item] (slice (item_origin item) k doc @ item_\<beta> item)"
-    using sound_bins_def sound_bin_def sound_item_def assms(2-4) by blast
+    using sound_defs assms(2-4) by blast
   hence "derives [item_rule_head item] (slice (item_origin item) k doc)"
     using assms(5) unfolding next_symbol_def by (auto split: if_splits simp: is_complete_def item_\<beta>_def)
   then obtain E where E_def: "Derivation [item_rule_head item] E (slice (item_origin item) k doc)"
@@ -684,7 +692,7 @@ proof -
     moreover have 2: "item_origin item \<le> k"
       using assms(1,3,4) wf_bin_def wf_bins_def by blast
     ultimately have "derives [item_rule_head itm] (slice (item_origin itm) (item_origin item) doc @ item_\<beta> itm)"
-      using sound_bins_def sound_bin_def sound_item_def assms(2-4) by simp
+      using sound_defs assms(2-4) by simp
     then obtain D where "Derivation [item_rule_head itm] D (slice (item_origin itm) (item_origin item) doc @ item_\<beta> itm)"
       using derives_implies_Derivation by blast
     hence D_def: "Derivation [item_rule_head itm] D (slice (item_origin itm) (item_origin item) doc @ [item_rule_head item] @ (tl (item_\<beta> itm)))"
@@ -748,7 +756,7 @@ theorem soundness:
   shows "derives [\<SS>] doc"
 proof -
   obtain item where *: "item \<in> set (items ((bins (earley init_state))!length doc))" "is_finished item"
-    using assms unfolding earley_recognized_def by blast
+    using assms unfolding earley_recognized_def by auto
   have "sound_state (earley init_state)"
     using sound_init_state sound_state_earley wf_init_state by blast
   moreover have "length doc < length (bins (earley init_state))"
@@ -758,6 +766,16 @@ proof -
   thus ?thesis
     using *(2) is_finished_def is_complete_def item_\<beta>_def by auto
 qed
+
+subsection \<open>Completeness\<close>
+
+subsubsection \<open>Auxiliary lemmas\<close>
+
+subsubsection \<open>Initial completeness\<close>
+
+subsubsection \<open>Earley step completeness\<close>
+
+subsubsection \<open>Earley completeness\<close>
 
 end
 
