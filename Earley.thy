@@ -769,6 +769,16 @@ qed
 
 subsection \<open>Completeness\<close>
 
+text \<open>
+  Outline:
+
+  derives [\<SS>] (slice 0 i doc @ [N] @ \<beta>) ==>
+  (N, \<alpha>) \<in> \<RR> ==>
+  derives (take k \<alpha>) (slice i j doc) ==>
+  i <= j ==> k <= length \<alpha> ==> j <= length doc ==>
+  Item (N, \<alpha>) i k is in the j-th bin
+\<close>
+
 subsubsection \<open>Auxiliary lemmas\<close>
 
 subsubsection \<open>Initial completeness\<close>
