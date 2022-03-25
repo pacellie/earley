@@ -778,46 +778,31 @@ qed
 
 subsection \<open>Completeness\<close>
 
-(*
-definition earley_step :: "state \<Rightarrow> state" where
-  "earley_step s = (
-    if index s = bin_size ((bins s)!(bin s)) then
-      (State (bins s) (bin s + 1) 0)
-    else
-      let item = (items ((bins s)!(bin s)))!index s in
-      let bins = 
-        case next_symbol item of
-          Some x \<Rightarrow>
-            if is_terminal x then scan x item (bins s) (bin s)
-            else predict x (bins s) (bin s)
-        | None \<Rightarrow> complete item (bins s) (bin s)
-      in State bins (bin s) (index s + 1))"
-*)
-
 definition partially_scanned :: "state \<Rightarrow> bool" where
   "partially_scanned s = (
-    \<forall>m n r i k x.
+    \<forall>m n r k i x.
+      m+1 < length (bins s) \<and>
       n < length (items (bins s ! m)) \<and>
-      Item r i k = items (bins s ! m) ! n \<and>
-      next_symbol (Item r i k) = Some x \<and>
+      Item r k i = items (bins s ! m) ! n \<and>
+      next_symbol (Item r k i) = Some x \<and>
       doc!m = x \<and>
       (m < bin s \<or> (m = bin s \<and> n < index s)) \<longrightarrow>
-    Item r i (k+1) \<in> set (items (bins s ! (m+1)))
+    Item r (k+1) i \<in> set (items (bins s ! (m+1)))
   )"
 
 definition complete_bins :: "nat \<Rightarrow> bins \<Rightarrow> bool" where
-  "complete_bins n bs = (
-    \<forall>item r i k j D.
-      item = Item r i k \<and>
+  "complete_bins m bs = (
+    \<forall>item r k i j D.
+      item = Item r k i \<and>
       item \<in> set (items (bs!j)) \<and>
-      \<not> is_complete item \<and>
-      j \<le> n \<and>
-      Derivation [item_\<beta> item ! 0] D (slice j n doc) \<longrightarrow>
-    Item r i (k+1) \<in> set (items (bs!n))
+      \<not> is_complete item \<and> \<comment>\<open>TODO: Only non-terminals! For terminals simplifiy\<close>
+      j \<le> m \<and> m < length bs \<and>
+      Derivation [item_\<beta> item ! 0] D (slice j m doc) \<longrightarrow>
+    Item r (k+1) i \<in> set (items (bs!m))
   )"
 
 definition complete_state :: "state \<Rightarrow> bool" where
-  "complete_state s = (\<forall>n < bin s. complete_bins n (bins s))"
+  "complete_state s = (\<forall>m < bin s. complete_bins m (bins s))"
 
 subsubsection \<open>Auxiliary lemmas\<close>
 
@@ -825,26 +810,132 @@ subsubsection \<open>Initial completeness\<close>
 
 subsubsection \<open>Earley step completeness\<close>
 
+lemma m_lt_bin_bins_id:
+  assumes "m < bin s"
+  shows "bins s ! m = bins (earley_step s) ! m"
+  using assms unfolding earley_step_def
+  by (auto simp: Let_def bins_append_def scan_def predict_def complete_def split: option.split)
+
+lemma bin_append_monotonic:
+  "set (items b) \<subseteq> set (items (bin_append b is))"
+  unfolding bin_append_def by simp
+
+lemma bins_append_monotonic:
+  "i < length bs \<Longrightarrow> set (items (bs!i)) \<subseteq> set (items (bins_append bs k is ! i))"
+  unfolding bins_append_def using bin_append_monotonic
+  by (metis nth_list_update_eq nth_list_update_neq order_refl)
+
+lemma bin_append_union:
+  "set (items (bin_append b is)) = set (items b) \<union> set is"
+  unfolding bin_append_def by auto
+
+lemma bins_append_union:
+  "k < length bs \<Longrightarrow> set (items (bins_append bs k is ! k)) = set (items (bs ! k)) \<union> set is"
+  unfolding bins_append_def using bin_append_union by simp
+
+lemma bin_items_monotonic:
+  "m < length (bins s) \<Longrightarrow> set (items (bins s ! m)) \<subseteq> set (items (bins (earley_step s) ! m))"
+  unfolding earley_step_def using bins_append_monotonic
+  by (auto simp: scan_def predict_def complete_def bins_append_def Let_def split: option.split)
+
+lemma length_step_id:
+  "length (bins s) = length (bins (earley_step s))"
+  unfolding earley_step_def by (auto simp: Let_def split: option.split)
+
+lemma bins_append_indexing_id:
+  "m < length bs \<Longrightarrow> n < length (items (bs!m)) \<Longrightarrow> items (bins_append bs k is ! m) ! n = items (bs ! m) ! n"
+  unfolding bins_append_def bin_append_def
+  by (metis Earley.bin.sel append_same_eq list_update_append1 list_update_id nth_list_update nth_list_update_neq)
+
+lemma m_eq_bin_bins_id:
+  assumes "m = bin s" "n < length (items (bins s ! m))"
+  shows "(items (bins s ! m)) ! n = (items (bins (earley_step s) ! m)) ! n"
+  using assms unfolding earley_step_def
+  apply (auto simp: Let_def split: option.splits)
+  apply (metis bins_append_def bins_append_indexing_id complete_def list_update_beyond not_le)
+   apply (simp add: bins_append_def scan_def)
+  by (metis bins_append_def bins_append_indexing_id list_update_beyond not_le_imp_less predict_def)
+
 lemma partially_scanned_earley_step:
-  assumes "partially_scanned s"
+  assumes "partially_scanned s" "wf_state s"
   shows "partially_scanned (earley_step s)"
   unfolding partially_scanned_def
 proof (standard, standard, standard, standard, standard, standard, standard)
   fix m n r i k x
-  assume *: "n < length (items (bins (earley_step s) ! m)) \<and>
-             Item r i k = items (bins (earley_step s) ! m) ! n \<and>
-             next_symbol (Item r i k) = Some x \<and>
-             doc ! m = x \<and>
+  assume *: "m+1 < length (bins (earley_step s)) \<and>
+             n < length (items (bins (earley_step s) ! m)) \<and>
+             Item r k i = items (bins (earley_step s) ! m) ! n \<and>
+             next_symbol (Item r k i) = Some x \<and>
+             doc!m = x \<and>
              (m < bin (earley_step s) \<or> (m = bin (earley_step s) \<and> n < index (earley_step s)))"
-  show "Item r i (k + 1) \<in> set (items (bins (earley_step s) ! (m + 1)))"
-  proof (cases "index s = bin_size ((bins s)!(bin s))")
-    case True
-    show ?thesis
-      by (smt (verit, ccfv_threshold) "*" Earley.Earley.earley_step_def Earley.Earley.partially_scanned_def Earley.state.sel(1) Earley.state.sel(2) Earley.state.sel(3) Earley_axioms Orderings.order_class.dual_order.strict_trans2 Suc_eq_plus1 Suc_leI True add_le_cancel_right antisym_conv2 assms bin_size_def zero_le)
+
+  hence 0: "m+1 < length (bins s)"
+    using length_step_id by auto
+
+  show "Item r (k+1) i \<in> set (items (bins (earley_step s) ! (m+1)))"
+  proof cases
+    assume "m < bin s"
+    thus ?thesis
+      using assms(1) * 0 unfolding partially_scanned_def by (smt (z3) bin_items_monotonic m_lt_bin_bins_id subsetD)
   next
-    case False
+    assume "\<not> m < bin s"
+    hence "m = bin s"
+      by (metis (no_types, lifting) * Earley.state.sel(2) Earley.state.sel(3) Suc_eq_plus1 earley_step_def gr_implies_not0 less_antisym)
     show ?thesis
-      sorry
+    proof cases
+      assume "n < index s"
+      have "n < length (items (bins s ! m))"
+        using \<open>m = bin s\<close> \<open>n < index s\<close> assms(2) bin_size_def wf_state_def by auto
+      thus ?thesis
+        by (smt (verit, ccfv_SIG) "*" "0" \<open>m = bin s\<close> \<open>n < index s\<close> assms(1) bin_items_monotonic less_or_eq_imp_le m_eq_bin_bins_id partially_scanned_def subsetD)
+    next 
+      assume "\<not> n < index s"
+      hence "n \<ge> index s"
+        by simp
+      show ?thesis
+      proof cases
+        assume "index s = bin_size ((bins s)!(bin s))"
+        show ?thesis
+          using "*" \<open>\<not> n < index s\<close> \<open>index s = bin_size (bins s ! bin s)\<close> \<open>m = bin s\<close> bin_size_def earley_step_def by auto
+      next
+        assume "\<not> index s = bin_size ((bins s)!(bin s))"
+        hence "index s < length (items (bins s ! m))"
+          using \<open>m = bin s\<close> assms(2) bin_size_def wf_state_def by auto
+        have "n = index s"
+          by (metis (no_types, lifting) "*" Earley.state.sel(2) Earley.state.sel(3) Suc_eq_plus1 \<open>\<not> m < bin s\<close> \<open>index s \<le> n\<close> \<open>index s \<noteq> bin_size (bins s ! bin s)\<close> earley_step_def le_less_Suc_eq)
+
+        define item where "item = (items ((bins s)!(bin s)))!index s"
+
+        have "n < length (items (bins s ! m))"
+          using \<open>index s < length (items (bins s ! m))\<close> \<open>n = index s\<close> by auto
+        hence "items (bins s ! m) ! n = items (bins (earley_step s) ! m) ! n"
+          using m_eq_bin_bins_id \<open>m = bin s\<close> \<open>n = index s\<close> by blast
+        hence "item = Item r k i"
+          by (simp add: "*" \<open>m = bin s\<close> \<open>n = index s\<close> item_def)
+        have "is_terminal x"
+          by (metis "*" add_less_cancel_right assms(2) is_terminal_def length_step_id nth_mem subset_code(1) valid_doc wf_state_def)
+
+        have "bins (earley_step s) = scan x item (bins s) (bin s)"
+          unfolding earley_step_def apply (auto simp: Let_def split: option.splits)
+          apply (auto simp: \<open>index s \<noteq> bin_size (bins s ! bin s)\<close> item_def)
+          apply (metis "*" Option.option.discI \<open>item = Item r k i\<close> item_def)
+          using "*" \<open>item = Item r k i\<close> item_def apply force+
+          by (metis "*" Option.option.inject \<open>is_terminal x\<close> \<open>item = Item r k i\<close> item_def)
+
+        have "m < length doc"
+          by (metis "*" add_le_cancel_right assms(2) length_step_id verit_comp_simplify1(3) wf_state_def)
+        hence "scan x item (bins s) m = bins_append (bins s) (m + 1) [inc_item item]"
+          unfolding scan_def using * by simp
+        have "inc_item item \<in> set (items ((bins_append (bins s) (m+1) [inc_item item]) !(m+1)))"
+          using "0" bins_append_union by auto
+        moreover have "inc_item item = Item r (k+1) i"
+          unfolding inc_item_def by (simp add: \<open>item = Item r k i\<close>)
+        ultimately have "Item r (k+1) i \<in> set (items ((scan x item (bins s) m) ! (m+1)))"
+          using \<open>scan x item (bins s) m = bins_append (bins s) (m + 1) [inc_item item]\<close> by simp
+        thus ?thesis
+          by (simp add: \<open>bins (earley_step s) = scan x item (bins s) (bin s)\<close> \<open>m = bin s\<close>)
+      qed
+    qed
   qed
 qed
 
@@ -859,12 +950,12 @@ proof (cases "index s = bin_size ((bins s)!(bin s))")
   proof (standard, standard, standard, standard, standard, standard, standard, standard, standard)
     fix m item r i k j D
     assume *: "m < bin (earley_step s)"
-              "item = Item r i k \<and>
+              "item = Item r k i \<and>
                item \<in> set (items (bins (earley_step s) ! j)) \<and>
                \<not> is_complete item \<and> 
-               j \<le> m \<and>
+               j \<le> m \<and> m < length (bins (earley_step s)) \<and>
                Derivation [item_\<beta> item ! 0] D (slice j m doc)"
-    show "Item r i (k + 1) \<in> set (items (bins (earley_step s) ! m))" using *
+    show "Item r (k + 1) i \<in> set (items (bins (earley_step s) ! m))" using *
     proof (induction D arbitrary: m item r i k j)
       case Nil
 
@@ -882,9 +973,9 @@ proof (cases "index s = bin_size ((bins s)!(bin s))")
       proof cases
         assume "m = bin s"
 
-        obtain n where 0: "Item r i k = items (bins s ! (m-1)) ! n" "n < length (items (bins s ! (m-1)))"
+        obtain n where 0: "Item r k i = items (bins s ! (m-1)) ! n" "n < length (items (bins s ! (m-1)))"
           by (metis Earley.state.sel(1) Suc_eq_plus1 \<open>m = j + 1\<close> diff_Suc_1 in_set_conv_nth local.Nil.prems(2) step_simp)
-        have 1: "next_symbol (Item r i k) = Some a"
+        have 1: "next_symbol (Item r k i) = Some a"
           by (metis Cons_nth_drop_Suc is_complete_def item_\<beta>_def local.Nil.prems(2) next_symbol_def nth_Cons_0 verit_comp_simplify1(3) x(1))
         have "[a] = slice (m-1) m doc"
           by (simp add: \<open>[item_\<beta> item ! 0] = slice j m doc\<close> \<open>m = j + 1\<close> x(1))
@@ -893,7 +984,7 @@ proof (cases "index s = bin_size ((bins s)!(bin s))")
 
         show ?case
           using assms(4) unfolding partially_scanned_def
-          by (metis Earley.state.sel(1) 0 2 \<open>m = bin s\<close> \<open>m = j + 1\<close> 1 diff_add_inverse2 less_add_one step_simp)
+          by (metis "0"(1) "0"(2) "1" "2" Earley.state.sel(1) Orderings.order_class.order.strict_iff_order Suc_eq_plus1 \<open>m = bin s\<close> \<open>m = j + 1\<close> add_diff_cancel_left' assms(5) local.Nil.prems(2) n_not_Suc_n plus_1_eq_Suc step_simp)
       next
         assume "\<not> m = bin s"
         hence "m < bin s"
@@ -903,7 +994,18 @@ proof (cases "index s = bin_size ((bins s)!(bin s))")
       qed
     next
       case (Cons d D)
-      then show ?case sorry
+      show ?case
+      proof cases
+        assume "m = bin s"
+        show ?thesis
+          sorry
+      next
+        assume "\<not> m = bin s"
+        hence "m < bin s"
+          using local.Cons.prems(1) step_simp by force
+        thus ?thesis
+          by (metis Earley.state.sel(1) assms(3) complete_bins_def complete_state_def local.Cons.prems(2) step_simp)
+      qed
     qed
   qed
 next
@@ -911,7 +1013,7 @@ next
   thus ?thesis
     using assms unfolding earley_step_def complete_state_def apply (auto simp: Let_def split: option.split)
     using bins_append_def complete_bins_def complete_def apply fastforce
-    apply (smt (verit, ccfv_SIG) Orderings.order_class.order.strict_iff_order Suc_eq_plus1 bins_append_def complete_bins_def le_imp_less_Suc not_less nth_list_update_neq scan_def)
+    apply (smt (verit, ccfv_SIG) Suc_eq_plus1 bins_append_def complete_bins_def leD le_imp_less_Suc length_scan less_imp_le_nat nth_list_update_neq scan_def)
     by (smt (verit, ccfv_SIG) Orderings.order_class.dual_order.strict_trans2 antisym_conv2 bins_append_def complete_bins_def less_imp_le_nat nth_list_update_neq predict_def)
 qed
 
@@ -921,12 +1023,12 @@ lemma complete_state_earley:
   "wf_state s \<Longrightarrow> sound_state s \<Longrightarrow> complete_state s \<Longrightarrow> partially_scanned s \<Longrightarrow> complete_state (earley s)"
   by (induction s rule: earley.induct) (auto simp: Let_def wf_state_earley_step sound_state_earley_step complete_state_earley_step partially_scanned_earley_step)
 
-lemma A:
+lemma
   assumes "derives \<alpha> \<beta>"
   shows "\<exists>\<BB>. (\<forall>i < length \<alpha>. \<exists>j < length \<BB>. derives ([\<alpha>!i]) (\<BB>!j)) \<and> \<beta> = concat \<BB>"
   sorry
 
-theorem complete_ness:
+theorem completeness:
   assumes "derives [\<SS>] doc"
   shows "earley_recognized"
   sorry
