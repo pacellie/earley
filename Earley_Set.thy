@@ -1,6 +1,7 @@
 theory Earley_Set
   imports
     "HOL-Library.While_Combinator"
+    LocalLexing.Limit \<comment>\<open>Use\<close>
     LocalLexing.ListTools \<comment>\<open>Use\<close>
     LocalLexing.InductRules \<comment>\<open>Use\<close>
     LocalLexing.CFG \<comment>\<open>Use\<close>
@@ -75,6 +76,11 @@ lemma slice_id[simp]:
 lemma slice_subset:
   "set (slice a b xs) \<subseteq> set xs"
   using slice_drop_take by (metis in_set_dropD in_set_takeD subsetI)
+
+lemma slice_singleton: 
+  "b < length xs \<Longrightarrow> [x] = slice a b xs \<Longrightarrow> b = a + 1"
+  by (induction a b xs arbitrary: x rule: slice.induct)
+     (auto, metis drop0 gr_implies_not0 length_0_conv slice_drop_take take_eq_Nil)
 
 section \<open>Derivations\<close>
 
@@ -228,18 +234,15 @@ definition Complete :: "nat \<Rightarrow> items \<Rightarrow> items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
-fun iterate1 :: "(nat \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "iterate1 f 0 x = f 0 x"
-| "iterate1 f (Suc n) x = f (Suc n) (iterate1 f n x)"
-
-definition limit :: "(nat \<Rightarrow> 'a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
-  "limit f x = \<Union> { iterate1 f n x | n. True }"
+fun iterate1n :: "(nat \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "iterate1n f 0 x = f 0 x"
+| "iterate1n f (Suc n) x = f (Suc n) (iterate1n f n x)"
 
 definition \<pi> :: "nat \<Rightarrow> items \<Rightarrow> items" where
-  "\<pi> k I = limit (\<lambda>_ I. (Scan k \<circ> Complete k \<circ> Predict k) I) I"
+  "\<pi> k I = limit (Scan k \<circ> Complete k \<circ> Predict k) I"
 
 definition \<I> :: "nat \<Rightarrow> items" where
-  "\<I> k = iterate1 \<pi> k Init"
+  "\<I> k = iterate1n \<pi> k Init"
 
 definition \<II> :: "items" where
   "\<II> = \<I> (length doc)"
@@ -292,8 +295,8 @@ lemma wf_Complete:
   unfolding Complete_def wf_defs bin_def inc_item_def is_complete_def item_rule_body_def next_symbol_def
   by (auto split: if_splits; metis le_trans)
 
-lemma wf_iterate:
-  "wf_items I \<Longrightarrow> wf_items (iterate1 (\<lambda>_. Scan k \<circ> Complete k \<circ> Predict k) n I)"
+lemma wf_funpower:
+  "wf_items I \<Longrightarrow> wf_items (funpower (\<lambda>I. (Scan k \<circ> Complete k \<circ> Predict k) I) n I)"
   unfolding wf_items_def
   apply (induction n)
   apply (auto)
@@ -303,18 +306,7 @@ lemma wf_iterate:
 lemma wf_\<pi>:
   assumes "wf_items I"
   shows "wf_items (\<pi> k I)"
-proof -
-  {
-    fix x
-    assume "x \<in> \<pi> k I"
-    then obtain n where "x \<in> iterate1 ((\<lambda>_ I. Scan k \<circ> Complete k \<circ> Predict k) I) n I"
-      using \<pi>_def limit_def by fast
-    hence "wf_item x"
-      using assms wf_items_def wf_iterate by metis
-  }
-  thus ?thesis
-    using wf_items_def by blast
-qed
+  by (metis \<pi>_def assms elem_limit_simp wf_funpower wf_items_def)
 
 lemma wf_\<pi>0:
   "wf_items (\<pi> 0 Init)"
@@ -438,25 +430,14 @@ proof standard
   qed
 qed
 
-lemma sound_iterate:
-  "wf_items I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (iterate1 (\<lambda>_. Scan k \<circ> Complete k \<circ> Predict k) n I)"
-  by (induction n) (auto simp: sound_Scan sound_Complete sound_Predict wf_Complete wf_Predict wf_iterate)
+lemma sound_funpower:
+  "wf_items I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (funpower (\<lambda>I. (Scan k \<circ> Complete k \<circ> Predict k) I) n I)"
+  by (induction n) (auto simp: sound_Scan sound_Complete sound_Predict wf_Complete wf_Predict wf_funpower)
 
 lemma sound_\<pi>:
   assumes "wf_items I" "sound_items I"
   shows "sound_items (\<pi> k I)"
-proof -
-  {
-    fix x
-    assume "x \<in> \<pi> k I"
-    then obtain n where "x \<in> iterate1 ((\<lambda>_ I. Scan k \<circ> Complete k \<circ> Predict k) I) n I"
-      using \<pi>_def limit_def by fast
-    hence "sound_item x"
-      using assms sound_items_def sound_iterate by metis
-  }
-  thus ?thesis
-    using sound_items_def by blast
-qed
+  by (metis \<pi>_def assms elem_limit_simp sound_items_def sound_funpower)
 
 lemma sound_\<pi>0:
   "sound_items (\<pi> 0 Init)"
@@ -476,208 +457,187 @@ theorem soundness:
   "earley_recognized \<Longrightarrow> derives [\<SS>] doc"
   using earley_recognized_def sound_\<II> sound_defs is_finished_def item_\<beta>_def by (auto simp: is_complete_def)
 
-\<comment>\<open>TODO\<close>
+subsection \<open>Completeness\<close> \<comment>\<open>TODO\<close>
 
-subsection \<open>Completeness\<close>
-
-definition partially_scanned :: "state \<Rightarrow> bool" where
-  "partially_scanned s = (
-    \<forall>m n r k i x.
-      m+1 < length (bins s) \<and>
-      n < length (items (bins s ! m)) \<and>
-      Item r k i = items (bins s ! m) ! n \<and>
-      next_symbol (Item r k i) = Some x \<and>
-      doc!m = x \<and>
-      (m < bin s \<or> (m = bin s \<and> n < index s)) \<longrightarrow>
-    Item r (k+1) i \<in> set (items (bins s ! (m+1)))
+definition partially_complete :: "nat \<Rightarrow> items \<Rightarrow> bool" where
+  "partially_complete k I = (
+    \<forall>i j x a D.
+      i \<le> j \<and> j \<le> k \<and> k < length doc \<and>
+      x \<in> bin I i \<and>
+      next_symbol x = Some a \<and>
+      Derivation [a] D (slice i j doc) \<longrightarrow>
+      Item (item_rule x) (item_dot x + 1) (item_origin x) j \<in> I
   )"
 
-definition complete_state :: "state \<Rightarrow> bool" where
-  "complete_state s = (
-    \<forall>m n r k i j x D.
-      m < length (bins s) \<and>
-      j \<le> m \<and>
-      n < length (items (bins s ! j)) \<and>
-      Item r k i = items (bins s ! j) ! n \<and>
-      next_symbol (Item r k i) = Some x \<and>
-      Derivation [x] D (slice j m doc) \<and>
-      (m < bin s \<or> (m = bin s \<and> n < index s)) \<longrightarrow>
-    Item r (k+1) i \<in> set (items (bins s ! m))
-  )"
+lemma Predict_mk_regular1: 
+  "\<exists> (P :: rule \<Rightarrow> item \<Rightarrow> bool) F. Predict k = mk_regular1 P F"
+proof -
+  let ?P = "\<lambda> r x::item. r \<in> \<RR> \<and> item_end x = k \<and> next_symbol x = Some(fst r)"
+  let ?F = "\<lambda> r (x::item). init_item r k"
+  show ?thesis
+    apply (rule_tac x="?P" in exI)
+    apply (rule_tac x="?F" in exI)
+    apply (rule_tac ext)
+    by (auto simp: mk_regular1_def bin_def rule_head_def Predict_def)
+qed
 
-subsubsection \<open>Auxiliary lemmas\<close>
+lemma Complete_mk_regular2: 
+  "\<exists> (P :: dummy \<Rightarrow> item \<Rightarrow> item \<Rightarrow> bool) F. Complete k = mk_regular2 P F"
+proof -
+  let ?P = "\<lambda> (r::dummy) x y. item_end x = item_origin y \<and> item_end y = k \<and> is_complete y \<and> 
+     next_symbol x = Some (item_rule_head y)"
+  let ?F = "\<lambda> (r::dummy) x y. inc_item x k"
+  show ?thesis
+    apply (rule_tac x="?P" in exI)
+    apply (rule_tac x="?F" in exI)
+    apply (rule_tac ext)
+    by (auto simp add: mk_regular2_def bin_def Complete_def)
+qed
 
-lemma m_lt_bin_bins_id:
-  assumes "m < bin s"
-  shows "bins s ! m = bins (earley_step s) ! m"
-  using assms unfolding earley_step_def
-  by (auto simp: Let_def bins_append_def scan_def predict_def complete_def split: option.split)
+lemma Scan_mk_regular1:
+  "\<exists> (P :: symbol \<Rightarrow> item \<Rightarrow> bool) F. Scan k = mk_regular1 P F"
+proof -
+  let ?P = "\<lambda> (a::symbol) (x::item). doc!k = a \<and> item_end x = k \<and> k < length doc \<and> next_symbol x = Some a"
+  let ?F = "\<lambda> (a::symbol) (x::item). inc_item x (k + 1)"
+  show ?thesis
+    apply (rule_tac x="?P" in exI)
+    apply (rule_tac x="?F" in exI)
+    apply (rule_tac ext)
+    by (auto simp add: mk_regular1_def bin_def Scan_def)
+qed
 
-lemma bin_append_monotonic:
-  "set (items b) \<subseteq> set (items (bin_append b is))"
-  unfolding bin_append_def by simp
+lemma Predict_regular: 
+  "regular (Predict k)" 
+  by (metis Predict_mk_regular1 regular1)
+  
+lemma Complete_regular: 
+  "regular (Complete k)" 
+  by (metis Complete_mk_regular2 regular2) 
 
-lemma bins_append_monotonic:
-  "i < length bs \<Longrightarrow> set (items (bs!i)) \<subseteq> set (items (bins_append bs k is ! i))"
-  unfolding bins_append_def using bin_append_monotonic
-  by (metis nth_list_update_eq nth_list_update_neq order_refl)
+lemma Scan_regular: 
+  "regular (Scan k)"
+  by (metis Scan_mk_regular1 regular1)
 
-lemma bin_append_union:
-  "set (items (bin_append b is)) = set (items b) \<union> set is"
-  unfolding bin_append_def by auto
+lemma \<pi>_step_regular: 
+  "regular ((Scan k) o (Complete k) o (Predict k))"
+  by (simp add: Complete_regular Predict_regular Scan_regular regular_comp)
+  
+lemma \<pi>_regular: 
+  "regular (\<pi> k)"
+  unfolding \<pi>_def by (simp add: \<pi>_step_regular regular_limit)
 
-lemma bins_append_union:
-  "k < length bs \<Longrightarrow> set (items (bins_append bs k is ! k)) = set (items (bs ! k)) \<union> set is"
-  unfolding bins_append_def using bin_append_union by simp
+lemma \<pi>_idempotent:
+  "\<pi> k (\<pi> k I) = \<pi> k I"
+  by (simp add: \<pi>_def \<pi>_step_regular limit_is_idempotent)
 
-lemma bin_items_monotonic:
-  "m < length (bins s) \<Longrightarrow> set (items (bins s ! m)) \<subseteq> set (items (bins (earley_step s) ! m))"
-  unfolding earley_step_def using bins_append_monotonic
-  by (auto simp: scan_def predict_def complete_def bins_append_def Let_def split: option.split)
+lemma X1:
+  "I \<subseteq> Scan k I" "I \<subseteq> Complete k I" "I \<subseteq> Predict k I"
+  using Scan_def Complete_def Predict_def by auto
 
-lemma length_step_id:
-  "length (bins s) = length (bins (earley_step s))"
-  unfolding earley_step_def by (auto simp: Let_def split: option.split)
+lemma Q:
+  "Scan k I \<subseteq> \<pi> k I"
+proof standard
+  fix x 
+  assume "x \<in> Scan k I"
+  thus "x \<in> \<pi> k I"
+    sorry
+qed
 
-lemma bins_append_indexing_id:
-  "m < length bs \<Longrightarrow> n < length (items (bs!m)) \<Longrightarrow> items (bins_append bs k is ! m) ! n = items (bs ! m) ! n"
-  unfolding bins_append_def bin_append_def
-  by (metis Earley.bin.sel append_same_eq list_update_append1 list_update_id nth_list_update nth_list_update_neq)
+lemma Q''':
+  "I \<subseteq> \<pi> k I"
+  by (meson Orderings.order_class.dual_order.trans Q X1(1))
 
-lemma m_eq_bin_bins_id:
-  assumes "m = bin s" "n < length (items (bins s ! m))"
-  shows "(items (bins s ! m)) ! n = (items (bins (earley_step s) ! m)) ! n"
-  using assms unfolding earley_step_def
-  apply (auto simp: Let_def split: option.splits)
-  apply (metis bins_append_def bins_append_indexing_id complete_def list_update_beyond not_le)
-   apply (simp add: bins_append_def scan_def)
-  by (metis bins_append_def bins_append_indexing_id list_update_beyond not_le_imp_less predict_def)
+lemma Q'':
+  "I \<subseteq> iterate1n \<pi> k I"
+  using Q'''
+  by (induction k arbitrary: I) (auto, blast)
 
-lemma partially_scanned_earley_step:
-  assumes "partially_scanned s" "wf_state s"
-  shows "partially_scanned (earley_step s)"
-  unfolding partially_scanned_def
-proof (standard, standard, standard, standard, standard, standard, standard)
-  fix m n r i k x
-  assume *: "m+1 < length (bins (earley_step s)) \<and>
-             n < length (items (bins (earley_step s) ! m)) \<and>
-             Item r k i = items (bins (earley_step s) ! m) ! n \<and>
-             next_symbol (Item r k i) = Some x \<and>
-             doc!m = x \<and>
-             (m < bin (earley_step s) \<or> (m = bin (earley_step s) \<and> n < index (earley_step s)))"
+lemma iterate1n_idempotent:
+  "iterate1n \<pi> k (iterate1n \<pi> k I) = iterate1n \<pi> k I"
+  sorry
 
-  hence 0: "m+1 < length (bins s)"
-    using length_step_id by auto
+lemma Q':
+  assumes "i < length doc" "doc!i = a"
+  assumes "x \<in> bin I i" "next_symbol x = Some a"
+  shows "inc_item x (i+1) \<in> \<pi> i I"
+  using Q Scan_def assms bin_def by blast
 
-  show "Item r (k+1) i \<in> set (items (bins (earley_step s) ! (m+1)))"
+lemma B:
+  assumes "i+1 \<le> k" "k < length doc"
+  assumes "x \<in> bin I i" "next_symbol x = Some a" "doc!i = a"
+  shows "inc_item x (i+1) \<in> iterate1n \<pi> k I"
+  using assms
+proof (induction k arbitrary: i x I a)
+  case 0
+  then show ?case
+    by linarith
+next
+  case (Suc k)
+  then show ?case
   proof cases
-    assume "m < bin s"
+    assume "i+1 \<le> k"
+    hence "inc_item x (i+1) \<in> iterate1n \<pi> k I"
+      using Suc by simp
     thus ?thesis
-      using assms(1) * 0 unfolding partially_scanned_def by (smt (z3) bin_items_monotonic m_lt_bin_bins_id subsetD)
+      using Scan_def Q by fastforce
   next
-    assume "\<not> m < bin s"
-    hence "m = bin s"
-      by (metis (no_types, lifting) * Earley.state.sel(2) Earley.state.sel(3) Suc_eq_plus1 earley_step_def gr_implies_not0 less_antisym)
-    show ?thesis
-    proof cases
-      assume "n < index s"
-      have "n < length (items (bins s ! m))"
-        using \<open>m = bin s\<close> \<open>n < index s\<close> assms(2) bin_size_def wf_state_def by auto
-      thus ?thesis
-        by (smt (verit, ccfv_SIG) "*" "0" \<open>m = bin s\<close> \<open>n < index s\<close> assms(1) bin_items_monotonic less_or_eq_imp_le m_eq_bin_bins_id partially_scanned_def subsetD)
-    next 
-      assume "\<not> n < index s"
-      hence "n \<ge> index s"
-        by simp
-      show ?thesis
-      proof cases
-        assume "index s = bin_size ((bins s)!(bin s))"
-        show ?thesis
-          using "*" \<open>\<not> n < index s\<close> \<open>index s = bin_size (bins s ! bin s)\<close> \<open>m = bin s\<close> bin_size_def earley_step_def by auto
-      next
-        assume "\<not> index s = bin_size ((bins s)!(bin s))"
-        hence "index s < length (items (bins s ! m))"
-          using \<open>m = bin s\<close> assms(2) bin_size_def wf_state_def by auto
-        have "n = index s"
-          by (metis (no_types, lifting) "*" Earley.state.sel(2) Earley.state.sel(3) Suc_eq_plus1 \<open>\<not> m < bin s\<close> \<open>index s \<le> n\<close> \<open>index s \<noteq> bin_size (bins s ! bin s)\<close> earley_step_def le_less_Suc_eq)
-
-        define item where "item = (items ((bins s)!(bin s)))!index s"
-
-        have "n < length (items (bins s ! m))"
-          using \<open>index s < length (items (bins s ! m))\<close> \<open>n = index s\<close> by auto
-        hence "items (bins s ! m) ! n = items (bins (earley_step s) ! m) ! n"
-          using m_eq_bin_bins_id \<open>m = bin s\<close> \<open>n = index s\<close> by blast
-        hence "item = Item r k i"
-          by (simp add: "*" \<open>m = bin s\<close> \<open>n = index s\<close> item_def)
-        have "is_terminal x"
-          by (metis "*" add_less_cancel_right assms(2) is_terminal_def length_step_id nth_mem subset_code(1) valid_doc wf_state_def)
-
-        have "bins (earley_step s) = scan x item (bins s) (bin s)"
-          unfolding earley_step_def apply (auto simp: Let_def split: option.splits)
-          apply (auto simp: \<open>index s \<noteq> bin_size (bins s ! bin s)\<close> item_def)
-          apply (metis "*" Option.option.discI \<open>item = Item r k i\<close> item_def)
-          using "*" \<open>item = Item r k i\<close> item_def apply force+
-          by (metis "*" Option.option.inject \<open>is_terminal x\<close> \<open>item = Item r k i\<close> item_def)
-
-        have "m < length doc"
-          by (metis "*" add_le_cancel_right assms(2) length_step_id verit_comp_simplify1(3) wf_state_def)
-        hence "scan x item (bins s) m = bins_append (bins s) (m + 1) [inc_item item]"
-          unfolding scan_def using * by simp
-        have "inc_item item \<in> set (items ((bins_append (bins s) (m+1) [inc_item item]) !(m+1)))"
-          using "0" bins_append_union by auto
-        moreover have "inc_item item = Item r (k+1) i"
-          unfolding inc_item_def by (simp add: \<open>item = Item r k i\<close>)
-        ultimately have "Item r (k+1) i \<in> set (items ((scan x item (bins s) m) ! (m+1)))"
-          using \<open>scan x item (bins s) m = bins_append (bins s) (m + 1) [inc_item item]\<close> by simp
-        thus ?thesis
-          by (simp add: \<open>bins (earley_step s) = scan x item (bins s) (bin s)\<close> \<open>m = bin s\<close>)
-      qed
-    qed
+    assume "\<not> i+1 \<le> k"
+    hence "i+1 = Suc k"
+      using le_Suc_eq Suc.prems(1) by blast
+    have "x \<in> bin (iterate1n \<pi> k I) i"
+      using Q'' bin_def local.Suc.prems(3) by auto
+    hence "inc_item x (i+1) \<in> \<pi> i (iterate1n \<pi> k I)"
+      using Q' by (metis \<open>i + 1 = Suc k\<close> add_lessD1 Suc.prems(2,4,5))
+    hence "inc_item x (i+1) \<in> \<pi> k (iterate1n \<pi> k I)"
+      using \<open>i + 1 = Suc k\<close> by force
+    hence "inc_item x (i+1) \<in> iterate1n \<pi> k I"
+      using \<pi>_idempotent by (metis local.iterate1n.elims)
+    thus ?thesis
+      using Q''' by auto
   qed
 qed
 
-subsubsection \<open>Initial completeness\<close>
-
-subsubsection \<open>Earley step completeness\<close>
-
-lemma complete_state_earley_step:
-  assumes "wf_state s" "sound_state s" "complete_state s" "partially_scanned s"
-  shows "complete_state (earley_step s)"
-  unfolding complete_state_def
-proof (standard, standard, standard, standard, standard, standard, standard, standard, standard)
-  fix m n r k i j x D
-  assume *: "m < length (bins (earley_step s)) \<and>
-             j \<le> m \<and>
-             n < length (items (bins (earley_step s) ! j)) \<and>
-             Item r k i = items (bins (earley_step s) ! j) ! n \<and>
-             next_symbol (Item r k i) = Some x \<and>
-             Derivation [x] D (slice j m doc) \<and>
-             (m < bin (earley_step s) \<or> m = bin (earley_step s) \<and> n < index (earley_step s))"
-  show "Item r (k + 1) i \<in> set (items (bins (earley_step s) ! m))" using *
-  proof (induction D arbitrary: m n r k i j x)
+lemma partially_complete_\<I>:
+  "partially_complete k (\<I> k)"
+  unfolding partially_complete_def
+proof (standard, standard, standard, standard, standard, standard)
+  fix x i a D j
+  assume
+    "i \<le> j \<and> j \<le> k \<and> k < length doc \<and>
+     x \<in> bin (\<I> k) i \<and>
+     next_symbol x = Some a \<and>
+     Derivation [a] D (slice i j doc)"
+  thus "Item (item_rule x) (item_dot x + 1) (item_origin x) j \<in> \<I> k"
+  proof (induction D arbitrary: x i a j)
     case Nil
-    show ?case
-    proof cases
-      assume "m < length (bins s)"
-      show ?thesis
-        sledgehammer
-    next
-      assume "\<not> m < length (bins s)"
-      show ?thesis
-        sorry
-    qed
+
+    hence "Derivation [a] [] (slice i j doc)"
+      by blast
+    hence "[a] = slice i j doc"
+      by simp
+    have "i < length doc"
+      using Nil by force
+    have "i +1 = j"
+      by (metis slice_singleton Nil \<open>[a] = slice i j doc\<close> le_less_trans)
+    hence "doc!i = a"
+      by (metis List.append.left_neutral List.list.inject \<open>[a] = slice i j doc\<close> \<open>i < length doc\<close> order_refl slice_append_nth slice_empty)
+    have "is_terminal a"
+      using \<open>doc ! i = a\<close> \<open>i < length doc\<close> is_terminal_def nth_mem valid_doc by blast
+
+    have "inc_item x (i+1) \<in> iterate1n \<pi> k (\<I> k)"
+      using B Nil \<open>doc ! i = a\<close> \<open>i + 1 = j\<close> by blast
+    hence "inc_item x (i+1) \<in> iterate1n \<pi> k Init"
+      unfolding \<I>_def using iterate1n_idempotent by blast
+    then show ?case
+      using \<open>i + 1 = j\<close> inc_item_def by (simp add: \<I>_def)
   next
     case (Cons d D)
-    show ?case
-      sorry
+
+    thm Cons
+  
+    then show ?case sorry
   qed
 qed
-
-subsubsection \<open>Earley completeness\<close>
-
-lemma complete_state_earley:
-  "wf_state s \<Longrightarrow> sound_state s \<Longrightarrow> complete_state s \<Longrightarrow> partially_scanned s \<Longrightarrow> complete_state (earley s)"
-  by (induction s rule: earley.induct) (auto simp: Let_def wf_state_earley_step sound_state_earley_step complete_state_earley_step partially_scanned_earley_step)
 
 lemma
   assumes "derives \<alpha> \<beta>"
