@@ -800,7 +800,7 @@ definition complete_state :: "state \<Rightarrow> bool" where
       next_symbol (Item r k i) = Some x \<and>
       Derivation [x] D (slice j m doc) \<and>
       (m < bin s \<or> (m = bin s \<and> n < index s)) \<longrightarrow>
-    Item r (k+1) i \<in> set (items (bins s ! m))
+    Item r (k+1) i \<in> set (items (bins s ! m)) \<comment>\<open>Need to distinguish between x being nonterminal -> (m+1) and terminal -> m ...\<close>
   )"
 
 subsubsection \<open>Auxiliary lemmas\<close>
@@ -955,15 +955,7 @@ proof (standard, standard, standard, standard, standard, standard, standard, sta
   proof (induction D arbitrary: m n r k i j x)
     case Nil
     show ?case
-    proof cases
-      assume "m < length (bins s)"
-      show ?thesis
-        sledgehammer
-    next
-      assume "\<not> m < length (bins s)"
-      show ?thesis
-        sorry
-    qed
+      sorry
   next
     case (Cons d D)
     show ?case
@@ -979,7 +971,11 @@ lemma complete_state_earley:
 
 lemma
   assumes "derives \<alpha> \<beta>"
-  shows "\<exists>\<BB>. (\<forall>i < length \<alpha>. \<exists>j < length \<BB>. derives ([\<alpha>!i]) (\<BB>!j)) \<and> \<beta> = concat \<BB>"
+  shows "\<exists>I. (\<forall>i < length \<alpha>. derives ([\<alpha>!i]) (slice (I!i) (I!(i+1)) \<beta>)) \<and>
+             length I = length \<alpha> + 1 \<and>
+             I!0 = 0 \<and>
+             I!(length \<alpha>) = length \<beta> \<and>
+             sorted I"
   sorry
 
 theorem completeness:
