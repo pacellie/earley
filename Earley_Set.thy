@@ -61,6 +61,13 @@ lemma slice_append:
   apply (auto simp: slice_append_aux)
   using Suc_le_D by fastforce
 
+lemma slice_append_Ex: \<comment>\<open>TODO\<close>
+  "a \<le> c \<Longrightarrow> slice a c xs = ys @ zs \<Longrightarrow> \<exists>b. ys = slice a b xs \<and> zs = slice b c xs \<and> a \<le> b \<and> b \<le> c"
+  apply (induction a c xs arbitrary: ys zs rule: slice.induct)
+  apply (auto)
+  apply (smt (verit, ccfv_threshold) Cons_eq_append_conv Earley_Set.slice.simps(2) Earley_Set.slice.simps(3) Earley_Set.slice.simps(4) Nat.less_eq_nat.simps(1) Suc_le_mono)
+  by (metis Earley_Set.slice.simps(4) Suc_le_mono)
+
 lemma slice_append_nth:
   "a \<le> b \<Longrightarrow> b < length xs \<Longrightarrow> slice a b xs @ [xs!b] = slice a (b+1) xs"
   by (auto simp: slice_drop_take take_Suc_conv_app_nth)
@@ -676,154 +683,133 @@ lemma L0: "is_sentence a \<Longrightarrow> derives a b \<Longrightarrow> is_sent
 lemma L1: "is_sentence a \<Longrightarrow> is_sentence b \<Longrightarrow> derives a a' \<Longrightarrow> derives b b' \<Longrightarrow> derives (a@b) (a'@b')"
   by (meson Derivation_append Derivation_implies_append Derivation_implies_derives Derivation_prepend L0 derives_implies_Derivation)
 
-lemma X2: 
-  assumes "is_sentence (N # \<alpha>)" "derives (N # \<alpha>) []"
-  shows "derives [N] [] \<and> derives \<alpha> []"
-proof (rule ccontr)
-  assume "\<not>(derives [N] [] \<and> derives \<alpha> [])"
+lemma R:
+  "Derivation (a@b) D c \<Longrightarrow> \<exists>E F a' b'. Derivation a E a' \<and> Derivation b F b' \<and> c = a' @ b'"
+  sledgehammer
+(*
+| "Derivation a (d#D) b = (\<exists> x. Derives1 a (fst d) (snd d) x \<and> Derivation x D b)"
 
-  have "is_sentence [N]" "is_sentence \<alpha>"
-    by (metis L0 assms is_sentence_cons)+
+  "Derives1 u i r v = 
+     (\<exists> x y N \<alpha>. 
+          u = x @ [N] @ y
+        \<and> v = x @ \<alpha> @ y
+        \<and> is_sentence x
+        \<and> is_sentence y
+        \<and> (N, \<alpha>) \<in> \<RR>
+        \<and> r = (N, \<alpha>) \<and> i = length x)"  
+*)
 
-  show False
-  proof cases
-    assume "\<not> derives [N] []"
-    show ?thesis
-      sorry
-  next
-    assume "\<not> \<not> derives [N] []"
-    show ?thesis
-      sorry
-  qed
+lemma R':
+  assumes "Derivation (a#as) D (slice i k doc)" "i \<le> k"
+  shows "\<exists>E F j. Derivation [a] E (slice i j doc) \<and> Derivation as F (slice j k doc) \<and> i \<le> j \<and> j \<le> k"
+proof -
+  obtain E F a' as' where "Derivation [a] E a'" "Derivation as F as'" "slice i k doc = a' @ as'"
+    using assms R by (metis append_Cons append_Nil)
+  thus ?thesis
+    using assms(2) slice_append_Ex by blast
 qed
 
-lemma Y:
-  assumes "is_sentence (N # \<alpha>)" "derives (N # \<alpha>) \<beta>"
-  shows "\<exists>i \<le> length \<beta>. derives [N] (slice 0 i \<beta>) \<and> derives \<alpha> (slice i (length \<beta>) \<beta>)"
+lemma partially_complete_\<II>:
+  "partially_complete (length doc) \<II>"
+  by (simp add: \<II>_def partially_complete_\<I>)
+
+lemma fully_complete:
+  assumes "i \<le> j" "j \<le> length doc"
+  assumes "x \<in> bin \<II> i" "next_symbol x = Some a"
+  assumes "Derivation [a] D (slice i j doc)"
+  shows "inc_item x j \<in> \<II>"
+  using assms partially_complete_\<II> unfolding partially_complete_def by blast
+
+lemma core:
+  assumes "j \<le> k" "k \<le> length doc"
+  assumes "x = Item (N,\<alpha>) d i j" "x \<in> \<II>" "wf_item x"
+  assumes "derives (item_\<beta> x) (slice j k doc)"
+  shows "Item (N,\<alpha>) (length \<alpha>) i k \<in> \<II>"
   using assms
-proof (induction \<beta> arbitrary: N \<alpha>)
+proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x)
   case Nil
-  show ?case
-    apply (rule exI[where x="0"])
-    using X2 Nil.prems by simp
+  have "item_\<alpha> x = \<alpha>"
+    using Nil(1) unfolding item_\<alpha>_def item_\<beta>_def item_rule_body_def rule_body_def
+    by (metis Earley_Set.item.sel(1) drop_all_iff Nil.prems(3) snd_conv take_all)
+  hence "x = Item (N,\<alpha>) (length \<alpha>) i j"
+    using Nil(6) wf_item_def apply auto
+    by (metis Earley_Set.item.sel(1) Earley_Set.item.sel(2) drop_all_iff item_defs(4) item_rule_body_def le_antisym local.Nil.hyps local.Nil.prems(3) rule_body_def snd_conv)
+  have "derives [] (slice j k doc)"
+    by (simp add: local.Nil.hyps local.Nil.prems(6))
+  hence "slice j k doc = []"
+    using X by blast
+  hence "j = k"
+    by (metis Groups.monoid_add_class.add.right_neutral Lattices.linorder_class.min.absorb2 List.list.size(3) le_add_diff_inverse length_drop length_take local.Nil.prems(1) local.Nil.prems(2) slice_drop_take)
+  then show ?case
+    using \<open>x = Item (N, \<alpha>) (length \<alpha>) i j\<close> assms(4)
+    using local.Nil.prems(4) by blast
 next
-  case (Cons b \<beta>)
-  show ?case
-    sorry
+  case (Cons b bs)
+
+  have 2: "next_symbol x = Some b"
+    by (metis List.list.simps(3) drop_0 drop_all hd_drop_conv_nth is_complete_def item_defs(4) local.Cons.hyps(2) next_symbol_def not_le nth_Cons_0)
+  obtain j' where 3: "derives [b] (slice j j' doc)" "derives bs (slice j' k doc)" "j \<le> j'" "j' \<le> k"
+    using Cons(2) Cons(8) R'
+    by (metis Derivation_implies_derives derives_implies_Derivation local.Cons.prems(1))
+  have 1: "j' \<le> length doc"
+    using "3"(4) local.Cons.prems(2) by auto
+  have 4: "x \<in> bin \<II> j"
+    using Earley_Set.item.sel(4) assms(4) bin_def local.Cons.prems(3)
+    using local.Cons.prems(4) by blast
+  have 5: "inc_item x j' \<in> \<II>"
+    using fully_complete[OF 3(3) 1 4 2] using "3"(1) derives_implies_Derivation by blast
+  have 6: "inc_item x j' = Item (N,\<alpha>) (d+1) i j'"
+    by (simp add: inc_item_def local.Cons.prems(3))
+
+  have 7: "bs = item_\<beta> (Item (N,\<alpha>) (d+1) i j')"
+    by (metis Earley_Set.item.sel(1) Earley_Set.item.sel(2) Groups.monoid_add_class.add.right_neutral List.list.sel(3) One_nat_def add_Suc_right drop_Suc item_defs(4) item_rule_body_def local.Cons.hyps(2) local.Cons.prems(3) tl_drop)
+  have 8: "k \<le> length doc"
+    by (simp add: local.Cons.prems(2))
+  have 9: "wf_item (Item (N, \<alpha>) (d + 1) i j')"
+    using "5" "6" wf_\<II> wf_items_def by force
+  have 11: "derives (item_\<beta> (Item (N, \<alpha>) (d + 1) i j')) (slice j' k doc)"
+    using "3"(2) "7" by blast
+  have "Item (N, \<alpha>) (length \<alpha>) i k \<in> \<II>"
+    using Cons.hyps(1)[OF 7 3(4) 8 _ _ 9 11] using "5" "6" by auto
+  then show ?case
+    by blast
 qed
 
-lemma Y1:
-  "sorted xs \<Longrightarrow> sorted (map (\<lambda>x. x + i) xs)" for i::nat
-  by (induction xs) auto
-
-lemma derives_split: \<comment>\<open>Clean\<close>
-  assumes "is_sentence \<alpha>" "derives \<alpha> \<beta>"
-  shows "\<exists>I. (\<forall>i < length \<alpha>. derives ([\<alpha>!i]) (slice (I!i) (I!(i+1)) \<beta>)) \<and>
-             length I = length \<alpha> + 1 \<and>
-             I!0 = 0 \<and>
-             I!(length \<alpha>) = length \<beta> \<and>
-             sorted I"
-  using assms
-proof (induction \<alpha> arbitrary: \<beta>)
+lemma A:
+  "Derivation [\<SS>] D doc \<Longrightarrow> \<exists>\<alpha> E. Derivation \<alpha> E doc \<and> (\<SS>,\<alpha>) \<in> \<RR>"
+proof (induction D)
   case Nil
-  hence "\<beta> = []"
-    using X by simp
-  show ?case
-    apply (rule exI[where x="[0]"])
-    by (simp add: \<open>\<beta> = []\<close>)
+  then show ?case
+    by (metis List.list.set_intros(1) is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal local.Derivation.simps(1) subsetD valid_doc)
 next
-  case (Cons \<alpha>\<^sub>0 \<alpha>)
-  then obtain i where *: "i \<le> length \<beta>" "derives [\<alpha>\<^sub>0] (slice 0 i \<beta>)" "derives \<alpha> (slice i (length \<beta>) \<beta>)"
-    using Y by blast
-  obtain I where I:
-    "(\<forall>j<length \<alpha>. derives [\<alpha> ! j] (slice (I ! j) (I ! (j+1)) (slice i (length \<beta>) \<beta>))) \<and>
-     length I = length \<alpha> + 1 \<and>
-     I!0 = 0 \<and>
-     I!length \<alpha> = length (slice i (length \<beta>) \<beta>) \<and>
-     sorted I"
-    using "*"(3) is_sentence_cons local.Cons.IH local.Cons.prems(1) by presburger
-
-  let ?I = "0 # map (\<lambda>j. j + i) I"
-
-  have 0: "?I!0 = 0"
-    by simp
-
-  have "?I!(length (\<alpha>\<^sub>0 # \<alpha>)) = (map (\<lambda>j. j + i) I) ! (length \<alpha>)"
-    by simp
-  also have "... = I ! (length \<alpha>) + i"
-    by (simp add: I)
-  also have "... = length (slice i (length \<beta>) \<beta>) + i"
-    by (simp add: I)
-  also have "... = length \<beta>"
-    by (metis (no_types, lifting) "*"(1) Groups.ab_semigroup_add_class.add.commute Lattices.linorder_class.min.absorb2 append_take_drop_id le_eq_less_or_eq length_append length_take slice_drop_take)
-  finally have 1: "?I!(length (\<alpha>\<^sub>0 # \<alpha>)) = length \<beta>" .
-
-  have "sorted (map (\<lambda>j. j + i) I)"
-    using I Y1 by blast
-  hence 2: "sorted ?I"
-    by simp
-
-  have 3: "\<forall>j<length (\<alpha>\<^sub>0 # \<alpha>). derives [(\<alpha>\<^sub>0 # \<alpha>) ! j] (slice (?I ! j) (?I ! (j + 1)) \<beta>)"
-  proof (standard, standard)
-    fix j
-    assume "j < length (\<alpha>\<^sub>0 # \<alpha>)"
-    show "derives [(\<alpha>\<^sub>0 # \<alpha>) ! j] (slice (?I ! j) (?I ! (j + 1)) \<beta>)"
-    proof cases
-      assume "j = 0"
-      show ?thesis
-        using "*"(2) I \<open>j = 0\<close> by force
-    next
-      assume "\<not> j = 0"
-      hence "j > 0"
-        by simp
-      hence "derives [(\<alpha>\<^sub>0 # \<alpha>) ! j] (slice (?I ! j) (?I ! (j + 1)) \<beta>) = 
-        derives [\<alpha> ! (j-1)] (slice ((map (\<lambda>j. j + i) I) ! (j-1)) ((map (\<lambda>j. j + i) I) ! j) \<beta>)"
-        by force
-      also have "... = derives [\<alpha> ! (j-1)] (slice (I ! (j-1) + i) ((map (\<lambda>j. j + i) I) ! j) \<beta>)"
-        by (smt (z3) I List.list.size(4) One_nat_def \<open>j < length (\<alpha>\<^sub>0 # \<alpha>)\<close> less_imp_diff_less nth_map)
-      also have "... = derives [\<alpha> ! (j-1)] (slice (I ! (j-1) + i) (I ! j + i) \<beta>)"
-        using I \<open>j < length (\<alpha>\<^sub>0 # \<alpha>)\<close> by auto
-      also have "... = derives [\<alpha> ! (j-1)] (slice (I ! (j-1)) (I ! j) (slice i (length \<beta>) \<beta>))"
-        by (simp add: slice_shift)
-      finally show ?thesis
-        by (metis (no_types, lifting) I List.list.size(4) One_nat_def Suc_eq_plus1 Suc_leI Suc_pred \<open>0 < j\<close> \<open>j < length (\<alpha>\<^sub>0 # \<alpha>)\<close> less_diff_conv2)
-    qed
-  qed
-
-  show ?case
-    apply (rule exI[where x="?I"])
-    using 0 1 2 3 I by auto
+  case (Cons d D)
+  then show ?case
+    apply (auto)
+    by (smt (z3) Derives1_bound Derives1_def List.list.size(3) List.list.size(4) One_nat_def Suc_eq_plus1 append_Cons append_self_conv2 less_Suc_eq_le nth_Cons_0 self_append_conv slice_empty slice_id)
 qed
 
-lemma U:
-  assumes "is_sentence \<alpha>" "derives \<alpha> \<beta>"
-  assumes "partially_complete (length \<beta>) \<II>"
-  assumes "x = Item (N,\<alpha>) k i j" "wf_item x" "x \<in> \<II>" "j \<le> length \<beta>"
-  shows "Item (N,\<alpha>) (length \<alpha>) i (length \<beta>) \<in> \<II>"
-  sorry
-
-lemma U1:
-  assumes "is_nonterminal N" "derives [N] \<beta>"
-  shows "\<exists>\<alpha>. (N,\<alpha>) \<in> \<RR> \<and> derives \<alpha> \<beta>"
-  sorry
+lemma A':
+  "derives [\<SS>] doc \<Longrightarrow> \<exists>N \<alpha>. derives \<alpha> doc \<and> (\<SS>,\<alpha>) \<in> \<RR>"
+  using A by (meson Derivation_implies_derives derives_implies_Derivation)
 
 theorem completeness:
   assumes "derives [\<SS>] doc"
   shows "earley_recognized"
 proof -
   obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> \<RR>" "derives \<alpha> doc"
-    using U1 assms is_nonterminal_startsymbol by blast
+    using A' by (meson assms)
   let ?x = "Item (\<SS>,\<alpha>) 0 0 0"
   have "?x \<in> \<II>" "wf_item ?x"
-    using Init_def Q'' \<I>_def \<II>_def init_item_def * apply fastforce
+    using Init_def Q'' \<I>_def \<II>_def init_item_def * 
+    apply fastforce
     by (simp add: "*"(1) wf_item_def)
-  moreover have "partially_complete (length doc) \<II>"
-    by (simp add: \<II>_def partially_complete_\<I>)
+  moreover have "derives (item_\<beta> ?x) (slice 0 (length doc) doc)"
+    by (simp add: *(2) item_defs(4) item_rule_body_def rule_body_def)
   ultimately have "Item (\<SS>,\<alpha>) (length \<alpha>) 0 (length doc) \<in> \<II>"
-    using * U rule_\<alpha>_type by blast
+    using core by blast
   then show ?thesis
-    unfolding earley_recognized_def is_finished_def apply (auto simp: is_complete_def item_defs)
-    by force
+    unfolding earley_recognized_def is_finished_def
+    by (auto simp: is_complete_def item_defs, force)
 qed
 
 text\<open>
