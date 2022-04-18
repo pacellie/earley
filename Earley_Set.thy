@@ -685,7 +685,45 @@ lemma L1: "is_sentence a \<Longrightarrow> is_sentence b \<Longrightarrow> deriv
 
 lemma R:
   "Derivation (a@b) D c \<Longrightarrow> \<exists>E F a' b'. Derivation a E a' \<and> Derivation b F b' \<and> c = a' @ b'"
-  sledgehammer
+proof (induction D arbitrary: a b)
+  case Nil
+  thus ?case
+    by (metis local.Derivation.simps(1))
+next
+  case (Cons d D)
+  then obtain ab where *: "Derives1 (a@b) (fst d) (snd d) ab" "Derivation ab D c"
+    by auto
+  then obtain x y N \<alpha> where 
+    "a@b = x @ [N] @ y" "ab = x @ \<alpha> @ y" "is_sentence x" "is_sentence y"
+    "(N,\<alpha>) \<in> \<RR>" "snd d = (N,\<alpha>)" "fst d = length x"
+    using * unfolding Derives1_def by blast
+  show ?case
+  proof (cases "length a \<le> length x")
+    case True
+    hence "a@b = take (length a) x @ drop (length a) x @ [N] @ y"
+      by (simp add: \<open>a @ b = x @ [N] @ y\<close>)
+    hence "a = take (length a) x" "b = drop (length a) x @ [N] @ y"
+      by (meson True \<open>a @ b = x @ [N] @ y\<close> append_eq_append_conv_if)+
+    hence "ab = take (length a) x @ drop (length a) x @ \<alpha> @ y"
+      by (metis True \<open>ab = x @ \<alpha> @ y\<close> append_eq_append_conv_if)
+    then obtain E F a' b' where 
+      "Derivation (take (length a) x) E a'"
+      "Derivation (drop (length a) x @ \<alpha> @ y) F b' \<and> c = a' @ b'"
+      using Cons *(2) by blast
+    have "Derivation a E a'"
+      using \<open>Derivation (take (length a) x) E a'\<close> \<open>a = take (length a) x\<close> by fastforce
+    have "Derives1 b (fst d - length a) (snd d) (drop (length a) x @ \<alpha> @ y)"
+      unfolding Derives1_def
+      by (metis *(1) Derives1_sentence1 \<open>(N, \<alpha>) \<in> \<RR>\<close> \<open>b = drop (length a) x @ [N] @ y\<close> \<open>fst d = length x\<close> \<open>snd d = (N, \<alpha>)\<close> is_sentence_concat length_drop)
+    hence "Derivation b ((fst d - length a, snd d) # F) b'"
+      using \<open>Derivation (drop (length a) x @ \<alpha> @ y) F b' \<and> c = a' @ b'\<close> by force
+    then show ?thesis
+      using \<open>Derivation (drop (length a) x @ \<alpha> @ y) F b' \<and> c = a' @ b'\<close> \<open>Derivation a E a'\<close> by blast
+  next
+    case False
+    then show ?thesis sorry
+  qed
+qed
 (*
 | "Derivation a (d#D) b = (\<exists> x. Derives1 a (fst d) (snd d) x \<and> Derivation x D b)"
 
