@@ -549,14 +549,37 @@ lemma X1: \<comment>\<open>TODO\<close>
   "I \<subseteq> Scan k I" "I \<subseteq> Complete k I" "I \<subseteq> Predict k I"
   using Scan_def Complete_def Predict_def by auto
 
+lemma X1': \<comment>\<open>TODO\<close>
+  "Scan k I \<subseteq> (Scan k \<circ> Complete k \<circ> Predict k) I"
+  "Predict k I \<subseteq> (Scan k \<circ> Complete k \<circ> Predict k) I"
+  "Complete k I \<subseteq> (Scan k \<circ> Complete k \<circ> Predict k) I"
+    apply (smt (z3) Scan_def Un_iff X1(2) X1(3) bin_def comp_apply mem_Collect_eq subset_iff)
+   apply (smt (z3) Scan_def Un_iff X1(2) X1(3) bin_def comp_apply mem_Collect_eq subset_iff)
+  unfolding comp_apply using X1 Complete_def Predict_def bin_def by fastforce
+
+lemma X2: "setmonotone (Scan k)" "setmonotone (Predict k)" "setmonotone (Complete k)" \<comment>\<open>TODO\<close>
+  by (simp_all add: Scan_regular Predict_regular Complete_regular regular_implies_setmonotone)
+
+lemma X3: "setmonotone (Scan k \<circ> Complete k \<circ> Predict k)" \<comment>\<open>TODO\<close>
+  using X2 by (simp add: setmonotone_comp)
+
+lemma X4: "setmonotone (\<pi> k)" \<comment>\<open>TODO\<close>
+  by (simp add: \<pi>_regular regular_implies_setmonotone)
+
+lemma X6:
+  "(Scan k \<circ> Complete k \<circ> Predict k) I \<subseteq> funpower (Scan k \<circ> Complete k \<circ> Predict k) 1 I" \<comment>\<open>TODO\<close>
+  by simp
+
+lemma X5: 
+  "(Scan k \<circ> Complete k \<circ> Predict k) I \<subseteq> \<pi> k I" \<comment>\<open>TODO\<close>
+  unfolding \<pi>_def unfolding limit_def natUnion_def
+  by (metis (mono_tags, lifting) Sup_upper2 X6 mem_Collect_eq)
+
 lemma Q: \<comment>\<open>TODO\<close>
   "Scan k I \<subseteq> \<pi> k I"
-proof standard
-  fix x 
-  assume "x \<in> Scan k I"
-  thus "x \<in> \<pi> k I"
-    sorry
-qed
+  "Predict k I \<subseteq> \<pi> k I"
+  "Complete k I \<subseteq> \<pi> k I"
+  using X1' X5 by blast+
 
 lemma Q''': \<comment>\<open>TODO\<close>
   "I \<subseteq> \<pi> k I"
@@ -567,9 +590,142 @@ lemma Q'': \<comment>\<open>TODO\<close>
   using Q'''
   by (induction k arbitrary: I) (auto, blast)
 
+definition bins :: "items \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> items" where
+  "bins I i j = { x | x k. x \<in> bin I k \<and> i \<le> k \<and> k \<le> j }"
+
+definition bins_inf :: "items \<Rightarrow> nat \<Rightarrow> items" where
+  "bins_inf I i = { x | x k. x \<in> bin I k \<and> i \<le> k }"
+
+lemma bins_Un:
+  "bins (I \<union> J) i j = bins I i j \<union> bins J i j"
+  unfolding bins_def bin_def by blast
+
+lemma bins_inf_Un:
+  "bins_inf (I \<union> J) i = bins_inf I i \<union> bins_inf J i"
+  unfolding bins_inf_def bin_def by blast
+
+lemma bins_bins_inf_In:
+  "bins (bins_inf I k) i j = bins I (max i k) j"
+  unfolding bins_def bins_inf_def bin_def max_def by auto
+
+lemma bins_inf_absorb:
+  "i < j \<Longrightarrow> bins_inf (bins_inf I j) i = bins_inf I j"
+  "i < j \<Longrightarrow> bins_inf (bins_inf I i) j = bins_inf I j"
+  unfolding bins_inf_def bin_def by auto
+
+lemma bins_absorb:
+  "i' \<le> i \<Longrightarrow> j' \<ge> j \<Longrightarrow> bins (bins I i' j') i j = bins I i j"
+  unfolding bins_def bin_def by auto
+
+lemma bins_bins_inf_empty:
+  "j < k \<Longrightarrow> bins (bins_inf I k) i j = {}"
+  unfolding bins_def bins_inf_def bin_def by simp
+
+lemma bins_inf_bins_empty:
+  "j < k \<Longrightarrow> bins_inf (bins I i j) k = {}"
+  unfolding bins_inf_def bins_def bin_def by simp
+
+lemma bins_\<pi>_absorb:
+  "i \<le> j \<Longrightarrow> j < k \<Longrightarrow> bins (\<pi> k I) i j = bins I i j"
+  sorry
+
+lemma bins_\<pi>_absorb2:
+  "i < j \<Longrightarrow> bins (\<pi> i (bins I 0 i)) 0 j = \<pi> i (bins I 0 i)"
+  sorry
+
+lemma bins_inf_\<pi>_absorb:
+  "i+1 < j \<Longrightarrow> bins_inf (\<pi> i I) j = bins_inf I j"
+  sorry
+
+lemma \<pi>_bins_split:
+  "\<pi> k I = bins_inf I (k+1) \<union> \<pi> k (bins I 0 k)"
+  sorry
+
+find_theorems limit "(\<subseteq>)"
+
+lemma \<pi>_sub:
+  "I \<subseteq> J \<Longrightarrow> \<pi> k I \<subseteq> \<pi> k J"
+  sledgehammer
+
 lemma a0: \<comment>\<open>TODO\<close>
   "i < j \<Longrightarrow> \<pi> i (\<pi> j I) \<subseteq> \<pi> j (\<pi> i I)"
-  sorry
+proof standard
+  fix x
+  assume *: "i < j" "x \<in> \<pi> i (\<pi> j I)"
+
+  have "\<pi> i (\<pi> j I) = \<pi> i (bins_inf I (j+1) \<union> \<pi> j (bins I 0 j))"
+    using \<pi>_bins_split by metis
+  also have "... = bins_inf (bins_inf I (j+1) \<union> \<pi> j (bins I 0 j)) (i+1) \<union>  
+                   \<pi> i (bins (bins_inf I (j+1) \<union> \<pi> j (bins I 0 j)) 0 i)"
+    using \<pi>_bins_split by blast
+  also have "... = bins_inf (bins_inf I (j+1)) (i+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union>
+                   \<pi> i (bins (bins_inf I (j+1) \<union> \<pi> j (bins I 0 j)) 0 i)"
+    using bins_inf_Un by blast
+  also have "... = bins_inf I (j+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union>
+                   \<pi> i (bins (bins_inf I (j+1) \<union> \<pi> j (bins I 0 j)) 0 i)"
+    using bins_inf_absorb *(1) by force
+  also have "... = bins_inf I (j+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union>
+                   \<pi> i (bins (bins_inf I (j+1)) 0 i \<union> bins (\<pi> j (bins I 0 j)) 0 i)"
+    using bins_Un by simp
+  also have "... = bins_inf I (j+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union>
+                   \<pi> i (bins (\<pi> j (bins I 0 j)) 0 i)"
+    using bins_bins_inf_empty *(1) by simp
+  also have "... = bins_inf I (j+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union>
+                   \<pi> i (bins (bins I 0 j) 0 i)"
+    using bins_\<pi>_absorb *(1) by simp
+  also have "... = bins_inf I (j+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union> \<pi> i (bins I 0 i)"
+    using bins_absorb *(1) by force
+  finally have 0: "\<pi> i (\<pi> j I) = bins_inf I (j+1) \<union> bins_inf (\<pi> j (bins I 0 j)) (i+1) \<union> \<pi> i (bins I 0 i)" .
+
+  have "\<pi> j (\<pi> i I) = \<pi> j (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i))"
+    by (metis \<pi>_bins_split)
+  also have "... = bins_inf (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i)) (j+1) \<union>
+                   \<pi> j (bins (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i)) 0 j)"
+    using \<pi>_bins_split by blast
+  also have "... = bins_inf (bins_inf I (i+1)) (j+1) \<union> bins_inf (\<pi> i (bins I 0 i)) (j+1) \<union>
+                   \<pi> j (bins (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i)) 0 j)"
+    using bins_inf_Un by blast
+  also have "... = bins_inf I (j+1) \<union> bins_inf (\<pi> i (bins I 0 i)) (j+1) \<union>
+                   \<pi> j (bins (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i)) 0 j)"
+    by (simp add: *(1) bins_inf_absorb)
+  also have "... = bins_inf I (j+1) \<union> bins_inf (bins I 0 i) (j+1) \<union>
+                   \<pi> j (bins (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i)) 0 j)"
+    using bins_inf_\<pi>_absorb *(1) by simp
+  also have "... = bins_inf I (j+1) \<union> \<pi> j (bins (bins_inf I (i+1) \<union> \<pi> i (bins I 0 i)) 0 j)"
+    using bins_inf_bins_empty *(1) by simp
+  also have "... = bins_inf I (j+1) \<union> \<pi> j (bins (bins_inf I (i+1)) 0 j \<union> bins (\<pi> i (bins I 0 i)) 0 j)"
+    using bins_Un by auto
+  also have "... = bins_inf I (j+1) \<union> \<pi> j (bins I (i+1) j \<union> bins (\<pi> i (bins I 0 i)) 0 j)"
+    using bins_bins_inf_In by simp
+  also have "... = bins_inf I (j+1) \<union> \<pi> j (bins I (i+1) j \<union> \<pi> i (bins I 0 i))"
+    using *(1) bins_\<pi>_absorb2 by presburger
+  finally have 1: "\<pi> j (\<pi> i I) = bins_inf I (j+1) \<union> \<pi> j (bins I (i+1) j \<union> \<pi> i (bins I 0 i))" .
+
+  consider (A) "x \<in> bins_inf I (j+1)" | (B) "x \<in> bins_inf (\<pi> j (bins I 0 j)) (i+1)" | (C) "x \<in> \<pi> i (bins I 0 i)"
+    using "*"(2) 0 by fastforce
+  then show "x \<in> \<pi> j (\<pi> i I)"
+  proof cases
+    case A
+    then show ?thesis
+      using 1 by blast
+  next
+    case B
+    have "\<pi> i (bins I 0 i) \<supseteq> bins I 0 i"
+      by (simp add: Q''')
+    hence "\<pi> j (bins I (i+1) j \<union> \<pi> i (bins I 0 i)) \<supseteq> \<pi> j (bins I (i+1) j \<union> bins I 0 i)"
+      using \<pi>_sub by (meson Orderings.order_class.order.trans le_sup_iff sup_ge1 sup_ge2)
+    moreover have "bins I (i+1) j \<union> bins I 0 i = bins I 0 j"
+      unfolding bins_def bin_def using *(1) Orderings.order_class.order.trans by force
+    ultimately have "\<pi> j (bins I (i+1) j \<union> \<pi> i (bins I 0 i)) \<supseteq> \<pi> j (bins I 0 j)"
+      by simp
+    then show ?thesis
+      using B 1 unfolding bins_inf_def bin_def by blast
+  next
+    case C
+    then show ?thesis
+      by (simp add: 1 X4 elem_setmonotone)
+  qed
+qed
 
 lemma a1: \<comment>\<open>TODO\<close>
   "i+1 < j \<Longrightarrow> \<pi> i (\<pi> j I) \<supseteq> \<pi> j (\<pi> i I)"
@@ -655,13 +811,77 @@ qed
 lemma C: \<comment>\<open>TODO\<close>
   assumes "i \<le> k" "x \<in> bin I i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
   shows "init_item (N,\<alpha>) i \<in> iterate1n \<pi> k I"
-  sorry
+  using assms
+proof (induction k arbitrary: i x I N \<alpha>)
+  case 0
+  have "iterate1n \<pi> 0 I = \<pi> 0 I"
+    by simp
+  have "init_item (N, \<alpha>) i \<in> Predict 0 I"
+    unfolding Predict_def using 0 using rule_head_def by fastforce
+  then show ?case
+    using Q \<open>iterate1n \<pi> 0 I = \<pi> 0 I\<close> by blast
+next
+  case (Suc k)
+  then show ?case
+  proof cases
+    assume "i \<le> k"
+    show ?thesis
+      by (metis Q''' \<open>i \<le> k\<close> local.Suc.IH local.Suc.prems(2) local.Suc.prems(3) local.Suc.prems(4) local.iterate1n.simps(2) subsetD)
+  next
+    assume "\<not> i \<le> k"
+    hence "i = Suc k"
+      using le_SucE local.Suc.prems(1) by blast
+    moreover have "x \<in> bin (iterate1n \<pi> k I) i"
+      using Q'' bin_def local.Suc.prems(2) by auto
+    ultimately have "init_item (N,\<alpha>) i \<in> Predict i (iterate1n \<pi> k I)"
+      unfolding Predict_def rule_head_def
+      using local.Suc.prems(3) local.Suc.prems(4) by fastforce
+    show ?thesis
+      using Q \<open>i = Suc k\<close> \<open>init_item (N, \<alpha>) i \<in> Predict i (iterate1n \<pi> k I)\<close> by force
+  qed
+qed
 
 lemma D: \<comment>\<open>TODO\<close>
-  assumes "i \<le> j" "j \<le> k" "x \<in> bin I i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
+  assumes "i \<le> j" "j \<le> k" "x \<in> bin I i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>" "i = item_origin y"
   assumes "y \<in> bin I j" "item_rule y = (N,\<alpha>)" "next_symbol y = None"
   shows "inc_item x j \<in> iterate1n \<pi> k I"
-  sorry
+  using assms
+proof (induction k arbitrary: i j x I N \<alpha> y)
+  case 0
+  have "j = 0"
+    using "local.0.prems"(2) by auto
+  hence "inc_item x 0 \<in> Complete 0 I"
+    unfolding Complete_def using 0
+    by (smt (verit, best) Option.option.discI UnI2 fst_conv item_defs(1) mem_Collect_eq next_symbol_def rule_head_def)
+  then show ?case
+    using Q(3) \<open>j = 0\<close> by auto
+next
+  case (Suc k)
+  show ?case
+  proof cases
+    assume "j \<le> k"
+    have "inc_item x j \<in> iterate1n \<pi> k I"
+      using Suc.IH[OF _ \<open>j \<le> k\<close>] Suc.prems by blast
+    then show ?thesis
+      by (simp add: X4 elem_setmonotone)
+  next
+    assume "\<not> j \<le> k"
+    hence "j = Suc k"
+      using le_Suc_eq local.Suc.prems(2) by presburger
+    have 0: "x \<in> bin (iterate1n \<pi> k I) (item_origin y)"
+      using Q'' bin_def local.Suc.prems(3) local.Suc.prems(6) by auto
+    moreover have 1: "y \<in> bin (iterate1n \<pi> k I) j"
+      using Suc.prems(7) Q'' bin_def by auto
+    moreover have "is_complete y"
+      by (metis Option.option.distinct(1) local.Suc.prems(9) next_symbol_def)
+    moreover have "next_symbol x = Some (item_rule_head y)"
+      by (simp add: item_rule_head_def local.Suc.prems(4) local.Suc.prems(8) rule_head_def)
+    ultimately have "inc_item x j \<in> Complete j (iterate1n \<pi> k I)"
+      unfolding Complete_def by blast
+    then show ?thesis
+      using Q(3) \<open>j = Suc k\<close> by auto
+  qed
+qed
 
 lemma p0: \<comment>\<open>TODO\<close>
   "is_terminal a \<Longrightarrow> Derivation [a] D b \<Longrightarrow> b = [a]"
@@ -880,7 +1100,6 @@ proof (standard, standard, standard, standard, standard, standard)
         hence "y \<in> bin (\<I> k) i"
           unfolding init_item_def using y_def by (simp add: \<I>_def bin_def iterate1n_idempotent)
 
-        thm "1"
         have "length D' < length D"
           using \<open>D = d # D'\<close> by fastforce
         have "partially_complete' k (\<I> k) (length D')"
@@ -906,7 +1125,7 @@ proof (standard, standard, standard, standard, standard, standard)
         have 3: "item_rule (Item (N,\<alpha>) (length \<alpha>) i j) = (N, \<alpha>)"
           by simp
         have "inc_item x j \<in> iterate1n \<pi> k (\<I> k)"
-          using D[OF _ _ 0 2 _ _ 3] 1
+          using D[OF _ _ 0 2 _ _  _ 3] 1
           by (simp add: \<open>(N, \<alpha>) \<in> \<RR>\<close> bin_def is_complete_def item_rule_body_def "local.1.prems" next_symbol_def rule_body_def)
         then show ?thesis
           using \<I>_def iterate1n_idempotent by force
@@ -1017,6 +1236,10 @@ proof -
     unfolding earley_recognized_def is_finished_def
     by (auto simp: is_complete_def item_defs, force)
 qed
+
+corollary correctness:
+  "earley_recognized \<longleftrightarrow> derives [\<SS>] doc"
+  using soundness completeness by blast
 
 end
 
