@@ -246,8 +246,7 @@ definition is_finished :: "item \<Rightarrow> bool" where
     item_end x = length doc \<and> 
     is_complete x)"
 
-definition earley_recognized :: "bool"
-where
+definition earley_recognized :: "bool" where
   "earley_recognized = (\<exists> x \<in> \<II>. is_finished x)"
 
 subsection \<open>Wellformedness\<close>
@@ -398,7 +397,9 @@ proof standard
     moreover have 0: "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"
       using *(5) by (auto simp: next_symbol_def item_\<beta>_def is_complete_def split: if_splits,
                      metis Cons_nth_drop_Suc drop_Suc drop_tl leI)
-    ultimately obtain D where D: "Derivation [item_rule_head x] D (slice (item_origin x) (item_origin y) doc @ [item_rule_head y] @ (tl (item_\<beta> x)))"
+    ultimately obtain D where D: 
+      "Derivation [item_rule_head x] D (slice (item_origin x) (item_origin y) doc @
+       [item_rule_head y] @ (tl (item_\<beta> x)))"
       using derives_implies_Derivation by (metis append_Cons append_Nil)
 
     have "wf_item x"
@@ -407,7 +408,9 @@ proof standard
       using is_sentence_item_\<beta> is_sentence_cons 0 by metis
     moreover have "is_sentence (slice (item_origin x) (item_origin y) doc)"
       by (meson is_sentence_simp is_symbol_def is_terminal_def slice_subset subsetD valid_doc)
-    ultimately obtain G where "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) doc @ slice (item_origin y) (item_end y) doc @ tl (item_\<beta> x))"
+    ultimately obtain G where 
+      "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) doc @
+       slice (item_origin y) (item_end y) doc @ tl (item_\<beta> x))"
       using Derivation_append_rewrite D E by blast
     moreover have "item_origin x \<le> item_origin y"
       using *(2) \<open>wf_item x\<close> bin_def wf_item_def by auto
@@ -508,7 +511,7 @@ lemma \<pi>_regular:
   "regular (\<pi> k)"
   unfolding \<pi>_def by (simp add: \<pi>_step_regular regular_limit)
 
-lemma \<pi>_idempotent:
+lemma \<pi>_idem:
   "\<pi> k (\<pi> k I) = \<pi> k I"
   by (simp add: \<pi>_def \<pi>_step_regular limit_is_idempotent)
 
@@ -608,6 +611,95 @@ qed
 
 subsection \<open>Completeness\<close>
 
+lemma Scan_\<I>:
+  assumes "i+1 \<le> k" "k \<le> length doc" "x \<in> bin (\<I> k) i" "next_symbol x = Some a" "doc!i = a"
+  shows "inc_item x (i+1) \<in> \<I> k"
+  using assms
+proof (induction k arbitrary: i x a)
+  case (Suc k)
+  show ?case
+  proof cases
+    assume "i+1 \<le> k"
+    hence "inc_item x (i+1) \<in> \<I> k"
+      using Suc \<pi>_bin_absorb by simp
+    thus ?thesis
+      using Scan_\<pi>_mono unfolding Scan_def by auto
+  next
+    assume "\<not> i+1 \<le> k"
+    hence *: "i+1 = Suc k"
+      using le_Suc_eq Suc.prems(1) by blast
+    have "x \<in> bin (\<I> k) i"
+      using Suc.prems(3) * \<pi>_bin_absorb by force
+    hence "inc_item x (i+1) \<in> \<pi> i (\<I> k)"
+      using * Suc.prems(2,4,5) Scan_\<pi>_mono unfolding Scan_def by force
+    hence "inc_item x (i+1) \<in> \<pi> k (\<I> k)"
+      using * by force
+    hence "inc_item x (i+1) \<in> \<I> k"
+      using \<pi>_idem by (metis local.\<I>.elims)
+    thus ?thesis
+      using \<pi>_mono by auto
+  qed
+qed simp
+
+lemma Predict_\<I>:
+  assumes "i \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
+  shows "init_item (N,\<alpha>) i \<in> \<I> k"
+  using assms
+proof (induction k arbitrary: i x N \<alpha>)
+  case 0
+  hence "init_item (N,\<alpha>) i \<in> Predict 0 (\<I> 0)"
+    unfolding rule_head_def Predict_def by auto
+  thus ?case
+    using Predict_\<pi>_mono \<pi>_idem by fastforce
+next
+  case (Suc k)
+  show ?case
+  proof cases
+    assume "i \<le> k"
+    hence "init_item (N,\<alpha>) i \<in> \<I> k"
+      using Suc.IH \<pi>_bin_absorb Suc.prems(2-4) by force
+    thus ?thesis
+      using \<pi>_mono by auto
+  next
+    assume "\<not> i \<le> k"
+    hence "init_item (N,\<alpha>) i \<in> Predict i (\<I> (Suc k))"
+      unfolding Predict_def rule_head_def using Suc.prems(2-4) by auto
+    thus ?thesis
+      using Predict_\<pi>_mono \<pi>_idem Suc.prems(1) \<open>\<not> i \<le> k\<close> by (metis le_SucE \<I>.simps(2) subsetD)
+  qed
+qed
+
+lemma Complete_\<I>:
+  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
+  assumes "i = item_origin y" "y \<in> bin (\<I> k) j" "item_rule y = (N,\<alpha>)" "is_complete y"
+  shows "inc_item x j \<in> \<I> k"
+  using assms
+proof (induction k arbitrary: i j x N \<alpha> y)
+  case 0
+  hence "inc_item x 0 \<in> Complete 0 (\<I> 0)"
+    unfolding Complete_def rule_head_def next_symbol_def item_rule_head_def by (auto split: if_splits; force)
+  thus ?case
+    using Complete_\<pi>_mono \<pi>_idem "0.prems"(2) by (metis le_0_eq \<I>.simps(1) subset_iff)
+next
+  case (Suc k)
+  show ?case
+  proof cases
+    assume "j \<le> k"
+    hence "inc_item x j \<in> \<I> k"
+      using Suc  \<pi>_bin_absorb Orderings.order_class.dual_order.eq_iff by force
+    thus ?thesis
+      using \<pi>_mono by fastforce
+  next
+    assume "\<not> j \<le> k"
+    hence "j = Suc k"
+      using le_SucE Suc.prems(2) by blast
+    hence "inc_item x (Suc k) \<in> Complete (Suc k) (\<I> (Suc k))"
+      using Suc.prems(3-4,6-9) unfolding Complete_def rule_head_def item_rule_head_def by fastforce
+    then show ?thesis
+      using Complete_\<pi>_mono \<pi>_idem \<open>j = Suc k\<close> by fastforce
+  qed
+qed
+
 definition partially_complete :: "nat \<Rightarrow> items \<Rightarrow> bool" where
   "partially_complete k I = (
     \<forall>i j x a D.
@@ -617,114 +709,6 @@ definition partially_complete :: "nat \<Rightarrow> items \<Rightarrow> bool" wh
       Derivation [a] D (slice i j doc) \<longrightarrow>
       inc_item x j \<in> I
   )"
-
-lemma B: \<comment>\<open>TODO\<close>
-  assumes "i+1 \<le> k" "k \<le> length doc"
-  assumes "x \<in> bin (\<I> k) i" "next_symbol x = Some a" "doc!i = a"
-  shows "inc_item x (i+1) \<in> \<I> k"
-  using assms
-proof (induction k arbitrary: i x a)
-  case 0
-  then show ?case
-    by linarith
-next
-  case (Suc k)
-  then show ?case
-  proof cases
-    assume "i+1 \<le> k"
-    hence "inc_item x (i+1) \<in> \<I> k"
-      using Suc by (metis \<pi>_bin_absorb add_leE leD less_add_one local.\<I>.simps(2) plus_1_eq_Suc)
-    thus ?thesis
-      using Scan_\<pi>_mono unfolding Scan_def by auto
-  next
-    assume "\<not> i+1 \<le> k"
-    hence "i+1 = Suc k"
-      using le_Suc_eq Suc.prems(1) by blast
-    have "x \<in> bin (\<I> k) i"
-      using Suc.prems(3) \<open>i + 1 = Suc k\<close> \<pi>_bin_absorb by force
-    hence "inc_item x (i+1) \<in> \<pi> i (\<I> k)"
-      using \<open>i + 1 = Suc k\<close> Suc.prems(2,4,5) Scan_\<pi>_mono unfolding Scan_def by force
-    hence "inc_item x (i+1) \<in> \<pi> k (\<I> k)"
-      using \<open>i + 1 = Suc k\<close> by force
-    hence "inc_item x (i+1) \<in> \<I> k"
-      using \<pi>_idempotent by (metis Earley_Set.Earley.\<I>.elims Earley_axioms)
-    thus ?thesis
-      using \<pi>_mono by auto
-  qed
-qed
-
-lemma C: \<comment>\<open>TODO\<close>
-  assumes "i \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
-  shows "init_item (N,\<alpha>) i \<in> \<I> k"
-  using assms
-proof (induction k arbitrary: i x N \<alpha>)
-  case 0
-  then show ?case
-    by (smt (verit, del_insts) Nat.bot_nat_0.extremum_uniqueI Predict_def Predict_\<pi>_mono Suc_eq_plus1 UnCI \<pi>_idempotent fst_conv local.\<I>.simps(1) local.\<I>.simps(2) mem_Collect_eq rule_head_def subset_eq)
-next
-  case (Suc k)
-  then show ?case
-  proof cases
-    assume "i \<le> k"
-    show ?thesis
-      by (metis Earley_Set.Earley.\<pi>_mono Earley_axioms Suc_eq_plus1 \<open>i \<le> k\<close> \<pi>_bin_absorb le_imp_less_Suc local.Suc.IH local.Suc.prems(2) local.Suc.prems(3) local.Suc.prems(4) local.\<I>.simps(2) nat_less_le subset_iff)
-  next
-    assume "\<not> i \<le> k"
-    hence "i = Suc k"
-      using le_SucE local.Suc.prems(1) by blast
-    moreover have "x \<in> bin (\<I> (Suc k)) i"
-      using Suc.prems(2) by auto
-    ultimately have "init_item (N,\<alpha>) i \<in> Predict i (\<I> (Suc k))"
-      unfolding Predict_def rule_head_def
-      using local.Suc.prems(3) local.Suc.prems(4) by fastforce
-    show ?thesis
-      using \<open>i = Suc k\<close> by (metis Predict_\<pi>_mono \<open>init_item (N, \<alpha>) i \<in> Predict i (\<I> (Suc k))\<close> \<pi>_idempotent local.\<I>.simps(2) subsetD)
-  qed
-qed
-
-lemma D: \<comment>\<open>TODO\<close>
-  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>" "i = item_origin y"
-  assumes "y \<in> bin (\<I> k) j" "item_rule y = (N,\<alpha>)" "next_symbol y = None"
-  shows "inc_item x j \<in> \<I> k"
-  using assms
-proof (induction k arbitrary: i j x N \<alpha> y)
-  case 0
-  have "j = 0"
-    using "local.0.prems"(2) by auto
-  hence "inc_item x 0 \<in> Complete 0 (\<I> 0)"
-    unfolding Complete_def using 0
-    by (smt (verit, best) Option.option.discI UnI2 fst_conv item_defs(1) mem_Collect_eq next_symbol_def rule_head_def)
-  then show ?case
-    using Complete_\<pi>_mono \<open>j = 0\<close> by (metis \<pi>_idempotent local.\<I>.simps(1) subsetD)
-next
-  case (Suc k)
-  show ?case
-  proof cases
-    assume "j \<le> k"
-    have "inc_item x j \<in> \<I> k"
-      using Suc.IH[OF _ \<open>j \<le> k\<close>] Suc.prems Orderings.order_class.dual_order.eq_iff \<open>j \<le> k\<close> \<pi>_bin_absorb by force
-    then show ?thesis
-      using \<pi>_mono by fastforce
-  next
-    assume "\<not> j \<le> k"
-    hence "j = Suc k"
-      using le_SucE local.Suc.prems(2) by blast
-
-    have 0: "x \<in> bin (\<I> (Suc k)) (item_origin y)"
-      using local.Suc.prems(3) local.Suc.prems(6) by auto
-    have 1: "y \<in> bin (\<I> (Suc k)) j"
-      using local.Suc.prems(7) by blast
-    have 2: "is_complete y"
-      by (metis Option.option.distinct(1) local.Suc.prems(9) next_symbol_def)
-    have 3: "next_symbol x = Some (item_rule_head y)"
-      by (simp add: item_rule_head_def local.Suc.prems(4) local.Suc.prems(8) rule_head_def)
-
-    have "inc_item x (Suc k) \<in> Complete (Suc k) (\<I> (Suc k))"
-      using 0 1 2 3 Complete_def \<open>j = Suc k\<close> by blast
-    then show ?thesis
-      by (metis Complete_\<pi>_mono \<open>j = Suc k\<close> \<pi>_idempotent in_mono local.\<I>.simps(2))
-  qed
-qed
 
 lemma X: \<comment>\<open>TODO\<close>
   "derives [] \<alpha> \<Longrightarrow> \<alpha> = []"
@@ -903,7 +887,7 @@ proof (standard, standard, standard, standard, standard, standard)
       hence "doc!i = a"
         using slice_nth \<open>[a] = slice i j doc\<close> \<open>j = i + 1\<close> by fastforce
       hence "inc_item x (i+1) \<in> \<I> k"
-        using B \<open>j = i + 1\<close> "1.prems" by blast
+        using Scan_\<I> \<open>j = i + 1\<close> "1.prems" by blast
       then show ?thesis
         by (simp add: \<open>j = i + 1\<close> wf_Init wf_items_def)
     next
@@ -927,7 +911,7 @@ proof (standard, standard, standard, standard, standard, standard)
           using *(1) unfolding Derives1_def by (simp add: Cons_eq_append_conv)
         define y where y_def: "y = Item (N,\<alpha>) 0 i i"
         have "init_item (N, \<alpha>) i \<in> \<I> k"
-          using C[of i k x N \<alpha>] \<open>(N, \<alpha>) \<in> \<RR>\<close> \<open>[a] = [N]\<close> "local.1.prems" by auto
+          using Predict_\<I>[of i k x N \<alpha>] \<open>(N, \<alpha>) \<in> \<RR>\<close> \<open>[a] = [N]\<close> "local.1.prems" by auto
         hence "y \<in> bin (\<I> k) i"
           unfolding init_item_def using y_def by (simp add: bin_def wf_Init wf_items_def)
 
@@ -956,7 +940,7 @@ proof (standard, standard, standard, standard, standard, standard)
         have 3: "item_rule (Item (N,\<alpha>) (length \<alpha>) i j) = (N, \<alpha>)"
           by simp
         have "inc_item x j \<in> \<I> k"
-          using D[OF _ _ 0 2 _ _  _ 3] 1
+          using Complete_\<I>[OF _ _ 0 2 _ _  _ 3] 1
           by (simp add: \<open>(N, \<alpha>) \<in> \<RR>\<close> bin_def is_complete_def item_rule_body_def "local.1.prems" next_symbol_def rule_body_def)
         then show ?thesis
           using wf_Init wf_items_def by force
