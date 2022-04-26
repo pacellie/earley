@@ -282,11 +282,10 @@ definition bin :: "items \<Rightarrow> nat \<Rightarrow> items" where
 
 subsection \<open>Earley algorithm\<close>
 
-locale Earley = CFG +
+locale Earley_Set = CFG +
   fixes doc :: "symbol list"
-  fixes rules :: "rule list"
   assumes valid_doc: "set doc \<subseteq> \<TT>"
-  assumes valid_rules: "set rules = \<RR> \<and> distinct rules"
+  assumes finite_grammar: "finite \<RR>"
 begin
 
 definition Init :: "items" where
@@ -396,6 +395,21 @@ lemma wf_\<I>:
 lemma wf_\<II>:
   "wf_items \<II>"
   unfolding \<II>_def using wf_\<I> by blast
+
+subsection \<open>Boundedness\<close>
+
+definition TOP_\<II> :: "items" where
+  "TOP_\<II> = { Item (N,\<alpha>) d i j | N \<alpha> d i j. (N,\<alpha>) \<in> \<RR> \<and> d \<le> length \<alpha> \<and> i \<le> length doc \<and> j \<le> length doc }"
+
+lemma finite_TOP_\<II>: \<comment>\<open>TODO\<close>
+  "finite TOP_\<II>"
+  \<comment>\<open>Proof via card: #number of rules * #length of longest rule * length doc * length doc\<close>
+  unfolding TOP_\<II>_def using finite_grammar card_ge_0_finite sorry
+
+lemma TOP_\<I>_upper_bound: \<comment>\<open>TODO\<close>
+  "\<II> \<subseteq> TOP_\<II>"
+  using wf_\<II> unfolding \<II>_def TOP_\<II>_def wf_items_def wf_item_def rule_body_def item_rule_body_def
+  by (smt (verit, best) item.collapse Orderings.order_class.dual_order.trans Product_Type.prod.exhaust_sel mem_Collect_eq subsetI)
 
 subsection \<open>Soundness\<close>
 
