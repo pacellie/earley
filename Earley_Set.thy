@@ -283,9 +283,8 @@ definition bin :: "items \<Rightarrow> nat \<Rightarrow> items" where
 subsection \<open>Earley algorithm\<close>
 
 locale Earley_Set = CFG +
-  fixes doc :: "symbol list"
-  assumes valid_doc: "set doc \<subseteq> \<TT>"
-  assumes finite_grammar: "finite \<RR>"
+  fixes inp :: "symbol list"
+  assumes valid_doc: "set inp \<subseteq> \<TT>"
 begin
 
 definition Init :: "items" where
@@ -295,8 +294,8 @@ definition Scan :: "nat \<Rightarrow> items \<Rightarrow> items" where
   "Scan k I = I \<union> 
     { inc_item x (k+1) | x a.
         x \<in> bin I k \<and>
-        doc!k = a \<and>
-        k < length doc \<and>
+        inp!k = a \<and>
+        k < length inp \<and>
         next_symbol x = Some a }"
 
 definition Predict :: "nat \<Rightarrow> items \<Rightarrow> items" where
@@ -322,17 +321,17 @@ fun \<I> :: "nat \<Rightarrow> items" where
 | "\<I> (Suc n) = \<pi> (Suc n) (\<I> n)"
 
 definition \<II> :: "items" where
-  "\<II> = \<I> (length doc)"
+  "\<II> = \<I> (length inp)"
 
 definition is_finished :: "item \<Rightarrow> bool" where
   "is_finished x \<longleftrightarrow> (
     item_rule_head x = \<SS> \<and>
     item_origin x = 0 \<and>
-    item_end x = length doc \<and> 
+    item_end x = length inp \<and> 
     is_complete x)"
 
 definition earley_recognized :: "bool" where
-  "earley_recognized = (\<exists> x \<in> \<II>. is_finished x)"
+  "earley_recognized = (\<exists>x \<in> \<II>. is_finished x)"
 
 subsection \<open>Wellformedness\<close>
 
@@ -341,7 +340,7 @@ definition wf_item :: "item \<Rightarrow> bool" where
     item_rule x \<in> \<RR> \<and> 
     item_dot x \<le> length (item_rule_body x) \<and>
     item_origin x \<le> item_end x \<and> 
-    item_end x \<le> length doc)"
+    item_end x \<le> length inp)"
 
 definition wf_items :: "items \<Rightarrow> bool" where
   "wf_items I = (\<forall>x \<in> I. wf_item x)"
@@ -396,25 +395,10 @@ lemma wf_\<II>:
   "wf_items \<II>"
   unfolding \<II>_def using wf_\<I> by blast
 
-subsection \<open>Boundedness\<close>
-
-definition TOP_\<II> :: "items" where
-  "TOP_\<II> = { Item (N,\<alpha>) d i j | N \<alpha> d i j. (N,\<alpha>) \<in> \<RR> \<and> d \<le> length \<alpha> \<and> i \<le> length doc \<and> j \<le> length doc }"
-
-lemma finite_TOP_\<II>: \<comment>\<open>TODO\<close>
-  "finite TOP_\<II>"
-  \<comment>\<open>Proof via card: #number of rules * #length of longest rule * length doc * length doc\<close>
-  unfolding TOP_\<II>_def using finite_grammar card_ge_0_finite sorry
-
-lemma TOP_\<I>_upper_bound: \<comment>\<open>TODO\<close>
-  "\<II> \<subseteq> TOP_\<II>"
-  using wf_\<II> unfolding \<II>_def TOP_\<II>_def wf_items_def wf_item_def rule_body_def item_rule_body_def
-  by (smt (verit, best) item.collapse Orderings.order_class.dual_order.trans Product_Type.prod.exhaust_sel mem_Collect_eq subsetI)
-
 subsection \<open>Soundness\<close>
 
 definition sound_item :: "item \<Rightarrow> bool" where
-  "sound_item x = derives [item_rule_head x] (slice (item_origin x) (item_end x) doc @ item_\<beta> x)"
+  "sound_item x = derives [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
 
 definition sound_items :: "items \<Rightarrow> bool" where
   "sound_items I = (\<forall>x \<in> I. sound_item x)"
@@ -443,17 +427,17 @@ qed
 lemma sound_item_inc_item:
   assumes "wf_item x" "sound_item x"
   assumes "next_symbol x = Some a"
-  assumes "k < length doc" "doc!k = a" "item_end x = k"
+  assumes "k < length inp" "inp!k = a" "item_end x = k"
   shows "sound_item (inc_item x (k+1))"
 proof -
   define x' where [simp]: "x' = inc_item x (k+1)"
   obtain item_\<beta>' where *: "item_\<beta> x = a # item_\<beta>'"
     using assms(3) next_symbol_def is_complete_def item_\<beta>_def by (auto split: if_splits, metis Cons_nth_drop_Suc leI)
-  have "slice (item_origin x) (item_end x) doc @ item_\<beta> x = slice (item_origin x') (item_end x') doc @ item_\<beta>'"
+  have "slice (item_origin x) (item_end x) inp @ item_\<beta> x = slice (item_origin x') (item_end x') inp @ item_\<beta>'"
     using * assms(1,4-6) slice_append_nth wf_item_def inc_item_def by auto
   moreover have "item_\<beta>' = item_\<beta> x'"
     using * by (auto simp: inc_item_def item_\<beta>_def item_rule_body_def, metis List.list.sel(3) drop_Suc tl_drop)
-  moreover have "derives [item_rule_head x] (slice (item_origin x) (item_end x) doc @ item_\<beta> x)"
+  moreover have "derives [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
     using assms(1,2,6) sound_item_def by blast
   ultimately show ?thesis
     by (simp add: inc_item_def item_rule_head_def sound_item_def)
@@ -487,18 +471,18 @@ proof standard
       "is_complete y" "next_symbol x = Some (item_rule_head y)"
       using \<open>z \<in> Complete k I\<close> unfolding Complete_def by blast
 
-    have "derives [item_rule_head y] (slice (item_origin y) (item_end y) doc)"
+    have "derives [item_rule_head y] (slice (item_origin y) (item_end y) inp)"
       using *(3,4) sound_defs assms bin_def is_complete_def item_\<beta>_def by auto
-    then obtain E where E: "Derivation [item_rule_head y] E (slice (item_origin y) (item_end y) doc)"
+    then obtain E where E: "Derivation [item_rule_head y] E (slice (item_origin y) (item_end y) inp)"
       using derives_implies_Derivation by blast
 
-    have "derives [item_rule_head x] (slice (item_origin x) (item_origin y) doc @ item_\<beta> x)"
+    have "derives [item_rule_head x] (slice (item_origin x) (item_origin y) inp @ item_\<beta> x)"
       using *(2) sound_defs assms bin_def sound_items_def by auto
     moreover have 0: "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"
       using *(5) by (auto simp: next_symbol_def item_\<beta>_def is_complete_def split: if_splits,
                      metis Cons_nth_drop_Suc drop_Suc drop_tl leI)
     ultimately obtain D where D: 
-      "Derivation [item_rule_head x] D (slice (item_origin x) (item_origin y) doc @
+      "Derivation [item_rule_head x] D (slice (item_origin x) (item_origin y) inp @
        [item_rule_head y] @ (tl (item_\<beta> x)))"
       using derives_implies_Derivation by (metis append_Cons append_Nil)
 
@@ -506,17 +490,17 @@ proof standard
       using *(2) assms(1) bin_def wf_items_def by fastforce
     hence "is_sentence (tl (item_\<beta> x))"
       using is_sentence_item_\<beta> is_sentence_cons 0 by metis
-    moreover have "is_sentence (slice (item_origin x) (item_origin y) doc)"
+    moreover have "is_sentence (slice (item_origin x) (item_origin y) inp)"
       by (meson is_sentence_simp is_symbol_def is_terminal_def slice_subset subsetD valid_doc)
     ultimately obtain G where 
-      "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) doc @
-       slice (item_origin y) (item_end y) doc @ tl (item_\<beta> x))"
+      "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
+       slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
       using Derivation_append_rewrite D E by blast
     moreover have "item_origin x \<le> item_origin y"
       using *(2) \<open>wf_item x\<close> bin_def wf_item_def by auto
     moreover have "item_origin y \<le> item_end y"
       using *(3) wf_defs assms(1) bin_def by auto
-    ultimately have "derives [item_rule_head x] (slice (item_origin x) (item_end y) doc @ tl (item_\<beta> x))"
+    ultimately have "derives [item_rule_head x] (slice (item_origin x) (item_end y) inp @ tl (item_\<beta> x))"
       by (metis Derivation_implies_derives append.assoc slice_concat)
     moreover have "tl (item_\<beta> x) = item_\<beta> z"
       using *(1,5) 0 item_\<beta>_def by (auto simp: inc_item_def item_rule_body_def tl_drop drop_Suc)
@@ -549,7 +533,7 @@ lemma sound_\<II>:
   unfolding \<II>_def using sound_\<I> by blast
 
 theorem soundness:
-  "earley_recognized \<Longrightarrow> derives [\<SS>] doc"
+  "earley_recognized \<Longrightarrow> derives [\<SS>] inp"
   using earley_recognized_def sound_\<II> sound_defs is_finished_def item_\<beta>_def by (auto simp: is_complete_def)
 
 subsection \<open>Monotonicity and Absorption\<close>
@@ -582,7 +566,7 @@ qed
 lemma Scan_mk_regular1:
   "\<exists> (P :: symbol \<Rightarrow> item \<Rightarrow> bool) F. Scan k = mk_regular1 P F"
 proof -
-  let ?P = "\<lambda> (a::symbol) (x::item). doc!k = a \<and> item_end x = k \<and> k < length doc \<and> next_symbol x = Some a"
+  let ?P = "\<lambda> (a::symbol) (x::item). inp!k = a \<and> item_end x = k \<and> k < length inp \<and> next_symbol x = Some a"
   let ?F = "\<lambda> (a::symbol) (x::item). inc_item x (k + 1)"
   show ?thesis
     apply (rule_tac x="?P" in exI)
@@ -712,7 +696,7 @@ qed
 subsection \<open>Completeness\<close>
 
 lemma Scan_\<I>:
-  assumes "i+1 \<le> k" "k \<le> length doc" "x \<in> bin (\<I> k) i" "next_symbol x = Some a" "doc!i = a"
+  assumes "i+1 \<le> k" "k \<le> length inp" "x \<in> bin (\<I> k) i" "next_symbol x = Some a" "inp!i = a"
   shows "inc_item x (i+1) \<in> \<I> k"
   using assms
 proof (induction k arbitrary: i x a)
@@ -800,32 +784,20 @@ next
   qed
 qed
 
-definition partially_complete_len :: "nat \<Rightarrow> items \<Rightarrow> nat \<Rightarrow> bool" where
-  "partially_complete_len k I l = (
+definition partially_complete :: "nat \<Rightarrow> items \<Rightarrow> (derivation \<Rightarrow> bool) \<Rightarrow> bool" where
+  "partially_complete k I P = (
     \<forall>i j x a D.
-      i \<le> j \<and> j \<le> k \<and> k \<le> length doc \<and>
+      i \<le> j \<and> j \<le> k \<and> k \<le> length inp \<and>
       x \<in> bin I i \<and> next_symbol x = Some a \<and>
-      Derivation [a] D (slice i j doc) \<and> length D \<le> l \<longrightarrow>
-      inc_item x j \<in> I)"
-
-definition partially_complete :: "nat \<Rightarrow> items \<Rightarrow> bool" where
-  "partially_complete k I = (
-    \<forall>i j x a D.
-      i \<le> j \<and> j \<le> k \<and> k \<le> length doc \<and>
-      x \<in> bin I i \<and> next_symbol x = Some a \<and>
-      Derivation [a] D (slice i j doc) \<longrightarrow>
+      Derivation [a] D (slice i j inp) \<and> P D \<longrightarrow>
       inc_item x j \<in> I
   )"
 
-lemma partially_complete_imp:
-  "partially_complete k I \<Longrightarrow> partially_complete_len k I l"
-  unfolding partially_complete_def partially_complete_len_def by blast
-
 lemma fully_complete:
-  assumes "j \<le> k" "k \<le> length doc"
-  assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "wf_item x"
-  assumes "Derivation (item_\<beta> x) D (slice j k doc)"
-  assumes "partially_complete_len k I (length D)" "wf_items I"
+  assumes "j \<le> k" "k \<le> length inp"
+  assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "wf_items I"
+  assumes "Derivation (item_\<beta> x) D (slice j k inp)"
+  assumes "partially_complete k I (\<lambda>D'. length D' \<le> length D)"
   shows "Item (N,\<alpha>) (length \<alpha>) i k \<in> I"
   using assms
 proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
@@ -834,11 +806,12 @@ proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
     using Nil(1,4) unfolding item_\<alpha>_def item_\<beta>_def item_rule_body_def rule_body_def 
     by (metis item.sel(1) drop_all_iff snd_conv take_all)
   hence "x = Item (N,\<alpha>) (length \<alpha>) i j"
-    using Nil.hyps Nil.prems(3,5) unfolding wf_item_def rule_body_def item_rule_body_def item_defs(4)
-    by (auto, metis drop_all_iff le_antisym)
-  have "Derivation [] D (slice j k doc)"
+    using Nil.hyps Nil.prems(3,4,5)
+    unfolding wf_items_def wf_item_def rule_body_def item_rule_body_def item_defs(4)
+    by (metis item.sel(1,2) drop_all_iff le_antisym snd_conv)
+  have "Derivation [] D (slice j k inp)"
     using Nil.hyps Nil.prems(6) by simp
-  hence "slice j k doc = []"
+  hence "slice j k inp = []"
     using Derivation_from_empty by blast
   hence "j = k"
     unfolding slice_drop_take using Nil.prems(1,2) by simp
@@ -847,51 +820,51 @@ proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
 next
   case (Cons b bs)
   then obtain j' E F where *: 
-    "Derivation [b] E (slice j j' doc)"
-    "Derivation bs F (slice j' k doc)"
+    "Derivation [b] E (slice j j' inp)"
+    "Derivation bs F (slice j' k inp)"
     "j \<le> j'" "j' \<le> k" "length E \<le> length D" "length F \<le> length D"
-    using Derivation_concat_split[of "[b]" bs D "slice j k doc"] slice_concat_Ex
+    using Derivation_concat_split[of "[b]" bs D "slice j k inp"] slice_concat_Ex
     by (metis append_Cons append_Nil Cons.prems(1))
   have "x \<in> bin I j"
     using bin_def Cons.prems(3,4) by auto
   moreover have "next_symbol x = Some b"
     using Cons unfolding item_defs(4) next_symbol_def is_complete_def by (auto, metis nth_via_drop)
   ultimately have "inc_item x j' \<in> I"
-    using *(1,3-5) Cons.prems(2-4,7) partially_complete_len_def by blast
-  moreover have "partially_complete_len k I (length F)"
-    using Cons.prems(7) *(6) unfolding partially_complete_len_def by fastforce
+    using *(1,3-5) Cons.prems(2-4,7) partially_complete_def by metis
+  moreover have "partially_complete k I (\<lambda>D'. length D' \<le> length F)"
+    using Cons.prems(7) *(6) unfolding partially_complete_def by fastforce
   moreover have "bs = item_\<beta> (Item (N,\<alpha>) (d+1) i j')"
     using Cons.hyps(2) Cons.prems(3) unfolding item_defs(4) item_rule_body_def 
     by (auto, metis List.list.sel(3) drop_Suc drop_tl)
   ultimately show ?case
-    using Cons.hyps(1) *(2,4) inc_item_def Cons.prems(2,3,8) wf_items_def by auto
+    using Cons.hyps(1) *(2,4) inc_item_def Cons.prems(2,3,5) wf_items_def by auto
 qed
 
 lemma partially_complete_\<I>:
-  "partially_complete k (\<I> k)"
+  "partially_complete k (\<I> k) (\<lambda>_. True)"
   unfolding partially_complete_def
 proof (standard, standard, standard, standard, standard, standard)
   fix x i a D j
   assume
-    "i \<le> j \<and> j \<le> k \<and> k \<le> length doc \<and>
+    "i \<le> j \<and> j \<le> k \<and> k \<le> length inp \<and>
      x \<in> bin (\<I> k) i \<and> next_symbol x = Some a \<and>
-     Derivation [a] D (slice i j doc)"
+     Derivation [a] D (slice i j inp) \<and> (\<lambda>_. True) D"
   thus "inc_item x j \<in> \<I> k"
   proof (induction "length D" arbitrary: x i a j D rule: nat_less_induct)
     case 1
     show ?case
     proof cases
       assume "D = []"
-      hence "[a] = slice i j doc"
+      hence "[a] = slice i j inp"
         using "1.prems" by force
-      moreover have "j \<le> length doc"
+      moreover have "j \<le> length inp"
         using le_trans "1.prems" by blast
       ultimately have "j = i+1"
         using slice_singleton by metis
-      hence "i < length doc"
-        using \<open>j \<le> length doc\<close> discrete by blast
-      hence "doc!i = a"
-        using slice_nth \<open>[a] = slice i j doc\<close> \<open>j = i + 1\<close> by fastforce
+      hence "i < length inp"
+        using \<open>j \<le> length inp\<close> discrete by blast
+      hence "inp!i = a"
+        using slice_nth \<open>[a] = slice i j inp\<close> \<open>j = i + 1\<close> by fastforce
       hence "inc_item x (i+1) \<in> \<I> k"
         using Scan_\<I> \<open>j = i + 1\<close> "1.prems" by blast
       thus ?thesis
@@ -900,7 +873,7 @@ proof (standard, standard, standard, standard, standard, standard)
       assume "\<not> D = []"
       then obtain d D' where "D = d # D'"
         by (meson List.list.exhaust)
-      then obtain b where *: "Derives1 [a] (fst d) (snd d) b" "Derivation b D' (slice i j doc)"
+      then obtain b where *: "Derives1 [a] (fst d) (snd d) b" "Derivation b D' (slice i j inp)"
         using "1.prems" by auto
       show ?thesis
       proof cases
@@ -922,11 +895,11 @@ proof (standard, standard, standard, standard, standard, standard)
           unfolding init_item_def using y_def by (simp add: bin_def wf_Init wf_items_def)
         have "length D' < length D"
           using \<open>D = d # D'\<close> by fastforce
-        hence "partially_complete_len k (\<I> k) (length D')"
-          unfolding partially_complete_len_def using "1.hyps" "1.prems" le_less_trans by blast
-        hence "partially_complete_len j (\<I> k) (length D')"
-          unfolding partially_complete_len_def using "1.prems" by (meson Orderings.order_class.dual_order.trans)
-        moreover have "Derivation (item_\<beta> y) D' (slice i j doc)"
+        hence "partially_complete k (\<I> k) (\<lambda>E. length E \<le> length D')"
+          unfolding partially_complete_def using "1.hyps" "1.prems" le_less_trans by blast
+        hence "partially_complete j (\<I> k) (\<lambda>E. length E \<le> length D')"
+          unfolding partially_complete_def using "1.prems" by (meson Orderings.order_class.dual_order.trans)
+        moreover have "Derivation (item_\<beta> y) D' (slice i j inp)"
           using #(2) *(2) item_\<beta>_def item_rule_body_def rule_body_def y_def by force
         ultimately have 0: "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (\<I> k) j"
           using fully_complete wf_\<I> "1.prems" wf_items_def \<open>y \<in> bin (\<I> k) i\<close> bin_def y_def by force
@@ -942,7 +915,7 @@ proof (standard, standard, standard, standard, standard, standard)
 qed
 
 lemma partially_complete_\<II>:
-  "partially_complete (length doc) \<II>"
+  "partially_complete (length inp) \<II> (\<lambda>_. True)"
   by (simp add: \<II>_def partially_complete_\<I>)
 
 lemma Init_sub_\<I>:
@@ -950,43 +923,44 @@ lemma Init_sub_\<I>:
   using \<pi>_mono by (induction k) auto
 
 lemma Derivation_\<SS>1:
-  assumes "Derivation [\<SS>] D doc"
-  shows "\<exists>\<alpha> E. Derivation \<alpha> E doc \<and> (\<SS>,\<alpha>) \<in> \<RR>"
+  assumes "Derivation [\<SS>] D inp"
+  shows "\<exists>\<alpha> E. Derivation \<alpha> E inp \<and> (\<SS>,\<alpha>) \<in> \<RR>"
 proof (cases D)
   case Nil
   thus ?thesis
     using is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal valid_doc assms by force
 next
   case (Cons d D)
-  then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D doc"
+  then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D inp"
     using assms by auto
   hence "(\<SS>, \<alpha>) \<in> \<RR>"
     unfolding Derives1_def
     by (metis List.append.right_neutral List.list.discI append_eq_Cons_conv append_is_Nil_conv nth_Cons_0 self_append_conv2)
   thus ?thesis
-    using \<open>Derivation \<alpha> D doc\<close> by auto
+    using \<open>Derivation \<alpha> D inp\<close> by auto
 qed
 
 theorem completeness:
-  assumes "derives [\<SS>] doc"
+  assumes "derives [\<SS>] inp"
   shows "earley_recognized"
 proof -
-  obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> \<RR>" "derives \<alpha> doc"
+  obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> \<RR>" "derives \<alpha> inp"
     using Derivation_\<SS>1 assms Derivation_implies_derives derives_implies_Derivation by blast
   let ?x = "Item (\<SS>,\<alpha>) 0 0 0"
   have "?x \<in> \<II>" "wf_item ?x"
     unfolding \<II>_def using *(1) Init_sub_\<I> Init_def wf_Init init_item_def by auto
-  moreover have "derives (item_\<beta> ?x) (slice 0 (length doc) doc)"
+  moreover have "derives (item_\<beta> ?x) (slice 0 (length inp) inp)"
     using *(2) item_defs(4) by (simp add: item_rule_body_def rule_body_def)
-  ultimately have "Item (\<SS>,\<alpha>) (length \<alpha>) 0 (length doc) \<in> \<II>"
-    using fully_complete partially_complete_\<II> wf_\<II> partially_complete_imp derives_implies_Derivation
-    by (metis Nat.bot_nat_0.extremum le_refl)
+  ultimately have "Item (\<SS>,\<alpha>) (length \<alpha>) 0 (length inp) \<in> \<II>"
+    using partially_complete_\<II> fully_complete unfolding partially_complete_def 
+    using fully_complete wf_\<II> derives_implies_Derivation
+    by (auto, metis Earley_Set.item.sel(4) le_refl slice_id wf_defs(1))
   then show ?thesis
     unfolding earley_recognized_def is_finished_def by (auto simp: is_complete_def item_defs, force)
 qed
 
 corollary correctness:
-  "earley_recognized \<longleftrightarrow> derives [\<SS>] doc"
+  "earley_recognized \<longleftrightarrow> derives [\<SS>] inp"
   using soundness completeness by blast
 
 end
