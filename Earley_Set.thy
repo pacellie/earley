@@ -3,7 +3,6 @@ theory Earley_Set
     LocalLexing.Limit
     LocalLexing.CFG
     LocalLexing.Derivations
-    "HOL-Library.While_Combinator" \<comment>\<open>TODO: Use?\<close>
 begin
 
 declare [[names_short]]
@@ -284,7 +283,7 @@ subsection \<open>Earley algorithm\<close>
 
 locale Earley_Set = CFG +
   fixes inp :: "symbol list"
-  assumes valid_doc: "set inp \<subseteq> \<TT>"
+  assumes valid_inp: "set inp \<subseteq> \<TT>"
 begin
 
 definition Init :: "items" where
@@ -491,7 +490,7 @@ proof standard
     hence "is_sentence (tl (item_\<beta> x))"
       using is_sentence_item_\<beta> is_sentence_cons 0 by metis
     moreover have "is_sentence (slice (item_origin x) (item_origin y) inp)"
-      by (meson is_sentence_simp is_symbol_def is_terminal_def slice_subset subsetD valid_doc)
+      by (meson is_sentence_simp is_symbol_def is_terminal_def slice_subset subsetD valid_inp)
     ultimately obtain G where 
       "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
        slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
@@ -928,7 +927,7 @@ lemma Derivation_\<SS>1:
 proof (cases D)
   case Nil
   thus ?thesis
-    using is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal valid_doc assms by force
+    using is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal valid_inp assms by force
 next
   case (Cons d D)
   then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D inp"
