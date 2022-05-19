@@ -622,6 +622,15 @@ lemma Complete_sub_mono:
   "I \<subseteq> J \<Longrightarrow> Complete k I \<subseteq> Complete k J"
   unfolding Complete_def bin_def by blast
 
+lemma funpower_\<pi>1_sub_mono:
+  "I \<subseteq> J \<Longrightarrow> funpower (Scan k \<circ> Complete k \<circ> Predict k) n I \<subseteq>  funpower (Scan k \<circ> Complete k \<circ> Predict k) n J"
+  by (induction n) (auto, meson Complete_sub_mono Predict_sub_mono Scan_sub_mono subsetD)
+
+lemma \<pi>_sub_mono:
+  "I \<subseteq> J \<Longrightarrow> \<pi> k I \<subseteq> \<pi> k J"
+  unfolding \<pi>_def limit_def natUnion_def using funpower_\<pi>1_sub_mono sledgehammer
+  by (smt (verit, ccfv_threshold) Earley_Set.Earley_Set.\<pi>_step_regular Earley_Set_axioms \<pi>1_sub_mono \<pi>_def \<pi>_regular limit_upperbound order_trans regular_fixpoint regular_implies_setmonotone subset_setmonotone)
+
 lemma Scan_\<pi>1_mono:
   "Scan k I \<subseteq> (Scan k \<circ> Complete k \<circ> Predict k) I"
   by (metis Complete_mono Predict_mono Scan_sub_mono comp_def subset_trans)
@@ -632,7 +641,7 @@ lemma Predict_\<pi>1_mono:
 
 lemma Complete_\<pi>1_mono:
   "Complete k I \<subseteq> (Scan k \<circ> Complete k \<circ> Predict k) I"
-  by (metis Complete_sub_mono Orderings.order_class.dual_order.trans Predict_mono Scan_mono comp_apply)
+  by (metis Complete_sub_mono Orderings.order_class.dual_order.trans Predict_mono Scan_mono comp_apply)+
 
 lemma \<pi>1_\<pi>_mono:
   "(Scan k \<circ> Complete k \<circ> Predict k) I \<subseteq> \<pi> k I"
