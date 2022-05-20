@@ -628,8 +628,16 @@ lemma funpower_\<pi>1_sub_mono:
 
 lemma \<pi>_sub_mono:
   "I \<subseteq> J \<Longrightarrow> \<pi> k I \<subseteq> \<pi> k J"
-  unfolding \<pi>_def limit_def natUnion_def using funpower_\<pi>1_sub_mono sledgehammer
-  by (smt (verit, ccfv_threshold) Earley_Set.Earley_Set.\<pi>_step_regular Earley_Set_axioms \<pi>1_sub_mono \<pi>_def \<pi>_regular limit_upperbound order_trans regular_fixpoint regular_implies_setmonotone subset_setmonotone)
+proof standard
+  fix x
+  assume "I \<subseteq> J" "x \<in> \<pi> k I"
+  then obtain n where "x \<in> funpower (Scan k \<circ> Complete k \<circ> Predict k) n I"
+    unfolding \<pi>_def limit_def natUnion_def by blast
+  hence "x \<in> funpower (Scan k \<circ> Complete k \<circ> Predict k) n J"
+    using \<open>I \<subseteq> J\<close> funpower_\<pi>1_sub_mono by blast
+  thus "x \<in> \<pi> k J"
+    unfolding \<pi>_def limit_def natUnion_def by blast
+qed
 
 lemma Scan_\<pi>1_mono:
   "Scan k I \<subseteq> (Scan k \<circ> Complete k \<circ> Predict k) I"
