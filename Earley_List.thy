@@ -1,7 +1,7 @@
 theory Earley_List
   imports 
     Earley_Set
-    "HOL-Library.While_Combinator" \<comment>\<open>TODO: Use?\<close>
+    (* "HOL-Library.While_Combinator" \<comment>\<open>TODO: Use?\<close> *)
 begin
 
 datatype bin = Bin (items: "item list")
@@ -19,6 +19,10 @@ definition app_bin :: "bin \<Rightarrow> item list \<Rightarrow> bin" where
 
 definition app_bins :: "bins \<Rightarrow> nat \<Rightarrow> item list \<Rightarrow> bins" where
   "app_bins bs k is = Bins ((bins bs)[k := app_bin ((bins bs)!k) is])"
+
+lemma length_bins_app_bins:
+  "length (bins (app_bins bs k is)) = length (bins bs)"
+  unfolding app_bins_def by simp
 
 lemma set_bin_app_bin:
   "set_bin (app_bin b is) = set_bin b \<union> set is"
@@ -133,10 +137,119 @@ definition \<II>_it :: "bins" where
 subsection \<open>Wellformed Bins\<close>
 
 definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
-  "wf_bin k b \<longleftrightarrow> (\<forall>x \<in> set (items b). item_end x = k \<and> wf_item x)"
+  "wf_bin k b \<longleftrightarrow> (\<forall>x \<in> set (items b). wf_item x \<and> item_end x = k)"
 
 definition wf_bins :: "bins \<Rightarrow> bool" where
-  "wf_bins bs \<longleftrightarrow> (\<forall>k. wf_bin k (bins bs ! k))"
+  "wf_bins bs \<longleftrightarrow> (\<forall>k < length (bins bs). wf_bin k (bins bs ! k))"
+
+lemma length_bins_Init_it:
+  "length (bins Init_it) = length inp + 1"
+  unfolding Init_it_def by simp
+
+lemma length_bins_\<pi>_it':
+  "length (bins (\<pi>_it' k bs i)) = length (bins bs)"
+  by (induction k bs i rule: \<pi>_it'.induct) (auto simp: length_bins_app_bins Let_def split: if_splits option.splits)
+
+lemma length_bins_\<pi>_it:
+  "length (bins (\<pi>_it k bs)) = length (bins bs)"
+  unfolding \<pi>_it_def using length_bins_\<pi>_it' by blast
+
+lemma length_bins_\<I>_it:
+  "length (bins (\<I>_it k)) = length (bins Init_it)"
+  by (induction k) (auto simp: length_bins_\<pi>_it)
+
+lemma wf_bins_Init_it:
+  "wf_bins Init_it"
+proof -
+  let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) rules"
+  let ?b0 = "Bin (map (\<lambda>r. init_item r 0) ?rs)"
+  let ?bs = "replicate (length inp + 1) (Bin [])"
+
+  have "wf_bin 0 ?b0"
+    unfolding wf_bin_def wf_item_def using valid_rules by (auto simp: init_item_def)
+  moreover have "wf_bins (Bins ?bs)"
+    unfolding wf_bins_def wf_bin_def
+    by (metis bin.sel bins.sel List.list.set(1) empty_iff length_replicate nth_replicate)
+  ultimately show ?thesis
+    by (metis bins.sel Init_it_def length_list_update nth_list_update_eq nth_list_update_neq wf_bins_def)
+qed
+
+lemma wf_bins_Scan_it_aux: \<comment>\<open>TODO\<close>
+  "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> x \<in> set_bin (bins bs ! k) \<Longrightarrow> k < length inp \<Longrightarrow> 
+    next_symbol x \<noteq> None \<Longrightarrow> wf_item (inc_item x (k+1)) \<and> item_end (inc_item x (k+1)) = (k+1)"
+  apply (auto simp: wf_bins_def wf_bin_def set_bin_def wf_item_def inc_item_def is_complete_def next_symbol_def item_rule_body_def split: if_splits)
+  by fastforce
+
+lemma wf_bins_Scan_it: \<comment>\<open>TODO\<close>
+  "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> x \<in> set_bin (bins bs ! k) \<Longrightarrow> k < length inp \<Longrightarrow> 
+    next_symbol x \<noteq> None \<Longrightarrow> \<forall>y \<in> set (Scan_it k a x bs). wf_item y \<and> item_end y = (k+1)" 
+  by (metis Groups.ab_semigroup_add_class.add.commute List.list.size(3) List.list.size(4) One_nat_def Scan_it_def gr_implies_not0 in_set_conv_nth not_less_less_Suc_eq nth_Cons_0 plus_1_eq_Suc wf_bins_Scan_it_aux)
+
+lemma wf_bins_Predict_it: \<comment>\<open>TODO\<close>
+  "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> k < length inp \<Longrightarrow> \<forall>y \<in> set (Predict_it k X bs). wf_item y \<and> item_end y = k"
+  by (auto simp: Predict_it_def wf_item_def wf_bins_def wf_bin_def init_item_def valid_rules)
+
+lemma wf_bins_Complete_it: \<comment>\<open>TODO\<close>
+  "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> y \<in> set_bin (bins bs ! k) \<Longrightarrow> \<forall>x \<in> set (Complete_it k y bs). wf_item x \<and> item_end x = k"
+  unfolding wf_bins_def wf_bin_def wf_item_def Complete_it_def inc_item_def
+  apply (auto simp: set_bin_def)
+  apply (metis Orderings.order_class.dual_order.strict_trans2)
+  apply (metis item.sel(1) Option.option.discI is_complete_def item_rule_body_def next_symbol_def not_less_eq_eq)
+  apply (metis Orderings.order_class.dual_order.strict_trans2 not_le)
+  done
+
+lemma wf_bins_\<pi>_it':
+  "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> k < length inp \<Longrightarrow> wf_bins (\<pi>_it' k bs i)"
+proof (induction k bs i rule: \<pi>_it'.induct)
+  case (1 k bs i)
+  show ?case
+  proof (cases "\<not> length (items (bins bs ! k)) \<le> i")
+    case True
+
+    let ?x = "items (bins bs ! k) ! i"
+    have 0: "?x \<in> set_bin (bins bs ! k)"
+      by (simp add: True not_le_imp_less set_bin_def)
+
+    have "next_symbol ?x \<noteq> None \<Longrightarrow> \<forall>a. \<forall>y \<in> set (Scan_it k a ?x bs). wf_item y \<and> item_end y = (k+1)"
+      using "1.prems" wf_bins_Scan_it 0 by blast
+    hence 1: "next_symbol ?x \<noteq> None \<Longrightarrow> \<forall>a. wf_bins (app_bins bs (k+1) (Scan_it k a ?x bs))"
+      using set_bins_app_bins[OF "1.prems"(2)] unfolding set_bins_def wf_bins_def wf_bin_def
+      by (smt (verit, ccfv_threshold) "local.1.prems"(1) Earley_List.Earley_List.wf_bin_def Earley_List.bins.sel Earley_List_axioms Un_iff app_bins_def length_bins_app_bins nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def wf_bins_def)
+    have "\<forall>X. \<forall>y \<in> set (Predict_it k X bs). wf_item y \<and> item_end y = k"
+      using "1.prems" wf_bins_Predict_it 0 by blast
+    hence 2: "\<forall>X. wf_bins (app_bins bs k (Predict_it k X bs))"
+      using set_bins_app_bins[OF "1.prems"(2)] unfolding set_bins_def wf_bins_def wf_bin_def
+      by (smt (verit, ccfv_threshold) "local.1.prems"(1) Earley_List.Earley_List.wf_bin_def Earley_List.bins.sel Earley_List_axioms Un_iff app_bins_def length_bins_app_bins nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def wf_bins_def)
+    have "\<forall>x \<in> set (Complete_it k ?x bs). wf_item x \<and> item_end x = k"
+      using "1.prems" wf_bins_Complete_it 0 by blast
+    hence 3: "wf_bins (app_bins bs k (Complete_it k ?x bs))"
+      using set_bins_app_bins[OF "1.prems"(2)] unfolding set_bins_def wf_bins_def wf_bin_def
+      by (smt (verit) "1.prems"(1) wf_bin_def bins.sel Earley_List_axioms UnE app_bins_def length_bins_app_bins nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def wf_bins_def)
+
+    let ?xa = "
+(case next_symbol ?x of None \<Rightarrow> app_bins bs k (Complete_it k ?x bs)
+ | Some a \<Rightarrow> if is_terminal a then app_bins bs (k + 1) (Scan_it k a ?x bs) else app_bins bs k (Predict_it k a bs))"
+
+    have 4: "wf_bins ?xa"
+      using 1 2 3 by (auto split: option.split)
+    moreover have 5: "k < length (bins ?xa)"
+      apply (auto split: option.split)
+        apply (auto simp add: "local.1.prems"(2) length_bins_app_bins)
+      done
+    ultimately have "wf_bins (\<pi>_it' k ?xa (i + 1))"
+      using "1.IH"[OF True _ _ 4 5] "local.1.prems"(3) by blast
+    then show ?thesis
+      using True by (auto simp: Let_def)
+  next
+    case False
+    then show ?thesis
+      using "local.1.prems"(1) by auto
+  qed
+qed
+
+lemma wf_bins_\<pi>_it:
+  "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> k < length inp \<Longrightarrow> wf_bins (\<pi>_it k bs)"
+  using \<pi>_it_def wf_bins_\<pi>_it' by presburger
 
 subsection \<open>Equality of generated bins\<close>
 \<comment>\<open>TODO: distinctness for termination proof\<close>
@@ -146,7 +259,7 @@ lemma Init_it_eq_Init:
   unfolding set_bins_def set_bin_def Init_it_def Init_def rule_head_def
   by (auto simp: valid_rules; blast)
 
-lemma A:
+lemma Complete_it_sub_Complete:
   assumes "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "next_symbol y = None" "wf_bins bs" "k < length (bins bs)"
   shows "set (Complete_it k y bs) \<subseteq> Complete k I"
 proof standard
@@ -156,7 +269,7 @@ proof standard
   have "y \<in> set_bins bs"
     using assms(2) assms(5) nth_mem set_bins_def by auto
   moreover have "item_end y = k"
-    using assms(2) assms(4) set_bin_def wf_bin_def wf_bins_def by blast
+    using assms(2) assms(4,5) set_bin_def wf_bin_def wf_bins_def by blast
   ultimately have 0: "y \<in> bin I k"
     unfolding bin_def using assms(1) by blast
 
@@ -181,22 +294,9 @@ proof standard
   have 5: "is_complete y"
     using assms(3) next_symbol_def by (metis not_None_eq)
 
-  thm Complete_it_def Complete_def
-
   show "x \<in> Complete k I"
     using 0 1(1) 3 4 5 unfolding Complete_def by blast
 qed
-
-lemma B1:
-  "wf_bins bs \<Longrightarrow> \<forall>x \<in> set (Complete_it k y bs). item_end x = k"
-  unfolding wf_bins_def wf_bin_def Complete_it_def inc_item_def by simp
-
-lemma B2:
-  "wf_bins bs \<Longrightarrow> k \<le> length inp \<Longrightarrow> y \<in> set_bin (bins bs ! k) \<Longrightarrow> \<forall>x \<in> set (Complete_it k y bs). wf_item x"
-  unfolding wf_bins_def wf_bin_def wf_item_def Complete_it_def inc_item_def
-  apply (auto)
-   apply (metis Earley_Set.item.sel(1) Option.option.discI is_complete_def item_rule_body_def next_symbol_def not_less_eq_eq)
-  by (metis le_trans set_bin_def)
 
 lemma \<pi>_it'_sub_\<pi>:
   "set_bins bs \<subseteq> I \<Longrightarrow> k < length (bins bs) \<Longrightarrow> wf_bins bs \<Longrightarrow> set_bins (\<pi>_it' k bs i) \<subseteq> \<pi> k I"
@@ -228,7 +328,7 @@ proof (induction k bs i arbitrary: I rule: \<pi>_it'.induct)
       also have "... \<subseteq> I \<union> set (Complete_it k ?x bs)"
         using "1.prems" by blast
       also have "... \<subseteq> I \<union> Complete k I"
-        using A[OF "1.prems"(1) 0 1] "1.prems"(2,3) by blast
+        using Complete_it_sub_Complete[OF "1.prems"(1) 0 1] "1.prems"(2,3) by blast
       also have "... = Complete k I"
         using Complete_mono by blast
       finally have 0: "set_bins (app_bins bs k (Complete_it k ?x bs)) \<subseteq> Complete k I" .
@@ -236,8 +336,8 @@ proof (induction k bs i arbitrary: I rule: \<pi>_it'.induct)
       have 1: "k < length (bins (app_bins bs k (Complete_it k ?x bs)))"
         by (simp add: "1.prems"(2) app_bins_def)
       have 2: "wf_bins (app_bins bs k (Complete_it k (items (bins bs ! k) ! i) bs))"
-        using 0 sledgehammer
-        by (smt (z3) "local.1.prems"(2) "local.1.prems"(3) B2 Earley_List.Earley_List.B1 Earley_List.bins.sel Earley_List_axioms False UnE app_bins_def not_le_imp_less nth_list_update_eq nth_list_update_neq nth_mem set_bin_app_bin set_bin_def wf_bin_def wf_bins_def wf_item_def)
+        using 0
+        by (smt (verit, del_insts) "1.prems"(3) wf_bins_Complete_it wf_bin_def bins.sel Earley_List_axioms False UnE app_bins_def length_list_update not_le_imp_less nth_list_update_eq nth_list_update_neq nth_mem set_bin_app_bin set_bin_def wf_bins_def)
 
       have "set_bins (\<pi>_it' k bs i) = set_bins (\<pi>_it' k (app_bins bs k (Complete_it k ?x bs)) (i + 1))"
         by (metis (no_types, lifting) False Option.option.simps(4) \<open>next_symbol (items (bins bs ! k) ! i) = None\<close> local.\<pi>_it'.simps)
@@ -259,51 +359,32 @@ lemma \<pi>_it_sub_\<pi>:
   "set_bins bs \<subseteq> I \<Longrightarrow> k < length (bins bs) \<Longrightarrow> wf_bins bs \<Longrightarrow> set_bins (\<pi>_it k bs) \<subseteq> \<pi> k I"
   using \<pi>_it'_sub_\<pi> \<pi>_it_def by metis
 
-lemma Q:
-  "wf_bins Init_it"
-  sorry
-
-lemma Q':
-  "wf_bins bs \<Longrightarrow> wf_bins (\<pi>_it k bs)"
-  sorry
-
-lemma Q'':
-  "length (bins (\<pi>_it k bs)) = length (bins bs)"
-  sorry
-
-lemma \<I>_it_length:
-  "length (bins (\<I>_it k)) = length (bins Init_it)"
-  by (induction k) (auto simp: Q'')
-
 lemma \<I>_it_wf_bins:
-  "wf_bins (\<I>_it k)"
-  by (induction k) (auto simp: Q Q')
+  "k < length (bins Init_it) \<Longrightarrow> k < length inp \<Longrightarrow> wf_bins (\<I>_it k)"
+  by (induction k) (auto simp: wf_bins_Init_it wf_bins_\<pi>_it length_bins_\<I>_it)
 
 lemma \<I>_it_sub_\<I>:
   "k < length (bins Init_it) \<Longrightarrow> set_bins (\<I>_it k) \<subseteq> \<I> k"
 proof (induction k)
   case 0
   then show ?case
-    by (auto simp: \<pi>_it_sub_\<pi> Q Init_it_eq_Init)
+    by (auto simp: \<pi>_it_sub_\<pi> wf_bins_Init_it Init_it_eq_Init)
 next
   case (Suc k)
   hence 0: "set_bins (\<I>_it k) \<subseteq> \<I> k"
     by (simp add: Suc_lessD)
   have 1: "Suc k < length (bins (\<I>_it k))"
-    using \<I>_it_length local.Suc.prems by force
+    using length_bins_\<I>_it Suc.prems by force
   have "set_bins (\<pi>_it (Suc k) (\<I>_it k)) \<subseteq> \<pi> (Suc k) (\<I> k)"
-    using \<pi>_it_sub_\<pi>[OF 0 1] \<I>_it_wf_bins by presburger
+    using \<pi>_it_sub_\<pi>[OF 0 1] \<I>_it_wf_bins
+    by (metis Suc_eq_plus1 Suc_lessD Suc_less_eq length_bins_Init_it Suc.prems)
   then show ?case
     by simp
 qed
 
-lemma Q''':
-  "length (bins Init_it) = length inp + 1"
-  unfolding Init_it_def by simp
-
 lemma \<II>_it_sub_\<II>:
   "set_bins \<II>_it \<subseteq> \<II>"
-  using \<I>_it_sub_\<I> \<II>_def \<II>_it_def by (simp add: Q''')
+  using \<I>_it_sub_\<I> \<II>_def \<II>_it_def by (simp add: length_bins_Init_it)
 
 end
 
