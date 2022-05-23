@@ -152,8 +152,9 @@ definition \<II>_it :: "bins" where
 
 subsection \<open>Wellformed Bins\<close>
 
+\<comment>\<open>TODO: add distinct condition on bin\<close>
 definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
-  "wf_bin k b \<longleftrightarrow> (distinct (items b) \<and> (\<forall>x \<in> set (items b). wf_item x \<and> item_end x = k))"
+  "wf_bin k b \<longleftrightarrow> (\<forall>x \<in> set (items b). wf_item x \<and> item_end x = k)"
 
 definition wf_bins :: "bins \<Rightarrow> bool" where
   "wf_bins bs \<longleftrightarrow> (\<forall>k < length (bins bs). wf_bin k (bins bs ! k))"
@@ -180,15 +181,12 @@ proof -
   let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) rules"
   let ?b0 = "Bin (map (\<lambda>r. init_item r 0) ?rs)"
   let ?bs = "replicate (length inp + 1) (Bin [])"
-  have "\<forall>xs. inj_on (\<lambda>r. init_item r 0) (set xs)"
-    by (simp add: init_item_def inj_on_def)
-  hence "distinct (items ?b0)"
-    using valid_rules using distinct_map by force
-  hence "wf_bin 0 ?b0"
+
+  have "wf_bin 0 ?b0"
     unfolding wf_bin_def wf_item_def using valid_rules by (auto simp: init_item_def)
   moreover have "wf_bins (Bins ?bs)"
     unfolding wf_bins_def wf_bin_def
-    by (metis bin.sel bins.sel List.distinct.simps(1) List.list.set(1) empty_iff length_replicate nth_replicate)
+    by (metis bin.sel bins.sel List.list.set(1) empty_iff length_replicate nth_replicate)
   ultimately show ?thesis
     by (metis bins.sel Init_it_def length_list_update nth_list_update_eq nth_list_update_neq wf_bins_def)
 qed
@@ -229,18 +227,21 @@ proof (induction k bs i rule: \<pi>_it'.induct)
     have 0: "?x \<in> set_bin (bins bs ! k)"
       by (simp add: True not_le_imp_less set_bin_def)
 
-    have "next_symbol ?x \<noteq> None \<Longrightarrow> \<forall>a. distinct (Scan_it k a ?x bs) \<and> (\<forall>y \<in> set (Scan_it k a ?x bs). wf_item y \<and> item_end y = (k+1))"
-      using "1.prems" wf_bins_Scan_it 0 sorry
+    have "next_symbol ?x \<noteq> None \<Longrightarrow> \<forall>a. \<forall>y \<in> set (Scan_it k a ?x bs). wf_item y \<and> item_end y = (k+1)"
+      using "1.prems" wf_bins_Scan_it 0 by blast
     hence 1: "next_symbol ?x \<noteq> None \<Longrightarrow> \<forall>a. wf_bins (app_bins bs (k+1) (Scan_it k a ?x bs))"
-      using set_bins_app_bins[OF "1.prems"(2)] sorry
-    have "\<forall>X. distinct (Predict_it k X bs) \<and> (\<forall>y \<in> set (Predict_it k X bs). wf_item y \<and> item_end y = k)"
-      using "1.prems" wf_bins_Predict_it 0 sorry
+      using set_bins_app_bins[OF "1.prems"(2)] unfolding set_bins_def wf_bins_def wf_bin_def
+      by (smt (verit, ccfv_threshold) "local.1.prems"(1) Earley_List.Earley_List.wf_bin_def Earley_List.bins.sel Earley_List_axioms Un_iff app_bins_def length_bins_app_bins nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def wf_bins_def)
+    have "\<forall>X. \<forall>y \<in> set (Predict_it k X bs). wf_item y \<and> item_end y = k"
+      using "1.prems" wf_bins_Predict_it 0 by blast
     hence 2: "\<forall>X. wf_bins (app_bins bs k (Predict_it k X bs))"
-      using set_bins_app_bins[OF "1.prems"(2)] sorry
-    have "distinct (Complete_it k ?x bs) \<and> (\<forall>x \<in> set (Complete_it k ?x bs). wf_item x \<and> item_end x = k)"
-      using "1.prems" wf_bins_Complete_it 0 sorry
+      using set_bins_app_bins[OF "1.prems"(2)] unfolding set_bins_def wf_bins_def wf_bin_def
+      by (smt (verit, ccfv_threshold) "local.1.prems"(1) Earley_List.Earley_List.wf_bin_def Earley_List.bins.sel Earley_List_axioms Un_iff app_bins_def length_bins_app_bins nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def wf_bins_def)
+    have "\<forall>x \<in> set (Complete_it k ?x bs). wf_item x \<and> item_end x = k"
+      using "1.prems" wf_bins_Complete_it 0 by blast
     hence 3: "wf_bins (app_bins bs k (Complete_it k ?x bs))"
-      using set_bins_app_bins[OF "1.prems"(2)] sorry
+      using set_bins_app_bins[OF "1.prems"(2)] unfolding set_bins_def wf_bins_def wf_bin_def
+      by (smt (verit) "1.prems"(1) wf_bin_def bins.sel Earley_List_axioms UnE app_bins_def length_bins_app_bins nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def wf_bins_def)
 
     let ?xa = "
 (case next_symbol ?x of None \<Rightarrow> app_bins bs k (Complete_it k ?x bs)
