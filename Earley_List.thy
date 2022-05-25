@@ -459,6 +459,82 @@ lemma \<II>_it_sub_\<II>:
   "set_bins \<II>_it \<subseteq> \<II>"
   using \<I>_it_sub_\<I> \<II>_def \<II>_it_def length_bins_Init_it by auto
 
+subsection \<open>Completeness\<close>
+
+lemma A:
+  "Scan k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> Scan k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
+  sorry
+
+lemma B:
+  "Predict k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> Predict k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
+  sorry
+
+lemma C:
+  "Complete k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> Complete k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
+  sorry
+
+lemma D:
+  "set_bins bs \<subseteq> set_bins (\<pi>_it' k bs i)"
+  sorry
+
+lemma ABCD':
+  "\<pi>_step k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> \<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
+  using A B C D \<pi>_step_def by simp+
+
+lemma ABCD:
+  "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs \<Longrightarrow> \<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
+  using ABCD' \<pi>_it_def by presburger
+
+lemma funpower_ABCD:
+  "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs \<Longrightarrow> funpower (\<pi>_step k) n (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
+  sorry
+
+lemma \<pi>_ABCD:
+  "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs \<Longrightarrow> \<pi> k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
+  using funpower_ABCD \<pi>_def elem_limit_simp by fastforce
+
+lemma \<I>_sub_\<I>_it:
+  "I k \<subseteq> set_bins (\<I>_it k)"
+  sorry
+
+lemma \<II>_sub_\<II>_it:
+  "\<II> \<subseteq> set_bins \<II>_it"
+  by (simp add: \<I>_sub_\<I>_it \<II>_def \<II>_it_def)
+
+subsection \<open>Correctness\<close>
+
+corollary correctness_list:
+  "earley_recognized (set_bins \<II>_it) \<longleftrightarrow> derives [\<SS>] inp"
+  using \<II>_it_sub_\<II> \<II>_sub_\<II>_it correctness by simp
+
+subsection \<open>Random thoughts\<close>
+
+(*
+lemma A:
+  "Scan k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> I = set_bins (\<pi>_it' k bs i) \<Longrightarrow> Scan k I = I"
+  sorry
+
+lemma B:
+  "Predict k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> I = set_bins (\<pi>_it' k bs i) \<Longrightarrow> Predict k I = I"
+  sorry
+
+lemma C:
+  "Complete k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow>  I = set_bins (\<pi>_it' k bs i) \<Longrightarrow> Complete k I = I"
+  sorry
+
+lemma ABC':
+  "\<pi>_step k (set_bins_upto bs k i) \<subseteq> set_bins bs \<Longrightarrow> I = set_bins (\<pi>_it' k bs i) \<Longrightarrow> \<pi>_step k I = I"
+  using A B C \<pi>_step_def by auto
+
+lemma ABC:
+  "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs \<Longrightarrow> I = set_bins (\<pi>_it k bs) \<Longrightarrow> \<pi>_step k I = I"
+  using ABC' \<pi>_it_def by presburger
+
+lemma \<pi>_ABC:
+  "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs \<Longrightarrow> I = set_bins (\<pi>_it k bs) \<Longrightarrow> \<pi> k I = I"
+  by (simp add: ABC fix_is_fix_of_limit \<pi>_def)
+*)
+
 end
 
 end

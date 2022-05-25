@@ -332,8 +332,8 @@ definition is_finished :: "item \<Rightarrow> bool" where
     item_end x = length inp \<and> 
     is_complete x)"
 
-definition earley_recognized :: "bool" where
-  "earley_recognized = (\<exists>x \<in> \<II>. is_finished x)"
+definition earley_recognized :: "items \<Rightarrow> bool" where
+  "earley_recognized I = (\<exists>x \<in> I. is_finished x)"
 
 subsection \<open>Wellformedness\<close>
 
@@ -543,7 +543,7 @@ lemma sound_\<II>:
   unfolding \<II>_def using sound_\<I> by blast
 
 theorem soundness:
-  "earley_recognized \<Longrightarrow> derives [\<SS>] inp"
+  "earley_recognized \<II> \<Longrightarrow> derives [\<SS>] inp"
   using earley_recognized_def sound_\<II> sound_defs is_finished_def item_\<beta>_def by (auto simp: is_complete_def)
 
 subsection \<open>Monotonicity and Absorption\<close>
@@ -983,7 +983,7 @@ qed
 
 theorem completeness:
   assumes "derives [\<SS>] inp"
-  shows "earley_recognized"
+  shows "earley_recognized \<II>"
 proof -
   obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> \<RR>" "derives \<alpha> inp"
     using Derivation_\<SS>1 assms Derivation_implies_derives derives_implies_Derivation by blast
@@ -1000,8 +1000,10 @@ proof -
     unfolding earley_recognized_def is_finished_def by (auto simp: is_complete_def item_defs, force)
 qed
 
+subsection \<open>Correctness\<close>
+
 corollary correctness:
-  "earley_recognized \<longleftrightarrow> derives [\<SS>] inp"
+  "earley_recognized \<II> \<longleftrightarrow> derives [\<SS>] inp"
   using soundness completeness by blast
 
 end
