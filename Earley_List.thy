@@ -234,7 +234,7 @@ lemma wf_bins_\<II>_it:
   "wf_bins \<II>_it"
   unfolding \<II>_it_def using wf_bins_\<I>_it length_bins_Init_it by auto
 
-subsection \<open>Soundness\<close> \<comment>\<open>TODO: Clean\<close>
+subsection \<open>Soundness\<close>
 
 lemma Init_it_eq_Init:
   "set_bins Init_it = Init"
@@ -243,10 +243,8 @@ proof -
   let ?b0 = "map (\<lambda>r. init_item r 0) ?rs"
   let ?bs = "Bins (replicate (length inp + 1) (Bin []))"
   have "set_bins ?bs = {}"
-    unfolding set_bins_def set_bins_upto_def set_bin_upto_def set_bin_conv_set
-    apply (auto)
-    apply (metis bin.sel less_SucI nth_replicate replicate_Suc)
-    by (metis bin.sel List.list.size(3) lessI less_zeroE nth_replicate replicate_Suc)
+    unfolding set_bins_def set_bins_upto_def set_bin_conv_set set_bin_upto_def
+    by (auto simp del: replicate_Suc)
   hence "set_bins Init_it = set ?b0"
     using Init_it_def set_bins_app_bins by simp
   thus ?thesis
@@ -254,7 +252,8 @@ proof -
 qed
 
 lemma Scan_it_sub_Scan:
-  assumes "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "wf_bins bs" "k < length (bins bs)" "next_symbol x = Some a"
+  assumes "wf_bins bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "next_symbol x = Some a"
   shows "set (Scan_it k a x bs) \<subseteq> Scan k I"
 proof standard
   fix y
@@ -273,7 +272,8 @@ proof standard
 qed
 
 lemma Predict_it_sub_Predict:
-  assumes "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)" "wf_bins bs" "next_symbol x = Some X"
+  assumes "wf_bins bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "next_symbol x = Some X"
   shows "set (Predict_it k X bs) \<subseteq> Predict k I"
 proof standard
   fix y
@@ -291,7 +291,8 @@ proof standard
 qed
 
 lemma Complete_it_sub_Complete:
-  assumes "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "next_symbol y = None" "wf_bins bs" "k < length (bins bs)"
+  assumes "wf_bins bs" "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "next_symbol y = None"
   shows "set (Complete_it k y bs) \<subseteq> Complete k I"
 proof standard
   fix x
@@ -301,158 +302,104 @@ proof standard
   let ?orig = "bins bs ! item_origin y"
   let ?xs = "filter (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
   have "item_origin y < length (bins bs)"
-    by (metis Orderings.order_class.dual_order.strict_trans2 assms(2,4,5) set_bin_conv_set wf_bin_def wf_bins_def wf_item_def)
-  hence "\<forall>z \<in> set_bin ?orig. z \<in> bin I (item_origin y)"
-    using wf_bin_def wf_bins_def bin_def assms(1,4) kth_bin_in_bins set_bin_conv_set by fastforce
-  hence 2:  "\<forall>z \<in> set ?xs. z \<in> bin I (item_origin y)"
-    by (simp add: set_bin_conv_set)
-  then obtain z where 1: "x = inc_item z k" "z \<in> set ?xs"
-    using "*" Complete_it_def by auto
-  hence 3: "next_symbol z = Some (item_rule_head y)"
-    by simp
-  have 4: "z \<in> bin I (item_origin y)"
-    using 1 2 by simp
-  have 5: "is_complete y"
-    using assms(3) next_symbol_def by (metis not_None_eq)
-  show "x \<in> Complete k I"
-    using \<open>y \<in> bin I k\<close> 1(1) 3 4 5 unfolding Complete_def by blast
+    using set_bin_conv_set wf_bins_def wf_bin_def wf_item_def assms(1,3,4) by force
+  hence "\<forall>z \<in> set ?xs. z \<in> bin I (item_origin y)"
+     using wf_bin_def wf_bins_def bin_def assms kth_bin_in_bins set_bin_conv_set by fastforce
+  then obtain z where "x = inc_item z k" "next_symbol z = Some (item_rule_head y)" "z \<in> bin I (item_origin y)"
+    using * Complete_it_def by auto
+  thus "x \<in> Complete k I"
+    using \<open>y \<in> bin I k\<close> assms(5) unfolding Complete_def next_symbol_def by (auto split: if_splits)
 qed
 
 lemma \<pi>_it'_sub_\<pi>:
-  "set_bins bs \<subseteq> I \<Longrightarrow> k < length (bins bs) \<Longrightarrow> wf_bins bs \<Longrightarrow> length (bins bs) = length inp + 1 \<Longrightarrow> set_bins (\<pi>_it' k bs i) \<subseteq> \<pi> k I"
+  assumes "wf_bins bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
+  shows "set_bins (\<pi>_it' k bs i) \<subseteq> \<pi> k I"
+  using assms
 proof (induction k bs i arbitrary: I rule: \<pi>_it'.induct)
   case (1 k bs i)
   show ?case
   proof (cases "i \<ge> length (items (bins bs ! k)) ")
     case True
-    then show ?thesis
+    thus ?thesis
       using "1.prems" \<pi>_mono by auto
   next
     case False
     let ?x = "items (bins bs ! k) ! i"
-    have 0: "?x \<in> set_bin (bins bs ! k)"
+    have x_in_kth_bin: "?x \<in> set_bin (bins bs ! k)"
       using False set_bin_conv_set by auto
     show ?thesis
     proof cases
-      assume 1: "next_symbol ?x = None"
-      have "set_bins (app_bins bs k (Complete_it k ?x bs)) = set_bins bs \<union> set (Complete_it k ?x bs)"
-        using "1.prems" by (simp add: set_bins_app_bins)
-      also have "... \<subseteq> I \<union> set (Complete_it k ?x bs)"
-        using "1.prems" by blast
-      also have "... \<subseteq> I \<union> Complete k I"
-        using Complete_it_sub_Complete[OF "1.prems"(1) 0 1] "1.prems"(2,3) by blast
-      finally have 0: "set_bins (app_bins bs k (Complete_it k ?x bs)) \<subseteq> I \<union> Complete k I" .
-
-      have 1: "k < length (bins (app_bins bs k (Complete_it k ?x bs)))"
-        by (simp add: "1.prems"(2) app_bins_def)
-      have 2: "wf_bins (app_bins bs k (Complete_it k (items (bins bs ! k) ! i) bs))"
-        using 0 by (metis "1.prems"(2,3) False le_cases nat_less_le nth_mem set_bin_conv_set wf_bins_Complete_it wf_bins_app_bins)
-
-      have "set_bins (\<pi>_it' k bs i) = set_bins (\<pi>_it' k (app_bins bs k (Complete_it k ?x bs)) (i + 1))"
-        using False \<open>next_symbol ?x = None\<close> \<pi>_it'_simps(2) by presburger
-      also have "... \<subseteq> \<pi> k (I \<union> Complete k I)"
-        using "1.IH"[OF False _ _ 0 1 2] "1.prems" by (simp add: \<open>next_symbol ?x = None\<close> length_bins_app_bins)
-      also have "... \<subseteq> \<pi> k (\<pi> k I)"
-        using Complete_\<pi>_mono by (simp add: \<pi>_mono \<pi>_sub_mono)
-      finally show ?thesis
-        using \<pi>_idem by blast
+      assume *: "next_symbol ?x = None"
+      hence "set_bins (app_bins bs k (Complete_it k ?x bs)) \<subseteq> I \<union> Complete k I"
+        using set_bins_app_bins "1.prems"(1,2,4) Complete_it_sub_Complete x_in_kth_bin by blast
+      moreover have "wf_bins (app_bins bs k (Complete_it k (items (bins bs ! k) ! i) bs))"
+        using "1.prems"(1,4) wf_bins_Complete_it wf_bins_app_bins x_in_kth_bin by presburger
+      ultimately have "set_bins (\<pi>_it' k bs i) \<subseteq> \<pi> k (I \<union> Complete k I)"
+        using False * \<pi>_it'_simps(2) 1 length_bins_app_bins by (auto simp del: \<pi>_it'.simps)
+      thus ?thesis
+        using Complete_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
     next
-      assume "\<not> next_symbol ?x = None"
-      then obtain a where 1: "next_symbol ?x = Some a"
+      assume *: "\<not> next_symbol ?x = None"
+      then obtain a where a_def: "next_symbol ?x = Some a"
         by blast
       show ?thesis
       proof cases
-        assume 2: "is_terminal a"
+        assume #: "is_terminal a"
         {
           assume "k < length inp"
-          hence "set_bins (app_bins bs (k+1) (Scan_it k a ?x bs)) = set_bins bs \<union> set (Scan_it k a ?x bs)"
-            using "1.prems" set_bins_app_bins by simp
-          also have "... \<subseteq> I \<union> set (Scan_it k a ?x bs)"
-            using "1.prems" by blast
-          also have "... \<subseteq> I \<union> Scan k I"
-            using Scan_it_sub_Scan[OF "1.prems"(1) 0 _ _ 1] "1.prems"(2,3) by blast
-          finally have 0: "set_bins (app_bins bs (k+1) (Scan_it k a ?x bs)) \<subseteq> I \<union> Scan k I" .
-
-          have 1: "k < length (bins (app_bins bs (k+1) (Scan_it k a ?x bs)))"
-            by (simp add: "1.prems"(2) app_bins_def)
-          have 2: "wf_bins (app_bins bs (k+1) (Scan_it k a ?x bs))"
-            using 0 using wf_bins_Scan_it
-            by (metis "1.prems"(2,3) False \<open>k < length inp\<close> \<open>next_symbol ?x \<noteq> None\<close> less_or_eq_imp_le not_le_imp_less nth_mem set_bin_conv_set wf_bins_app_bins)
-
-          have "set_bins (\<pi>_it' k bs i) = set_bins (\<pi>_it' k (app_bins bs (k+1) (Scan_it k a ?x bs)) (i + 1))"
-            using \<open>next_symbol ?x = Some a\<close> \<open>is_terminal a\<close> False \<pi>_it'_simps(3) \<open>k < length inp\<close> by presburger
-          also have "... \<subseteq> \<pi> k (I \<union> Scan k I)"
-            using "1.IH"[OF False _ _ 0 1 2] "1.prems"(4) length_bins_app_bins by (simp add: \<open>k < length inp\<close> \<open>next_symbol ?x = Some a\<close> \<open>is_terminal a\<close>)
-          also have "... \<subseteq> \<pi> k (\<pi> k I)"
-            using Scan_\<pi>_mono by (simp add: \<pi>_mono \<pi>_sub_mono)
-          finally have ?thesis
-            using \<pi>_idem by auto
+          hence "set_bins (app_bins bs (k+1) (Scan_it k a ?x bs)) \<subseteq> I \<union> Scan k I"
+            using set_bins_app_bins Scan_it_sub_Scan[OF "1.prems"(1,2) x_in_kth_bin] a_def "1.prems"(2,3) by auto
+          moreover have "wf_bins (app_bins bs (k+1) (Scan_it k a ?x bs))"
+            using "1.prems"(1,4) wf_bins_Scan_it wf_bins_app_bins x_in_kth_bin * \<open>k < length inp\<close> less_or_eq_imp_le by presburger         
+          ultimately have "set_bins (\<pi>_it' k bs i) \<subseteq> \<pi> k (I \<union> Scan k I)"
+            using a_def # False \<pi>_it'_simps(3) \<open>k < length inp\<close> length_bins_app_bins 1 by (auto simp del: \<pi>_it'.simps)
+          hence ?thesis
+            using Scan_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
         }
         hence "k < length inp \<Longrightarrow> ?thesis" .
         {
           assume "\<not> k < length inp"
-          hence "Scan k I = {}"
-            unfolding Scan_def by auto
-          have "set_bins (\<pi>_it' k bs i) = set_bins (\<pi>_it' k bs (i + 1))"
-            using \<open>next_symbol ?x = Some a\<close> \<open>is_terminal a\<close> False \<pi>_it'_simps(4) \<open>\<not> k < length inp\<close> by presburger
-          also have "... \<subseteq> \<pi> k (I \<union> Scan k I)"
-            using "1.IH"[OF False _ _ "1.prems"] \<open>Scan k I = {}\<close> by (simp add: \<open>\<not> k < length inp\<close> \<open>next_symbol ?x = Some a\<close> \<open>is_terminal a\<close>)
-          also have "... \<subseteq> \<pi> k (\<pi> k I)"
-            using Scan_\<pi>_mono by (simp add: \<pi>_mono \<pi>_sub_mono)
-          finally have ?thesis
-            using \<pi>_idem by auto
+          hence "set_bins (\<pi>_it' k bs i) \<subseteq> \<pi> k (I \<union> Scan k I)"
+            using a_def # False \<pi>_it'_simps(4) Scan_def 1 by simp
+          hence ?thesis
+            using Scan_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
         }
-        then show ?thesis
+        thus ?thesis
           using \<open>k < length inp \<Longrightarrow> ?thesis\<close> by blast
       next
-        assume "\<not> is_terminal a"
-
-        have "set_bins (app_bins bs k (Predict_it k a bs)) = set_bins bs \<union> set (Predict_it k a bs)"
-          using "1.prems" by (simp add: set_bins_app_bins)
-        also have "... \<subseteq> I \<union> set (Predict_it k a bs)"
-          using "1.prems" by blast
-        also have "... \<subseteq> I \<union> Predict k I"
-          using Predict_it_sub_Predict[OF "1.prems"(1)] 0 1 "1.prems"(2,3) by blast
-        finally have 0: "set_bins (app_bins bs k (Predict_it k a bs)) \<subseteq> I \<union> Predict k I" .
-
-        have 1: "k < length (bins (app_bins bs k (Predict_it k a bs)))"
-          by (simp add: "1.prems"(2) app_bins_def)
-        have 2: "wf_bins (app_bins bs k (Predict_it k a bs))"
-          using 0 1 wf_bins_Predict_it by (metis "1.prems"(3,4) Suc_eq_plus1 Suc_leI Suc_le_mono length_bins_app_bins wf_bins_app_bins)
-
-        have "set_bins (\<pi>_it' k bs i) = set_bins (\<pi>_it' k (app_bins bs k (Predict_it k a bs)) (i + 1))"
-          using False \<open>next_symbol ?x = Some a\<close> \<open>\<not> is_terminal a\<close> \<pi>_it'_simps(5) by presburger
-        also have "... \<subseteq> \<pi> k (I \<union> Predict k I)"
-          using "1.IH"[OF False _ _ 0 1 2] "1.prems"(4) length_bins_app_bins by (simp add: \<open>next_symbol ?x = Some a\<close> \<open>\<not> is_terminal a\<close>)
-        also have "... \<subseteq> \<pi> k (\<pi> k I)"
-          using Predict_\<pi>_mono by (simp add: \<pi>_mono \<pi>_sub_mono)
-        finally show ?thesis
-          using \<pi>_idem by blast
+        assume #: "\<not> is_terminal a"
+        have "set_bins (app_bins bs k (Predict_it k a bs)) \<subseteq> I \<union> Predict k I"
+          using set_bins_app_bins Predict_it_sub_Predict x_in_kth_bin a_def "1.prems" by blast
+        moreover have "wf_bins (app_bins bs k (Predict_it k a bs))"
+          using "1.prems"(1,4) wf_bins_Predict_it wf_bins_app_bins wf_bins_kth_bin wf_item_def x_in_kth_bin by metis
+        ultimately have "set_bins (\<pi>_it' k bs i)  \<subseteq> \<pi> k (I \<union> Predict k I)"
+          using False a_def # \<pi>_it'_simps(5) 1 length_bins_app_bins by simp
+        thus ?thesis
+          using Predict_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
       qed
     qed
   qed
 qed
 
 lemma \<pi>_it_sub_\<pi>:
-  "set_bins bs \<subseteq> I \<Longrightarrow> k < length (bins bs) \<Longrightarrow> length (bins bs) = length inp + 1 \<Longrightarrow> wf_bins bs \<Longrightarrow> set_bins (\<pi>_it k bs) \<subseteq> \<pi> k I"
-  using \<pi>_it'_sub_\<pi> \<pi>_it_def by metis
+  assumes "wf_bins bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
+  shows "set_bins (\<pi>_it k bs) \<subseteq> \<pi> k I"
+  using assms \<pi>_it'_sub_\<pi> \<pi>_it_def by metis
 
 lemma \<I>_it_sub_\<I>:
-  "k < length (bins Init_it) \<Longrightarrow> length (bins bs) = length inp + 1 \<Longrightarrow> set_bins (\<I>_it k) \<subseteq> \<I> k"
+  "length (bins bs) = length inp + 1 \<Longrightarrow> k < length (bins Init_it) \<Longrightarrow> set_bins (\<I>_it k) \<subseteq> \<I> k"
 proof (induction k)
   case 0
-  then show ?case
+  thus ?case
     by (simp add: Init_it_eq_Init \<pi>_it_sub_\<pi> length_bins_Init_it wf_bins_Init_it)
 next
   case (Suc k)
-  hence 0: "set_bins (\<I>_it k) \<subseteq> \<I> k"
+  hence "set_bins (\<I>_it k) \<subseteq> \<I> k"
     by (simp add: Suc_lessD)
-  have 1: "Suc k < length (bins (\<I>_it k))"
+  moreover have "Suc k < length (bins (\<I>_it k))"
     using length_bins_\<I>_it Suc.prems by force
-  have "set_bins (\<pi>_it (Suc k) (\<I>_it k)) \<subseteq> \<pi> (Suc k) (\<I> k)"
-    using \<pi>_it_sub_\<pi>[OF 0 1] length_bins_Init_it length_bins_\<I>_it Suc.prems(1) wf_bins_\<I>_it by simp
-  then show ?case
-    by simp
+  ultimately show ?case
+    using \<pi>_it_sub_\<pi> length_bins_Init_it length_bins_\<I>_it Suc.prems(1) wf_bins_\<I>_it by simp
 qed
 
 lemma \<II>_it_sub_\<II>:
