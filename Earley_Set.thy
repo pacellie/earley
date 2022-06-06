@@ -626,6 +626,14 @@ lemma \<pi>_idem:
   "\<pi> k (\<pi> k I) = \<pi> k I"
   by (simp add: \<pi>_def \<pi>_step_regular limit_is_idempotent)
 
+lemma Scan_Un:
+  "Scan k (I \<union> J) = Scan k I \<union> Scan k J"
+  unfolding Scan_def bin_def by blast
+
+lemma Predict_Un:
+  "Predict k (I \<union> J) = Predict k I \<union> Predict k J"
+  unfolding Predict_def bin_def by blast
+
 lemma Scan_sub_mono:
   "I \<subseteq> J \<Longrightarrow> Scan k I \<subseteq> Scan k J"
   unfolding Scan_def bin_def by blast
