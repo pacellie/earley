@@ -73,6 +73,13 @@ lemma set_bins_upto_kth_nth_id:
   using assms apply (auto simp: nth_append nth_list_update)
   using nat_neq_iff by blast
 
+lemma set_bins_upto_kth_nth_id_Suc:
+  assumes "k+1 < length (bins bs)" "i < length (items (bins bs ! k))"
+  shows "set_bins_upto (app_bins bs (k+1) is) k i = set_bins_upto bs k i"
+  unfolding set_bins_upto_def set_bin_upto_def set_bin_def app_bins_def app_bin_def
+  using assms apply (auto simp: nth_append nth_list_update)
+  by (metis not_add_less2 nth_mem plus_1_eq_Suc set_conv_nth)
+
 locale Earley_List = Earley_Set +
   fixes rules :: "rule list"
   assumes valid_rules: "set rules = \<RR> \<and> distinct rules"
@@ -502,7 +509,7 @@ lemma A:
   sorry
 
 lemma B:
-  assumes "wf_bins bs" "k < length (bins bs)"
+  assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "Scan k (set_bins_upto bs k i) \<subseteq> set_bins bs"
   shows "Scan k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
   using assms
@@ -516,7 +523,7 @@ proof (induction k bs i rule: \<pi>_it'.induct)
     moreover have "bin (set_bins bs) k = bin (set_bins_upto bs k i) k"
       using AUX2 a1 "1.prems"(1,2) by blast
     ultimately show ?thesis
-      using Scan_bin_absorb "1.prems"(3) by metis
+      using Scan_bin_absorb "1.prems"(3,4) by metis
   next
     assume a1: "\<not> i \<ge> length (items (bins bs ! k))"
     let ?x = "items (bins bs ! k) ! i"
@@ -549,14 +556,14 @@ proof (induction k bs i rule: \<pi>_it'.induct)
         also have "... = Scan k (set_bins_upto bs k i) \<union> Scan k {?x}" \<comment>\<open>TODO: Lemma\<close>
           unfolding Scan_def bin_def by blast
         also have "... \<subseteq> set_bins bs \<union> Scan k {?x}"
-          using "1.prems"(3) by blast
+          using "1.prems"(3,4) by blast
         also have "... = set_bins bs"
           using x_in_kth_bin' a2 unfolding Scan_def bin_def by simp
         finally show ?thesis
           by (simp add: "1.prems"(2) le_supI1 set_bins_app_bins)
       qed
       ultimately have 1: "Scan k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
-        using "1.IH" a1 a2 by auto
+        using "1.IH" a1 a2 "1.prems"(3) length_bins_app_bins by auto
       show ?thesis
         using 0 1 "1.prems"(2) set_bins_app_bins Scan_sub_mono
         by (metis Orderings.order_class.dual_order.trans Un_upper1)
@@ -570,8 +577,58 @@ proof (induction k bs i rule: \<pi>_it'.induct)
         show ?thesis
         proof cases
           assume a4: "k < length inp"
+          let ?bs' = "app_bins bs (k+1) (Scan_it k a ?x bs)"
+          have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
+            using a1 a_def a3 a4 \<pi>_it'_simps(3) by blast
+          have "i < length (items (bins ?bs' ! k))"
+            using a1 "1.prems"(2) length_kth_bin_app_bins app_bins_def by auto
+          have "wf_bins ?bs'"
+            using "1.prems"(1,2) wf_bins_Scan_it wf_bins_app_bins x_in_kth_bin a2 a4 less_or_eq_imp_le by presburger
+          moreover have "k < length (bins ?bs')"
+            using "1.prems"(2) length_bins_app_bins by simp
+          moreover have "Scan k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
+          proof -
+            have 0: "?x = items (bins ?bs' ! k) ! i"
+              using "1.prems"(2) kth_bin_nth_id a1 by (simp add: app_bins_def)
+            have 1: "set_bins_upto ?bs' k i = set_bins_upto bs k i"
+              using "1.prems"(2) a1 set_bins_upto_kth_nth_id_Suc by (metis bins.collapse app_bins_def leI list_update_beyond)
+            have "Scan k (set_bins_upto ?bs' k (i + 1)) = Scan k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
+              using AUX31 \<open>i < length (items (bins ?bs' ! k))\<close> by simp
+            also have "... = Scan k (set_bins_upto bs k i \<union> {?x})"
+              using 0 1 by simp
+            also have "... = Scan k (set_bins_upto bs k i) \<union> Scan k {?x}" \<comment>\<open>TODO: Lemma\<close>
+              unfolding Scan_def bin_def by blast
+            also have "... \<subseteq> set_bins bs \<union> Scan k {?x}"
+              using "1.prems"(3,4) by blast
+            finally have 2: "Scan k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins bs \<union> Scan k {?x}" .
+            show ?thesis
+            proof cases
+              assume a5: "inp!k = a"
+              hence "Scan k {?x} = {inc_item ?x (k+1)}"
+                unfolding Scan_def using a_def x_in_kth_bin' a4 bin_def by auto
+              hence "Scan k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins bs \<union> {inc_item ?x (k+1)}"
+                using 2 by blast
+              also have "... = set_bins bs \<union> set (Scan_it k a ?x bs)"
+                unfolding Scan_it_def using a4 a5 by simp
+              also have "... = set_bins ?bs'"
+                using set_bins_app_bins "1.prems"(3) a4 by force
+              finally show ?thesis .
+            next
+              assume a5: "\<not> inp!k = a"
+              hence "Scan k {?x} = {}"
+                unfolding Scan_def using bin_def a_def by force
+              hence "Scan k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins bs"
+                using 2 by blast
+              also have "... \<subseteq> set_bins ?bs'"
+                by (metis bins.exhaust_sel Un_upper1 app_bins_def less_or_eq_imp_le list_update_beyond nat_neq_iff set_bins_app_bins subset_refl)
+              finally show ?thesis .
+            qed
+          qed
+          ultimately have 1: "Scan k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
+            using "1.IH" a1 a2 a3 a4 a_def "1.prems"(3) length_bins_app_bins by auto
           show ?thesis
-            sorry
+            using 0 1 "1.prems"(2) set_bins_app_bins Scan_sub_mono
+            by (smt (z3) Earley_List.bins.exhaust_sel Lattices.semilattice_sup_class.sup.orderE Suc_eq_plus1 Suc_leI Un_upper1 app_bins_def le_supI2 less_linear list_update_beyond not_less_eq)
         next
           assume a4: "\<not> k < length inp"
           thus ?thesis
@@ -579,8 +636,41 @@ proof (induction k bs i rule: \<pi>_it'.induct)
         qed
       next
         assume a3: "\<not> is_terminal a"
+        hence "k \<ge> length inp \<or> \<not> inp!k = a"
+          using valid_inp unfolding is_terminal_def by force
+        let ?bs' = "app_bins bs k (Predict_it k a bs)"
+        have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
+          using a1 a2 a3 a_def \<pi>_it'_simps(5) by blast
+        have "i < length (items (bins ?bs' ! k))"
+          using a1 "1.prems"(2) length_kth_bin_app_bins by (meson less_le_trans not_le_imp_less)
+        have "wf_bins ?bs'"
+          using "1.prems"(1,2) wf_bins_Predict_it wf_bins_app_bins x_in_kth_bin by (metis wf_bins_kth_bin wf_item_def)
+        moreover have "k < length (bins ?bs')"
+          using "1.prems"(2) length_bins_app_bins by simp
+        moreover have "Scan k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
+        proof -
+          have 0: "?x = items (bins ?bs' ! k) ! i"
+            using "1.prems"(2) kth_bin_nth_id a1 by simp
+          have 1: "set_bins_upto ?bs' k i = set_bins_upto bs k i"
+            using "1.prems"(2) a1 set_bins_upto_kth_nth_id by simp
+          have "Scan k (set_bins_upto ?bs' k (i + 1)) = Scan k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
+            using AUX31 \<open>i < length (items (bins ?bs' ! k))\<close> by simp
+          also have "... = Scan k (set_bins_upto bs k i \<union> {?x})"
+            using 0 1 by simp
+          also have "... = Scan k (set_bins_upto bs k i) \<union> Scan k {?x}" \<comment>\<open>TODO: Lemma\<close>
+            unfolding Scan_def bin_def by blast
+          also have "... \<subseteq> set_bins bs \<union> Scan k {?x}"
+            using "1.prems"(3,4) by blast
+          also have "... = set_bins bs"
+            unfolding Scan_def bin_def using \<open>length inp \<le> k \<or> inp ! k \<noteq> a\<close> a_def by auto
+          finally show ?thesis
+            by (simp add: "1.prems"(2) le_supI1 set_bins_app_bins)
+        qed
+        ultimately have 1: "Scan k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
+          using "1.IH" a1 a2 a3 a_def "1.prems"(3) length_bins_app_bins by auto
         show ?thesis
-          sorry
+          using 0 1 "1.prems"(2) set_bins_app_bins Scan_sub_mono
+          by (metis Orderings.order_class.dual_order.trans Un_upper1)
       qed
     qed
   qed
