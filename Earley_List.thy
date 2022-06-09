@@ -998,9 +998,57 @@ proof standard
   qed
 qed
 
+lemma Q8:
+  assumes "next_symbol z = Some a" "is_nonterminal a"
+  assumes "sound_items I" "item_end z = k"
+  shows "Complete k (I \<union> {z}) = Complete k I"
+proof (rule ccontr)
+  assume "Complete k (I \<union> {z}) \<noteq> Complete k I"
+  hence "Complete k I \<subset> Complete k (I \<union> {z})"
+    by (metis Complete_sub_mono Un_upper1 psubsetI)
+  then obtain x y q where *:
+    "q \<in> Complete k (I \<union> {z})" "q \<notin> Complete k I" "q = inc_item x k"
+    "x \<in> bin (I \<union> {z}) (item_origin y)" "y \<in> bin (I \<union> {z}) k"
+    "is_complete y" "next_symbol x = Some (item_rule_head y)"
+    unfolding Complete_def by fast
+  consider (A) "x = z" | (B) "y = z" | "\<not> (x = z \<or> y = z)"
+    by blast
+  then show False
+  proof cases
+    case A
+    have 0: "item_origin y = k"
+      using "*"(4) A assms(4) bin_def by auto
+    have 1: "item_end y = k"
+      using "*"(5) bin_def by blast
+    have "y \<noteq> z"
+      using "*"(6) assms(1) next_symbol_def by fastforce
+    hence "sound_item y"
+      using "*"(5) assms(3) bin_def sound_items_def by auto
+    hence "derives [a] (slice k k inp @ item_\<beta> y)"
+      unfolding sound_item_def using 0 1 "*"(7) A assms(1) by auto
+    hence "derives [a] (slice k k inp)"
+      using "*"(6) is_complete_def item_\<beta>_def by auto
+    hence "derives [a] []"
+      by (simp add: slice_empty)
+    then show ?thesis
+      using assms(2) is_nonterminal_def nonempty_deriv by blast
+  next
+    case B
+    then show ?thesis
+      using "*"(6) assms(1) next_symbol_def by force
+  next
+    case 3
+    hence "x \<in> bin I (item_origin y)" "y \<in> bin I k"
+      using *(2,4,5) unfolding Complete_def bin_def by simp_all
+    then show ?thesis
+      using "*"(2) "*"(3) "*"(6) "*"(7) Complete_def by blast
+  qed
+qed
+
 lemma D:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "Complete k (set_bins_upto bs k i) \<subseteq> set_bins bs"
+  assumes "sound_items (set_bins bs)"
   shows "Complete k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
   using assms
 proof (induction k bs i rule: \<pi>_it'.induct)
@@ -1033,6 +1081,8 @@ proof (induction k bs i rule: \<pi>_it'.induct)
         using "1.prems"(1,2) wf_bins_Complete_it wf_bins_app_bins x_in_kth_bin by presburger
       moreover have "k < length (bins ?bs')"
         using "1.prems"(2) length_bins_app_bins by simp
+      moreover have "sound_items (set_bins ?bs')"
+        sorry
       moreover have "Complete k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
       proof -
         have 0: "?x = items (bins ?bs' ! k) ! i"
@@ -1073,6 +1123,8 @@ proof (induction k bs i rule: \<pi>_it'.induct)
             using "1.prems"(1,2) wf_bins_Scan_it wf_bins_app_bins x_in_kth_bin a2 a4 less_or_eq_imp_le by presburger
           moreover have "k < length (bins ?bs')"
             using "1.prems"(2) length_bins_app_bins by simp
+          moreover have "sound_items (set_bins ?bs')"
+            sorry
           moreover have "Complete k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
           proof -
             have 0: "?x = items (bins ?bs' ! k) ! i"
@@ -1122,10 +1174,12 @@ proof (induction k bs i rule: \<pi>_it'.induct)
       next
         assume a3: "\<not> is_terminal a"
         let ?bs' = "app_bins bs k (Predict_it k a bs)"
-
-        (*
-        have "k \<ge> length inp \<or> \<not> inp!k = a"
-          using a3 valid_inp unfolding is_terminal_def by force
+        have 2: "item_end ?x = k"
+          using "local.1.prems"(1) "local.1.prems"(2) wf_bins_kth_bin x_in_kth_bin by force
+        have 3: "is_nonterminal a"
+          by (metis "local.1.prems"(1) "local.1.prems"(2) Option.option.inject Product_Type.prod.collapse
+                    a2 a3 a_def is_complete_def is_sentence_symbol is_symbol_distinct item_rule_body_def
+                    leI next_symbol_def rule_\<alpha>_type rule_body_def wf_bins_kth_bin wf_item_def x_in_kth_bin)
         have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
           using a1 a2 a3 a_def \<pi>_it'_simps(5) by blast
         have "i < length (items (bins ?bs' ! k))"
@@ -1134,34 +1188,31 @@ proof (induction k bs i rule: \<pi>_it'.induct)
           using "1.prems"(1,2) wf_bins_Predict_it wf_bins_app_bins x_in_kth_bin by (metis wf_bins_kth_bin wf_item_def)
         moreover have "k < length (bins ?bs')"
           using "1.prems"(2) length_bins_app_bins by simp
-        moreover have "Predict k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
+        moreover have "sound_items (set_bins ?bs')"
+          sorry
+        moreover have "Complete k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
         proof -
           have 0: "?x = items (bins ?bs' ! k) ! i"
             using "1.prems"(2) kth_bin_nth_id a1 by simp
           have 1: "set_bins_upto ?bs' k i = set_bins_upto bs k i"
             using "1.prems"(2) a1 set_bins_upto_kth_nth_id by simp
-          have "Predict k (set_bins_upto ?bs' k (i + 1)) = Predict k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
+          have "Complete k (set_bins_upto ?bs' k (i + 1)) = Complete k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
             using AUX31 \<open>i < length (items (bins ?bs' ! k))\<close> by simp
-          also have "... = Predict k (set_bins_upto bs k i \<union> {?x})"
+          also have "... = Complete k (set_bins_upto bs k i \<union> {?x})"
             using 0 1 by simp
-          also have "... = Predict k (set_bins_upto bs k i) \<union> Predict k {?x}"
-            using Predict_Un by blast
-          also have "... \<subseteq> set_bins bs \<union> Predict k {?x}"
-            using "1.prems"(3,4) by blast
-          also have "... = set_bins bs \<union> set (Predict_it k a bs)"
-            unfolding Predict_def bin_def Predict_it_def 
-            using a_def valid_rules "1.prems"(1,2) wf_bins_kth_bin x_in_kth_bin by auto
+          also have "... = Complete k (set_bins_upto bs k i)"
+            using Q8[OF a_def 3] 2
+            by (metis "local.1.prems"(1) "local.1.prems"(2) "local.1.prems"(5) AUX1 in_mono sound_items_def wf_bins_def) 
+          also have "... \<subseteq> set_bins bs"
+            using "1.prems"(4) by blast
           finally show ?thesis
-            using "1.prems"(2) set_bins_app_bins by simp
+            using "1.prems"(2) set_bins_app_bins by auto
         qed
-        ultimately have 1: "Predict k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
+        ultimately have 1: "Complete k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
           using "1.IH" a1 a2 a3 a_def "1.prems"(3) length_bins_app_bins by auto
         show ?thesis
-          using 0 1 "1.prems"(2) set_bins_app_bins Predict_Un by simp
-        *)
-
-        show ?thesis
-          sorry
+          using 0 1 "1.prems"(2) set_bins_app_bins Complete_sub_mono
+          by (metis subset_trans sup_ge1)
       qed
     qed
   qed
@@ -1170,12 +1221,14 @@ qed
 lemma ABCD':
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k (set_bins_upto bs k i) \<subseteq> set_bins bs"
+  assumes "sound_items (set_bins bs)"
   shows "\<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
   using assms A B C D \<pi>_step_def by simp
 
 lemma ABCD:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs"
+  assumes "sound_items (set_bins bs)"
   shows "\<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
   using assms ABCD' \<pi>_it_def by metis
 
