@@ -922,6 +922,82 @@ lemma Q5:
   using Q1 Q4 assms
   by (metis BUX11 wf_bins_def wf_bins_kth_bin wf_items_def)
 
+lemma Q6:
+  assumes "next_symbol z = Some a" "is_terminal a" "wf_items I" "wf_item z"
+  shows "Complete k (I \<union> {z}) = Complete k I"
+proof (rule ccontr)
+  assume "Complete k (I \<union> {z}) \<noteq> Complete k I"
+  hence "Complete k I \<subset> Complete k (I \<union> {z})"
+    by (metis Complete_sub_mono Un_upper1 psubsetI)
+  then obtain x y q where *:
+    "q \<in> Complete k (I \<union> {z})" "q \<notin> Complete k I" "q = inc_item x k"
+    "x \<in> bin (I \<union> {z}) (item_origin y)" "y \<in> bin (I \<union> {z}) k"
+    "is_complete y" "next_symbol x = Some (item_rule_head y)"
+    unfolding Complete_def by fast
+  show False
+  proof (cases "x = z")
+    case True
+    hence "next_symbol z = Some (item_rule_head y)"
+      using *(7) by blast
+    hence "item_rule_head y = a"
+      using assms(1) by simp
+    have "wf_item y"
+      using *(5) assms(3,4) unfolding wf_items_def bin_def by blast
+    hence "is_nonterminal (item_rule_head y)"
+      unfolding wf_item_def item_rule_head_def rule_head_def using validRules by auto
+    thus ?thesis
+      using \<open>item_rule_head y = a\<close> assms(2) is_terminal_nonterminal by auto
+  next
+    case False
+    hence "y = z"
+      using * unfolding Complete_def bin_def by blast
+    thus ?thesis
+      using *(6) assms(1) next_symbol_def by auto
+  qed
+qed
+
+lemma Q7:
+  assumes "Complete k I \<subseteq> set_bins bs" "I \<subseteq> set_bins bs" "is_complete z" "wf_bins bs" "wf_item z"
+  shows "Complete k (I \<union> {z}) \<subseteq> set_bins bs \<union> set (Complete_it k z bs)"
+proof standard
+  fix q
+  assume "q \<in> Complete k (I \<union> {z})"
+  then obtain x y where *:
+    "q = inc_item x k" "x \<in> bin (I \<union> {z}) (item_origin y)" "y \<in> bin (I \<union> {z}) k"
+    "is_complete y" "next_symbol x = Some (item_rule_head y)"
+    unfolding Complete_def by blast
+  consider (A) "x = z" | (B) "y = z" | "\<not> (x = z \<or> y = z)"
+    by blast
+  then show "q \<in> set_bins bs \<union> set (Complete_it k z bs)"
+  proof cases
+    case A
+    then show ?thesis
+      using *(5) assms(3) next_symbol_def by auto
+  next
+    case B
+    have "x \<noteq> z"
+      using "*"(5) assms(3) next_symbol_def by force
+    hence "x \<in> bin I (item_origin y)"
+      using "*"(2) bin_def by auto
+
+    let ?orig = "bins bs ! item_origin z"
+    let ?is = "filter (\<lambda>x. next_symbol x = Some (item_rule_head z)) (items ?orig)"
+
+    have "bin I (item_origin z) \<subseteq> set_bin (bins bs ! item_origin z)"
+      using BUX1 assms(2) assms(4) bin_def by blast
+    hence "x \<in> set ?is"
+      using "*"(5) B \<open>x \<in> bin I (item_origin y)\<close> set_bin_conv_set by (simp add: in_mono)
+    then show ?thesis
+      unfolding Complete_it_def *(1) by simp
+  next
+    case 3
+    hence "x \<in> bin I (item_origin y)" "y \<in> bin I k"
+      using *(2,3) unfolding bin_def by simp_all
+    then show ?thesis
+      using assms(1) *(1,4,5) unfolding Complete_def by blast
+  qed
+qed
+
 lemma D:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "Complete k (set_bins_upto bs k i) \<subseteq> set_bins bs"
@@ -949,8 +1025,6 @@ proof (induction k bs i rule: \<pi>_it'.induct)
     proof cases
       assume a2: "next_symbol ?x = None"
       let ?bs' = "app_bins bs k (Complete_it k ?x bs)"
-
-      (*
       have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
         using a1 a2 \<pi>_it'_simps(2) by blast
       have "i < length (items (bins ?bs' ! k))"
@@ -959,33 +1033,27 @@ proof (induction k bs i rule: \<pi>_it'.induct)
         using "1.prems"(1,2) wf_bins_Complete_it wf_bins_app_bins x_in_kth_bin by presburger
       moreover have "k < length (bins ?bs')"
         using "1.prems"(2) length_bins_app_bins by simp
-      moreover have "Predict k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
+      moreover have "Complete k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
       proof -
         have 0: "?x = items (bins ?bs' ! k) ! i"
           using "1.prems"(2) kth_bin_nth_id a1 by simp
         have 1: "set_bins_upto ?bs' k i = set_bins_upto bs k i"
           using "1.prems"(2) a1 set_bins_upto_kth_nth_id by simp
-        have "Predict k (set_bins_upto ?bs' k (i + 1)) = Predict k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
+        have "Complete k (set_bins_upto ?bs' k (i + 1)) = Complete k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
           using AUX31 \<open>i < length (items (bins ?bs' ! k))\<close> by simp
-        also have "... = Predict k (set_bins_upto bs k i \<union> {?x})"
+        also have "... = Complete k (set_bins_upto bs k i \<union> {?x})"
           using 0 1 by simp
-        also have "... = Predict k (set_bins_upto bs k i) \<union> Predict k {?x}"
-          using Predict_Un by blast
-        also have "... \<subseteq> set_bins bs \<union> Predict k {?x}"
-          using "1.prems"(3,4) by blast
-        also have "... = set_bins bs"
-          using x_in_kth_bin' a2 unfolding Predict_def bin_def by simp
+        also have "... \<subseteq> set_bins bs \<union> set (Complete_it k ?x bs)"
+          using "1.prems"(4)
+          by (metis "1.prems"(1,2) AUX1 Option.option.discI Q7 a2 next_symbol_def wf_bins_def wf_bins_kth_bin x_in_kth_bin)
         finally show ?thesis
           using "1.prems"(2) set_bins_app_bins by blast
       qed
-      ultimately have 1: "Predict k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
+      ultimately have 1: "Complete k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
         using "1.IH" a1 a2 "1.prems"(3) length_bins_app_bins by auto
       show ?thesis
-        using 0 1 "1.prems"(2) set_bins_app_bins Predict_Un by simp
-      *)
-
-      show ?thesis
-        sorry
+        using 0 1 "1.prems"(2) set_bins_app_bins Complete_sub_mono
+        by (metis Orderings.order_class.order.trans inf_sup_ord(3))
     next
       assume a2: "\<not> next_symbol ?x = None"
       then obtain a where a_def: "next_symbol ?x = Some a"
@@ -996,75 +1064,60 @@ proof (induction k bs i rule: \<pi>_it'.induct)
         show ?thesis
         proof cases
           assume a4: "k < length inp"
-          let ?bs' = "app_bins bs k (Complete_it k ?x bs)"
-
-          (*
+          let ?bs' = "app_bins bs (k+1) (Scan_it k a ?x bs)"
           have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
-            using a1 a_def a3 a4 \<pi>_it'_simps(3) sledgehammer
+            using a1 a_def a3 a4 \<pi>_it'_simps(3) by blast
           have "i < length (items (bins ?bs' ! k))"
             using a1 "1.prems"(2) length_kth_bin_app_bins app_bins_def by auto
           have "wf_bins ?bs'"
             using "1.prems"(1,2) wf_bins_Scan_it wf_bins_app_bins x_in_kth_bin a2 a4 less_or_eq_imp_le by presburger
           moreover have "k < length (bins ?bs')"
             using "1.prems"(2) length_bins_app_bins by simp
-          moreover have "Predict k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
+          moreover have "Complete k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
           proof -
             have 0: "?x = items (bins ?bs' ! k) ! i"
               using "1.prems"(2) kth_bin_nth_id a1 by (simp add: app_bins_def)
             have 1: "set_bins_upto ?bs' k i = set_bins_upto bs k i"
               using "1.prems"(2,3) a1 set_bins_upto_kth_nth_id a4 by auto
-            have "Predict k (set_bins_upto ?bs' k (i + 1)) = Predict k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
+            have "Complete k (set_bins_upto ?bs' k (i + 1)) = Complete k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
               using AUX31 \<open>i < length (items (bins ?bs' ! k))\<close> by simp
-            also have "... = Predict k (set_bins_upto bs k i \<union> {?x})"
+            also have "... = Complete k (set_bins_upto bs k i \<union> {?x})"
               using 0 1 by simp
-            also have "... = Predict k (set_bins_upto bs k i) \<union> Predict k {?x}"
-              using Predict_Un by blast
-            also have "... \<subseteq> set_bins bs \<union> Predict k {?x}"
-              using "1.prems"(3,4) by blast
-            also have "... = set_bins bs"
-              unfolding Predict_def bin_def rule_head_def
-              using a_def a3 validRules valid_rules is_terminal_nonterminal by force
+            also have "... = Complete k (set_bins_upto bs k i)"
+              using Q6 a3 a_def
+              by (meson "1.prems"(1,2) AUX1 BUX11 subset_iff wf_bins_def wf_bins_kth_bin wf_items_def x_in_kth_bin)
+            also have "... \<subseteq> set_bins bs"
+              using "1.prems"(4) by blast
             finally show ?thesis
               using "1.prems"(3) a4 set_bins_app_bins by auto
           qed
-          ultimately have 1: "Predict k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
+          ultimately have 1: "Complete k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i + 1))"
             using "1.IH" a1 a2 a3 a4 a_def "1.prems"(3) length_bins_app_bins by auto
           show ?thesis
-            using 0 1 "1.prems"(3) a4 set_bins_app_bins Predict_Un by simp
-          *)
-
-          show ?thesis
-            sorry
+            using 0 1 "1.prems"(3) a4 set_bins_app_bins Complete_sub_mono
+            by (metis Un_upper1 add_less_mono1 subset_trans)
         next
           assume a4: "\<not> k < length inp"
-
-          (*
           have 0: "\<pi>_it' k bs i = \<pi>_it' k bs (i+1)"
             using a1 a_def a3 a4 \<pi>_it'_simps(4) by blast
-          have "Predict k (set_bins_upto bs k (i + 1)) \<subseteq> set_bins bs"
+          have "Complete k (set_bins_upto bs k (i + 1)) \<subseteq> set_bins bs"
           proof -
-            have "Predict k (set_bins_upto bs k (i + 1)) = Predict k (set_bins_upto bs k i \<union> {items (bins bs ! k) ! i})"
+            have "Complete k (set_bins_upto bs k (i + 1)) = Complete k (set_bins_upto bs k i \<union> {items (bins bs ! k) ! i})"
               using AUX31 a1 by auto
-            moreover have "Predict k (set_bins_upto bs k i \<union> {items (bins bs ! k) ! i}) = Predict k (set_bins_upto bs k i \<union> {?x})"
+            moreover have "Complete k (set_bins_upto bs k i \<union> {items (bins bs ! k) ! i}) = Complete k (set_bins_upto bs k i \<union> {?x})"
               using 0 1 by simp
-            moreover have "Predict k (set_bins_upto bs k i \<union> {?x}) = Predict k (set_bins_upto bs k i) \<union> Predict k {?x}"
-              using Predict_Un by fast
-            moreover have "Predict k (set_bins_upto bs k i) \<union> Predict k {?x} \<subseteq> set_bins bs \<union> Predict k {?x}"
+            moreover have "Complete k (set_bins_upto bs k i \<union> {?x}) = Complete k (set_bins_upto bs k i)"
+              using Q6 a3 a_def
+              by (meson "1.prems"(1,2) AUX1 BUX11 subset_iff wf_bins_def wf_bins_kth_bin wf_items_def x_in_kth_bin)
+            moreover have "Complete k (set_bins_upto bs k i) \<subseteq> set_bins bs"
               using "1.prems"(4) by blast
-            moreover have "set_bins bs \<union> Predict k {?x} = set_bins bs"
-              unfolding Predict_def bin_def rule_head_def
-              using a_def a3 validRules valid_rules is_terminal_nonterminal by force
             ultimately show ?thesis
               using "1.prems"(3) a4 set_bins_app_bins by simp
           qed
-          hence 1: "Predict k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs (i + 1))"
+          hence 1: "Complete k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs (i + 1))"
             using 1 a1 a3 a4 a_def by auto
           show ?thesis
-            using 0 1 "1.prems"(3) a4 set_bins_app_bins Predict_Un by simp
-          *)
-          show ?thesis
-            sorry
-
+            using 0 1 "1.prems"(3) a4 set_bins_app_bins by auto
         qed
       next
         assume a3: "\<not> is_terminal a"
