@@ -548,6 +548,10 @@ theorem soundness:
 
 subsection \<open>Monotonicity and Absorption\<close>
 
+lemma \<pi>_step_empty:
+  "\<pi>_step k {} = {}"
+  unfolding \<pi>_step_def Scan_def Complete_def Predict_def bin_def by blast
+
 lemma \<pi>_step_setmonotone:
   "setmonotone (\<pi>_step k)"
   by (simp add: Un_assoc \<pi>_step_def setmonotone_def)
@@ -625,6 +629,18 @@ lemma \<pi>_step_regular:
 lemma \<pi>_idem:
   "\<pi> k (\<pi> k I) = \<pi> k I"
   by (simp add: \<pi>_def \<pi>_step_regular limit_is_idempotent)
+
+lemma Scan_bin_absorb:
+  "Scan k (bin I k) = Scan k I"
+  unfolding Scan_def bin_def by simp
+
+lemma Predict_bin_absorb:
+  "Predict k (bin I k) = Predict k I"
+  unfolding Predict_def bin_def by simp
+
+lemma Complete_bin_absorb:
+  "Complete k (bin I k) \<subseteq> Complete k I"
+  unfolding Complete_def bin_def by blast
 
 lemma Scan_Un:
   "Scan k (I \<union> J) = Scan k I \<union> Scan k J"
