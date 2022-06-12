@@ -243,6 +243,10 @@ lemma set_bin_\<pi>_it'_eq:
   "l < k \<Longrightarrow> set_bin (bins (\<pi>_it' k bs i) ! l) = set_bin (bins bs ! l)"
   by (induction k bs i rule: \<pi>_it'_induct) (auto simp: app_bins_def nth_app_bins)
 
+lemma set_bin_upto_eq_set_bin:
+  "i \<ge> length (items b) \<Longrightarrow> set_bin_upto b i = set_bin b"
+  unfolding set_bin_upto_def set_bin_def by (auto, metis in_set_conv_nth less_le_trans)
+
 lemma set_bins_upto_k0_\<pi>_it'_eq:
   "k < length (bins bs) \<Longrightarrow> set_bins_upto (\<pi>_it k bs) k 0 = set_bins_upto bs k 0"
   unfolding set_bins_upto_def set_bin_upto_def \<pi>_it_def using set_bin_\<pi>_it'_eq by auto
@@ -599,34 +603,24 @@ subsection \<open>Set to List\<close>
 (* START TODO CLEAN *)
 
 lemma BUX1:
-  assumes "wf_bins bs" "x \<in> set_bins bs" "item_end x = k"
-  shows "x \<in> set_bin (bins bs ! k)"
-  using set_bins_bin_exists assms wf_bins_kth_bin wf_bins_def by blast
+  "wf_bins bs \<Longrightarrow> x \<in> set_bins bs \<Longrightarrow> item_end x = k \<Longrightarrow> x \<in> set_bin (bins bs ! k)"
+  using set_bins_bin_exists wf_bins_kth_bin wf_bins_def by blast
 
 lemma AUX2:
   assumes "wf_bins bs" "k < length (bins bs)" "i \<ge> length (items (bins bs ! k))"
   shows "bin (set_bins_upto bs k i) k = bin (set_bins bs) k"
-  using assms
-  unfolding set_bins_upto_def set_bins_def set_bin_upto_def bin_def set_bin_def
-  apply (auto simp: nth_list_update)
-  apply (metis less_trans)
-  apply (metis nth_mem)
-  by (metis (no_types, lifting) Orderings.order_class.dual_order.strict_trans in_set_conv_nth le_eq_less_or_eq set_bin_def wf_bins_kth_bin)
+  unfolding set_bins_upto_def set_bins_def bin_def using assms
+  by (auto simp: nth_list_update set_bin_upto_eq_set_bin wf_bins_kth_bin, metis less_trans)
 
 definition bins_upto :: "items \<Rightarrow> nat \<Rightarrow> items" where
   "bins_upto I k = \<Union> { bin I l | l. l \<le> k }"
 
 lemma set_bin_eq_bin:
-  assumes "k < length (bins bs)" "wf_bins bs"
-  shows "set_bin (bins bs ! k) = bin (set_bins bs) k"
-  using assms unfolding set_bins_def
-  apply auto
-  using wf_bins_kth_bin bin_def
-  using kth_bin_in_bins apply fastforce
-  using set_bins_bin_exists BUX1 bin_def set_bins_def by force
+   "wf_bins bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> set_bin (bins bs ! k) = bin (set_bins bs) k"
+  unfolding set_bins_def bin_def by (auto simp: wf_bins_kth_bin)
 
 lemma Q1:
-  assumes "k < length (bins bs)" "i \<ge> length (items (bins bs ! k))" "wf_bins bs"
+  assumes "wf_bins bs" "k < length (bins bs)" "i \<ge> length (items (bins bs ! k))"
   shows "set_bins_upto bs k i = bins_upto (set_bins bs) k"
 proof -
   have "set_bins_upto bs k i = \<Union> {set_bin (bins bs ! l) |l. l < k} \<union> set_bin_upto (bins bs ! k) i"
@@ -634,27 +628,17 @@ proof -
   also have "... = \<Union> {set_bin (bins bs ! l) |l. l < k} \<union> set_bin (bins bs ! k)"
     using assms unfolding set_bin_upto_def set_bin_def using set_take by force
   also have "... = \<Union> {set_bin (bins bs ! l) |l. l \<le> k}"
-    apply (induction k)
-     apply auto
-     apply (metis less_imp_le)
-    using nat_less_le by auto
+    by (induction k) (auto; metis le_less)+
   also have "... = \<Union> {bin (set_bins bs) l | l. l \<le> k }"
-    using set_bin_eq_bin[OF _ assms(3)] assms(1) by auto
+    by (metis Orderings.order_class.dual_order.strict_trans2 assms(1,2) set_bin_eq_bin)
   finally show ?thesis
     using bins_upto_def by auto
 qed
 
-lemma Q2:
-  "Scan k (bins_upto I k) = Scan k I"
-  unfolding Scan_def bins_upto_def bin_def by blast
-
-lemma Q3:
-  "Predict k (bins_upto I k) = Predict k I"
-  unfolding Predict_def bins_upto_def bin_def by blast
-
 lemma Q4:
   "wf_items I \<Longrightarrow> Complete k (bins_upto I k) = Complete k I"
   unfolding Complete_def bins_upto_def bin_def wf_items_def wf_item_def by blast
+
 lemma Q5:
   assumes "k < length (bins bs)" "i \<ge> length (items (bins bs ! k))" "wf_bins bs"
   shows "Complete k (set_bins bs) = Complete k (set_bins_upto bs k i)"
@@ -1608,22 +1592,19 @@ lemma \<pi>_sub_\<pi>_it:
   shows "\<pi> k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
   using assms funpower_\<pi>_step_sub_\<pi>_it \<pi>_def elem_limit_simp by fastforce
 
-lemma F31:
-  assumes "wf_bins bs" "x \<in> set_bin ((bins bs) ! k)" "k < length (bins bs)"
-  shows "item_end x = k"
-  using assms by (meson wf_bins_kth_bin)
-
-lemma F3:
+lemma kth_bin_set_bins_upto_empty:
   assumes "wf_bins bs" "k < length (bins bs)"
   shows "bin (set_bins_upto bs k 0) k = {}"
 proof -
   {
     fix x
     assume "x \<in> set_bins_upto bs k 0"
-    hence "x \<in> \<Union> {set_bin (bins bs ! l) |l. l < k}"
+    then obtain l where "x \<in> set_bin (bins bs ! l)" "l < k"
       unfolding set_bins_upto_def set_bin_upto_def by blast
+    hence "item_end x = l"
+      using wf_bins_kth_bin assms by simp
     hence "item_end x < k"
-      using F31 assms by force
+      using \<open>l < k\<close> by blast
   }
   thus ?thesis
     using bin_def by auto
@@ -1640,33 +1621,26 @@ proof (induction k)
     by simp
 next
   case (Suc k)
-  have 1: "wf_bins (\<I>_it k)"
+  have wf: "wf_bins (\<I>_it k)"
     using length_bins_Init_it Suc.prems wf_bins_\<I>_it by force
-  have 2: "Suc k < length (bins (\<I>_it k))"
-    using Suc.prems by force
-  have 3: "length (bins (\<I>_it k)) = length inp + 1"
-    by simp
-  have 4: "\<pi>_step (Suc k) (set_bins_upto (\<I>_it k) (Suc k) 0) \<subseteq> set_bins (\<I>_it k)"
+  have sub: "\<pi>_step (Suc k) (set_bins_upto (\<I>_it k) (Suc k) 0) \<subseteq> set_bins (\<I>_it k)"
   proof -
     have "bin (set_bins_upto (\<I>_it k) (Suc k) 0) (Suc k) = {}"
-      using F3 1 2 by auto
+      using kth_bin_set_bins_upto_empty wf Suc.prems by auto
     hence "\<pi>_step (Suc k) (set_bins_upto (\<I>_it k) (Suc k) 0) = set_bins_upto (\<I>_it k) (Suc k) 0"
       unfolding \<pi>_step_def Scan_def Complete_def Predict_def bin_def by blast
     also have "... \<subseteq> set_bins (\<I>_it k)"
-      using 1 2 set_bins_upto_sub_set_bins wf_bins_def by blast
+      using wf Suc.prems set_bins_upto_sub_set_bins wf_bins_def by simp
     finally show ?thesis .
   qed
-  have 5: "sound_items (set_bins (\<I>_it k))"
-    by (metis Suc_lessD \<I>_it_sub_\<I> Suc sound_\<I> subset_antisym)
-  have "\<I> (Suc k) = \<pi> (Suc k) (\<I> k)"
-    by simp
-  also have "... \<subseteq> \<pi> (Suc k) (set_bins (\<I>_it k))"
+  have sound: "sound_items (set_bins (\<I>_it k))"
+    using Suc sound_\<I> \<I>_it_sub_\<I> by (metis Suc_lessD subset_antisym)
+  have "\<I> (Suc k) \<subseteq> \<pi> (Suc k) (set_bins (\<I>_it k))"
     using Suc \<pi>_sub_mono by simp
   also have "... \<subseteq> set_bins (\<pi>_it (Suc k) (\<I>_it k))"
-    using \<pi>_sub_\<pi>_it[OF 1 2 3 4 5] by blast
-  also have "... = set_bins (\<I>_it (Suc k))"
+    using \<pi>_sub_\<pi>_it wf sub sound Suc.prems by simp
+  finally show ?case
     by simp
-  finally show ?case .
 qed
 
 lemma \<II>_sub_\<II>_it:
