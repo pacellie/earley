@@ -830,6 +830,19 @@ proof -
     unfolding Complete_def bin_def wf_items_def wf_item_def by auto
 qed
 
+lemma core:
+  assumes "wf_item x" "sound_item x" "is_complete x"  "item_origin x = k" "item_end x = k"
+  shows False
+proof -
+  have "derives [item_rule_head x] []"
+    using assms(2-5) sound_item_def item_\<beta>_def is_complete_def by (simp add: slice_empty)
+  moreover have "is_nonterminal (item_rule_head x)"
+    using assms(1) unfolding wf_item_def item_rule_head_def rule_head_def
+    by (metis prod.collapse rule_nonterminal_type)
+  ultimately show ?thesis
+    using nonempty_deriv is_nonterminal_def by blast
+qed
+
 lemma Q6:
   assumes "next_symbol z = Some a" "is_terminal a" "wf_items I" "wf_item z"
   shows "Complete k (I \<union> {z}) = Complete k I"
@@ -932,10 +945,8 @@ proof (rule ccontr)
       using "*"(4) A assms(4) bin_def by auto
     have 1: "item_end y = k"
       using "*"(5) bin_def by blast
-    have "y \<noteq> z"
-      using "*"(6) assms(1) next_symbol_def by fastforce
-    hence "sound_item y"
-      using "*"(5) assms(3) bin_def sound_items_def by auto
+    have "sound_item y"
+      using "*"(5) "*"(6) assms(1) next_symbol_def assms(3) bin_def sound_items_def by auto
     hence "derives [a] (slice k k inp @ item_\<beta> y)"
       unfolding sound_item_def using 0 1 "*"(7) A assms(1) by auto
     hence "derives [a] (slice k k inp)"
