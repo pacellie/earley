@@ -299,6 +299,10 @@ definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
 definition wf_bins :: "bins \<Rightarrow> bool" where
   "wf_bins bs \<longleftrightarrow> (\<forall>k < length (bins bs). wf_bin k (bins bs ! k))"
 
+lemma wf_bins_impl_wf_items:
+  "wf_bins bs \<Longrightarrow> wf_items (set_bins bs)"
+  unfolding wf_bins_def wf_bin_def wf_items_def set_bins_def by auto
+
 lemma wf_bins_app_bins:
   "wf_bins bs \<Longrightarrow> \<forall>x \<in> set xs. wf_item x \<and> item_end x = k \<Longrightarrow> wf_bins (app_bins bs k xs)"
   unfolding wf_bins_def wf_bin_def app_bins_def using set_bin_app_bin
@@ -1161,268 +1165,203 @@ lemma ABCD:
   shows "\<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
   using assms ABCD' \<pi>_it_def by metis
 
-lemma R15:
-  assumes "item_origin x < k" "set_bin (bins bs ! item_origin x) = set_bin (bins bs' ! item_origin x)"
+(* END TODO CLEAN *)
+
+lemma Complete_it_eq_item_origin:
+  assumes "set_bin (bins bs ! item_origin x) = set_bin (bins bs' ! item_origin x)"
   shows "set (Complete_it k x bs) = set (Complete_it k x bs')"
   using assms unfolding Complete_it_def by simp
 
-lemma R1:
+lemma \<pi>_it'_idem:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1" "i \<le> j"
   assumes "sound_items (set_bins bs)"
   shows "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k bs i"
   using assms
-proof (induction k bs i arbitrary: j rule: \<pi>_it'.induct)
-  case (1 k bs i)
+proof (induction k bs i arbitrary: j rule: \<pi>_it'_induct)
+  case (Complete k bs i x)
+  let ?bs' = "app_bins bs k (Complete_it k x bs)"
+  have x: "x \<in> set_bin (bins bs ! k)"
+    using Complete.hyps(1,2) by auto
+  have wf: "wf_bins ?bs'"
+    using Complete.hyps Complete.prems(1,2) wf_bins_Complete_it wf_bins_app_bins set_bin_def
+    by (metis not_le_imp_less nth_mem)
+  have sound: "sound_items (set_bins ?bs')"
+    using sound_Complete_it[OF _ _ _ Complete.prems(2) Complete.hyps(3)] wf_bins_impl_wf_items 
+          Complete.hyps(1,2) set_bins_app_bins sound_items_def Complete.prems(1,2,5) by auto
   show ?case
   proof cases
-    assume a1: "i \<ge> length (items (bins bs ! k))"
+    assume "i+1 \<le> j"
     thus ?thesis
-      using "1.prems"(4) by simp
+      using wf sound Complete by simp
   next
-    assume a1: "\<not> i \<ge> length (items (bins bs ! k))"
-    let ?x = "items (bins bs ! k) ! i"
-    have x_in_kth_bin: "?x \<in> set_bin (bins bs ! k)"
-      using a1 set_bin_def by auto
-    have x_in_kth_bin': "?x \<in> bin (set_bins bs) k"
-      using "1.prems"(1,2) bin_def kth_bin_in_bins wf_bins_kth_bin x_in_kth_bin by fastforce
-    show ?thesis
-    proof cases
-      assume a2: "next_symbol ?x = None"
-      let ?bs' = "app_bins bs k (Complete_it k ?x bs)"
-      have wf: "wf_bins ?bs'"
-        using "1.prems"(1,2) wf_bins_Complete_it wf_bins_app_bins x_in_kth_bin by presburger
-      have sound: "sound_items (set_bins ?bs')"
-        using sound_Complete_it[OF "1.prems"(1) _ x_in_kth_bin "1.prems"(2)]
-        by (metis "1.prems"(1,2,5) set_bins_bin_exists UnE a2 set_bins_app_bins sound_items_def subset_refl wf_bins_kth_bin wf_items_def)
-      show ?thesis
-      proof cases
-        assume a3: "i+1 \<le> j"
-        have "\<pi>_it' k (\<pi>_it' k ?bs' (i + 1)) j = \<pi>_it' k ?bs' (i + 1)"
-          using "1.IH" "1.prems"(2,3) a1 a2 a3 length_bins_app_bins wf sound by auto
-        thus ?thesis
-          using \<pi>_it'_simps(2) a1 a2 by presburger
-      next
-        assume a3: "\<not> i+1 \<le> j"
-        hence "i = j"
-          using "1.prems"(4) by auto
-        have "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) j"
-          using \<pi>_it'_simps(2) a1 a2 by presburger
-        also have "... = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) (j+1)"
-        proof -
-          let ?bs'' = "\<pi>_it' k ?bs' (i+1)"
-
-          have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
-            by (metis length_nth_bin_\<pi>_it' \<pi>_it'_simps(2) a1 a2)
-          hence 0: "\<not> length (items (bins ?bs'' ! k)) \<le> j"
-            using \<open>i = j\<close> a1 by linarith
-          have "?x = items (bins ?bs' ! k) ! j"
-            using "local.1.prems"(2) a1 kth_app_bins \<open>i = j\<close> by auto
-          hence 1: "?x = items (bins ?bs'' ! k) ! j"
-            using kth_\<pi>_it'_bins by (metis \<open>i = j\<close> \<pi>_it'_simps(2) a1 a2 leI)
-
-          have "\<pi>_it' k ?bs'' j = \<pi>_it' k (app_bins ?bs'' k (Complete_it k ?x ?bs'')) (j+1)"
-            using 1 \<pi>_it'_simps(2)[OF 0 1 a2] by blast
-          moreover have "app_bins ?bs'' k (Complete_it k ?x ?bs'') = ?bs''"
-          proof -
-            have "set (Complete_it k ?x ?bs'') = set (Complete_it k ?x bs)"
-            proof (cases "item_origin ?x = k")
-              case True
-              moreover have "item_end ?x = k"
-                using "1.prems"(1,2) wf_bins_kth_bin x_in_kth_bin by auto
-              moreover have "is_complete ?x"
-                by (metis a2 next_symbol_def not_Some_eq)
-              ultimately have "derives [item_rule_head ?x] []"
-                using "1.prems"(2,5) kth_bin_in_bins sound_items_def x_in_kth_bin sound_item_def slice_empty
-                using is_complete_def item_\<beta>_def by (metis drop_all_iff in_mono order_refl self_append_conv)
-              moreover have "wf_item ?x"
-                using "local.1.prems"(1) "local.1.prems"(2) wf_bins_kth_bin x_in_kth_bin by blast
-              ultimately have "False"
-                unfolding item_rule_head_def rule_head_def wf_item_def using validRules
-                using nonempty_deriv by fastforce
-              then show ?thesis
-                by blast
-            next
-              case False
-              have "item_origin ?x < k"
-                by (metis "1.prems"(1,2) False le_neq_implies_less wf_bins_kth_bin wf_item_def x_in_kth_bin)
-              moreover have "set_bin (bins bs ! item_origin ?x) = set_bin (bins ?bs' ! item_origin ?x)"
-                using False app_bins_def by force
-              moreover have "set_bin (bins ?bs' ! item_origin ?x) = set_bin (bins ?bs'' ! item_origin ?x)"
-                using "local.1.prems"(2) set_bin_\<pi>_it'_eq calculation(1) length_bins_app_bins by presburger
-              ultimately show ?thesis
-                using R15 by blast
-            qed
-            also have "... \<subseteq> set_bin (bins ?bs' ! k)"
-              using "local.1.prems"(2) app_bins_def set_bin_app_bin by auto
-            also have "... \<subseteq> set_bin (bins ?bs'' ! k)"
-              using "local.1.prems"(2) nth_bin_sub_\<pi>_it' by auto
-            finally have "set (Complete_it k ?x ?bs'') \<subseteq> set_bin (bins ?bs'' ! k)" .
-            thus ?thesis
-              using app_bins_eq "1.prems"(2) length_bins_\<pi>_it' length_bins_app_bins by presburger
-          qed
-          ultimately show ?thesis
-            by presburger
-        qed
-        also have "... = \<pi>_it' k ?bs' (i + 1)"
-          using "1.IH" "1.prems"(1-3) \<open>i = j\<close> a1 a2 length_bins_app_bins wf_bins_Complete_it wf_bins_app_bins x_in_kth_bin
-          using wf sound by force
-        finally show ?thesis
-          by (metis \<pi>_it'_simps(2) a1 a2)
-      qed
-    next
-      assume a2: "\<not> next_symbol ?x = None"
-      then obtain a where a_def: "next_symbol ?x = Some a"
-        by blast
-      show ?thesis
-      proof cases
-        assume a3: "is_terminal a"
-        show ?thesis
-        proof cases
-          assume a4: "k < length inp"
-          let ?bs' = "app_bins bs (k+1) (Scan_it k a ?x bs)"
-          have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
-            using a1 a2 a3 a_def \<pi>_it'_simps(3) a4 by blast
-          have wf: "wf_bins ?bs'"
-            using "1.prems"(1,2) a2 a4 wf_bins_app_bins wf_bins_Scan_it x_in_kth_bin by simp
-          have sound: "sound_items (set_bins ?bs')"
-            using sound_Scan_it[OF "1.prems"(1) _ x_in_kth_bin "1.prems"(2) a_def]
-            by (metis (full_types) 0 "1.prems"(1,2,3,5) \<pi>_it'_mono sound_defs(1) sound_\<pi>_it' length_bins_app_bins subsetD)
-          show ?thesis
-          proof cases
-            assume a5: "i+1 \<le> j"
-            have "\<pi>_it' k (\<pi>_it' k ?bs' (i + 1)) j = \<pi>_it' k ?bs' (i + 1)"
-              using "1.IH" "1.prems"(2,3) a1 a2 a3 length_bins_app_bins a4 a5 a_def wf sound by simp
-            thus ?thesis
-              using \<pi>_it'_simps(3) a1 a3 a4 a_def by presburger   
-          next
-            assume a5: "\<not> i+1 \<le> j"
-            hence "i = j"
-              using "1.prems"(4) by auto
-            have "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) j"
-              using 0 by auto
-            also have "... = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) (j+1)"
-            proof -
-              let ?bs'' = "\<pi>_it' k ?bs' (i+1)"
-
-              have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
-                by (metis "0" length_nth_bin_\<pi>_it')
-              hence 0: "\<not> length (items (bins ?bs'' ! k)) \<le> j"
-                using \<open>i = j\<close> a1 by linarith
-              have "?x = items (bins ?bs' ! k) ! j"
-                using "local.1.prems"(2) a1 kth_app_bins \<open>i = j\<close> by (simp add: app_bins_def)
-              hence 1: "?x = items (bins ?bs'' ! k) ! j"
-                by (metis kth_\<pi>_it'_bins \<open>i = j\<close> \<pi>_it'_simps(3) a1 a3 a4 a_def not_less)
-
-              have "k+1 < length (bins bs)"
-                using "1.prems"(3) a4 by auto
-              hence 2: "k+1 < length (bins ?bs')"
-                using length_bins_app_bins by presburger
-
-              have "\<pi>_it' k ?bs'' j = \<pi>_it' k (app_bins ?bs'' (k+1) (Scan_it k a ?x ?bs'')) (j+1)"
-                using "0" "1" \<pi>_it'_simps(3) a3 a4 a_def by blast
-              moreover have "app_bins ?bs'' (k+1) (Scan_it k a ?x ?bs'') = ?bs''"
-              proof -
-                have "set (Scan_it k a ?x ?bs'') = set (Scan_it k a ?x bs)"
-                  unfolding Scan_it_def by blast
-                also have "... \<subseteq> set_bin (bins ?bs' ! (k+1))"
-                  using \<open>k + 1 < length (bins bs)\<close> app_bins_def set_bin_app_bin by auto
-                also have "... \<subseteq> set_bin (bins ?bs'' ! (k+1))"
-                  using "2" nth_bin_sub_\<pi>_it' by auto
-                finally have "set (Scan_it k a ?x ?bs'') \<subseteq> set_bin (bins ?bs'' ! (k+1))" .
-                thus ?thesis
-                  using app_bins_eq \<open>k+1 < length (bins bs)\<close> length_bins_\<pi>_it' length_bins_app_bins by presburger
-              qed
-              ultimately show ?thesis
-                by presburger
-            qed
-            also have "... = \<pi>_it' k ?bs' (i + 1)"
-              using "1.IH" "1.prems"(2,3) \<open>i = j\<close> a1 a3 a_def length_bins_app_bins wf a4 sound by force
-            finally show ?thesis
-              by (metis "0")
-          qed
-        next
-          assume a4: "\<not> k < length inp"
-          show ?thesis
-            proof cases
-              assume a5: "i+1 \<le> j"
-              show ?thesis
-                using 1 a1 a3 a4 a5 a_def by auto
-            next
-              assume a5: "\<not> i+1 \<le> j"
-              show ?thesis
-                by (smt (z3) 1 Option.option.simps(5) kth_\<pi>_it'_bins Suc_eq_plus1 \<pi>_it'_simps(1) \<pi>_it'_simps(4) a3 a4 a5 a_def le_Suc_eq le_antisym le_eq_less_or_eq not_le_imp_less)
-            qed
-        qed
-      next
-        assume a3: "\<not> is_terminal a"
-        let ?bs' = "app_bins bs k (Predict_it k a bs)"
-        have 0: "\<pi>_it' k bs i = \<pi>_it' k ?bs' (i+1)"
-          using a1 a2 a3 a_def \<pi>_it'_simps(5) by blast
-        have len: "i < length (items (bins ?bs' ! k))"
-          using a1 "1.prems"(2) length_nth_bin_app_bins by (meson less_le_trans not_le_imp_less)
-        have wf: "wf_bins ?bs'"
-          using "1.prems"(1,2) wf_bins_Predict_it wf_bins_app_bins x_in_kth_bin by (metis wf_bins_kth_bin wf_item_def)
-        have sound: "sound_items (set_bins ?bs')"
-          using sound_Predict_it by (metis 0 "1.prems"(1,2,3,5) \<pi>_it'_mono sound_\<pi>_it' length_bins_app_bins sound_items_def subsetD)
-        show ?thesis
-        proof cases
-          assume a4: "i+1 \<le> j"
-          hence "\<pi>_it' k (\<pi>_it' k ?bs' (i + 1)) j = \<pi>_it' k ?bs' (i + 1)"
-            using "1.IH" "1.prems"(2,3) a1 a2 a3 length_bins_app_bins a_def wf sound by simp
+    assume "\<not> i+1 \<le> j"
+    hence "i = j"
+      using Complete.prems(4) by simp
+    have "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) j"
+      using \<pi>_it'_simps(2) Complete.hyps(1-3) by presburger
+    also have "... = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) (j+1)"
+    proof -
+      let ?bs'' = "\<pi>_it' k ?bs' (i+1)"
+      have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
+        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins by (meson le_trans)
+      hence 0: "\<not> length (items (bins ?bs'' ! k)) \<le> j"
+        using \<open>i = j\<close> Complete.hyps(1) by linarith
+      have "x = items (bins ?bs' ! k) ! j"
+        using \<open>i = j\<close> kth_app_bins Complete.hyps(1,2) by auto
+      hence 1: "x = items (bins ?bs'' ! k) ! j"
+        using \<open>i = j\<close> kth_\<pi>_it'_bins length_nth_bin_app_bins Complete.hyps(1) by (metis leI order_trans)
+      have "\<pi>_it' k ?bs'' j = \<pi>_it' k (app_bins ?bs'' k (Complete_it k x ?bs'')) (j+1)"
+        using \<pi>_it'_simps(2) 0 1 Complete.hyps(3) by blast
+      moreover have "app_bins ?bs'' k (Complete_it k x ?bs'') = ?bs''"
+      proof -
+        have "set (Complete_it k x ?bs'') = set (Complete_it k x bs)"
+        proof (cases "item_origin x = k")
+          case True
           thus ?thesis
-            using \<pi>_it'_simps(5) a1 a2 a3 a_def by presburger
+            using core True kth_bin_in_bins Complete.hyps(3) Complete.prems(1,2,5) wf_bins_kth_bin
+                  x sound_items_def next_symbol_def by fastforce
         next
-          assume a4: "\<not> i+1 \<le> j"
-          hence "i = j"
-            using "1.prems"(4) by auto
-          have "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) j"
-            using \<pi>_it'_simps(5) a1 a2 a3 a_def by presburger
-          also have "... = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) (j+1)"
-          proof -
-            let ?bs'' = "\<pi>_it' k ?bs' (i+1)"
-
-            have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
-              by (metis "0" length_nth_bin_\<pi>_it')
-            hence 0: "\<not> length (items (bins ?bs'' ! k)) \<le> j"
-              using \<open>i = j\<close> a1 by linarith
-            have "?x = items (bins ?bs' ! k) ! j"
-              using "local.1.prems"(2) a1 kth_app_bins \<open>i = j\<close> by auto
-            hence 1: "?x = items (bins ?bs'' ! k) ! j"
-              using kth_\<pi>_it'_bins \<open>i = j\<close> len by simp
-
-            have "\<pi>_it' k ?bs'' j = \<pi>_it' k (app_bins ?bs'' k (Predict_it k a ?bs'')) (j+1)"
-              using "0" "1" \<pi>_it'_simps(5) a3 a_def by blast
-            moreover have "app_bins ?bs'' k (Predict_it k a ?bs'') = ?bs''"
-            proof -
-              have "set (Predict_it k a ?bs'') = set (Predict_it k a bs)"
-                unfolding Predict_it_def by blast
-              also have "... \<subseteq> set_bin (bins ?bs' ! k)"
-                using "local.1.prems"(2) app_bins_def set_bin_app_bin by auto
-              also have "... \<subseteq> set_bin (bins ?bs'' ! k)"
-                by (metis "local.1.prems"(2) nth_bin_sub_\<pi>_it' length_bins_app_bins)
-              finally have "set (Predict_it k a ?bs'') \<subseteq> set_bin (bins ?bs'' ! k)" .
-              thus ?thesis
-                using app_bins_eq "1.prems"(2) length_bins_\<pi>_it' length_bins_app_bins by presburger
-            qed
-            ultimately show ?thesis
-              by presburger
-          qed
-          also have "... = \<pi>_it' k ?bs' (i + 1)"
-            using "1.IH" "1.prems"(2,3) \<open>i = j\<close> a1 a3 a_def length_bins_app_bins wf sound by force
-          finally show ?thesis
-            by (metis "0")
+          case False
+          hence "item_origin x < k"
+            using x Complete.prems(1,2) wf_bins_kth_bin wf_item_def by force
+          hence "set_bin (bins bs ! item_origin x) = set_bin (bins ?bs'' ! item_origin x)"
+            using False app_bins_def set_bin_\<pi>_it'_eq by force
+          thus ?thesis
+            using Complete_it_eq_item_origin by blast
         qed
+        also have "... \<subseteq> set_bin (bins ?bs' ! k)"
+          using Complete.prems(2) app_bins_def set_bin_app_bin by auto
+        also have "... \<subseteq> set_bin (bins ?bs'' ! k)"
+          using Complete.prems(2) nth_bin_sub_\<pi>_it' by auto
+        finally have "set (Complete_it k x ?bs'') \<subseteq> set_bin (bins ?bs'' ! k)" .
+        thus ?thesis
+          using app_bins_eq Complete.prems(2) length_bins_\<pi>_it' length_bins_app_bins by presburger
       qed
+      ultimately show ?thesis
+        by presburger
     qed
+    also have "... = \<pi>_it' k ?bs' (i + 1)"
+      using Complete.IH Complete.prems(1-3) \<open>i = j\<close> Complete.hyps length_bins_app_bins 
+            wf_bins_Complete_it wf_bins_app_bins x wf sound by force
+    finally show ?thesis
+      using Complete.hyps by simp
   qed
-qed
-
-(* END TODO CLEAN *)
+next
+  case (Scan k bs i x a)
+  let ?bs' = "app_bins bs (k+1) (Scan_it k a x bs)"
+  have x: "x \<in> set_bin (bins bs ! k)"
+    using Scan.hyps(1,2) by auto
+  have wf: "wf_bins ?bs'"
+    using Scan.prems(1,2) Scan.hyps wf_bins_app_bins wf_bins_Scan_it x by (metis Option.option.discI nat_less_le)
+  have sound: "sound_items (set_bins ?bs')"
+    using sound_Scan_it[OF Scan.prems(1) _ x Scan.prems(2)] Scan.hyps(3,5) Scan.prems(1,3,5) 
+          set_bins_app_bins sound_items_def wf_bins_impl_wf_items by fastforce
+  show ?case
+  proof cases
+    assume "i+1 \<le> j"
+    thus ?thesis
+      using wf sound Scan by simp
+  next
+    assume "\<not> i+1 \<le> j"
+    hence "i = j"
+      using Scan.prems(4) by auto
+    have "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) j"
+      using Scan.hyps by simp
+    also have "... = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) (j+1)"
+    proof -
+      let ?bs'' = "\<pi>_it' k ?bs' (i+1)"
+      have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
+        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans by blast
+      hence "\<pi>_it' k ?bs'' j = \<pi>_it' k (app_bins ?bs'' (k+1) (Scan_it k a x ?bs'')) (j+1)"
+        using \<open>i = j\<close> kth_\<pi>_it'_bins nth_app_bin \<pi>_it'_simps(3) Scan.hyps by (smt (z3) le_less_trans not_le)
+      moreover have "app_bins ?bs'' (k+1) (Scan_it k a x ?bs'') = ?bs''"
+      proof -
+        have "set (Scan_it k a x ?bs'') = set (Scan_it k a x bs)"
+          unfolding Scan_it_def by blast
+        also have "... \<subseteq> set_bin (bins ?bs' ! (k+1))"
+          using Scan.hyps(5) Scan.prems(3) app_bins_def set_bin_app_bin by auto
+        also have "... \<subseteq> set_bin (bins ?bs'' ! (k+1))"
+          using Scan.hyps(5) Scan.prems(3) nth_bin_sub_\<pi>_it' by auto
+        finally have "set (Scan_it k a x ?bs'') \<subseteq> set_bin (bins ?bs'' ! (k+1))" .
+        thus ?thesis
+          using app_bins_eq Scan.hyps(5) Scan.prems(3) length_bins_\<pi>_it' by simp
+      qed
+      ultimately show ?thesis
+        by presburger
+    qed
+    also have "... = \<pi>_it' k ?bs' (i + 1)"
+      using \<open>i = j\<close> Scan.IH Scan.prems(2,3) sound wf by simp
+    finally show ?thesis
+      using Scan.hyps by simp
+  qed
+next
+  case (Pass k bs i x a)
+  show ?case
+  proof cases
+    assume "i+1 \<le> j"
+    thus ?thesis
+      using Pass by simp
+  next
+    assume "\<not> i+1 \<le> j"
+    show ?thesis
+      using Pass \<pi>_it'_simps(1,4) kth_\<pi>_it'_bins by (metis Suc_eq_plus1 Suc_leI antisym_conv2 not_le_imp_less)
+  qed
+next
+  case (Predict k bs i x a)
+  let ?bs' = "app_bins bs k (Predict_it k a bs)"
+  have x: "x \<in> set_bin (bins bs ! k)"
+    using Predict.hyps(1,2) by auto
+  have len: "i < length (items (bins ?bs' ! k))"
+    using length_nth_bin_app_bins Predict.hyps(1) by (meson leI le_trans)
+  have wf: "wf_bins ?bs'"
+    using Predict.prems(1-3) wf_bins_Predict_it wf_bins_app_bins by force
+  have sound: "sound_items (set_bins ?bs')" 
+    using sound_Predict_it[OF _ _ x] Predict.hyps(3) Predict.prems(1,2,5) set_bins_app_bins sound_items_def by auto
+  show ?case
+  proof cases
+    assume "i+1 \<le> j"
+    thus ?thesis
+      using sound wf Predict by simp
+  next
+    assume "\<not> i+1 \<le> j"
+    hence "i = j"
+      using Predict.prems(4) by auto
+    have "\<pi>_it' k (\<pi>_it' k bs i) j = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) j"
+      using Predict.hyps by simp
+    also have "... = \<pi>_it' k (\<pi>_it' k ?bs' (i+1)) (j+1)"
+    proof -
+      let ?bs'' = "\<pi>_it' k ?bs' (i+1)"
+      have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
+        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins by (meson order_trans)
+      hence "\<pi>_it' k ?bs'' j = \<pi>_it' k (app_bins ?bs'' k (Predict_it k a ?bs'')) (j+1)"
+        using \<open>i = j\<close> kth_\<pi>_it'_bins nth_app_bin \<pi>_it'_simps(5) Predict.hyps
+        by (smt (z3) Orderings.order_class.order.trans not_le)
+      moreover have "app_bins ?bs'' k (Predict_it k a ?bs'') = ?bs''"
+      proof -
+        have "set (Predict_it k a ?bs'') = set (Predict_it k a bs)"
+          unfolding Predict_it_def by blast
+        also have "... \<subseteq> set_bin (bins ?bs' ! k)"
+          using Predict.prems(2) app_bins_def set_bin_app_bin by auto
+        also have "... \<subseteq> set_bin (bins ?bs'' ! k)"
+          using Predict.prems(2) nth_bin_sub_\<pi>_it' by simp
+        finally have "set (Predict_it k a ?bs'') \<subseteq> set_bin (bins ?bs'' ! k)" .
+        thus ?thesis
+          using app_bins_eq Predict.prems(2) length_bins_\<pi>_it' by simp
+      qed
+      ultimately show ?thesis
+        by presburger
+    qed
+    also have "... = \<pi>_it' k ?bs' (i + 1)"
+      using \<open>i = j\<close> Predict.IH Predict.prems(2,3) sound wf by simp
+    finally show ?thesis
+      using Predict.hyps by simp
+  qed
+qed simp
 
 lemma \<pi>_it_idem:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1" "sound_items (set_bins bs)"
   shows "\<pi>_it k (\<pi>_it k bs) = \<pi>_it k bs"
-  using assms R1 \<pi>_it_def le0 by metis
+  using assms \<pi>_it'_idem \<pi>_it_def le0 by metis
 
 lemma funpower_\<pi>_step_sub_\<pi>_it:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
