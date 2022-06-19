@@ -284,6 +284,7 @@ subsection \<open>Earley algorithm\<close>
 locale Earley_Set = CFG +
   fixes inp :: "symbol list"
   assumes valid_inp: "set inp \<subseteq> \<TT>"
+  assumes finite: "finite \<RR>"
 begin
 
 definition Init :: "items" where
@@ -1029,6 +1030,35 @@ subsection \<open>Correctness\<close>
 corollary correctness:
   "earley_recognized \<II> \<longleftrightarrow> derives [\<SS>] inp"
   using soundness completeness by blast
+
+subsection \<open>Finite\<close>
+
+find_theorems finite "(\<times>)"
+
+thm finite_cartesian_product
+
+find_theorems finite "(\<subseteq>)"
+
+thm finite_subset rev_finite_subset
+
+thm wf_\<II>
+
+(*
+definition wf_item :: "item \<Rightarrow> bool" where 
+  "wf_item x = (
+    item_rule x \<in> \<RR> \<and> 
+    item_dot x \<le> length (item_rule_body x) \<and>
+    item_origin x \<le> item_end x \<and> 
+    item_end x \<le> length inp)"
+*)
+
+lemma A:
+  "finite { x | x. wf_item x }"
+  sorry
+
+theorem finiteness:
+  "finite \<II>"
+  using A wf_items_def wf_\<II> rev_finite_subset by fastforce
 
 end
 
