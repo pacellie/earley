@@ -1031,34 +1031,52 @@ corollary correctness:
   "earley_recognized \<II> \<longleftrightarrow> derives [\<SS>] inp"
   using soundness completeness by blast
 
-subsection \<open>Finite\<close>
+subsection \<open>Finiteness\<close>
 
-find_theorems finite "(\<times>)"
+lemma finiteness_empty:
+  "\<RR> = {} \<Longrightarrow> finite { x | x. wf_item x }"
+  unfolding wf_item_def by simp
 
-thm finite_cartesian_product
-
-find_theorems finite "(\<subseteq>)"
-
-thm finite_subset rev_finite_subset
-
-thm wf_\<II>
-
-(*
-definition wf_item :: "item \<Rightarrow> bool" where 
-  "wf_item x = (
-    item_rule x \<in> \<RR> \<and> 
-    item_dot x \<le> length (item_rule_body x) \<and>
-    item_origin x \<le> item_end x \<and> 
-    item_end x \<le> length inp)"
-*)
-
-lemma A:
-  "finite { x | x. wf_item x }"
-  sorry
+lemma finiteness_nonempty:
+  assumes "\<RR> \<noteq> {}"
+  shows "finite { x | x. wf_item x }"
+proof -
+  define M where "M = Max { length (rule_body r) | r. r \<in> \<RR> }"
+  define Top where "Top = (\<RR> \<times> {0..M} \<times> {0..length inp} \<times> {0..length inp})"
+  hence "finite Top"
+    using finite_cartesian_product finite by blast
+  define f where "f = (\<lambda>(rule, dot, origin, end). Item rule dot origin end)"
+  have "inj_on f Top"
+    unfolding f_def Top_def inj_on_def by simp
+  hence "finite (f ` Top)"
+    using finite_image_iff \<open>finite Top\<close> by auto
+  have "{ x | x. wf_item x } \<subseteq> f ` Top"
+  proof standard
+    fix x
+    assume "x \<in> { x | x. wf_item x }"
+    then obtain rule dot origin endp where *: "x = Item rule dot origin endp"
+      "rule \<in> \<RR>" "dot \<le> length (item_rule_body x)" "origin \<le> length inp" "endp \<le> length inp"
+      unfolding wf_item_def using item.exhaust_sel le_trans by blast
+    hence "length (rule_body rule) \<in> { length (rule_body r) | r. r \<in> \<RR> }"
+      using *(1,2) item_rule_body_def by (auto, metis surj_pair)
+    moreover have "finite { length (rule_body r) | r. r \<in> \<RR> }"
+      using finite finite_image_set[of "\<lambda>x. x \<in> \<RR>"] by fastforce
+    ultimately have "M \<ge> length (rule_body rule)"
+      unfolding M_def by simp
+    hence "dot \<le> M"
+      using *(1,3) item_rule_body_def by fastforce
+    hence "(rule, dot, origin, endp) \<in> Top"
+      using *(2,4,5) unfolding Top_def by simp
+    thus "x \<in> f ` Top"
+      unfolding f_def using *(1) by force
+  qed
+  thus ?thesis
+    using \<open>finite (f ` Top)\<close> rev_finite_subset by auto
+qed
 
 theorem finiteness:
   "finite \<II>"
-  using A wf_items_def wf_\<II> rev_finite_subset by fastforce
+  using finiteness_empty finiteness_nonempty wf_items_def wf_\<II> rev_finite_subset by fastforce
 
 end
 
