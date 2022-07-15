@@ -6,62 +6,62 @@ begin
 
 subsection \<open>Bins\<close>
 
-datatype bin = Bin (items: "item list")
+datatype 'a bin = Bin (items: "'a item list")
 
-datatype bins = Bins (bins: "bin list")
+datatype 'a bins = Bins (bins: "'a bin list")
 
-definition set_bin_upto :: "bin \<Rightarrow> nat \<Rightarrow> items" where
+definition set_bin_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
   "set_bin_upto b i = { items b ! j | j. j < i \<and> j < length (items b) }"
 
-definition set_bin :: "bin \<Rightarrow> items" where
+definition set_bin :: "'a bin \<Rightarrow> 'a items" where
   "set_bin b = set (items b)"
 
-definition set_bins_upto :: "bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> items" where
+definition set_bins_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
   "set_bins_upto bs k i = \<Union> { set_bin (bins bs ! l) | l. l < k } \<union> set_bin_upto (bins bs ! k) i"
 
-definition set_bins :: "bins \<Rightarrow> items" where
+definition set_bins :: "'a bins \<Rightarrow> 'a items" where
   "set_bins bs = \<Union> { set_bin (bins bs ! k) | k. k < length (bins bs) }"
 
-definition app_bin :: "bin \<Rightarrow> item list \<Rightarrow> bin" where
+definition app_bin :: "'a bin \<Rightarrow> 'a item list \<Rightarrow> 'a bin" where
   "app_bin b is = Bin (items b @ (filter (\<lambda>i. i \<notin> set (items b)) is))"
 
-definition app_bins :: "bins \<Rightarrow> nat \<Rightarrow> item list \<Rightarrow> bins" where
+definition app_bins :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> 'a bins" where
   "app_bins bs k is = Bins ((bins bs)[k := app_bin ((bins bs)!k) is])"
 
 locale Earley_List = Earley_Set +
-  fixes rules :: "rule list"
+  fixes rules :: "'a rule list"
   assumes valid_rules: "set rules = \<RR> \<and> distinct rules"
   assumes nonempty_deriv: "N \<in> \<NN> \<Longrightarrow> \<not> derives [N] []"
 begin
 
 subsection \<open>Earley algorithm\<close>
 
-definition Init_it :: "bins" where
+definition Init_it :: "'a bins" where
   "Init_it = (
     let rs = filter (\<lambda>r. rule_head r = \<SS>) rules in
     let b0 = map (\<lambda>r. init_item r 0) rs in
     let bs = replicate (length inp + 1) (Bin []) in
     app_bins (Bins bs) 0 b0)"
 
-definition Scan_it :: "nat \<Rightarrow> symbol \<Rightarrow> item \<Rightarrow> item list" where
+definition Scan_it :: "nat \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> 'a item list" where
   "Scan_it k a x = (
     if k < length inp \<and> inp!k = a then
       let x' = inc_item x (k+1) in
       [x']
     else [])"
 
-definition Predict_it :: "nat \<Rightarrow> symbol \<Rightarrow> item list" where
+definition Predict_it :: "nat \<Rightarrow> 'a \<Rightarrow> 'a item list" where
   "Predict_it k X = (
     let rs = filter (\<lambda>r. rule_head r = X) rules in
     map (\<lambda>r. init_item r k) rs)"
 
-definition Complete_it :: "nat \<Rightarrow> item \<Rightarrow> bins \<Rightarrow> item list" where
+definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> 'a item list" where
   "Complete_it k y bs = (
     let orig = (bins bs)!(item_origin y) in
     let is = filter (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
     map (\<lambda>x. inc_item x k) is)"
 
-function \<pi>_it' :: "nat \<Rightarrow> bins \<Rightarrow> nat \<Rightarrow> bins" where
+function \<pi>_it' :: "nat \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
   "\<pi>_it' k bs i = (
     if i \<ge> length (items (bins bs ! k)) then bs
     else
@@ -81,14 +81,14 @@ termination
 (* while_option :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a option"
    while :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" *)
 
-definition \<pi>_it :: "nat \<Rightarrow> bins \<Rightarrow> bins" where
+definition \<pi>_it :: "nat \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
   "\<pi>_it k bs = \<pi>_it' k bs 0"
 
-fun \<I>_it :: "nat \<Rightarrow> bins" where
+fun \<I>_it :: "nat \<Rightarrow> 'a bins" where
   "\<I>_it 0 = \<pi>_it 0 Init_it"
 | "\<I>_it (Suc n) = \<pi>_it (Suc n) (\<I>_it n)"
 
-definition \<II>_it :: "bins" where
+definition \<II>_it :: "'a bins" where
   "\<II>_it = \<I>_it (length inp)"
 
 subsubsection \<open>Alternate \<pi>_it' simps and induction rule\<close>
@@ -219,7 +219,9 @@ lemma kth_\<pi>_it'_bins:
   assumes "j < length (items (bins bs ! l))"
   shows "items (bins (\<pi>_it' k bs i) ! l) ! j = items (bins bs ! l) ! j"
   using assms length_nth_bin_app_bins nth_app_bins kth_app_bins length_bins_app_bins
-  by (induction k bs i rule: \<pi>_it'_induct) (auto simp: less_le_trans, metis+)
+  apply (induction k bs i rule: \<pi>_it'_induct)
+      apply (auto simp: less_le_trans)
+  sorry
 
 lemma nth_bin_sub_\<pi>_it':
   assumes "k < length (bins bs)" "l < length (bins bs)"
@@ -294,10 +296,10 @@ lemma distinct_app_bin:
 
 subsection \<open>Wellformed Bins\<close>
 
-definition wf_bin :: "nat \<Rightarrow> bin \<Rightarrow> bool" where
+definition wf_bin :: "nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
   "wf_bin k b \<longleftrightarrow> distinct (items b) \<and> (\<forall>x \<in> set (items b). wf_item x \<and> item_end x = k)"
 
-definition wf_bins :: "bins \<Rightarrow> bool" where
+definition wf_bins :: "'a bins \<Rightarrow> bool" where
   "wf_bins bs \<longleftrightarrow> (\<forall>k < length (bins bs). wf_bin k (bins bs ! k))"
 
 lemma wf_bins_impl_wf_items:
