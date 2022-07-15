@@ -24,7 +24,7 @@ datatype t = a | plus
 datatype n = S
 datatype s = Terminal t | Nonterminal n
 
-definition grammar :: "rule set" where
+definition grammar :: "s rule set" where
   "grammar = {
     (Nonterminal S, [Terminal a]),
     (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])
