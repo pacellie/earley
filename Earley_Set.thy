@@ -8,6 +8,12 @@ section \<open>Slightly adjusted content from AFP/LocalLexing\<close>
 
 subsection \<open>CFG.thy\<close>
 
+(*
+type_synonym ('a, 'b) rule = "'a \<times> ('a + 'b) list"
+
+type_synonym ('a, 'b) sentence = "('a + 'b) list"
+*)
+
 type_synonym 'a rule = "'a \<times> 'a list"
 
 type_synonym 'a sentence = "'a list"
@@ -1882,7 +1888,7 @@ subsection \<open>Earley algorithm\<close>
 
 locale Earley_Set = CFG +
   fixes inp :: "'a list"
-  assumes valid_inp: "set inp \<subseteq> \<TT>"
+  assumes valid_input: "set inp \<subseteq> \<TT>"
   assumes finite: "finite \<RR>"
 begin
 
@@ -2098,7 +2104,8 @@ proof standard
     hence "is_sentence (tl (item_\<beta> x))"
       using is_sentence_item_\<beta> is_sentence_cons 0 by metis
     moreover have "is_sentence (slice (item_origin x) (item_origin y) inp)"
-      by (meson is_sentence_simp is_symbol_def is_terminal_def slice_subset subsetD valid_inp)
+      unfolding is_sentence_simp is_symbol_def is_terminal_def is_nonterminal_def
+      by (meson slice_subset subsetD valid_input)
     ultimately obtain G where 
       "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
        slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
@@ -2593,7 +2600,7 @@ lemma Derivation_\<SS>1:
 proof (cases D)
   case Nil
   thus ?thesis
-    using is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal valid_inp assms by force
+    using valid_input assms is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal by fastforce
 next
   case (Cons d D)
   then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D inp"
