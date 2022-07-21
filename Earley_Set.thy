@@ -2682,9 +2682,13 @@ proof -
     using \<open>finite (f ` Top)\<close> rev_finite_subset by auto
 qed
 
+lemma finiteness_UNIV_wf_item:
+  "finite { x | x. wf_item x }"
+  using finiteness_empty finiteness_nonempty by fastforce
+
 theorem finiteness:
   "finite \<II>"
-  using finiteness_empty finiteness_nonempty wf_items_def wf_\<II> rev_finite_subset by fastforce
+  using finiteness_UNIV_wf_item wf_items_def wf_\<II> rev_finite_subset by fastforce
 
 end
 
