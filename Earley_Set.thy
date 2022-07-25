@@ -2692,4 +2692,135 @@ theorem finiteness:
 
 end
 
+subsection \<open>Epsilon Productions\<close>
+
+fun all :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> bool" where
+  "all _ [] = True"
+| "all P (x#xs) \<longleftrightarrow> P x \<and> all P xs"
+
+lemma all_iff_forall:
+  "all P xs \<longleftrightarrow> (\<forall>x \<in> set xs. P x)"
+  by (induction xs) auto
+
+context Earley_Set
+begin
+
+definition Init_\<epsilon> :: "'a set" where
+  "Init_\<epsilon> = { rule_head r | r. r \<in> \<RR> \<and> rule_body r = [] }"
+
+definition \<epsilon>_step :: "'a set \<Rightarrow> 'a set" where
+  "\<epsilon>_step \<E> = \<E> \<union> { rule_head r | r. r \<in> \<RR> \<and> all (\<lambda>a. a \<in> \<E>) (rule_body r)}"
+
+definition \<epsilon> :: "'a set \<Rightarrow> 'a set" where
+  "\<epsilon> \<E> = limit (\<epsilon>_step) \<E>"
+
+definition \<epsilon>_free :: "bool" where
+  "\<epsilon>_free \<longleftrightarrow> \<epsilon> Init_\<epsilon> = {}"
+
+(*
+fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'a)" where
+  "funpower f 0 x = x"
+| "funpower f (Suc n) x = f (funpower f n x)"
+
+definition natUnion :: "(nat \<Rightarrow> 'a set) \<Rightarrow> 'a set" where
+  "natUnion f = \<Union> { f n | n. True }"
+
+definition limit  :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
+  "limit f x = natUnion (\<lambda> n. funpower f n x)"
+*)
+
+lemma X0:
+  "\<E> \<subseteq> \<epsilon>_step \<E>"
+  unfolding \<epsilon>_step_def by blast
+
+lemma X1:
+  "m \<le> n \<Longrightarrow> funpower \<epsilon>_step m \<E> \<subseteq> funpower \<epsilon>_step n \<E>"
+  apply (induction n)
+  apply (auto simp: X0)
+  using X0 le_Suc_eq by auto
+
+lemma X2:
+  assumes "\<forall>a \<in> set (rule_body r). a \<in> \<E>" "r \<in> \<RR>"
+  shows "rule_head r \<in> \<epsilon>_step \<E>"
+  unfolding \<epsilon>_step_def using assms all_iff_forall by blast
+
+lemma A1:
+  assumes "N \<in> \<NN>" "\<exists>D. Derivation [N] D [] \<and> length D \<le> n"
+  shows "N \<in> funpower \<epsilon>_step n Init_\<epsilon>"
+  using assms
+proof (induction n arbitrary: N rule: nat_less_induct)
+  case (1 n)
+  then obtain D where D: "Derivation [N] D []" "length D \<le> n"
+    by blast
+  show ?case
+  proof (cases "length D < n")
+    case True
+    hence "N \<in> funpower \<epsilon>_step (length D) Init_\<epsilon>"
+      using 1 D by blast
+    hence "N \<in> funpower \<epsilon>_step n Init_\<epsilon>"
+      using D(2) X1 by blast
+    then show ?thesis
+      by simp
+  next
+    case False
+    hence "length D = n"
+      using D(2) by auto
+    show ?thesis
+    proof cases
+      assume "n = 0"
+      thus ?thesis
+        using D(1) \<open>length D = n\<close> by auto
+    next
+      assume "\<not> n = 0"
+      then obtain d D' where "D = d # D'"
+        using list.exhaust \<open>length D = n\<close> by blast
+      then obtain \<alpha> where \<alpha>: "Derivation [N] [d] \<alpha>" "Derivation \<alpha> D' []" "(N,\<alpha>) \<in> \<RR>"
+        sorry
+
+      have 2: "\<forall>M \<in> set \<alpha>. M \<in> \<NN>"
+        sorry
+      have 3: "\<forall>M \<in> set \<alpha>. \<exists>E. Derivation [M] E [] \<and> length E \<le> length D'"
+        sorry
+
+      have "\<forall>M \<in> set \<alpha>. M \<in> funpower \<epsilon>_step (length D') Init_\<epsilon>"
+        using 1 2 3 \<open>D = d # D'\<close> \<open>length D = n\<close> by auto
+      hence "N \<in> \<epsilon>_step (funpower \<epsilon>_step (length D') Init_\<epsilon>)"
+        using X2 \<alpha>(3) by (auto simp: rule_body_def rule_head_def)
+      thus ?thesis
+        using \<open>length D = n\<close> \<open>n \<noteq> 0\<close> \<open>D = d # D'\<close> by auto
+    qed
+  qed
+qed
+
+(*
+lemma A2:
+  assumes "N \<in> funpower \<epsilon>_step n Init_\<epsilon>"
+  shows "\<exists>D. Derivation [N] D []"
+  sorry
+*)
+
+lemma B1:
+  assumes "N \<in> \<NN>" "\<exists>D. Derivation [N] D []"
+  shows "N \<in> \<epsilon> Init_\<epsilon>"
+  unfolding \<epsilon>_def limit_def natUnion_def using assms A1 by blast
+
+(*
+lemma B2:
+  assumes "N \<in> \<epsilon> Init_\<epsilon>"
+  shows "\<exists>D. Derivation [N] D []"
+  using assms A2 \<epsilon>_def elem_limit_simp by fast
+*)
+
+lemma C1:
+  assumes "N \<in> \<NN>" "\<epsilon>_free"
+  shows "\<nexists>D. Derivation [N] D []"
+  using B1 assms \<epsilon>_free_def by blast
+
+lemma D1:
+  assumes "N \<in> \<NN>" "\<epsilon>_free"
+  shows "\<not> derives [N] []"
+  using C1 assms derives_implies_Derivation by blast
+
+end
+
 end
