@@ -1893,9 +1893,16 @@ begin
 definition \<epsilon>_free :: "bool" where
   "\<epsilon>_free = (\<forall>r \<in> set \<RR>. rule_body r \<noteq> [])"
 
+lemma \<epsilon>_free_impl_non_empty_Derivation:
+  "\<epsilon>_free \<Longrightarrow> N \<in> set \<NN> \<Longrightarrow> \<not> Derivation [N] D []"
+proof (induction "length D" arbitrary: D rule: nat_less_induct)
+  case 1
+  then show ?case sorry
+qed
+
 lemma \<epsilon>_free_impl_non_empty_deriv:
   "\<epsilon>_free \<Longrightarrow> N \<in> set \<NN> \<Longrightarrow> \<not> derives [N] []"
-  sorry
+  using \<epsilon>_free_impl_non_empty_Derivation derives_implies_Derivation by blast
 
 end
 
@@ -1903,8 +1910,7 @@ subsection \<open>Earley algorithm\<close>
 
 locale Earley_Set = CFG +
   fixes inp :: "'a list"
-  assumes univ_symbols: "set \<NN> \<union> set \<TT> = UNIV" 
-(*  assumes valid_input: "set inp \<subseteq> set \<TT>" *)
+  assumes univ_symbols: "set \<NN> \<union> set \<TT> = UNIV"
 begin
 
 definition Init :: "'a items" where
@@ -2608,14 +2614,19 @@ lemma Init_sub_\<I>:
   "Init \<subseteq> \<I> k"
   using \<pi>_mono by (induction k) auto
 
+(*
+fun Derivation :: "'a sentence \<Rightarrow> 'a derivation \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "Derivation a [] b = (a = b)"
+| "Derivation a (d#D) b = (\<exists> x. Derives1 a (fst d) (snd d) x \<and> Derivation x D b)"
+*)
+
 lemma Derivation_\<SS>1:
-  assumes "Derivation [\<SS>] D inp"
+  assumes "Derivation [\<SS>] D inp" "set inp \<subseteq> set \<TT>"
   shows "\<exists>\<alpha> E. Derivation \<alpha> E inp \<and> (\<SS>,\<alpha>) \<in> set \<RR>"
 proof (cases D)
   case Nil
   thus ?thesis
-    sorry
-(* using valid_input assms is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal by fastforce *)
+    using assms is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal by fastforce
 next
   case (Cons d D)
   then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D inp"
@@ -2628,7 +2639,7 @@ next
 qed
 
 theorem completeness:
-  assumes "derives [\<SS>] inp"
+  assumes "derives [\<SS>] inp" "set inp \<subseteq> set \<TT>"
   shows "earley_recognized"
 proof -
   obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> set \<RR>" "derives \<alpha> inp"
@@ -2649,8 +2660,9 @@ qed
 subsection \<open>Correctness\<close>
 
 corollary correctness:
-  "earley_recognized \<longleftrightarrow> derives [\<SS>] inp"
-  using soundness completeness by blast
+  assumes "set inp \<subseteq> set \<TT>"
+  shows "earley_recognized \<longleftrightarrow> derives [\<SS>] inp"
+  using assms soundness completeness by blast
 
 subsection \<open>Finiteness\<close>
 

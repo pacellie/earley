@@ -834,7 +834,7 @@ lemma \<pi>_it'_mono:
 lemma \<pi>_step_sub_\<pi>_it':
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k (set_bins_upto bs k i) \<subseteq> set_bins bs"
-  assumes "sound_items (set_bins bs)"
+  assumes "sound_items (set_bins bs)" "set inp \<subseteq> set \<TT>"
   shows "\<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs i)"
   using assms
 proof (induction k bs i rule: \<pi>_it'_induct)
@@ -894,7 +894,8 @@ next
       using Complete.prems(2) set_bins_app_bins by blast
   qed
   ultimately have "\<pi>_step k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i+1))"
-    using Complete.IH Complete.prems(2,3) sound wf \<pi>_step_def set_bins_upto_sub_set_bins by (metis Un_subset_iff length_bins_app_bins)
+    using Complete.IH Complete.prems(2,3,6) sound wf \<pi>_step_def set_bins_upto_sub_set_bins
+    by (metis (no_types, lifting) Un_assoc length_bins_app_bins subset_Un_eq)
   thus ?case
     using \<pi>_it'_simps(2) \<pi>_step_sub_mono Complete.hyps local.Complete.prems(2) set_bins_app_bins
     by (smt (verit, del_insts) Orderings.preorder_class.dual_order.trans Un_upper1)
@@ -971,7 +972,7 @@ next
       using Scan.hyps(5) Scan.prems(3,4) Complete_\<pi>_step_mono by (auto simp: set_bins_app_bins, blast)
   qed
   ultimately have "\<pi>_step k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i+1))"
-    using Scan.IH Scan.prems(2,3) sound wf \<pi>_step_def set_bins_upto_sub_set_bins by (metis Un_subset_iff length_bins_app_bins)
+    using Scan.IH Scan.prems(2,3,6) sound wf \<pi>_step_def set_bins_upto_sub_set_bins by (metis Un_subset_iff length_bins_app_bins)
   thus ?case
     using \<pi>_step_sub_mono \<pi>_it'_simps(3) Scan.hyps Scan.prems(2,3) by (auto simp: set_bins_app_bins, blast)
 next
@@ -1004,14 +1005,14 @@ next
       using Pass.prems(4) Complete_\<pi>_step_mono by blast
   qed
   ultimately have "\<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it' k bs (i+1))"
-    using Pass.IH Pass.prems(1-3,5) \<pi>_step_def set_bins_upto_sub_set_bins by (metis Un_subset_iff)
+    using Pass.IH Pass.prems(1-3,5,6) \<pi>_step_def set_bins_upto_sub_set_bins by (metis Un_subset_iff)
   thus ?case
     using set_bins_app_bins Pass.hyps Pass.prems by simp
 next
   case (Predict k bs i x a)
   let ?bs' = "app_bins bs k (Predict_it k a)"
   have "k \<ge> length inp \<or> \<not> inp!k = a"
-    using Predict.hyps(4) is_terminal_def sorry
+    using Predict.hyps(4) is_terminal_def Predict.prems(6) by force
   have x: "x \<in> set_bin (bins bs ! k)"
     using Predict.hyps(1,2) by auto
   have len: "i < length (items (bins ?bs' ! k))"
@@ -1063,7 +1064,7 @@ next
       using set_bins_app_bins Predict.prems(2,4) Complete_\<pi>_step_mono by fastforce
   qed
   ultimately have "\<pi>_step k (set_bins ?bs') \<subseteq> set_bins (\<pi>_it' k ?bs' (i+1))"
-    using Predict.IH Predict.prems(2,3) sound wf \<pi>_step_def set_bins_upto_sub_set_bins 
+    using Predict.IH Predict.prems(2,3,6) sound wf \<pi>_step_def set_bins_upto_sub_set_bins 
     by (metis Un_subset_iff length_bins_app_bins)
   thus ?case
     using \<pi>_step_sub_mono \<pi>_it'_simps(5) Predict.hyps Predict.prems(2,3) by (auto simp: set_bins_app_bins, blast)
@@ -1072,7 +1073,7 @@ qed
 lemma \<pi>_step_sub_\<pi>_it:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs"
-  assumes "sound_items (set_bins bs)"
+  assumes "sound_items (set_bins bs)" "set inp \<subseteq> set \<TT>"
   shows "\<pi>_step k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
   using assms \<pi>_step_sub_\<pi>_it' \<pi>_it_def by metis
 
@@ -1359,8 +1360,9 @@ proof -
 qed
 
 corollary correctness_list:
-  "earley_recognized_it \<longleftrightarrow> derives [\<SS>] inp"
-  using correctness earley_recognized_it_iff_earley_recognized by blast
+  assumes "set inp \<subseteq> set \<TT>"
+  shows "earley_recognized_it \<longleftrightarrow> derives [\<SS>] inp"
+  using assms correctness earley_recognized_it_iff_earley_recognized by blast
 
 end
 

@@ -52,7 +52,7 @@ global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
 value \<epsilon>_free
 thm CFG.\<epsilon>_free_impl_non_empty_deriv[OF]
 
-global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" inp
+global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" for inp
   defines is_finished = earley.is_finished
       and wf_item = earley.wf_item
       and wf_bin = earley.wf_bin
@@ -78,8 +78,8 @@ global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "
     sorry
   done
 
-value \<II>
-value earley_recognized
+value "\<II> inp"
+value "earley_recognized inp"
 
 export_code earley_recognized in SML
 
