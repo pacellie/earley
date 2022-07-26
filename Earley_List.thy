@@ -30,11 +30,8 @@ definition app_bins :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a item list \<R
   "app_bins bs k is = Bins ((bins bs)[k := app_bin ((bins bs)!k) is])"
 
 locale Earley_List = Earley_Set +
-  fixes rules :: "'a rule list"
-  fixes terminals :: "'a list"
-  assumes valid_rules: "set rules = \<RR> \<and> distinct rules"
-  assumes valid_terminals: "set terminals = \<TT>"
-  assumes nonempty_deriv: "N \<in> \<NN> \<Longrightarrow> \<not> derives [N] []"
+  assumes distinct_rules: "distinct \<RR>"
+  assumes nonempty_deriv: "N \<in> set \<NN> \<Longrightarrow> \<not> derives [N] []"
 begin
 
 subsection \<open>Earley algorithm\<close>
@@ -47,7 +44,7 @@ definition wf_bins :: "'a bins \<Rightarrow> bool" where
 
 definition Init_it :: "'a bins" where
   "Init_it = (
-    let rs = filter (\<lambda>r. rule_head r = \<SS>) rules in
+    let rs = filter (\<lambda>r. rule_head r = \<SS>) \<RR> in
     let b0 = map (\<lambda>r. init_item r 0) rs in
     let bs = replicate (length inp + 1) (Bin []) in
     app_bins (Bins bs) 0 b0)"
@@ -61,7 +58,7 @@ definition Scan_it :: "nat \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow>
 
 definition Predict_it :: "nat \<Rightarrow> 'a \<Rightarrow> 'a item list" where
   "Predict_it k X = (
-    let rs = filter (\<lambda>r. rule_head r = X) rules in
+    let rs = filter (\<lambda>r. rule_head r = X) \<RR> in
     map (\<lambda>r. init_item r k) rs)"
 
 definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> 'a item list" where
@@ -348,11 +345,11 @@ lemma wf_bins_app_bins:
 lemma wf_bins_Init_it:
   "wf_bins Init_it"
 proof -
-  let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) rules"
+  let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) \<RR>"
   let ?b0 = "Bin (map (\<lambda>r. init_item r 0) ?rs)"
   let ?bs = "replicate (length inp + 1) (Bin [])"
   have "wf_bin 0 ?b0"
-    unfolding wf_bin_def wf_item_def using valid_rules by (auto simp: init_item_def distinct_map inj_on_def)
+    unfolding wf_bin_def wf_item_def using distinct_rules by (auto simp: init_item_def distinct_map inj_on_def)
   moreover have "wf_bins (Bins ?bs)"
     unfolding wf_bins_def wf_bin_def using less_Suc_eq_0_disj by force
   ultimately show ?thesis
@@ -365,7 +362,7 @@ lemma distinct_Scan_it:
 
 lemma distinct_Predict_it:
   "distinct (Predict_it k X)"
-  unfolding Predict_it_def using valid_rules by (auto simp: init_item_def rule_head_def distinct_map inj_on_def)
+  unfolding Predict_it_def using distinct_rules by (auto simp: init_item_def rule_head_def distinct_map inj_on_def)
 
 lemma distinct_Complete_it:
   "wf_bins bs \<Longrightarrow> item_origin y < length (bins bs) \<Longrightarrow> distinct (Complete_it k y bs)"
@@ -451,7 +448,7 @@ subsection \<open>List to Set\<close>
 lemma Init_it_eq_Init:
   "set_bins Init_it = Init"
 proof -
-  let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) rules"
+  let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) \<RR>"
   let ?b0 = "map (\<lambda>r. init_item r 0) ?rs"
   let ?bs = "Bins (replicate (length inp + 1) (Bin []))"
   have "set_bins ?bs = {}"
@@ -492,11 +489,11 @@ proof standard
   assume *: "y \<in> set (Predict_it k X)"
   have "x \<in> bin I k"
     using kth_bin_in_bins assms(1-4) set_bin_def wf_bin_def wf_bins_def bin_def by blast
-  let ?rs = "filter (\<lambda>r. rule_head r = X) rules"
+  let ?rs = "filter (\<lambda>r. rule_head r = X) \<RR>"
   let ?xs = "map (\<lambda>r. init_item r k) ?rs"
   have "y \<in> set ?xs"
     using * unfolding Predict_it_def by simp
-  then obtain r where "y = init_item r k" "rule_head r = X" "r \<in> \<RR>" "next_symbol x = Some (rule_head r)"
+  then obtain r where "y = init_item r k" "rule_head r = X" "r \<in> set \<RR>" "next_symbol x = Some (rule_head r)"
     using valid_rules assms(5) by auto
   thus "y \<in> Predict k I"
     unfolding Predict_def using \<open>x \<in> bin I k\<close> by blast
@@ -705,7 +702,7 @@ proof (rule ccontr)
   proof (cases "x = z")
     case True
     have "is_nonterminal (item_rule_head y)"
-      using validRules *(5) assms(3,4)
+      using valid_rules *(5) assms(3,4)
       by (auto simp: wf_item_def wf_items_def bin_def item_rule_head_def rule_head_def, force)
     thus ?thesis
       using True *(7) assms(1,2) is_terminal_nonterminal by auto
@@ -955,7 +952,7 @@ next
     also have "... \<subseteq> set_bins bs \<union> Predict k {x}"
       using Scan.prems(3,4) Predict_Un Predict_\<pi>_step_mono by fastforce
     also have "... = set_bins bs"
-      using Scan.hyps(3,4)  validRules valid_rules is_terminal_nonterminal
+      using Scan.hyps(3,4) valid_rules valid_rules is_terminal_nonterminal
       by (auto simp: Predict_def bin_def rule_head_def, force)
     finally show ?thesis
       using Scan.hyps(5) Scan.prems(3) by (auto simp: set_bins_app_bins)
@@ -992,7 +989,7 @@ next
     also have "... \<subseteq> set_bins bs \<union> Predict k {x}"
       using Pass.prems(3,4) Predict_Un Predict_\<pi>_step_mono by fastforce
     also have "... = set_bins bs"
-      using Pass.hyps(3,4) validRules valid_rules is_terminal_nonterminal by (auto simp: Predict_def bin_def rule_head_def, force)
+      using Pass.hyps(3,4) valid_rules valid_rules is_terminal_nonterminal by (auto simp: Predict_def bin_def rule_head_def, force)
     finally show ?thesis
       using set_bins_app_bins Pass.hyps(5) Pass.prems(3) by auto
   qed
@@ -1343,9 +1340,27 @@ lemma \<II>_sub_\<II>_it:
 
 subsection \<open>Correctness\<close>
 
+definition earley_recognized_it :: "bool" where
+  "earley_recognized_it = (\<exists>x \<in> set (items (bins \<II>_it ! length inp)). is_finished x)"
+
+theorem earley_recognized_it_iff_earley_recognized:
+  "earley_recognized_it \<longleftrightarrow> earley_recognized"
+proof -
+  have "earley_recognized_it = (\<exists>x \<in> set (items (bins \<II>_it ! length inp)). is_finished x)"
+    unfolding earley_recognized_it_def by blast
+  also have "... = (\<exists>x \<in> set_bins \<II>_it. is_finished x)"
+    using is_finished_def kth_bin_in_bins \<II>_it_def length_bins_Init_it length_bins_\<I>_it wf_bins_\<II>_it
+      wf_item_in_kth_bin set_bin_def by (metis One_nat_def lessI less_add_same_cancel1 subset_code(1))
+  also have "... = (\<exists>x \<in> \<II>. is_finished x)"
+    using \<II>_it_sub_\<II> \<II>_sub_\<II>_it by auto
+  also have "... = earley_recognized"
+    unfolding earley_recognized_def by blast
+  finally show ?thesis .
+qed
+
 corollary correctness_list:
-  "earley_recognized (set_bins \<II>_it) \<longleftrightarrow> derives [\<SS>] inp"
-  using \<II>_it_sub_\<II> \<II>_sub_\<II>_it correctness by simp
+  "earley_recognized_it \<longleftrightarrow> derives [\<SS>] inp"
+  using correctness earley_recognized_it_iff_earley_recognized by blast
 
 end
 

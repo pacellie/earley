@@ -19,20 +19,20 @@ type_synonym 'a rule = "'a \<times> 'a list"
 type_synonym 'a sentence = "'a list"
 
 locale CFG =
-  fixes \<NN> :: "'a set"
-  fixes \<TT> :: "'a set"
-  fixes \<RR> :: "'a rule set"
+  fixes \<NN> :: "'a list"
+  fixes \<TT> :: "'a list"
+  fixes \<RR> :: "'a rule list"
   fixes \<SS> :: "'a"
-  assumes disjunct_symbols: "\<NN> \<inter> \<TT> = {}"
-  assumes startsymbol_dom: "\<SS> \<in> \<NN>"
-  assumes validRules: "\<forall> (N, \<alpha>) \<in> \<RR>. N \<in> \<NN> \<and> (\<forall> s \<in> set \<alpha>. s \<in> \<NN> \<union> \<TT>)"
+  assumes disjunct_symbols: "set \<NN> \<inter> set \<TT> = {}"
+  assumes startsymbol_dom: "\<SS> \<in> set \<NN>"
+  assumes valid_rules: "\<forall>(N, \<alpha>) \<in> set \<RR>. N \<in> set \<NN> \<and> (\<forall>s \<in> set \<alpha>. s \<in> set \<NN> \<union> set \<TT>)"
 begin
 
 definition is_terminal :: "'a \<Rightarrow> bool" where
-  "is_terminal s = (s \<in> \<TT>)"
+  "is_terminal s = (s \<in> set \<TT>)"
 
 definition is_nonterminal :: "'a \<Rightarrow> bool" where
-  "is_nonterminal s = (s \<in> \<NN>)"
+  "is_nonterminal s = (s \<in> set \<NN>)"
 
 lemma is_nonterminal_startsymbol: "is_nonterminal \<SS>"
   by (simp add: is_nonterminal_def startsymbol_dom)
@@ -53,7 +53,7 @@ definition derives1 :: "'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool
         \<and> v = x @ \<alpha> @ y
         \<and> is_sentence x
         \<and> is_sentence y
-        \<and> (N, \<alpha>) \<in> \<RR>)"  
+        \<and> (N, \<alpha>) \<in> set \<RR>)"  
 
 definition derivations1 :: "('a sentence \<times> 'a sentence) set" where
   "derivations1 = { (u,v) | u v. derives1 u v }"
@@ -96,7 +96,7 @@ definition leftderives1 :: "'a sentence \<Rightarrow> 'a sentence \<Rightarrow> 
         \<and> v = x @ \<alpha> @ y
         \<and> is_word x
         \<and> is_sentence y
-        \<and> (N, \<alpha>) \<in> \<RR>)"  
+        \<and> (N, \<alpha>) \<in> set \<RR>)"  
 
 lemma leftderives1_implies_derives1[simp]: "leftderives1 u v \<Longrightarrow> derives1 u v"
   apply (auto simp add: leftderives1_def derives1_def)
@@ -198,7 +198,7 @@ definition Derives1 :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a rule \<Ri
         \<and> v = x @ \<alpha> @ y
         \<and> is_sentence x
         \<and> is_sentence y
-        \<and> (N, \<alpha>) \<in> \<RR>
+        \<and> (N, \<alpha>) \<in> set \<RR>
         \<and> r = (N, \<alpha>) \<and> i = length x)"  
 
 lemma Derives1_split:
@@ -289,12 +289,12 @@ lemma is_sentence_concat: "is_sentence (x@y) = (is_sentence x \<and> is_sentence
 lemma is_sentence_cons: "is_sentence (x#xs) = (is_symbol x \<and> is_sentence xs)"
   by (auto simp add: is_sentence_def)
 
-lemma rule_nonterminal_type[simp]: "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> is_nonterminal N"
-  apply (insert validRules)
+lemma rule_nonterminal_type[simp]: "(N, \<alpha>) \<in> set \<RR> \<Longrightarrow> is_nonterminal N"
+  apply (insert valid_rules)
   by (auto simp add: is_nonterminal_def)
 
-lemma rule_\<alpha>_type[simp]: "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> is_sentence \<alpha>"
-  apply (insert validRules)
+lemma rule_\<alpha>_type[simp]: "(N, \<alpha>) \<in> set \<RR> \<Longrightarrow> is_sentence \<alpha>"
+  apply (insert valid_rules)
   by (auto simp add: is_sentence_def is_symbol_def list_all_iff is_terminal_def is_nonterminal_def)
 
 lemma [simp]: "is_nonterminal N \<Longrightarrow> is_symbol N"
@@ -306,7 +306,7 @@ lemma Derives1_sentence1[elim]: "Derives1 a i r b \<Longrightarrow> is_sentence 
 lemma Derives1_sentence2[elim]: "Derives1 a i r b \<Longrightarrow> is_sentence b"
   by (auto simp add: Derives1_def is_sentence_cons is_sentence_concat)
 
-lemma [elim]: "Derives1 a i r b \<Longrightarrow> r \<in> \<RR>"
+lemma [elim]: "Derives1 a i r b \<Longrightarrow> r \<in> set \<RR>"
   using Derives1_def by auto
 
 lemma is_sentence_symbol: "is_sentence a \<Longrightarrow> i < length a \<Longrightarrow> is_symbol (a ! i)"
@@ -328,7 +328,7 @@ proof -
   let ?M = "Min ?J"
   from assms have J1:"i \<in> ?J"
     apply (auto simp add: Derives1_def is_nonterminal_def)
-    by (metis (mono_tags, lifting) prod.simps(2) validRules)
+    by (metis (mono_tags, lifting) prod.simps(2) valid_rules)
   have J2:"finite ?J" by auto
   note J = J1 J2
   from J have M1: "?M \<in> ?J" by (rule_tac Min_in, auto) 
@@ -667,7 +667,7 @@ proof -
     using is_sentence_concat by blast    
   have u2: "b2 = u @ snd p @ a2" by (metis a_dest append_assoc b_src same_append_eq u1) 
   let ?b = "b1 @ (snd q) @ u @ [fst p] @ a2"
-  from assms have q_dom: "q \<in> \<RR>" by auto
+  from assms have q_dom: "q \<in> set \<RR>" by auto
   have a_b': "Derives1 a i q ?b"
     apply (subst Derives1_def)
     apply (rule exI[where x="b1"])
@@ -677,7 +677,7 @@ proof -
     apply (auto simp add: b1_len is_sentence_cons is_sentence_concat
            is_sentence_a2 is_symbol_fst_p is_sentence_b1_u a_src u1 q_dom)
     done
-  from assms have p_dom: "p \<in> \<RR>" by auto
+  from assms have p_dom: "p \<in> set \<RR>" by auto
   have is_sentence_snd_q: "is_sentence (snd q)" 
     using Derives1_sentence2 a_b' is_sentence_concat by blast
   have b'_c: "Derives1 ?b (j - 1 + length (snd q)) p c"
@@ -893,14 +893,14 @@ lemma leftderives1_implies_LeftDerives1:
   shows "\<exists> i r. LeftDerives1 u i r v"
 proof -
   from leftderives1 have 
-    "\<exists>x y N \<alpha>. u = x @ [N] @ y \<and> v = x @ \<alpha> @ y \<and> is_word x \<and> is_sentence y \<and> (N, \<alpha>) \<in> \<RR>"
+    "\<exists>x y N \<alpha>. u = x @ [N] @ y \<and> v = x @ \<alpha> @ y \<and> is_word x \<and> is_sentence y \<and> (N, \<alpha>) \<in> set \<RR>"
     by (simp add: leftderives1_def)
   then obtain x y N \<alpha> where 
     u:"u = x @ [N] @ y" and
     v:"v = x @ \<alpha> @ y" and
     x:"is_word x" and  
     y:"is_sentence y" and 
-    r:"(N, \<alpha>) \<in> \<RR>"
+    r:"(N, \<alpha>) \<in> set \<RR>"
     by blast
   show ?thesis
     apply (rule_tac x="length x" in exI)
@@ -1710,7 +1710,7 @@ proof -
   obtain x y N \<alpha> where *:
     "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
     "is_sentence x" "is_sentence y"
-    "(N, \<alpha>) \<in> \<RR>" "r = (N, \<alpha>)" "i = length x"
+    "(N, \<alpha>) \<in> set \<RR>" "r = (N, \<alpha>)" "i = length x"
     using assms Derives1_def by blast
   hence "w@u = w @ x @ [N] @ y" "w@v = w @ x @ \<alpha> @ y" "is_sentence (w@x)"
     using assms(2) is_sentence_concat by auto
@@ -1732,7 +1732,7 @@ proof -
   obtain x y N \<alpha> where *: 
     "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
     "is_sentence x" "is_sentence y"
-    "(N, \<alpha>) \<in> \<RR>" "r = (N, \<alpha>)" "i = length x"
+    "(N, \<alpha>) \<in> set \<RR>" "r = (N, \<alpha>)" "i = length x"
     using assms Derives1_def by blast
   hence "u@w = x @ [N] @ y @ w" "v@w = x @ \<alpha> @ y @ w" "is_sentence (y@w)"
     using assms(2) is_sentence_concat by auto
@@ -1754,14 +1754,14 @@ lemma Derivation_append_rewrite:
   using assms Derivation_append' Derivation_prepend Derivation_implies_append by fast
 
 lemma derives1_if_valid_rule:
-  "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> derives1 [N] \<alpha>"
+  "(N, \<alpha>) \<in> set \<RR> \<Longrightarrow> derives1 [N] \<alpha>"
   unfolding derives1_def
   apply (rule_tac exI[where x="[]"])
   apply (rule_tac exI[where x="[]"])
   by simp
 
 lemma derives_if_valid_rule:
-  "(N, \<alpha>) \<in> \<RR> \<Longrightarrow> derives [N] \<alpha>"
+  "(N, \<alpha>) \<in> set \<RR> \<Longrightarrow> derives [N] \<alpha>"
   using derives1_if_valid_rule by simp
 
 lemma Derivation_from_empty:
@@ -1781,7 +1781,7 @@ next
     by auto
   then obtain x y N \<alpha> where #:
     "a@b = x @ [N] @ y" "ab = x @ \<alpha> @ y" "is_sentence x" "is_sentence y"
-    "(N,\<alpha>) \<in> \<RR>" "snd d = (N,\<alpha>)" "fst d = length x"
+    "(N,\<alpha>) \<in> set \<RR>" "snd d = (N,\<alpha>)" "fst d = length x"
     using * unfolding Derives1_def by blast
   show ?case
   proof (cases "length a \<le> length x")
@@ -1888,12 +1888,11 @@ subsection \<open>Earley algorithm\<close>
 
 locale Earley_Set = CFG +
   fixes inp :: "'a list"
-  assumes valid_input: "set inp \<subseteq> \<TT>"
-  assumes finite: "finite \<RR>"
+  assumes valid_input: "set inp \<subseteq> set \<TT>"
 begin
 
 definition Init :: "'a items" where
-  "Init = { init_item r 0 | r. r \<in> \<RR> \<and> fst r = \<SS> }"
+  "Init = { init_item r 0 | r. r \<in> set \<RR> \<and> fst r = \<SS> }"
 
 definition Scan :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
   "Scan k I = 
@@ -1906,7 +1905,7 @@ definition Scan :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
 definition Predict :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
   "Predict k I =
     { init_item r k | r x.
-        r \<in> \<RR> \<and>
+        r \<in> set \<RR> \<and>
         x \<in> bin I k \<and>
         next_symbol x = Some (rule_head r) }"
 
@@ -1938,14 +1937,14 @@ definition is_finished :: "'a item \<Rightarrow> bool" where
     item_end x = length inp \<and> 
     is_complete x)"
 
-definition earley_recognized :: "'a items \<Rightarrow> bool" where
-  "earley_recognized I = (\<exists>x \<in> I. is_finished x)"
+definition earley_recognized :: "bool" where
+  "earley_recognized = (\<exists>x \<in> \<II>. is_finished x)"
 
 subsection \<open>Wellformedness\<close>
 
 definition wf_item :: "'a item \<Rightarrow> bool" where 
   "wf_item x = (
-    item_rule x \<in> \<RR> \<and> 
+    item_rule x \<in> set \<RR> \<and> 
     item_dot x \<le> length (item_rule_body x) \<and>
     item_origin x \<le> item_end x \<and> 
     item_end x \<le> length inp)"
@@ -2025,7 +2024,7 @@ proof (standard)
   assume *: "x \<in> Init"
   hence "item_dot x = 0"
     using Init_def by (auto, simp add: init_item_def)
-  hence "(item_rule_head x, item_\<beta> x) \<in> \<RR>"
+  hence "(item_rule_head x, item_\<beta> x) \<in> set \<RR>"
     unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
     using * wf_Init wf_item_def by simp
   hence "derives [item_rule_head x] (item_\<beta> x)"
@@ -2151,7 +2150,7 @@ lemma sound_\<II>:
   unfolding \<II>_def using sound_\<I> by blast
 
 theorem soundness:
-  "earley_recognized \<II> \<Longrightarrow> derives [\<SS>] inp"
+  "earley_recognized \<Longrightarrow> derives [\<SS>] inp"
   using earley_recognized_def sound_\<II> sound_defs by (auto simp: is_complete_def is_finished_def item_\<beta>_def)
 
 subsection \<open>Monotonicity and Absorption\<close>
@@ -2399,7 +2398,7 @@ proof (induction k arbitrary: i x a)
 qed simp
 
 lemma Predict_\<I>:
-  assumes "i \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
+  assumes "i \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set \<RR>"
   shows "init_item (N,\<alpha>) i \<in> \<I> k"
   using assms
 proof (induction k arbitrary: i x N \<alpha>)
@@ -2427,7 +2426,7 @@ next
 qed
 
 lemma Complete_\<I>:
-  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> \<RR>"
+  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set \<RR>"
   assumes "i = item_origin y" "y \<in> bin (\<I> k) j" "item_rule y = (N,\<alpha>)" "is_complete y"
   shows "inc_item x j \<in> \<I> k"
   using assms
@@ -2549,7 +2548,7 @@ proof (standard, standard, standard, standard, standard, standard)
       show ?thesis
       proof cases
         assume "is_terminal a"
-        then obtain N \<alpha> where "[a] = [N]" "(N,\<alpha>) \<in> \<RR>"
+        then obtain N \<alpha> where "[a] = [N]" "(N,\<alpha>) \<in> set \<RR>"
           using *(1) unfolding Derives1_def by (metis Cons_eq_append_conv neq_Nil_conv)
          hence "is_nonterminal a"
            by simp
@@ -2557,7 +2556,7 @@ proof (standard, standard, standard, standard, standard, standard)
           using \<open>is_terminal a\<close> is_terminal_nonterminal by blast
       next
         assume "\<not> is_terminal a"
-        then obtain N \<alpha> where #: "[a] = [N]" "b = \<alpha>" "(N,\<alpha>) \<in> \<RR>" "fst d = 0" "snd d = (N,\<alpha>)"
+        then obtain N \<alpha> where #: "[a] = [N]" "b = \<alpha>" "(N,\<alpha>) \<in> set \<RR>" "fst d = 0" "snd d = (N,\<alpha>)"
           using *(1) unfolding Derives1_def by (simp add: Cons_eq_append_conv)
         define y where y_def: "y = Item (N,\<alpha>) 0 i i"
         have "init_item (N, \<alpha>) i \<in> \<I> k"
@@ -2596,7 +2595,7 @@ lemma Init_sub_\<I>:
 
 lemma Derivation_\<SS>1:
   assumes "Derivation [\<SS>] D inp"
-  shows "\<exists>\<alpha> E. Derivation \<alpha> E inp \<and> (\<SS>,\<alpha>) \<in> \<RR>"
+  shows "\<exists>\<alpha> E. Derivation \<alpha> E inp \<and> (\<SS>,\<alpha>) \<in> set \<RR>"
 proof (cases D)
   case Nil
   thus ?thesis
@@ -2605,7 +2604,7 @@ next
   case (Cons d D)
   then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D inp"
     using assms by auto
-  hence "(\<SS>, \<alpha>) \<in> \<RR>"
+  hence "(\<SS>, \<alpha>) \<in> set \<RR>"
     unfolding Derives1_def
     by (metis List.append.right_neutral List.list.discI append_eq_Cons_conv append_is_Nil_conv nth_Cons_0 self_append_conv2)
   thus ?thesis
@@ -2614,9 +2613,9 @@ qed
 
 theorem completeness:
   assumes "derives [\<SS>] inp"
-  shows "earley_recognized \<II>"
+  shows "earley_recognized"
 proof -
-  obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> \<RR>" "derives \<alpha> inp"
+  obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> set \<RR>" "derives \<alpha> inp"
     using Derivation_\<SS>1 assms Derivation_implies_derives derives_implies_Derivation by blast
   let ?x = "Item (\<SS>,\<alpha>) 0 0 0"
   have "?x \<in> \<II>" "wf_item ?x"
@@ -2634,24 +2633,24 @@ qed
 subsection \<open>Correctness\<close>
 
 corollary correctness:
-  "earley_recognized \<II> \<longleftrightarrow> derives [\<SS>] inp"
+  "earley_recognized \<longleftrightarrow> derives [\<SS>] inp"
   using soundness completeness by blast
 
 subsection \<open>Finiteness\<close>
 
 lemma finiteness_empty:
-  "\<RR> = {} \<Longrightarrow> finite { x | x. wf_item x }"
+  "set \<RR> = {} \<Longrightarrow> finite { x | x. wf_item x }"
   unfolding wf_item_def by simp
 
 fun f :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" where
   "f (rule, dot, origin, ends) = Item rule dot origin ends" 
 
 lemma finiteness_nonempty:
-  assumes "\<RR> \<noteq> {}"
+  assumes "set \<RR> \<noteq> {}"
   shows "finite { x | x. wf_item x }"
 proof -
-  define M where "M = Max { length (rule_body r) | r. r \<in> \<RR> }"
-  define Top where "Top = (\<RR> \<times> {0..M} \<times> {0..length inp} \<times> {0..length inp})"
+  define M where "M = Max { length (rule_body r) | r. r \<in> set \<RR> }"
+  define Top where "Top = (set \<RR> \<times> {0..M} \<times> {0..length inp} \<times> {0..length inp})"
   hence "finite Top"
     using finite_cartesian_product finite by blast
   have "inj_on f Top"
@@ -2663,12 +2662,12 @@ proof -
     fix x
     assume "x \<in> { x | x. wf_item x }"
     then obtain rule dot origin endp where *: "x = Item rule dot origin endp"
-      "rule \<in> \<RR>" "dot \<le> length (item_rule_body x)" "origin \<le> length inp" "endp \<le> length inp"
+      "rule \<in> set \<RR>" "dot \<le> length (item_rule_body x)" "origin \<le> length inp" "endp \<le> length inp"
       unfolding wf_item_def using item.exhaust_sel le_trans by blast
-    hence "length (rule_body rule) \<in> { length (rule_body r) | r. r \<in> \<RR> }"
+    hence "length (rule_body rule) \<in> { length (rule_body r) | r. r \<in> set \<RR> }"
       using *(1,2) item_rule_body_def by blast
-    moreover have "finite { length (rule_body r) | r. r \<in> \<RR> }"
-      using finite finite_image_set[of "\<lambda>x. x \<in> \<RR>"] by fastforce
+    moreover have "finite { length (rule_body r) | r. r \<in> set \<RR> }"
+      using finite finite_image_set[of "\<lambda>x. x \<in> set \<RR>"] by fastforce
     ultimately have "M \<ge> length (rule_body rule)"
       unfolding M_def by simp
     hence "dot \<le> M"
@@ -2706,10 +2705,10 @@ context Earley_Set
 begin
 
 definition Init_\<epsilon> :: "'a set" where
-  "Init_\<epsilon> = { rule_head r | r. r \<in> \<RR> \<and> rule_body r = [] }"
+  "Init_\<epsilon> = { rule_head r | r. r \<in> set \<RR> \<and> rule_body r = [] }"
 
 definition \<epsilon>_step :: "'a set \<Rightarrow> 'a set" where
-  "\<epsilon>_step \<E> = \<E> \<union> { rule_head r | r. r \<in> \<RR> \<and> all (\<lambda>a. a \<in> \<E>) (rule_body r)}"
+  "\<epsilon>_step \<E> = \<E> \<union> { rule_head r | r. r \<in> set \<RR> \<and> all (\<lambda>a. a \<in> \<E>) (rule_body r)}"
 
 definition \<epsilon> :: "'a set \<Rightarrow> 'a set" where
   "\<epsilon> \<E> = limit (\<epsilon>_step) \<E>"
@@ -2740,12 +2739,12 @@ lemma X1:
   using X0 le_Suc_eq by auto
 
 lemma X2:
-  assumes "\<forall>a \<in> set (rule_body r). a \<in> \<E>" "r \<in> \<RR>"
+  assumes "\<forall>a \<in> set (rule_body r). a \<in> \<E>" "r \<in> set \<RR>"
   shows "rule_head r \<in> \<epsilon>_step \<E>"
   unfolding \<epsilon>_step_def using assms all_iff_forall by blast
 
 lemma A1:
-  assumes "N \<in> \<NN>" "\<exists>D. Derivation [N] D [] \<and> length D \<le> n"
+  assumes "N \<in> set \<NN>" "\<exists>D. Derivation [N] D [] \<and> length D \<le> n"
   shows "N \<in> funpower \<epsilon>_step n Init_\<epsilon>"
   using assms
 proof (induction n arbitrary: N rule: nat_less_induct)
@@ -2774,10 +2773,10 @@ proof (induction n arbitrary: N rule: nat_less_induct)
       assume "\<not> n = 0"
       then obtain d D' where "D = d # D'"
         using list.exhaust \<open>length D = n\<close> by blast
-      then obtain \<alpha> where \<alpha>: "Derivation [N] [d] \<alpha>" "Derivation \<alpha> D' []" "(N,\<alpha>) \<in> \<RR>"
+      then obtain \<alpha> where \<alpha>: "Derivation [N] [d] \<alpha>" "Derivation \<alpha> D' []" "(N,\<alpha>) \<in> set \<RR>"
         sorry
 
-      have 2: "\<forall>M \<in> set \<alpha>. M \<in> \<NN>"
+      have 2: "\<forall>M \<in> set \<alpha>. M \<in> set \<NN>"
         sorry
       have 3: "\<forall>M \<in> set \<alpha>. \<exists>E. Derivation [M] E [] \<and> length E \<le> length D'"
         sorry
@@ -2800,7 +2799,7 @@ lemma A2:
 *)
 
 lemma B1:
-  assumes "N \<in> \<NN>" "\<exists>D. Derivation [N] D []"
+  assumes "N \<in> set \<NN>" "\<exists>D. Derivation [N] D []"
   shows "N \<in> \<epsilon> Init_\<epsilon>"
   unfolding \<epsilon>_def limit_def natUnion_def using assms A1 by blast
 
@@ -2812,12 +2811,12 @@ lemma B2:
 *)
 
 lemma C1:
-  assumes "N \<in> \<NN>" "\<epsilon>_free"
+  assumes "N \<in> set \<NN>" "\<epsilon>_free"
   shows "\<nexists>D. Derivation [N] D []"
   using B1 assms \<epsilon>_free_def by blast
 
 lemma D1:
-  assumes "N \<in> \<NN>" "\<epsilon>_free"
+  assumes "N \<in> set \<NN>" "\<epsilon>_free"
   shows "\<not> derives [N] []"
   using C1 assms derives_implies_Derivation by blast
 
