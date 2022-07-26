@@ -40,11 +40,20 @@ definition nonterminals :: "s list" where
   "nonterminals = [Nonterminal S]"
 
 definition inp :: "s list" where
-  "inp = [Terminal a, Terminal plus, Terminal a]"
+  "inp = [Terminal a, Terminal plus, Terminal a, Terminal plus, Terminal a]"
+
+global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
+  defines is_terminal = cfg.is_terminal
+      and \<epsilon>_free = cfg.\<epsilon>_free
+  apply unfold_locales
+    apply (auto simp: nonterminals_def terminals_def grammar_def)
+  done
+
+value \<epsilon>_free
+thm CFG.\<epsilon>_free_impl_non_empty_deriv[OF]
 
 global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" inp
   defines is_finished = earley.is_finished
-      and is_terminal = earley.is_terminal
       and wf_item = earley.wf_item
       and wf_bin = earley.wf_bin
       and wf_bins = earley.wf_bins
@@ -56,14 +65,22 @@ global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "
       and \<pi> = earley.\<pi>_it
       and \<I> = earley.\<I>_it
       and \<II> = earley.\<II>_it
-      and earley_recognized_it = earley.earley_recognized_it
+      and earley_recognized = earley.earley_recognized_it
   apply unfold_locales
-      apply (auto simp: nonterminals_def terminals_def grammar_def inp_def)
-  sorry
+    apply (auto simp: nonterminals_def terminals_def grammar_def inp_def)[1]
+  subgoal for x
+    apply (cases x)
+    using Examples.t.exhaust apply blast
+    using Examples.n.exhaust by blast
+  apply (auto simp: grammar_def)[1]
+  subgoal for N
+    using CFG.\<epsilon>_free_impl_non_empty_deriv[of nonterminals terminals grammar "Nonterminal S"]
+    sorry
+  done
 
 value \<II>
-value earley_recognized_it
+value earley_recognized
 
-export_code earley_recognized_it in SML
+export_code earley_recognized in SML
 
 end

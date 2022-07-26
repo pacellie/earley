@@ -1011,7 +1011,7 @@ next
   case (Predict k bs i x a)
   let ?bs' = "app_bins bs k (Predict_it k a)"
   have "k \<ge> length inp \<or> \<not> inp!k = a"
-    using Predict.hyps(4) is_terminal_def valid_input by force
+    using Predict.hyps(4) is_terminal_def sorry
   have x: "x \<in> set_bin (bins bs ! k)"
     using Predict.hyps(1,2) by auto
   have len: "i < length (items (bins ?bs' ! k))"

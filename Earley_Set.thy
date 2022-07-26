@@ -1834,6 +1834,7 @@ next
   qed
 qed
 
+
 end
 
 section \<open>Earley recognizer\<close>
@@ -1884,11 +1885,26 @@ lemmas item_defs = item_rule_head_def item_rule_body_def item_\<alpha>_def item_
 definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
   "bin I k = { x . x \<in> I \<and> item_end x = k }"
 
+subsection \<open>Epsilon Productions\<close>
+
+context CFG
+begin
+
+definition \<epsilon>_free :: "bool" where
+  "\<epsilon>_free = (\<forall>r \<in> set \<RR>. rule_body r \<noteq> [])"
+
+lemma \<epsilon>_free_impl_non_empty_deriv:
+  "\<epsilon>_free \<Longrightarrow> N \<in> set \<NN> \<Longrightarrow> \<not> derives [N] []"
+  sorry
+
+end
+
 subsection \<open>Earley algorithm\<close>
 
 locale Earley_Set = CFG +
   fixes inp :: "'a list"
-  assumes valid_input: "set inp \<subseteq> set \<TT>"
+  assumes univ_symbols: "set \<NN> \<union> set \<TT> = UNIV" 
+(*  assumes valid_input: "set inp \<subseteq> set \<TT>" *)
 begin
 
 definition Init :: "'a items" where
@@ -2103,8 +2119,7 @@ proof standard
     hence "is_sentence (tl (item_\<beta> x))"
       using is_sentence_item_\<beta> is_sentence_cons 0 by metis
     moreover have "is_sentence (slice (item_origin x) (item_origin y) inp)"
-      unfolding is_sentence_simp is_symbol_def is_terminal_def is_nonterminal_def
-      by (meson slice_subset subsetD valid_input)
+      unfolding is_sentence_simp is_symbol_def is_terminal_def is_nonterminal_def using univ_symbols by auto
     ultimately obtain G where 
       "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
        slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
@@ -2599,7 +2614,8 @@ lemma Derivation_\<SS>1:
 proof (cases D)
   case Nil
   thus ?thesis
-    using valid_input assms is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal by fastforce
+    sorry
+(* using valid_input assms is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal by fastforce *)
 next
   case (Cons d D)
   then obtain \<alpha> where "Derives1 [\<SS>] (fst d) (snd d) \<alpha>" "Derivation \<alpha> D inp"
@@ -2691,6 +2707,7 @@ theorem finiteness:
 
 end
 
+(*
 subsection \<open>Epsilon Productions\<close>
 
 fun all :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> bool" where
@@ -2816,10 +2833,11 @@ lemma C1:
   using B1 assms \<epsilon>_free_def by blast
 
 lemma D1:
-  assumes "N \<in> set \<NN>" "\<epsilon>_free"
+  (* assumes "N \<in> set \<NN>" "\<epsilon>_free" *)
   shows "\<not> derives [N] []"
-  using C1 assms derives_implies_Derivation by blast
+  using C1 derives_implies_Derivation sorry
 
 end
+*)
 
 end
