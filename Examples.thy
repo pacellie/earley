@@ -2,6 +2,18 @@ theory Examples
   imports Earley_List
 begin
 
+text\<open>
+  \<^item> Customize Parts of LocalLexing:
+    typedecl, sets -> lists for code export and less duplication, move around assumptions
+  \<^item> Termination Proof: Done.
+    Question: Slow code, is it solvable or different approach with typedef?
+  \<^item> Grammar Example: Done.
+    Question: Howto locales + proof by eval (see below)
+  \<^item> Next:
+    Monpoly Grammar example
+    Parse Trees via 'pointer'/indices
+\<close>
+
 subsection \<open>Example 1\<close>
 
 (*
