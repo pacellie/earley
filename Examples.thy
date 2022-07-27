@@ -11,12 +11,12 @@ locale CFG =
   fixes \<RR> :: "'a rule list"
   fixes \<SS> :: "'a"
   assumes disjunct_symbols: "set \<NN> \<inter> set \<TT> = {}"
+  assumes univ_symbols: "set \<NN> \<union> set \<TT> = UNIV"
   assumes startsymbol_dom: "\<SS> \<in> set \<NN>"
   assumes valid_rules: "\<forall>(N, \<alpha>) \<in> set \<RR>. N \<in> set \<NN> \<and> (\<forall>s \<in> set \<alpha>. s \<in> set \<NN> \<union> set \<TT>)"
 
 locale Earley_Set = CFG +
   fixes inp :: "'a list"
-  assumes valid_input: "set inp \<subseteq> set \<TT>"
 
 locale Earley_List = Earley_Set +
   assumes distinct_rules: "distinct \<RR>"
@@ -39,18 +39,15 @@ definition terminals :: "s list" where
 definition nonterminals :: "s list" where
   "nonterminals = [Nonterminal S]"
 
-definition inp :: "s list" where
-  "inp = [Terminal a, Terminal plus, Terminal a, Terminal plus, Terminal a]"
-
 global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
   defines is_terminal = cfg.is_terminal
       and \<epsilon>_free = cfg.\<epsilon>_free
   apply unfold_locales
-    apply (auto simp: nonterminals_def terminals_def grammar_def)
-  done
+  apply (auto simp: nonterminals_def terminals_def grammar_def)
+  using n.exhaust s.exhaust t.exhaust by metis
 
 value \<epsilon>_free
-thm CFG.\<epsilon>_free_impl_non_empty_deriv[OF]
+thm CFG.\<epsilon>_free_impl_non_empty_deriv
 
 global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" for inp
   defines is_finished = earley.is_finished
@@ -67,20 +64,21 @@ global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "
       and \<II> = earley.\<II>_it
       and earley_recognized = earley.earley_recognized_it
   apply unfold_locales
-    apply (auto simp: nonterminals_def terminals_def grammar_def inp_def)[1]
-  subgoal for x
-    apply (cases x)
-    using Examples.t.exhaust apply blast
-    using Examples.n.exhaust by blast
+  apply (auto simp: nonterminals_def terminals_def grammar_def)[1]
   apply (auto simp: grammar_def)[1]
   subgoal for N
-    using CFG.\<epsilon>_free_impl_non_empty_deriv[of nonterminals terminals grammar "Nonterminal S"]
+    using CFG.\<epsilon>_free_impl_non_empty_deriv
     sorry
   done
+
+definition inp :: "s list" where
+  "inp = [Terminal a, Terminal plus, Terminal a, Terminal plus, Terminal a]"
 
 value "\<II> inp"
 value "earley_recognized inp"
 
 export_code earley_recognized in SML
+
+subsection \<open>Monpoly Grammar Example - TODO\<close>
 
 end

@@ -999,7 +999,7 @@ next
     have "Complete k (set_bins_upto bs k (i + 1)) = Complete k (set_bins_upto bs k i \<union> {x})"
       using set_bins_upto_Suc_Un Pass.hyps(1,2) by (metis linorder_not_less)
     also have "... = Complete k (set_bins_upto bs k i)"
-      using Complete_Un_eq_terminal Pass.hyps Pass.prems(1,2) set_bins_upto_Suc_Un set_bins_upto_sub_set_bins subset_iff 
+      using Complete_Un_eq_terminal Pass.hyps Pass.prems(1,2) set_bins_upto_sub_set_bins subset_iff 
             wf_bins_impl_wf_items wf_items_def wf_bins_kth_bin x by metis
     finally show ?thesis
       using Pass.prems(4) Complete_\<pi>_step_mono by blast
@@ -1022,9 +1022,7 @@ next
   have sound: "sound_items (set_bins ?bs')" 
     using sound_Predict_it[OF _ _ x] Predict.hyps(3) Predict.prems(1,2,5) sound_items_def by (auto simp: set_bins_app_bins)
   have nonterm: "is_nonterminal a"
-    using is_complete_def is_sentence_cons is_sentence_item_\<beta> is_symbol_distinct item_\<beta>_def
-          Predict.hyps(3,4) Predict.prems(1,2) next_symbol_def wf_bins_kth_bin x
-    by (metis Cons_nth_drop_Suc Option.option.inject Option.option.simps(3) not_le_imp_less)
+    using is_symbol_distinct Predict.hyps(3,4) Predict.prems(1,2) wf_bins_kth_bin x by blast
   have "Scan k (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
   proof -
     have "Scan k (set_bins_upto ?bs' k (i + 1)) = Scan k (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
@@ -1276,7 +1274,7 @@ lemma \<pi>_it_idem:
 
 lemma funpower_\<pi>_step_sub_\<pi>_it:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
-  assumes "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items (set_bins bs)"
+  assumes "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items (set_bins bs)" "set inp \<subseteq> set \<TT>"
   shows "funpower (\<pi>_step k) n (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
   using assms
 proof (induction n)
@@ -1290,7 +1288,7 @@ next
   have "funpower (\<pi>_step k) (Suc n) (set_bins bs) \<subseteq> (\<pi>_step k) (set_bins (\<pi>_it k bs))"
     using \<pi>_step_sub_mono Suc by auto
   also have "... \<subseteq> set_bins (\<pi>_it k (\<pi>_it k bs))"
-    using \<pi>_step_sub_\<pi>_it Suc.prems(1-3,5) wf_bins_\<pi>_it sound_\<pi>_it 0 by simp
+    using \<pi>_step_sub_\<pi>_it Suc.prems(1-3,5,6) wf_bins_\<pi>_it sound_\<pi>_it 0 by simp
   also have "... \<subseteq> set_bins (\<pi>_it k bs)"
     using \<pi>_it_idem Suc.prems by simp
   finally show ?case .
@@ -1298,12 +1296,12 @@ qed
 
 lemma \<pi>_sub_\<pi>_it:
   assumes "wf_bins bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
-  assumes "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items (set_bins bs)"
+  assumes "\<pi>_step k (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items (set_bins bs)" "set inp \<subseteq> set \<TT>"
   shows "\<pi> k (set_bins bs) \<subseteq> set_bins (\<pi>_it k bs)"
   using assms funpower_\<pi>_step_sub_\<pi>_it \<pi>_def elem_limit_simp by fastforce
 
 lemma \<I>_sub_\<I>_it:
-  "k < length (bins Init_it) \<Longrightarrow> \<I> k \<subseteq> set_bins (\<I>_it k)"
+  "k < length (bins Init_it) \<Longrightarrow> set inp \<subseteq> set \<TT> \<Longrightarrow> \<I> k \<subseteq> set_bins (\<I>_it k)"
 proof (induction k)
   case 0
   hence "\<pi> 0 Init \<subseteq> set_bins (\<pi>_it 0 Init_it)"
@@ -1336,8 +1334,9 @@ next
 qed
 
 lemma \<II>_sub_\<II>_it:
-  "\<II> \<subseteq> set_bins \<II>_it"
-  using \<I>_sub_\<I>_it \<II>_def \<II>_it_def by simp
+  assumes "set inp \<subseteq> set \<TT>"
+  shows "\<II> \<subseteq> set_bins \<II>_it"
+  using assms \<I>_sub_\<I>_it \<II>_def \<II>_it_def by simp
 
 subsection \<open>Correctness\<close>
 
@@ -1345,7 +1344,8 @@ definition earley_recognized_it :: "bool" where
   "earley_recognized_it = (\<exists>x \<in> set (items (bins \<II>_it ! length inp)). is_finished x)"
 
 theorem earley_recognized_it_iff_earley_recognized:
-  "earley_recognized_it \<longleftrightarrow> earley_recognized"
+  assumes "set inp \<subseteq> set \<TT>"
+  shows "earley_recognized_it \<longleftrightarrow> earley_recognized"
 proof -
   have "earley_recognized_it = (\<exists>x \<in> set (items (bins \<II>_it ! length inp)). is_finished x)"
     unfolding earley_recognized_it_def by blast
@@ -1353,7 +1353,7 @@ proof -
     using is_finished_def kth_bin_in_bins \<II>_it_def length_bins_Init_it length_bins_\<I>_it wf_bins_\<II>_it
       wf_item_in_kth_bin set_bin_def by (metis One_nat_def lessI less_add_same_cancel1 subset_code(1))
   also have "... = (\<exists>x \<in> \<II>. is_finished x)"
-    using \<II>_it_sub_\<II> \<II>_sub_\<II>_it by auto
+    using assms \<II>_it_sub_\<II> \<II>_sub_\<II>_it by auto
   also have "... = earley_recognized"
     unfolding earley_recognized_def by blast
   finally show ?thesis .
