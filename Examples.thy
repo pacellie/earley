@@ -2,38 +2,7 @@ theory Examples
   imports Earley_List
 begin
 
-text\<open>
-  \<^item> Customize Parts of LocalLexing:
-    typedecl, sets -> lists for code export and less duplication, move around assumptions
-  \<^item> Termination Proof: Done.
-    Question: Slow code, is it solvable or different approach with typedef?
-  \<^item> Grammar Example: Done.
-    Question: Howto locales + proof by eval (see below)
-  \<^item> Next:
-    Monpoly Grammar example
-    Parse Trees via 'pointer'/indices
-\<close>
-
 subsection \<open>Example 1\<close>
-
-(*
-locale CFG =
-  fixes \<NN> :: "'a list"
-  fixes \<TT> :: "'a list"
-  fixes \<RR> :: "'a rule list"
-  fixes \<SS> :: "'a"
-  assumes disjunct_symbols: "set \<NN> \<inter> set \<TT> = {}"
-  assumes univ_symbols: "set \<NN> \<union> set \<TT> = UNIV"
-  assumes startsymbol_dom: "\<SS> \<in> set \<NN>"
-  assumes valid_rules: "\<forall>(N, \<alpha>) \<in> set \<RR>. N \<in> set \<NN> \<and> (\<forall>s \<in> set \<alpha>. s \<in> set \<NN> \<union> set \<TT>)"
-
-locale Earley_Set = CFG +
-  fixes inp :: "'a list"
-
-locale Earley_List = Earley_Set +
-  assumes distinct_rules: "distinct \<RR>"
-  assumes nonempty_deriv: "N \<in> set \<NN> \<Longrightarrow> \<not> derives [N] []"
-*)
 
 datatype t = a | plus
 datatype n = S
@@ -58,9 +27,6 @@ global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
   apply (auto simp: nonterminals_def terminals_def grammar_def)
   using n.exhaust s.exhaust t.exhaust by metis
 
-value \<epsilon>_free
-thm CFG.\<epsilon>_free_impl_non_empty_deriv
-
 global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" for inp
   defines is_finished = earley.is_finished
       and wf_item = earley.wf_item
@@ -78,9 +44,13 @@ global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "
   apply unfold_locales
   apply (auto simp: nonterminals_def terminals_def grammar_def)[1]
   apply (auto simp: grammar_def)[1]
-  subgoal for N
-    using CFG.\<epsilon>_free_impl_non_empty_deriv
-    sorry
+  subgoal premises prems for N
+  proof -
+    have "CFG.\<epsilon>_free [(Nonterminal S, [Terminal a]), (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])]"
+      by (metis cfg.\<epsilon>_free_def List.list.set(1,2) \<epsilon>_free_def empty_iff grammar_def insert_iff rule_body_def snd_conv)
+    thus ?thesis
+      by (metis CFG.\<epsilon>_free_impl_non_empty_deriv cfg.CFG_axioms grammar_def prems)
+  qed
   done
 
 definition inp :: "s list" where
@@ -90,7 +60,5 @@ value "\<II> inp"
 value "earley_recognized inp"
 
 export_code earley_recognized in SML
-
-subsection \<open>Monpoly Grammar Example - TODO\<close>
 
 end
