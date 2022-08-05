@@ -10,6 +10,8 @@ subsection \<open>CFG.thy\<close>
 
 type_synonym 'a rule = "'a \<times> 'a list"
 
+type_synonym 'a rules = "'a rule list"
+
 type_synonym 'a sentence = "'a list"
 
 locale CFG =
@@ -288,27 +290,7 @@ proof -
   note M3 = this[OF J1]
   have is_word: "is_word (take ?M a)"
     apply (auto simp add: is_word_def list_all_take)
-    sledgehammer
     by (smt (verit, ccfv_SIG) \<open>\<And>j. j \<in> {j. j < length a \<and> is_nonterminal (a ! j)} \<Longrightarrow> Min {j. j < length a \<and> is_nonterminal (a ! j)} \<le> j\<close> is_symbol_distinct less_le_not_le mem_Collect_eq set_take)
-(* 
-proof -
-      fix i
-      assume i_less_M: "i < ?M"
-      assume i_inbounds: "i < length a"
-      show "is_terminal (a ! i)"
-      proof(cases "is_terminal (a ! i)")
-        case True thus ?thesis by auto
-      next
-        case False
-        then have "is_nonterminal (a ! i)"
-        using i_inbounds a_sentence is_sentence_symbol is_symbol_distinct by blast
-        then have "i \<in> ?J" by (metis i_inbounds mem_Collect_eq) 
-        then have "?M < i" by (metis J2 Min_le i_less_M leD) 
-        then have "False" by (metis i_less_M less_asym') 
-        then show ?thesis by auto
-      qed
-    qed  
-*)
   show ?thesis 
     apply (rule_tac exI[where x="?M"])
     apply (simp add: leftmost_def)
@@ -1805,6 +1787,16 @@ lemmas item_defs = item_rule_head_def item_rule_body_def item_\<alpha>_def item_
 definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
   "bin I k = { x . x \<in> I \<and> item_end x = k }"
 
+definition wf_item :: "'a rules \<Rightarrow> 'a list => 'a item \<Rightarrow> bool" where 
+  "wf_item \<RR> inp x = (
+    item_rule x \<in> set \<RR> \<and> 
+    item_dot x \<le> length (item_rule_body x) \<and>
+    item_origin x \<le> item_end x \<and> 
+    item_end x \<le> length inp)"
+
+definition wf_items :: "'a rules \<Rightarrow> 'a list \<Rightarrow> 'a items \<Rightarrow> bool" where
+  "wf_items \<RR> inp I = (\<forall>x \<in> I. wf_item \<RR> inp x)"
+
 subsection \<open>Epsilon Productions\<close>
 
 context CFG
@@ -1907,63 +1899,53 @@ definition earley_recognized :: "bool" where
 
 subsection \<open>Wellformedness\<close>
 
-definition wf_item :: "'a item \<Rightarrow> bool" where 
-  "wf_item x = (
-    item_rule x \<in> set \<RR> \<and> 
-    item_dot x \<le> length (item_rule_body x) \<and>
-    item_origin x \<le> item_end x \<and> 
-    item_end x \<le> length inp)"
-
-definition wf_items :: "'a items \<Rightarrow> bool" where
-  "wf_items I = (\<forall>x \<in> I. wf_item x)"
-
 lemma wf_items_Un:
-  "wf_items I \<Longrightarrow> wf_items J \<Longrightarrow> wf_items (I \<union> J)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp J \<Longrightarrow> wf_items \<RR> inp (I \<union> J)"
   unfolding wf_items_def by blast
 
 lemmas wf_defs = wf_item_def wf_items_def
 
 lemma wf_Init:
-  "x \<in> Init \<Longrightarrow> wf_item x"
+  "x \<in> Init \<Longrightarrow> wf_item \<RR> inp x"
   unfolding Init_def wf_item_def init_item_def by auto
 
 lemma wf_Scan:
-  "wf_items I \<Longrightarrow> wf_items (Scan k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (Scan k I)"
   unfolding Scan_def wf_defs bin_def inc_item_def is_complete_def item_rule_body_def next_symbol_def
   by (auto split: if_splits)
 
 lemma wf_Predict:
-  "wf_items I \<Longrightarrow> wf_items (Predict k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (Predict k I)"
   unfolding Predict_def wf_defs bin_def init_item_def by auto
 
 lemma wf_Complete:
-  "wf_items I \<Longrightarrow> wf_items (Complete k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (Complete k I)"
   unfolding Complete_def wf_defs bin_def inc_item_def is_complete_def item_rule_body_def next_symbol_def
   by (auto split: if_splits; metis le_trans)
 
 lemma wf_\<pi>_step:
-  "wf_items I \<Longrightarrow> wf_items (\<pi>_step k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (\<pi>_step k I)"
   unfolding \<pi>_step_def using wf_Scan wf_Predict wf_Complete wf_items_Un by simp
 
 lemma wf_funpower:
-  "wf_items I \<Longrightarrow> wf_items (funpower (\<pi>_step k) n I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (funpower (\<pi>_step k) n I)"
   using wf_\<pi>_step unfolding wf_items_def
   by (induction n) auto
 
 lemma wf_\<pi>:
-  "wf_items I \<Longrightarrow> wf_items (\<pi> k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (\<pi> k I)"
   by (metis \<pi>_def elem_limit_simp wf_funpower wf_items_def)
 
 lemma wf_\<pi>0:
-  "wf_items (\<pi> 0 Init)"
+  "wf_items \<RR> inp (\<pi> 0 Init)"
   using wf_items_def wf_Init wf_\<pi> by blast
 
 lemma wf_\<I>:
-  "wf_items (\<I> n)"
+  "wf_items \<RR> inp (\<I> n)"
   by (induction n) (auto simp: wf_\<pi>0 wf_\<pi>)
 
 lemma wf_\<II>:
-  "wf_items \<II>"
+  "wf_items \<RR> inp \<II>"
   unfolding \<II>_def using wf_\<I> by blast
 
 subsection \<open>Soundness\<close>
@@ -1986,7 +1968,7 @@ proof (standard)
     using Init_def by (auto, simp add: init_item_def)
   hence "(item_rule_head x, item_\<beta> x) \<in> set \<RR>"
     unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
-    using * wf_Init wf_item_def by simp
+    using * wf_Init wf_item_def by auto
   hence "derives [item_rule_head x] (item_\<beta> x)"
     using derives_if_valid_rule by blast
   moreover have "item_origin x = item_end x"
@@ -1996,7 +1978,7 @@ proof (standard)
 qed
 
 lemma sound_item_inc_item:
-  assumes "wf_item x" "sound_item x"
+  assumes "wf_item \<RR> inp x" "sound_item x"
   assumes "next_symbol x = Some a"
   assumes "k < length inp" "inp!k = a" "item_end x = k"
   shows "sound_item (inc_item x (k+1))"
@@ -2006,7 +1988,7 @@ proof -
     using assms(3) apply (auto simp: item_\<beta>_def is_complete_def next_symbol_def split: if_splits)
     by (metis Cons_nth_drop_Suc leI)
   have "slice (item_origin x) (item_end x) inp @ item_\<beta> x = slice (item_origin x') (item_end x') inp @ item_\<beta>'"
-    using * assms(1,4-6) slice_append_nth wf_item_def by (auto simp: inc_item_def)
+    using * assms(1,4-6) slice_append_nth wf_item_def by (auto simp: inc_item_def; blast)
   moreover have "item_\<beta>' = item_\<beta> x'"
     using * by (auto simp: inc_item_def item_\<beta>_def item_rule_body_def, metis List.list.sel(3) drop_Suc tl_drop)
   moreover have "derives [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
@@ -2016,7 +1998,7 @@ proof -
 qed
 
 lemma sound_Scan:
-  "wf_items I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (Scan k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (Scan k I)"
   unfolding Scan_def using sound_item_inc_item by (auto simp: wf_items_def sound_items_def bin_def)
 
 lemma sound_Predict:
@@ -2024,7 +2006,7 @@ lemma sound_Predict:
   unfolding Predict_def by (auto simp: sound_defs init_item_def derives_if_valid_rule slice_empty item_defs)
 
 lemma sound_Complete:
-  assumes "wf_items I" "sound_items I"
+  assumes "wf_items \<RR> inp I" "sound_items I"
   shows "sound_items (Complete k I)"
   unfolding sound_items_def
 proof standard
@@ -2057,16 +2039,16 @@ proof standard
        [item_rule_head y] @ (tl (item_\<beta> x)))"
       using derives_implies_Derivation by (metis append_Cons append_Nil)
 
-    have "wf_item x"
-      using *(2) assms(1) bin_def wf_items_def by fastforce
+    have "wf_item \<RR> inp x"
+      using *(2) assms(1) bin_def wf_items_def by (metis (mono_tags, lifting) mem_Collect_eq)
     obtain G where 
       "Derivation [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
        slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
       using Derivation_append_rewrite D E by blast
     moreover have "item_origin x \<le> item_origin y"
-      using *(2) \<open>wf_item x\<close> wf_item_def by (auto simp: bin_def)
+      using *(2) \<open>wf_item \<RR> inp x\<close> wf_item_def by (auto simp: bin_def; force)
     moreover have "item_origin y \<le> item_end y"
-      using *(3) wf_defs assms(1) by (auto simp: bin_def)
+      using *(3) wf_defs assms(1) by (auto simp: bin_def; blast)
     ultimately have "derives [item_rule_head x] (slice (item_origin x) (item_end y) inp @ tl (item_\<beta> x))"
       by (metis Derivation_implies_derives append.assoc slice_concat)
     moreover have "tl (item_\<beta> x) = item_\<beta> z"
@@ -2077,15 +2059,15 @@ proof standard
 qed
 
 lemma sound_\<pi>_step:
-  "wf_items I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (\<pi>_step k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (\<pi>_step k I)"
   unfolding \<pi>_step_def using sound_Scan sound_Predict sound_Complete by (metis UnE sound_items_def)
 
 lemma sound_funpower:
-  "wf_items I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (funpower (\<pi>_step k) n I)"
+  "wf_items \<RR> inp I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (funpower (\<pi>_step k) n I)"
   by (induction n) (auto simp: sound_\<pi>_step wf_\<pi>_step wf_funpower)
 
 lemma sound_\<pi>:
-  assumes "wf_items I" "sound_items I"
+  assumes "wf_items \<RR> inp I" "sound_items I"
   shows "sound_items (\<pi> k I)"
   by (metis \<pi>_def assms elem_limit_simp sound_items_def sound_funpower)
 
@@ -2421,7 +2403,7 @@ definition partially_complete :: "nat \<Rightarrow> 'a items \<Rightarrow> ('a d
 
 lemma fully_complete:
   assumes "j \<le> k" "k \<le> length inp"
-  assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "wf_items I"
+  assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "wf_items \<RR> inp I"
   assumes "Derivation (item_\<beta> x) D (slice j k inp)"
   assumes "partially_complete k I (\<lambda>D'. length D' \<le> length D)"
   shows "Item (N,\<alpha>) (length \<alpha>) i k \<in> I"
@@ -2572,7 +2554,7 @@ proof -
   obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> set \<RR>" "derives \<alpha> inp"
     using Derivation_\<SS>1 assms Derivation_implies_derives derives_implies_Derivation by blast
   let ?x = "Item (\<SS>,\<alpha>) 0 0 0"
-  have "?x \<in> \<II>" "wf_item ?x"
+  have "?x \<in> \<II>" "wf_item \<RR> inp ?x"
     unfolding \<II>_def using *(1) Init_sub_\<I> Init_def wf_Init by (auto simp: init_item_def)
   moreover have "derives (item_\<beta> ?x) (slice 0 (length inp) inp)"
     using *(2) item_defs(4) by (simp add: item_\<beta>_def item_rule_body_def rule_body_def)
@@ -2594,7 +2576,7 @@ corollary correctness:
 subsection \<open>Finiteness\<close>
 
 lemma finiteness_empty:
-  "set \<RR> = {} \<Longrightarrow> finite { x | x. wf_item x }"
+  "set \<RR> = {} \<Longrightarrow> finite { x | x. wf_item \<RR> inp x }"
   unfolding wf_item_def by simp
 
 fun f :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" where
@@ -2602,7 +2584,7 @@ fun f :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" 
 
 lemma finiteness_nonempty:
   assumes "set \<RR> \<noteq> {}"
-  shows "finite { x | x. wf_item x }"
+  shows "finite { x | x. wf_item \<RR> inp x }"
 proof -
   define M where "M = Max { length (rule_body r) | r. r \<in> set \<RR> }"
   define Top where "Top = (set \<RR> \<times> {0..M} \<times> {0..length inp} \<times> {0..length inp})"
@@ -2612,10 +2594,10 @@ proof -
     unfolding Top_def inj_on_def by simp
   hence "finite (f ` Top)"
     using finite_image_iff \<open>finite Top\<close> by auto
-  have "{ x | x. wf_item x } \<subseteq> f ` Top"
+  have "{ x | x. wf_item \<RR> inp x } \<subseteq> f ` Top"
   proof standard
     fix x
-    assume "x \<in> { x | x. wf_item x }"
+    assume "x \<in> { x | x. wf_item \<RR> inp x }"
     then obtain rule dot origin endp where *: "x = Item rule dot origin endp"
       "rule \<in> set \<RR>" "dot \<le> length (item_rule_body x)" "origin \<le> length inp" "endp \<le> length inp"
       unfolding wf_item_def using item.exhaust_sel le_trans by blast
@@ -2637,12 +2619,12 @@ proof -
 qed
 
 lemma finiteness_UNIV_wf_item:
-  "finite { x | x. wf_item x }"
+  "finite { x | x. wf_item \<RR> inp x }"
   using finiteness_empty finiteness_nonempty by fastforce
 
 theorem finiteness:
   "finite \<II>"
-  using finiteness_UNIV_wf_item wf_items_def wf_\<II> rev_finite_subset by fastforce
+  using finiteness_UNIV_wf_item wf_items_def wf_\<II> rev_finite_subset by (metis mem_Collect_eq subsetI)
 
 end
 

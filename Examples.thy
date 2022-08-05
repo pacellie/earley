@@ -29,9 +29,6 @@ global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
 
 global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" for inp
   defines is_finished = earley.is_finished
-      and wf_item = earley.wf_item
-      and wf_bin = earley.wf_bin
-      and wf_bins = earley.wf_bins
       and init = earley.Init_it
       and scan = earley.Scan_it
       and predict = earley.Predict_it
