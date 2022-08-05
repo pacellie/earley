@@ -21,15 +21,15 @@ definition nonterminals :: "s list" where
   "nonterminals = [Nonterminal S]"
 
 global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
-  defines is_terminal = cfg.is_terminal
+  defines is_finished = cfg.is_finished
+      and is_terminal = cfg.is_terminal
       and \<epsilon>_free = cfg.\<epsilon>_free
   apply unfold_locales
   apply (auto simp: nonterminals_def terminals_def grammar_def)
   using n.exhaust s.exhaust t.exhaust by metis
 
-global_interpretation earley: Earley_List "nonterminals" "terminals" "grammar" "Nonterminal S" for inp
-  defines is_finished = earley.is_finished
-      and init = earley.Init_it
+global_interpretation earley: Earley "nonterminals" "terminals" "grammar" "Nonterminal S"
+  defines init = earley.Init_it
       and scan = earley.Scan_it
       and predict = earley.Predict_it
       and complete = earley.Complete_it

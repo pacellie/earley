@@ -1840,19 +1840,14 @@ lemma \<epsilon>_free_impl_non_empty_deriv:
   "\<epsilon>_free \<Longrightarrow> N \<in> set \<NN> \<Longrightarrow> \<not> derives [N] []"
   using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation is_nonterminal_def by (meson not_Cons_self2)
 
-end
 
 subsection \<open>Earley algorithm\<close>
-
-locale Earley_Set = CFG +
-  fixes inp :: "'a list"
-begin
 
 definition Init :: "'a items" where
   "Init = { init_item r 0 | r. r \<in> set \<RR> \<and> fst r = \<SS> }"
 
-definition Scan :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "Scan k I = 
+definition Scan :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "Scan k inp I = 
     { inc_item x (k+1) | x a.
         x \<in> bin I k \<and>
         inp!k = a \<and>
@@ -1874,28 +1869,28 @@ definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
-definition \<pi>_step :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "\<pi>_step k I = I \<union> Scan k I \<union> Complete k I \<union> Predict k I"
+definition \<pi>_step :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "\<pi>_step k inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k I"
 
-definition \<pi> :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "\<pi> k I = limit (\<pi>_step k) I"
+definition \<pi> :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "\<pi> k inp I = limit (\<pi>_step k inp) I"
 
-fun \<I> :: "nat \<Rightarrow> 'a items" where
-  "\<I> 0 = \<pi> 0 Init"
-| "\<I> (Suc n) = \<pi> (Suc n) (\<I> n)"
+fun \<I> :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items" where
+  "\<I> 0 inp = \<pi> 0 inp Init"
+| "\<I> (Suc n) inp = \<pi> (Suc n) inp (\<I> n inp)"
 
-definition \<II> :: "'a items" where
-  "\<II> = \<I> (length inp)"
+definition \<II> :: "'a sentence \<Rightarrow> 'a items" where
+  "\<II> inp = \<I> (length inp) inp"
 
-definition is_finished :: "'a item \<Rightarrow> bool" where
-  "is_finished x \<longleftrightarrow> (
+definition is_finished :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "is_finished inp x \<longleftrightarrow> (
     item_rule_head x = \<SS> \<and>
     item_origin x = 0 \<and>
     item_end x = length inp \<and> 
     is_complete x)"
 
-definition earley_recognized :: "bool" where
-  "earley_recognized = (\<exists>x \<in> \<II>. is_finished x)"
+definition earley_recognized :: "'a sentence \<Rightarrow> bool" where
+  "earley_recognized inp = (\<exists>x \<in> \<II> inp. is_finished inp x)"
 
 subsection \<open>Wellformedness\<close>
 
@@ -1910,7 +1905,7 @@ lemma wf_Init:
   unfolding Init_def wf_item_def init_item_def by auto
 
 lemma wf_Scan:
-  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (Scan k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (Scan k inp I)"
   unfolding Scan_def wf_defs bin_def inc_item_def is_complete_def item_rule_body_def next_symbol_def
   by (auto split: if_splits)
 
@@ -1924,42 +1919,42 @@ lemma wf_Complete:
   by (auto split: if_splits; metis le_trans)
 
 lemma wf_\<pi>_step:
-  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (\<pi>_step k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (\<pi>_step k inp I)"
   unfolding \<pi>_step_def using wf_Scan wf_Predict wf_Complete wf_items_Un by simp
 
 lemma wf_funpower:
-  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (funpower (\<pi>_step k) n I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (funpower (\<pi>_step k inp) n I)"
   using wf_\<pi>_step unfolding wf_items_def
   by (induction n) auto
 
 lemma wf_\<pi>:
-  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (\<pi> k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> wf_items \<RR> inp (\<pi> k inp I)"
   by (metis \<pi>_def elem_limit_simp wf_funpower wf_items_def)
 
 lemma wf_\<pi>0:
-  "wf_items \<RR> inp (\<pi> 0 Init)"
-  using wf_items_def wf_Init wf_\<pi> by blast
+  "wf_items \<RR> inp (\<pi> 0 inp Init)"
+  using wf_items_def wf_Init wf_\<pi> by metis
 
 lemma wf_\<I>:
-  "wf_items \<RR> inp (\<I> n)"
+  "wf_items \<RR> inp (\<I> n inp)"
   by (induction n) (auto simp: wf_\<pi>0 wf_\<pi>)
 
 lemma wf_\<II>:
-  "wf_items \<RR> inp \<II>"
+  "wf_items \<RR> inp (\<II> inp)"
   unfolding \<II>_def using wf_\<I> by blast
 
 subsection \<open>Soundness\<close>
 
-definition sound_item :: "'a item \<Rightarrow> bool" where
-  "sound_item x = derives [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
+definition sound_item :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "sound_item inp x = derives [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
 
-definition sound_items :: "'a items \<Rightarrow> bool" where
-  "sound_items I = (\<forall>x \<in> I. sound_item x)"
+definition sound_items :: "'a sentence \<Rightarrow> 'a items \<Rightarrow> bool" where
+  "sound_items inp I = (\<forall>x \<in> I. sound_item inp x)"
 
 lemmas sound_defs = sound_items_def sound_item_def
 
 lemma sound_Init:
-  "sound_items Init"
+  "sound_items inp Init"
   unfolding sound_items_def
 proof (standard)
   fix x
@@ -1968,20 +1963,20 @@ proof (standard)
     using Init_def by (auto, simp add: init_item_def)
   hence "(item_rule_head x, item_\<beta> x) \<in> set \<RR>"
     unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
-    using * wf_Init wf_item_def by auto
+    using * wf_Init wf_item_def by fastforce
   hence "derives [item_rule_head x] (item_\<beta> x)"
     using derives_if_valid_rule by blast
   moreover have "item_origin x = item_end x"
     using * Init_def by (auto, simp add: init_item_def)
-  ultimately show "sound_item x"
+  ultimately show "sound_item inp x"
     unfolding sound_item_def by (simp add: slice_empty)
 qed
 
 lemma sound_item_inc_item:
-  assumes "wf_item \<RR> inp x" "sound_item x"
+  assumes "wf_item \<RR> inp x" "sound_item inp x"
   assumes "next_symbol x = Some a"
   assumes "k < length inp" "inp!k = a" "item_end x = k"
-  shows "sound_item (inc_item x (k+1))"
+  shows "sound_item inp (inc_item x (k+1))"
 proof -
   define x' where [simp]: "x' = inc_item x (k+1)"
   obtain item_\<beta>' where *: "item_\<beta> x = a # item_\<beta>'"
@@ -1998,21 +1993,21 @@ proof -
 qed
 
 lemma sound_Scan:
-  "wf_items \<RR> inp I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (Scan k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> sound_items inp I \<Longrightarrow> sound_items inp (Scan k inp I)"
   unfolding Scan_def using sound_item_inc_item by (auto simp: wf_items_def sound_items_def bin_def)
 
 lemma sound_Predict:
-  "sound_items I \<Longrightarrow> sound_items (Predict k I)"
+  "sound_items inp I \<Longrightarrow> sound_items inp (Predict k I)"
   unfolding Predict_def by (auto simp: sound_defs init_item_def derives_if_valid_rule slice_empty item_defs)
 
 lemma sound_Complete:
-  assumes "wf_items \<RR> inp I" "sound_items I"
-  shows "sound_items (Complete k I)"
+  assumes "wf_items \<RR> inp I" "sound_items inp I"
+  shows "sound_items inp (Complete k I)"
   unfolding sound_items_def
 proof standard
   fix z
   assume "z \<in> Complete k I"
-  show "sound_item z"
+  show "sound_item inp z"
   proof cases
     assume "z \<in> I"
     thus ?thesis
@@ -2059,65 +2054,67 @@ proof standard
 qed
 
 lemma sound_\<pi>_step:
-  "wf_items \<RR> inp I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (\<pi>_step k I)"
+  "wf_items \<RR> inp I \<Longrightarrow> sound_items inp I \<Longrightarrow> sound_items inp (\<pi>_step k inp I)"
   unfolding \<pi>_step_def using sound_Scan sound_Predict sound_Complete by (metis UnE sound_items_def)
 
 lemma sound_funpower:
-  "wf_items \<RR> inp I \<Longrightarrow> sound_items I \<Longrightarrow> sound_items (funpower (\<pi>_step k) n I)"
+  "wf_items \<RR> inp I \<Longrightarrow> sound_items inp I \<Longrightarrow> sound_items inp (funpower (\<pi>_step k inp) n I)"
   by (induction n) (auto simp: sound_\<pi>_step wf_\<pi>_step wf_funpower)
 
 lemma sound_\<pi>:
-  assumes "wf_items \<RR> inp I" "sound_items I"
-  shows "sound_items (\<pi> k I)"
+  assumes "wf_items \<RR> inp I" "sound_items inp I"
+  shows "sound_items inp (\<pi> k inp I)"
   by (metis \<pi>_def assms elem_limit_simp sound_items_def sound_funpower)
 
 lemma sound_\<pi>0:
-  "sound_items (\<pi> 0 Init)"
+  "sound_items inp (\<pi> 0 inp Init)"
   using sound_items_def sound_Init sound_\<pi> wf_Init wf_items_def by metis
 
 lemma sound_\<I>:
-  "sound_items (\<I> k)"
+  "sound_items inp (\<I> k inp)"
   apply (induction k)
   apply (auto simp: sound_\<pi>0)
   using sound_\<pi> wf_\<I> by force
 
 lemma sound_\<II>:
-  "sound_items \<II>"
+  "sound_items inp (\<II> inp)"
   unfolding \<II>_def using sound_\<I> by blast
 
 theorem soundness:
-  "earley_recognized \<Longrightarrow> derives [\<SS>] inp"
-  using earley_recognized_def sound_\<II> sound_defs by (auto simp: is_complete_def is_finished_def item_\<beta>_def)
+  "earley_recognized inp \<Longrightarrow> derives [\<SS>] inp"
+  using earley_recognized_def sound_\<II> sound_defs
+  apply (auto simp: is_complete_def is_finished_def item_\<beta>_def)
+  by (metis drop_all self_append_conv slice_id)
 
 subsection \<open>Monotonicity and Absorption\<close>
 
 lemma \<pi>_step_empty:
-  "\<pi>_step k {} = {}"
+  "\<pi>_step k inp {} = {}"
   unfolding \<pi>_step_def Scan_def Complete_def Predict_def bin_def by blast
 
 lemma \<pi>_step_setmonotone:
-  "setmonotone (\<pi>_step k)"
+  "setmonotone (\<pi>_step k inp)"
   by (simp add: Un_assoc \<pi>_step_def setmonotone_def)
 
 lemma \<pi>_step_continuous:
-  "continuous (\<pi>_step k)"
+  "continuous (\<pi>_step k inp)"
   unfolding continuous_def
 proof (standard, standard, standard)
   fix C :: "nat \<Rightarrow> 'a item set"
   assume "chain C"
-  thus "chain (\<pi>_step k \<circ> C)"
+  thus "chain (\<pi>_step k inp \<circ> C)"
     unfolding chain_def \<pi>_step_def by (auto simp: Scan_def Predict_def Complete_def bin_def subset_eq)
 next
   fix C :: "nat \<Rightarrow> 'a item set"
   assume *: "chain C"
-  show "\<pi>_step k (natUnion C) = natUnion (\<pi>_step k \<circ> C)"
+  show "\<pi>_step k inp (natUnion C) = natUnion (\<pi>_step k inp \<circ> C)"
     unfolding natUnion_def
   proof standard
-    show "\<pi>_step k (\<Union> {C n |n. True}) \<subseteq> \<Union> {(\<pi>_step k \<circ> C) n |n. True}"
+    show "\<pi>_step k inp (\<Union> {C n |n. True}) \<subseteq> \<Union> {(\<pi>_step k inp \<circ> C) n |n. True}"
     proof standard
       fix x
-      assume #: "x \<in> \<pi>_step k (\<Union> {C n |n. True})"
-      show "x \<in> \<Union> {(\<pi>_step k \<circ> C) n |n. True}"
+      assume #: "x \<in> \<pi>_step k inp (\<Union> {C n |n. True})"
+      show "x \<in> \<Union> {(\<pi>_step k inp \<circ> C) n |n. True}"
       proof (cases "x \<in> Complete k (\<Union> {C n |n. True})")
         case True
         then show ?thesis
@@ -2139,7 +2136,7 @@ next
             using f6 a3 by (meson le_sup_iff subset_eq sup_ge1)
           thus "\<exists>I.
                   (\<exists>n. I = C n \<union> 
-                           Scan (item_end z) (C n) \<union> 
+                           Scan (item_end z) inp (C n) \<union> 
                            {inc_item i (item_end z) |i. 
                               i \<in> C n \<and> 
                               (\<exists>j. 
@@ -2159,22 +2156,22 @@ next
       qed
     qed
   next
-    show "\<Union> {(\<pi>_step k \<circ> C) n |n. True} \<subseteq> \<pi>_step k (\<Union> {C n |n. True})"
+    show "\<Union> {(\<pi>_step k inp \<circ> C) n |n. True} \<subseteq> \<pi>_step k inp (\<Union> {C n |n. True})"
       unfolding \<pi>_step_def
       using * by (auto simp: Scan_def Predict_def Complete_def chain_def bin_def, metis+)
   qed
 qed
 
 lemma \<pi>_step_regular:
-  "regular (\<pi>_step k)"
+  "regular (\<pi>_step k inp)"
   by (simp add: \<pi>_step_continuous \<pi>_step_setmonotone regular_def)
 
 lemma \<pi>_idem:
-  "\<pi> k (\<pi> k I) = \<pi> k I"
+  "\<pi> k inp (\<pi> k inp I) = \<pi> k inp I"
   by (simp add: \<pi>_def \<pi>_step_regular limit_is_idempotent)
 
 lemma Scan_bin_absorb:
-  "Scan k (bin I k) = Scan k I"
+  "Scan k inp (bin I k) = Scan k inp I"
   unfolding Scan_def bin_def by simp
 
 lemma Predict_bin_absorb:
@@ -2186,7 +2183,7 @@ lemma Complete_bin_absorb:
   unfolding Complete_def bin_def by blast
 
 lemma Scan_Un:
-  "Scan k (I \<union> J) = Scan k I \<union> Scan k J"
+  "Scan k inp (I \<union> J) = Scan k inp I \<union> Scan k inp J"
   unfolding Scan_def bin_def by blast
 
 lemma Predict_Un:
@@ -2194,7 +2191,7 @@ lemma Predict_Un:
   unfolding Predict_def bin_def by blast
 
 lemma Scan_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> Scan k I \<subseteq> Scan k J"
+  "I \<subseteq> J \<Longrightarrow> Scan k inp I \<subseteq> Scan k inp J"
   unfolding Scan_def bin_def by blast
 
 lemma Predict_sub_mono:
@@ -2206,65 +2203,65 @@ lemma Complete_sub_mono:
   unfolding Complete_def bin_def by blast
 
 lemma \<pi>_step_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> \<pi>_step k I \<subseteq> \<pi>_step k J"
+  "I \<subseteq> J \<Longrightarrow> \<pi>_step k inp I \<subseteq> \<pi>_step k inp J"
   unfolding \<pi>_step_def using Scan_sub_mono Predict_sub_mono Complete_sub_mono by (meson Un_mono)
 
 lemma funpower_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> funpower (\<pi>_step k) n I \<subseteq> funpower (\<pi>_step k) n J"
+  "I \<subseteq> J \<Longrightarrow> funpower (\<pi>_step k inp) n I \<subseteq> funpower (\<pi>_step k inp) n J"
   by (induction n) (auto simp: \<pi>_step_sub_mono)
 
 lemma \<pi>_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> \<pi> k I \<subseteq> \<pi> k J"
+  "I \<subseteq> J \<Longrightarrow> \<pi> k inp I \<subseteq> \<pi> k inp J"
 proof standard
   fix x
-  assume "I \<subseteq> J" "x \<in> \<pi> k I"
-  then obtain n where "x \<in> funpower (\<pi>_step k) n I"
+  assume "I \<subseteq> J" "x \<in> \<pi> k inp I"
+  then obtain n where "x \<in> funpower (\<pi>_step k inp) n I"
     unfolding \<pi>_def limit_def natUnion_def by blast
-  hence "x \<in> funpower (\<pi>_step k) n J"
+  hence "x \<in> funpower (\<pi>_step k inp) n J"
     using \<open>I \<subseteq> J\<close> funpower_sub_mono by blast
-  thus "x \<in> \<pi> k J"
+  thus "x \<in> \<pi> k inp J"
     unfolding \<pi>_def limit_def natUnion_def by blast
 qed
 
 lemma Scan_\<pi>_step_mono:
-  "Scan k I \<subseteq> \<pi>_step k I"
+  "Scan k inp I \<subseteq> \<pi>_step k inp I"
   using \<pi>_step_def by auto
 
 lemma Predict_\<pi>_step_mono:
-  "Predict k I \<subseteq> \<pi>_step k I"
+  "Predict k I \<subseteq> \<pi>_step k inp I"
   using \<pi>_step_def by auto
 
 lemma Complete_\<pi>_step_mono:
-  "Complete k I \<subseteq> \<pi>_step k I"
+  "Complete k I \<subseteq> \<pi>_step k inp I"
   using \<pi>_step_def by auto
 
 lemma \<pi>_step_\<pi>_mono:
-  "\<pi>_step k I \<subseteq> \<pi> k I"
+  "\<pi>_step k inp I \<subseteq> \<pi> k inp I"
 proof -
-  have "\<pi>_step k I \<subseteq> funpower (\<pi>_step k) 1 I"
+  have "\<pi>_step k inp I \<subseteq> funpower (\<pi>_step k inp) 1 I"
     by simp
   thus ?thesis
     by (metis \<pi>_def limit_elem subset_eq)
 qed
 
 lemma Scan_\<pi>_mono:
-  "Scan k I \<subseteq> \<pi> k I"
+  "Scan k inp  I \<subseteq> \<pi> k inp I"
   using Scan_\<pi>_step_mono \<pi>_step_\<pi>_mono by force
 
 lemma Predict_\<pi>_mono:
-  "Predict k I \<subseteq> \<pi> k I"
+  "Predict k I \<subseteq> \<pi> k inp I"
   using Predict_\<pi>_step_mono \<pi>_step_\<pi>_mono by force
 
 lemma Complete_\<pi>_mono:
-  "Complete k I \<subseteq> \<pi> k I"
+  "Complete k I \<subseteq> \<pi> k inp I"
   using Complete_\<pi>_step_mono \<pi>_step_\<pi>_mono by force
 
 lemma \<pi>_mono:
-  "I \<subseteq> \<pi> k I"
+  "I \<subseteq> \<pi> k inp I"
   using \<pi>_step_\<pi>_mono \<pi>_step_def by auto
 
 lemma Scan_bin_empty:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (Scan k I) i = {}"
+  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (Scan k inp I) i = {}"
   unfolding Scan_def bin_def inc_item_def by fastforce
 
 lemma Predict_bin_empty:
@@ -2276,43 +2273,43 @@ lemma Complete_bin_empty:
   unfolding Complete_def bin_def inc_item_def by auto
 
 lemma \<pi>_step_bin_absorb:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k + 1 \<Longrightarrow> bin (\<pi>_step k I) i = bin I i"
+  "i \<noteq> k \<Longrightarrow> i \<noteq> k + 1 \<Longrightarrow> bin (\<pi>_step k inp I) i = bin I i"
   unfolding \<pi>_step_def using Scan_bin_empty Predict_bin_empty Complete_bin_empty
   unfolding bin_def using Un_iff empty_iff mem_Collect_eq by fastforce
 
 lemma funpower_bin_absorb:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (funpower (\<pi>_step k) n I) i = bin I i"
+  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (funpower (\<pi>_step k inp) n I) i = bin I i"
   by (induction n) (auto simp: \<pi>_step_bin_absorb)
 
 lemma \<pi>_bin_absorb:
   assumes "i \<noteq> k" "i \<noteq> k+1" 
-  shows "bin (\<pi> k I) i = bin I i"
+  shows "bin (\<pi> k inp I) i = bin I i"
 proof (standard; standard)
   fix x 
-  assume "x \<in> bin (\<pi> k I) i"
-  then obtain n where "x \<in> bin (funpower (\<pi>_step k) n I) i"
+  assume "x \<in> bin (\<pi> k inp I) i"
+  then obtain n where "x \<in> bin (funpower (\<pi>_step k inp) n I) i"
     unfolding \<pi>_def limit_def natUnion_def by (auto simp: bin_def)
   then show "x \<in> bin I i"
     using funpower_bin_absorb assms by blast
 next
   fix x
   assume "x \<in> bin I i"
-  show "x \<in> bin (\<pi> k I) i"
+  show "x \<in> bin (\<pi> k inp I) i"
     using \<pi>_mono \<open>x \<in> bin I i\<close> by (auto simp: bin_def)
 qed
 
 subsection \<open>Completeness\<close>
 
 lemma Scan_\<I>:
-  assumes "i+1 \<le> k" "k \<le> length inp" "x \<in> bin (\<I> k) i" "next_symbol x = Some a" "inp!i = a"
-  shows "inc_item x (i+1) \<in> \<I> k"
+  assumes "i+1 \<le> k" "k \<le> length inp" "x \<in> bin (\<I> k inp) i" "next_symbol x = Some a" "inp!i = a"
+  shows "inc_item x (i+1) \<in> \<I> k inp"
   using assms
 proof (induction k arbitrary: i x a)
   case (Suc k)
   show ?case
   proof cases
     assume "i+1 \<le> k"
-    hence "inc_item x (i+1) \<in> \<I> k"
+    hence "inc_item x (i+1) \<in> \<I> k inp"
       using Suc \<pi>_bin_absorb by simp
     thus ?thesis
       using \<pi>_mono unfolding Scan_def by force
@@ -2320,13 +2317,13 @@ proof (induction k arbitrary: i x a)
     assume "\<not> i+1 \<le> k"
     hence *: "i+1 = Suc k"
       using le_Suc_eq Suc.prems(1) by blast
-    have "x \<in> bin (\<I> k) i"
+    have "x \<in> bin (\<I> k inp) i"
       using Suc.prems(3) * \<pi>_bin_absorb by force
-    hence "inc_item x (i+1) \<in> \<pi> i (\<I> k)"
+    hence "inc_item x (i+1) \<in> \<pi> i inp (\<I> k inp)"
       using * Suc.prems(2,4,5) Scan_\<pi>_mono unfolding Scan_def by force
-    hence "inc_item x (i+1) \<in> \<pi> k (\<I> k)"
+    hence "inc_item x (i+1) \<in> \<pi> k inp (\<I> k inp)"
       using * by force
-    hence "inc_item x (i+1) \<in> \<I> k"
+    hence "inc_item x (i+1) \<in> \<I> k inp"
       using \<pi>_idem by (metis local.\<I>.elims)
     thus ?thesis
       using \<pi>_mono by auto
@@ -2334,12 +2331,12 @@ proof (induction k arbitrary: i x a)
 qed simp
 
 lemma Predict_\<I>:
-  assumes "i \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set \<RR>"
-  shows "init_item (N,\<alpha>) i \<in> \<I> k"
+  assumes "i \<le> k" "x \<in> bin (\<I> k inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set \<RR>"
+  shows "init_item (N,\<alpha>) i \<in> \<I> k inp"
   using assms
 proof (induction k arbitrary: i x N \<alpha>)
   case 0
-  hence "init_item (N,\<alpha>) i \<in> Predict 0 (\<I> 0)"
+  hence "init_item (N,\<alpha>) i \<in> Predict 0 (\<I> 0 inp)"
     unfolding rule_head_def Predict_def by auto
   thus ?case
     using Predict_\<pi>_mono \<pi>_idem by fastforce
@@ -2348,13 +2345,13 @@ next
   show ?case
   proof cases
     assume "i \<le> k"
-    hence "init_item (N,\<alpha>) i \<in> \<I> k"
+    hence "init_item (N,\<alpha>) i \<in> \<I> k inp"
       using Suc.IH \<pi>_bin_absorb Suc.prems(2-4) by force
     thus ?thesis
       using \<pi>_mono by auto
   next
     assume "\<not> i \<le> k"
-    hence "init_item (N,\<alpha>) i \<in> Predict i (\<I> (Suc k))"
+    hence "init_item (N,\<alpha>) i \<in> Predict i (\<I> (Suc k) inp)"
       unfolding Predict_def rule_head_def using Suc.prems(2-4) by auto
     thus ?thesis
       using Predict_\<pi>_mono \<pi>_idem Suc.prems(1) \<open>\<not> i \<le> k\<close> by (metis le_SucE \<I>.simps(2) subsetD)
@@ -2362,13 +2359,13 @@ next
 qed
 
 lemma Complete_\<I>:
-  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set \<RR>"
-  assumes "i = item_origin y" "y \<in> bin (\<I> k) j" "item_rule y = (N,\<alpha>)" "is_complete y"
-  shows "inc_item x j \<in> \<I> k"
+  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set \<RR>"
+  assumes "i = item_origin y" "y \<in> bin (\<I> k inp) j" "item_rule y = (N,\<alpha>)" "is_complete y"
+  shows "inc_item x j \<in> \<I> k inp"
   using assms
 proof (induction k arbitrary: i j x N \<alpha> y)
   case 0
-  hence "inc_item x 0 \<in> Complete 0 (\<I> 0)"
+  hence "inc_item x 0 \<in> Complete 0 (\<I> 0 inp)"
     unfolding Complete_def rule_head_def next_symbol_def item_rule_head_def by (auto split: if_splits; force)
   thus ?case
     using Complete_\<pi>_mono \<pi>_idem "0.prems"(2) by (metis le_0_eq \<I>.simps(1) subset_iff)
@@ -2377,7 +2374,7 @@ next
   show ?case
   proof cases
     assume "j \<le> k"
-    hence "inc_item x j \<in> \<I> k"
+    hence "inc_item x j \<in> \<I> k inp"
       using Suc  \<pi>_bin_absorb Orderings.order_class.dual_order.eq_iff by force
     thus ?thesis
       using \<pi>_mono by fastforce
@@ -2385,15 +2382,15 @@ next
     assume "\<not> j \<le> k"
     hence "j = Suc k"
       using le_SucE Suc.prems(2) by blast
-    hence "inc_item x (Suc k) \<in> Complete (Suc k) (\<I> (Suc k))"
+    hence "inc_item x (Suc k) \<in> Complete (Suc k) (\<I> (Suc k) inp)"
       using Suc.prems(3-4,6-9) unfolding Complete_def rule_head_def item_rule_head_def by fastforce
     then show ?thesis
       using Complete_\<pi>_mono \<pi>_idem \<open>j = Suc k\<close> by fastforce
   qed
 qed
 
-definition partially_complete :: "nat \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
-  "partially_complete k I P = (
+definition partially_complete :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
+  "partially_complete k inp I P = (
     \<forall>i j x a D.
       i \<le> j \<and> j \<le> k \<and> k \<le> length inp \<and>
       x \<in> bin I i \<and> next_symbol x = Some a \<and>
@@ -2405,7 +2402,7 @@ lemma fully_complete:
   assumes "j \<le> k" "k \<le> length inp"
   assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "wf_items \<RR> inp I"
   assumes "Derivation (item_\<beta> x) D (slice j k inp)"
-  assumes "partially_complete k I (\<lambda>D'. length D' \<le> length D)"
+  assumes "partially_complete k inp I (\<lambda>D'. length D' \<le> length D)"
   shows "Item (N,\<alpha>) (length \<alpha>) i k \<in> I"
   using assms
 proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
@@ -2437,7 +2434,7 @@ next
     using Cons unfolding item_defs(4) next_symbol_def is_complete_def by (auto, metis nth_via_drop)
   ultimately have "inc_item x j' \<in> I"
     using *(1,3-5) Cons.prems(2-4,7) partially_complete_def by metis
-  moreover have "partially_complete k I (\<lambda>D'. length D' \<le> length F)"
+  moreover have "partially_complete k inp I (\<lambda>D'. length D' \<le> length F)"
     using Cons.prems(7) *(6) unfolding partially_complete_def by fastforce
   moreover have "bs = item_\<beta> (Item (N,\<alpha>) (d+1) i j')"
     using Cons.hyps(2) Cons.prems(3) unfolding item_defs(4) item_rule_body_def 
@@ -2447,15 +2444,15 @@ next
 qed
 
 lemma partially_complete_\<I>:
-  "partially_complete k (\<I> k) (\<lambda>_. True)"
+  "partially_complete k inp (\<I> k inp) (\<lambda>_. True)"
   unfolding partially_complete_def
 proof (standard, standard, standard, standard, standard, standard)
   fix x i a D j
   assume
     "i \<le> j \<and> j \<le> k \<and> k \<le> length inp \<and>
-     x \<in> bin (\<I> k) i \<and> next_symbol x = Some a \<and>
+     x \<in> bin (\<I> k inp) i \<and> next_symbol x = Some a \<and>
      Derivation [a] D (slice i j inp) \<and> (\<lambda>_. True) D"
-  thus "inc_item x j \<in> \<I> k"
+  thus "inc_item x j \<in> \<I> k inp"
   proof (induction "length D" arbitrary: x i a j D rule: nat_less_induct)
     case 1
     show ?case
@@ -2471,7 +2468,7 @@ proof (standard, standard, standard, standard, standard, standard)
         using \<open>j \<le> length inp\<close> discrete by blast
       hence "inp!i = a"
         using slice_nth \<open>[a] = slice i j inp\<close> \<open>j = i + 1\<close> by fastforce
-      hence "inc_item x (i+1) \<in> \<I> k"
+      hence "inc_item x (i+1) \<in> \<I> k inp"
         using Scan_\<I> \<open>j = i + 1\<close> "1.prems" by blast
       thus ?thesis
         by (simp add: \<open>j = i + 1\<close> wf_Init wf_items_def)
@@ -2495,22 +2492,24 @@ proof (standard, standard, standard, standard, standard, standard)
         then obtain N \<alpha> where #: "[a] = [N]" "b = \<alpha>" "(N,\<alpha>) \<in> set \<RR>" "fst d = 0" "snd d = (N,\<alpha>)"
           using *(1) unfolding Derives1_def by (simp add: Cons_eq_append_conv)
         define y where y_def: "y = Item (N,\<alpha>) 0 i i"
-        have "init_item (N, \<alpha>) i \<in> \<I> k"
+        have "init_item (N, \<alpha>) i \<in> \<I> k inp"
           using Predict_\<I> #(1,3) "1.prems" by auto
-        hence "y \<in> bin (\<I> k) i"
+        hence "y \<in> bin (\<I> k inp) i"
           unfolding init_item_def using y_def by (simp add: bin_def wf_Init wf_items_def)
         have "length D' < length D"
           using \<open>D = d # D'\<close> by fastforce
-        hence "partially_complete k (\<I> k) (\<lambda>E. length E \<le> length D')"
+        hence "partially_complete k inp (\<I> k inp) (\<lambda>E. length E \<le> length D')"
           unfolding partially_complete_def using "1.hyps" "1.prems" le_less_trans by blast
-        hence "partially_complete j (\<I> k) (\<lambda>E. length E \<le> length D')"
+        hence "partially_complete j inp (\<I> k inp) (\<lambda>E. length E \<le> length D')"
           unfolding partially_complete_def using "1.prems" by force
         moreover have "Derivation (item_\<beta> y) D' (slice i j inp)"
           using #(2) *(2) item_\<beta>_def item_rule_body_def rule_body_def y_def
           by (metis item.sel(1) item.sel(2) drop0 snd_conv)
-        ultimately have 0: "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (\<I> k) j"
-          using fully_complete wf_\<I> "1.prems" wf_items_def \<open>y \<in> bin (\<I> k) i\<close> by (auto simp: bin_def y_def)
-        have 1: "x \<in> bin (\<I> k) i"
+        ultimately have 0: "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (\<I> k inp) j"
+          using fully_complete wf_\<I> "1.prems" wf_items_def \<open>y \<in> bin (\<I> k inp) i\<close>
+          apply (auto simp: bin_def y_def)
+          by (smt (verit, best) fully_complete le_trans partially_complete_def)
+        have 1: "x \<in> bin (\<I> k inp) i"
           by (simp add: "1.prems")
         have "next_symbol x = Some N"
           using #(1) "1.prems" by fastforce
@@ -2522,12 +2521,12 @@ proof (standard, standard, standard, standard, standard, standard)
 qed
 
 lemma partially_complete_\<II>:
-  "partially_complete (length inp) \<II> (\<lambda>_. True)"
+  "partially_complete (length inp) inp (\<II> inp) (\<lambda>_. True)"
   by (simp add: \<II>_def partially_complete_\<I>)
 
 lemma Init_sub_\<I>:
-  "Init \<subseteq> \<I> k"
-  using \<pi>_mono by (induction k) auto
+  "Init \<subseteq> \<I> k inp"
+  using \<pi>_mono by (induction k) (auto, blast)
 
 lemma Derivation_\<SS>1:
   assumes "Derivation [\<SS>] D inp" "set inp \<subseteq> set \<TT>"
@@ -2549,16 +2548,16 @@ qed
 
 theorem completeness:
   assumes "derives [\<SS>] inp" "set inp \<subseteq> set \<TT>"
-  shows "earley_recognized"
+  shows "earley_recognized inp"
 proof -
   obtain \<alpha> where *: "(\<SS>,\<alpha>) \<in> set \<RR>" "derives \<alpha> inp"
     using Derivation_\<SS>1 assms Derivation_implies_derives derives_implies_Derivation by blast
   let ?x = "Item (\<SS>,\<alpha>) 0 0 0"
-  have "?x \<in> \<II>" "wf_item \<RR> inp ?x"
+  have "?x \<in> \<II> inp" "wf_item \<RR> inp ?x"
     unfolding \<II>_def using *(1) Init_sub_\<I> Init_def wf_Init by (auto simp: init_item_def)
   moreover have "derives (item_\<beta> ?x) (slice 0 (length inp) inp)"
     using *(2) item_defs(4) by (simp add: item_\<beta>_def item_rule_body_def rule_body_def)
-  ultimately have "Item (\<SS>,\<alpha>) (length \<alpha>) 0 (length inp) \<in> \<II>"
+  ultimately have "Item (\<SS>,\<alpha>) (length \<alpha>) 0 (length inp) \<in> \<II> inp"
     using partially_complete_\<II> fully_complete unfolding partially_complete_def 
     using fully_complete wf_\<II> derives_implies_Derivation
     by (auto, metis Earley_Set.item.sel(4) le_refl slice_id wf_defs(1))
@@ -2570,7 +2569,7 @@ subsection \<open>Correctness\<close>
 
 corollary correctness:
   assumes "set inp \<subseteq> set \<TT>"
-  shows "earley_recognized \<longleftrightarrow> derives [\<SS>] inp"
+  shows "earley_recognized inp \<longleftrightarrow> derives [\<SS>] inp"
   using assms soundness completeness by blast
 
 subsection \<open>Finiteness\<close>
@@ -2623,7 +2622,7 @@ lemma finiteness_UNIV_wf_item:
   using finiteness_empty finiteness_nonempty by fastforce
 
 theorem finiteness:
-  "finite \<II>"
+  "finite (\<II> inp)"
   using finiteness_UNIV_wf_item wf_items_def wf_\<II> rev_finite_subset by (metis mem_Collect_eq subsetI)
 
 end
