@@ -10,54 +10,65 @@ type_synonym 'a rules = "'a rule list"
 
 type_synonym 'a sentence = "'a list"
 
-locale CFG =
-  fixes \<NN> :: "'a list"
-  fixes \<TT> :: "'a list"
-  fixes \<RR> :: "'a rule list"
-  fixes \<SS> :: "'a"
-  assumes disjunct_symbols: "set \<NN> \<inter> set \<TT> = {}"
-  assumes univ_symbols: "set \<NN> \<union> set \<TT> = UNIV"
-  assumes startsymbol_dom: "\<SS> \<in> set \<NN>"
-  assumes valid_rules: "\<forall>(N, \<alpha>) \<in> set \<RR>. N \<in> set \<NN> \<and> (\<forall>s \<in> set \<alpha>. s \<in> set \<NN> \<union> set \<TT>)"
-begin
+datatype 'a cfg = 
+  CFG 
+    (\<NN> : "'a list") 
+    (\<TT> : "'a list") 
+    (\<RR> : "'a rules")
+    (\<SS> : "'a")
 
-definition is_terminal :: "'a \<Rightarrow> bool" where
-  "is_terminal s = (s \<in> set \<TT>)"
+definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
+  "disjunct_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
 
-definition is_nonterminal :: "'a \<Rightarrow> bool" where
-  "is_nonterminal s = (s \<in> set \<NN>)"
+definition univ_symbols :: "'a cfg \<Rightarrow> bool" where
+  "univ_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<union> set (\<TT> cfg) = UNIV"
 
-lemma is_nonterminal_startsymbol: "is_nonterminal \<SS>"
-  by (simp add: is_nonterminal_def startsymbol_dom)
+definition valid_startsymbol :: "'a cfg \<Rightarrow> bool" where
+  "valid_startsymbol cfg \<longleftrightarrow> \<SS> cfg \<in> set (\<NN> cfg)"
 
-definition is_word :: "'a sentence \<Rightarrow> bool" where
-  "is_word s = (\<forall>x \<in> set s. is_terminal x)"
+definition valid_rules :: "'a cfg \<Rightarrow> bool" where
+  "valid_rules cfg \<longleftrightarrow> (\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg) \<and> (\<forall>s \<in> set \<alpha>. s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg)))"
+
+definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
+  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> univ_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg"
+
+lemmas wf_cfg_defs = wf_cfg_def valid_rules_def valid_startsymbol_def univ_symbols_def disjunct_symbols_def
+
+definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_terminal cfg s = (s \<in> set (\<TT> cfg))"
+
+definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_nonterminal cfg s = (s \<in> set (\<NN> cfg))"
+
+lemma is_nonterminal_startsymbol: "wf_cfg cfg \<Longrightarrow> is_nonterminal cfg (\<SS> cfg)"
+  by (simp add: is_nonterminal_def wf_cfg_defs)
+
+definition is_word :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "is_word cfg s = (\<forall>x \<in> set s. is_terminal cfg x)"
    
-definition derives1 :: "'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "derives1 u v = 
+definition derives1 :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "derives1 cfg u v = 
      (\<exists> x y N \<alpha>. 
           u = x @ [N] @ y
         \<and> v = x @ \<alpha> @ y
-        \<and> (N, \<alpha>) \<in> set \<RR>)"  
+        \<and> (N, \<alpha>) \<in> set (\<RR> cfg))"  
 
-definition derivations1 :: "('a sentence \<times> 'a sentence) set" where
-  "derivations1 = { (u,v) | u v. derives1 u v }"
+definition derivations1 :: "'a cfg \<Rightarrow> ('a sentence \<times> 'a sentence) set" where
+  "derivations1 cfg = { (u,v) | u v. derives1 cfg u v }"
 
-definition derivations :: "('a sentence \<times> 'a sentence) set" where 
-  "derivations = derivations1^*"
+definition derivations :: "'a cfg \<Rightarrow> ('a sentence \<times> 'a sentence) set" where 
+  "derivations cfg = (derivations1 cfg)^*"
 
-definition derives :: "'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "derives u v = ((u, v) \<in> derivations)"
+definition derives :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "derives cfg u v = ((u, v) \<in> derivations cfg)"
 
-definition is_derivation :: "'a sentence \<Rightarrow> bool" where
-  "is_derivation u = derives [\<SS>] u"
+definition is_derivation :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "is_derivation cfg u = derives cfg [\<SS> cfg] u"
 
-definition \<L> :: "'a sentence set" where
-  "\<L> = { v | v. is_word v \<and> is_derivation v}"
+definition \<L> :: "'a cfg \<Rightarrow> 'a sentence set" where
+  "\<L> cfg = { v | v. is_word cfg v \<and> is_derivation cfg v}"
 
-definition "\<L>\<^sub>P"  :: "'a sentence set" where
-  "\<L>\<^sub>P = { u | u v. is_word u \<and> is_derivation (u@v) }"
-
-end
+definition "\<L>\<^sub>P"  :: "'a cfg \<Rightarrow> 'a sentence set" where
+  "\<L>\<^sub>P cfg = { u | u v. is_word cfg u \<and> is_derivation cfg (u@v) }"
 
 end
