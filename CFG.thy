@@ -29,10 +29,13 @@ definition valid_startsymbol :: "'a cfg \<Rightarrow> bool" where
 definition valid_rules :: "'a cfg \<Rightarrow> bool" where
   "valid_rules cfg \<longleftrightarrow> (\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg) \<and> (\<forall>s \<in> set \<alpha>. s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg)))"
 
-definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
-  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> univ_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg"
+definition distinct_rules :: "'a cfg \<Rightarrow> bool" where
+  "distinct_rules cfg = distinct (\<RR> cfg)"
 
-lemmas wf_cfg_defs = wf_cfg_def valid_rules_def valid_startsymbol_def univ_symbols_def disjunct_symbols_def
+definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
+  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> univ_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg \<and> distinct_rules cfg"
+
+lemmas wf_cfg_defs = wf_cfg_def valid_rules_def valid_startsymbol_def univ_symbols_def disjunct_symbols_def distinct_rules_def
 
 definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
   "is_terminal cfg s = (s \<in> set (\<TT> cfg))"
