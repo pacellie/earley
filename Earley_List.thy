@@ -424,22 +424,22 @@ lemma wf_bins_\<II>_it:
 subsection \<open>List to Set\<close>
 
 lemma Init_it_eq_Init:
-  "set_bins (Init_it inp) = Init"
+  "set_bins (Init_it cfg inp) = Init cfg"
 proof -
-  let ?rs = "filter (\<lambda>r. rule_head r = \<SS>) \<RR>"
+  let ?rs = "filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg)"
   let ?b0 = "map (\<lambda>r. init_item r 0) ?rs"
   let ?bs = "Bins (replicate (length inp + 1) (Bin []))"
   have "set_bins ?bs = {}"
     unfolding set_bins_def set_bins_upto_def set_bin_def set_bin_upto_def
     by (auto simp del: replicate_Suc)
-  hence "set_bins (Init_it inp) = set ?b0"
+  hence "set_bins (Init_it cfg inp) = set ?b0"
     by (auto simp: Init_it_def set_bins_app_bins)
   thus ?thesis
-    unfolding Init_def rule_head_def using valid_rules by auto
+    unfolding Init_def rule_head_def by auto
 qed
 
 lemma Scan_it_sub_Scan:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
   assumes "next_symbol x = Some a"
   shows "set (Scan_it k inp a x) \<subseteq> Scan k inp I"
 proof standard
@@ -459,26 +459,26 @@ proof standard
 qed
 
 lemma Predict_it_sub_Predict:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
   assumes "next_symbol x = Some X"
-  shows "set (Predict_it k X) \<subseteq> Predict k I"
+  shows "set (Predict_it k cfg X) \<subseteq> Predict k cfg I"
 proof standard
   fix y
-  assume *: "y \<in> set (Predict_it k X)"
+  assume *: "y \<in> set (Predict_it k cfg X)"
   have "x \<in> bin I k"
     using kth_bin_in_bins assms(1-4) set_bin_def wf_bin_def wf_bins_def bin_def by blast
-  let ?rs = "filter (\<lambda>r. rule_head r = X) \<RR>"
+  let ?rs = "filter (\<lambda>r. rule_head r = X) (\<RR> cfg)"
   let ?xs = "map (\<lambda>r. init_item r k) ?rs"
   have "y \<in> set ?xs"
     using * unfolding Predict_it_def by simp
-  then obtain r where "y = init_item r k" "rule_head r = X" "r \<in> set \<RR>" "next_symbol x = Some (rule_head r)"
-    using valid_rules assms(5) by auto
-  thus "y \<in> Predict k I"
+  then obtain r where "y = init_item r k" "rule_head r = X" "r \<in> set (\<RR> cfg)" "next_symbol x = Some (rule_head r)"
+    using assms(5) by auto
+  thus "y \<in> Predict k cfg I"
     unfolding Predict_def using \<open>x \<in> bin I k\<close> by blast
 qed
 
 lemma Complete_it_sub_Complete:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
   assumes "next_symbol y = None"
   shows "set (Complete_it k y bs) \<subseteq> Complete k I"
 proof standard
@@ -495,156 +495,157 @@ proof standard
      using wf_bin_def wf_bins_def bin_def assms kth_bin_in_bins set_bin_def
      by (metis (mono_tags, lifting) filter_is_subset in_mono mem_Collect_eq)
   then obtain z where "x = inc_item z k" "next_symbol z = Some (item_rule_head y)" "z \<in> bin I (item_origin y)"
-    using * Complete_it_def by auto
+    using * Complete_it_def by (smt (verit, best) filter_set imageE list.set_map member_filter)
   thus "x \<in> Complete k I"
     using \<open>y \<in> bin I k\<close> assms(5) unfolding Complete_def next_symbol_def by (auto split: if_splits)
 qed
 
 lemma \<pi>_it'_sub_\<pi>:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
-  shows "set_bins (\<pi>_it' k inp bs i) \<subseteq> \<pi> k inp I"
+  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
+  shows "set_bins (\<pi>_it' k cfg inp bs i) \<subseteq> \<pi> k cfg inp I"
   using assms
-proof (induction k inp bs i arbitrary: I rule: \<pi>_it'_induct)
-  case (Base k inp bs i)
+proof (induction k cfg inp bs i arbitrary: I rule: \<pi>_it'_induct)
+  case (Base k cfg inp bs i)
   thus ?case
     using \<pi>_mono by fastforce
 next
-  case (Complete k inp bs i x)
+  case (Complete k cfg inp bs i x)
   let ?bs' = "app_bins bs k (Complete_it k x bs)"
   have 0: "x \<in> set_bin (bins bs ! k)"
     using Complete.hyps(1,2) by force
   have "set_bins ?bs' \<subseteq> I \<union> Complete k I"
-    using 0 Complete_it_sub_Complete Complete.hyps(3) Complete.prems(1,2,4) set_bins_app_bins Un_mono by metis
-  moreover have "wf_bins \<RR> inp ?bs'"
-    using 0 wf_bins_app_bins Complete.hyps(2) Complete.prems(1,4) wf_bins_Complete_it 
-      distinct_Complete_it wf_bins_kth_bin wf_item_def
-    by (smt (verit, del_insts) le_eq_less_or_eq Complete.hyps(1) order_trans)
-  ultimately have "set_bins (\<pi>_it' k inp bs i) \<subseteq> \<pi> k inp (I \<union> Complete k I)"
-    using Complete.IH Complete.hyps Complete.prems(3,4) by simp
+    using 0 Complete_it_sub_Complete Complete.hyps(3) Complete.prems(2,3,5) set_bins_app_bins Un_mono by metis
+  moreover have "wf_bins cfg inp ?bs'"
+    using 0 wf_bins_app_bins Complete.hyps(2) Complete.prems(2,5) wf_bins_Complete_it 
+      distinct_Complete_it wf_bins_kth_bin wf_item_def by (smt (verit) le_trans linorder_not_less)
+  ultimately have "set_bins (\<pi>_it' k cfg inp bs i) \<subseteq> \<pi> k cfg inp (I \<union> Complete k I)"
+    using Complete.IH Complete.hyps Complete.prems(1,4,5) by simp
   thus ?case
     using Complete_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
 next
-  case (Scan k inp bs i x a)
+  case (Scan k cfg inp bs i x a)
   let ?bs' = "app_bins bs (k+1) (Scan_it k inp a x)"
   have 0: "x \<in> set_bin (bins bs ! k)"
     using Scan.hyps(1,2) by force
   have "set_bins ?bs' \<subseteq> I \<union> Scan k inp I"
-    using 0 Scan_it_sub_Scan[OF Scan.prems(1,2) 0 Scan.prems(4) Scan.hyps(3)]
-          Scan.hyps(5) Scan.prems(2,3) by (auto simp: set_bins_app_bins)
-  moreover have "wf_bins \<RR> inp ?bs'"
-    using 0 wf_bins_Scan_it wf_bins_app_bins Scan.hyps(3,5) Scan.prems(1,4) distinct_Scan_it by force
-  ultimately have "set_bins (\<pi>_it' k inp bs i) \<subseteq> \<pi> k inp (I \<union> Scan k inp I)"
-    using Scan.IH Scan.hyps Scan.prems(3,4) by simp
+    using 0 Scan_it_sub_Scan[OF Scan.prems(2,3) 0 Scan.prems(5) Scan.hyps(3)]
+          Scan.hyps(5) Scan.prems(3,4) by (auto simp: set_bins_app_bins)
+  moreover have "wf_bins cfg inp ?bs'"
+    using 0 wf_bins_Scan_it wf_bins_app_bins Scan.hyps(3,5) Scan.prems(2,5) distinct_Scan_it
+    by (metis less_imp_le_nat option.simps(3))
+  ultimately have "set_bins (\<pi>_it' k cfg inp bs i) \<subseteq> \<pi> k cfg inp (I \<union> Scan k inp I)"
+    using Scan.IH Scan.hyps Scan.prems(1,4,5) by simp
   thus ?case
     using Scan_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
 next
-  case (Pass k inp bs i x a)
+  case (Pass k cfg inp bs i x a)
   thus ?case
     using \<pi>_it'_simps(4) by simp
 next
-  case (Predict k inp bs i x a)
-  let ?bs' = "app_bins bs k (Predict_it k a)"
+  case (Predict k cfg inp bs i x a)
+  let ?bs' = "app_bins bs k (Predict_it k cfg a)"
   have 0: "x \<in> set_bin (bins bs ! k)"
     using Predict.hyps(1,2) by force
-  have "set_bins ?bs' \<subseteq> I \<union> Predict k I"
-    using 0 Predict_it_sub_Predict Predict.hyps(3) Predict.prems(1,2,4) set_bins_app_bins Un_mono by metis
-  moreover have "wf_bins \<RR> inp ?bs'"
-    using Suc_eq_plus1 Suc_le_eq Suc_le_mono Predict.prems(1,3,4) wf_bins_Predict_it
-      wf_bins_app_bins distinct_Predict_it by presburger
-  ultimately have "set_bins (\<pi>_it' k inp bs i)  \<subseteq> \<pi> k inp (I \<union> Predict k I)"
-    using Predict.IH Predict.hyps Predict.prems(3,4) by simp
+  have "set_bins ?bs' \<subseteq> I \<union> Predict k cfg I"
+    using 0 Predict_it_sub_Predict Predict.hyps(3) Predict.prems(2,3,5) set_bins_app_bins Un_mono by metis
+  moreover have "wf_bins cfg inp ?bs'"
+    using Suc_eq_plus1 Suc_le_eq Suc_le_mono Predict.prems(1,2,4,5) wf_bins_Predict_it
+      wf_bins_app_bins distinct_Predict_it by metis
+  ultimately have "set_bins (\<pi>_it' k cfg inp bs i)  \<subseteq> \<pi> k cfg inp (I \<union> Predict k cfg I)"
+    using Predict.IH Predict.hyps Predict.prems(1,4,5) by simp
   thus ?case
     using Predict_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
 qed
 
 lemma \<pi>_it_sub_\<pi>:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
-  shows "set_bins (\<pi>_it k inp bs) \<subseteq> \<pi> k inp I"
+  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
+  shows "set_bins (\<pi>_it k cfg inp bs) \<subseteq> \<pi> k cfg inp I"
   using assms \<pi>_it'_sub_\<pi> \<pi>_it_def by metis
 
 lemma \<I>_it_sub_\<I>:
-  "k < length (bins (Init_it inp)) \<Longrightarrow> set_bins (\<I>_it k inp) \<subseteq> \<I> k inp"
+  "wf_cfg cfg \<Longrightarrow> k < length (bins (Init_it cfg inp)) \<Longrightarrow> set_bins (\<I>_it k cfg inp) \<subseteq> \<I> k cfg inp"
   by (induction k) (auto simp: Init_it_eq_Init \<pi>_it_sub_\<pi> wf_bins_Init_it wf_bins_\<I>_it)
 
 lemma \<II>_it_sub_\<II>:
-  "set_bins (\<II>_it inp) \<subseteq> \<II> inp"
-  using \<I>_it_sub_\<I> \<II>_def \<II>_it_def by auto
+  "wf_cfg cfg \<Longrightarrow> set_bins (\<II>_it cfg inp) \<subseteq> \<II> cfg inp"
+  using \<I>_it_sub_\<I> \<II>_def \<II>_it_def by (metis length_bins_Init_it less_add_one)
 
 subsection \<open>Soundness\<close>
 
 lemma sound_Scan_it:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
-  assumes "next_symbol x = Some a" "wf_items \<RR> inp I" "sound_items inp I"
-  shows "sound_items inp (set (Scan_it k inp a x))"
-  using sound_Scan Scan_it_sub_Scan assms by (meson sound_items_def subsetD)
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "next_symbol x = Some a" "wf_items cfg inp I" "sound_items cfg inp I"
+  shows "sound_items cfg inp (set (Scan_it k inp a x))"
+  using sound_Scan Scan_it_sub_Scan assms by (smt (verit, best) sound_items_def subsetD)
 
 lemma sound_Predict_it:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
-  assumes "next_symbol x = Some X" "sound_items inp I"
-  shows "sound_items inp (set (Predict_it k X))"
-  using sound_Predict Predict_it_sub_Predict sound_items_def assms by (meson subsetD)
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "next_symbol x = Some X" "sound_items cfg inp I"
+  shows "sound_items cfg inp (set (Predict_it k cfg X))"
+  using sound_Predict Predict_it_sub_Predict sound_items_def assms by (smt (verit, ccfv_SIG) in_mono)
 
 lemma sound_Complete_it:
-  assumes "wf_bins \<RR> inp bs" "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
-  assumes "next_symbol y = None" "wf_items \<RR> inp I" "sound_items inp I"
-  shows "sound_items inp (set (Complete_it k y bs))"
-  using sound_Complete Complete_it_sub_Complete sound_items_def assms by (meson subsetD)
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "y \<in> set_bin (bins bs ! k)" "k < length (bins bs)"
+  assumes "next_symbol y = None" "wf_items cfg inp I" "sound_items cfg inp I"
+  shows "sound_items cfg inp (set (Complete_it k y bs))"
+  using sound_Complete Complete_it_sub_Complete sound_items_def assms by (metis (no_types, lifting) subsetD)
 
 lemma sound_\<pi>_it':
-  assumes "wf_bins \<RR> inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
-  assumes "sound_items inp (set_bins bs)"
-  shows "sound_items inp (set_bins (\<pi>_it' k inp bs i))"
+  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
+  assumes "sound_items cfg inp (set_bins bs)"
+  shows "sound_items cfg inp (set_bins (\<pi>_it' k cfg inp bs i))"
   using assms
-proof (induction k inp bs i rule: \<pi>_it'_induct)
-  case (Complete k inp bs i x)
+proof (induction k cfg inp bs i rule: \<pi>_it'_induct)
+  case (Complete k cfg inp bs i x)
   let ?bs' = "app_bins bs k (Complete_it k x bs)"
   have 0: "x \<in> set_bin (bins bs ! k)"
     using Complete.hyps(1,2) by force
-  have "wf_bins \<RR> inp ?bs'"
-    using 0 Complete.prems(1,2) wf_bins_Complete_it wf_bins_app_bins distinct_Complete_it
+  have "wf_bins cfg inp ?bs'"
+    using 0 Complete.prems(2,3) wf_bins_Complete_it wf_bins_app_bins distinct_Complete_it
       wf_bins_kth_bin wf_item_def by (smt (verit, ccfv_SIG) le_trans nat_less_le nle_le)
-  moreover have "sound_items inp (set (Complete_it k x bs))"
-    using 0 sound_Complete_it \<pi>_mono Complete.hyps(3) Complete.prems(1,2,4) set_bins_bin_exists 
+  moreover have "sound_items cfg inp (set (Complete_it k x bs))"
+    using 0 sound_Complete_it \<pi>_mono Complete.hyps(3) Complete.prems(2,3,5) set_bins_bin_exists 
             sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def by metis
-  ultimately have "sound_items inp (set_bins (\<pi>_it' k inp ?bs' (i + 1)))"
-    using Complete.IH Complete.prems(2-4) sound_items_def by (auto simp: set_bins_app_bins)
+  ultimately have "sound_items cfg inp (set_bins (\<pi>_it' k cfg inp ?bs' (i + 1)))"
+    using Complete.IH Complete.prems(1,2-5) sound_items_def by (auto simp: set_bins_app_bins; blast)
   thus ?case
     using Complete.hyps by simp
 next
-  case (Scan k inp bs i x a)
+  case (Scan k cfg inp bs i x a)
   let ?bs' = "app_bins bs (k+1) (Scan_it k inp a x)"
   have 0: "x \<in> set_bin (bins bs ! k)"
     using Scan.hyps(1,2) by force
-  have "wf_bins \<RR> inp ?bs'"
-    using 0 Scan.prems(1,2) wf_bins_Scan_it wf_bins_app_bins Scan.hyps(3,5) distinct_Scan_it by simp
-  moreover have "sound_items inp (set (Scan_it k inp a x))"
-    using 0 sound_Scan_it \<pi>_mono Scan.hyps(3) Scan.prems(1,2,4) set_bins_bin_exists 
+  have "wf_bins cfg inp ?bs'"
+    using 0 Scan.prems(2,3) wf_bins_Scan_it wf_bins_app_bins Scan.hyps(3,5) distinct_Scan_it
+    by (metis nat_less_le option.distinct(1))
+  moreover have "sound_items cfg inp (set (Scan_it k inp a x))"
+    using 0 sound_Scan_it \<pi>_mono Scan.hyps(3) Scan.prems(2,3,5) set_bins_bin_exists 
             sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def by metis
-  ultimately have "sound_items inp (set_bins (\<pi>_it' k inp ?bs' (i + 1)))"
-    using Scan.IH Scan.prems(2-4) sound_items_def Scan.hyps(5) by (auto simp: set_bins_app_bins)
+  ultimately have "sound_items cfg inp (set_bins (\<pi>_it' k cfg inp ?bs' (i + 1)))"
+    using Scan.IH Scan.prems(1,3-5) sound_items_def Scan.hyps(5) by (auto simp: set_bins_app_bins; blast)
   thus ?case
     using Scan.hyps by simp
 next
-  case (Predict k inp bs i x a)
-  let ?bs' = "app_bins bs k (Predict_it k a)"
+  case (Predict k cfg inp bs i x a)
+  let ?bs' = "app_bins bs k (Predict_it k cfg a)"
   have 0: "x \<in> set_bin (bins bs ! k)"
     using Predict.hyps(1,2) by force
-  have "wf_bins \<RR> inp ?bs'"
-    using 0 Predict.prems(1-3) wf_bins_Predict_it wf_bins_app_bins distinct_Predict_it by simp
-  moreover have "sound_items inp (set (Predict_it k a))"
-    using 0 sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems(1,2,4) set_bins_bin_exists 
-            sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def by metis
-  ultimately have "sound_items inp (set_bins (\<pi>_it' k inp ?bs' (i + 1)))"
-    using Predict.IH Predict.prems(2-4) sound_items_def by (auto simp: set_bins_app_bins)
+  have "wf_bins cfg inp ?bs'"
+    using 0 Predict.prems(1-5) wf_bins_Predict_it wf_bins_app_bins distinct_Predict_it wf_bins_kth_bin by fastforce
+  moreover have "sound_items cfg inp (set (Predict_it k cfg a))"
+    using 0 sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems(1-3,5) set_bins_bin_exists 
+            sound_\<pi> wf_bins_kth_bin wf_items_def by metis
+  ultimately have "sound_items cfg inp (set_bins (\<pi>_it' k cfg inp ?bs' (i + 1)))"
+    using Predict.IH Predict.prems(1,3-5) sound_items_def by (auto simp: set_bins_app_bins; blast)
   thus ?case
     using Predict.hyps by simp
 qed simp_all
 
 lemma sound_\<pi>_it:
-  assumes "wf_bins \<RR> inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
-  assumes "sound_items inp (set_bins bs)"
-  shows "sound_items inp (set_bins (\<pi>_it k inp bs))"
-  using sound_\<pi>_it' assms \<pi>_it_def by simp
+  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
+  assumes "sound_items cfg inp (set_bins bs)"
+  shows "sound_items cfg inp (set_bins (\<pi>_it k cfg inp bs))"
+  using sound_\<pi>_it' assms \<pi>_it_def by metis
 
 subsection \<open>Set to List\<close>
 
