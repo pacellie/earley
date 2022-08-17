@@ -8,54 +8,49 @@ datatype t = a | plus
 datatype n = S
 datatype s = Terminal t | Nonterminal n
 
-definition grammar :: "s rule list" where
-  "grammar = [
-    (Nonterminal S, [Terminal a]),
-    (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])
-  ]"
+definition nonterminals :: "s list" where
+  "nonterminals = [Nonterminal S]"
 
 definition terminals :: "s list" where
   "terminals = [Terminal a, Terminal plus]"
 
-definition nonterminals :: "s list" where
-  "nonterminals = [Nonterminal S]"
+definition rules :: "s rule list" where
+  "rules = [
+    (Nonterminal S, [Terminal a]),
+    (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])
+  ]"
 
-global_interpretation cfg: CFG nonterminals terminals grammar "Nonterminal S"
-  defines is_finished = cfg.is_finished
-      and is_terminal = cfg.is_terminal
-      and \<epsilon>_free = cfg.\<epsilon>_free
-  apply unfold_locales
-  apply (auto simp: nonterminals_def terminals_def grammar_def)
-  using n.exhaust s.exhaust t.exhaust by metis
+definition start_symbol :: s where
+  "start_symbol = Nonterminal S"
 
-global_interpretation earley: Earley "nonterminals" "terminals" "grammar" "Nonterminal S"
-  defines init = earley.Init_it
-      and scan = earley.Scan_it
-      and predict = earley.Predict_it
-      and complete = earley.Complete_it
-      and \<pi>' = earley.\<pi>_it'
-      and \<pi> = earley.\<pi>_it
-      and \<I> = earley.\<I>_it
-      and \<II> = earley.\<II>_it
-      and earley_recognized = earley.earley_recognized_it
-  apply unfold_locales
-  apply (auto simp: nonterminals_def terminals_def grammar_def)[1]
-  apply (auto simp: grammar_def)[1]
-  subgoal premises prems for N
-  proof -
-    have "CFG.\<epsilon>_free [(Nonterminal S, [Terminal a]), (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])]"
-      by (metis cfg.\<epsilon>_free_def List.list.set(1,2) \<epsilon>_free_def empty_iff grammar_def insert_iff rule_body_def snd_conv)
-    thus ?thesis
-      by (metis CFG.\<epsilon>_free_impl_non_empty_deriv cfg.CFG_axioms grammar_def prems)
-  qed
-  done
+definition cfg :: "s cfg" where
+  "cfg = CFG nonterminals terminals rules start_symbol"
 
 definition inp :: "s list" where
   "inp = [Terminal a, Terminal plus, Terminal a, Terminal plus, Terminal a]"
 
-value "\<II> inp"
-value "earley_recognized inp"
+lemmas cfg_defs = cfg_def nonterminals_def terminals_def rules_def start_symbol_def
 
-export_code earley_recognized in SML
+lemma wf_cfg:
+  "wf_cfg cfg"
+  apply (auto simp: wf_cfg_defs cfg_defs)
+  by (metis n.exhaust s.exhaust t.exhaust)
+
+lemma wf_inp:
+  "set inp \<subseteq> set (\<TT> cfg)"
+  by (auto simp: cfg_defs inp_def)
+
+lemma nonempty_derives:
+  "nonempty_derives cfg"
+  by (auto simp: \<epsilon>_free_def cfg_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
+
+lemma correctness:
+  "earley_recognized_it cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  using correctness_list wf_cfg wf_inp nonempty_derives by blast
+
+value "\<II>_it cfg inp"
+value "earley_recognized_it cfg inp"
+
+export_code earley_recognized_it in SML
 
 end

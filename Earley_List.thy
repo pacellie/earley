@@ -81,7 +81,7 @@ partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 
         | None \<Rightarrow> app_bins bs k (Complete_it k x bs)
       in \<pi>_it' k cfg inp bs' (i+1))"
 
-print_theorems
+declare \<pi>_it'.simps[code]
 
 definition \<pi>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
   "\<pi>_it k cfg inp bs = \<pi>_it' k cfg inp bs 0"
