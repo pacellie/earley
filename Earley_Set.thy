@@ -1036,7 +1036,7 @@ qed
 
 subsection \<open>Correctness\<close>
 
-corollary correctness:
+corollary correctness_set:
   assumes "set inp \<subseteq> set (\<TT> cfg)" "wf_cfg cfg"
   shows "earley_recognized cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms soundness completeness by blast
