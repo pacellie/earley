@@ -997,12 +997,12 @@ lemma Init_sub_\<I>:
   using \<pi>_mono by (induction k) (auto, blast, blast)
 
 lemma Derivation_\<SS>1:
-  assumes "Derivation cfg [\<SS> cfg] D inp" "set inp \<subseteq> set (\<TT> cfg)" "wf_cfg cfg"
+  assumes "Derivation cfg [\<SS> cfg] D inp" "is_word cfg inp" "wf_cfg cfg"
   shows "\<exists>\<alpha> E. Derivation cfg \<alpha> E inp \<and> (\<SS> cfg,\<alpha>) \<in> set (\<RR> cfg)"
 proof (cases D)
   case Nil
   thus ?thesis
-    using assms is_nonterminal_startsymbol is_terminal_def is_terminal_nonterminal wf_cfg_defs by fastforce
+    using assms is_nonterminal_startsymbol is_terminal_nonterminal by (metis Derivation.simps(1) is_word_def list.set_intros(1))
 next
   case (Cons d D)
   then obtain \<alpha> where "Derives1 cfg [\<SS> cfg] (fst d) (snd d) \<alpha>" "Derivation cfg \<alpha> D inp"
@@ -1015,7 +1015,7 @@ next
 qed
 
 theorem completeness:
-  assumes "derives cfg [\<SS> cfg] inp" "set inp \<subseteq> set (\<TT> cfg)" "wf_cfg cfg"
+  assumes "derives cfg [\<SS> cfg] inp" "is_word cfg inp" "wf_cfg cfg"
   shows "earley_recognized cfg inp"
 proof -
   obtain \<alpha> where *: "(\<SS> cfg,\<alpha>) \<in> set (\<RR> cfg)" "derives cfg \<alpha> inp"
@@ -1037,7 +1037,7 @@ qed
 subsection \<open>Correctness\<close>
 
 corollary correctness_set:
-  assumes "set inp \<subseteq> set (\<TT> cfg)" "wf_cfg cfg"
+  assumes "wf_cfg cfg" "is_word cfg inp"
   shows "earley_recognized cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms soundness completeness by blast
 

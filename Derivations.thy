@@ -192,14 +192,11 @@ lemma rule_nonterminal_type[simp]: "wf_cfg cfg \<Longrightarrow> (N, \<alpha>) \
 lemma [elim]: "Derives1 cfg a i r b \<Longrightarrow> r \<in> set (\<RR> cfg)"
   using Derives1_def by metis
 
-lemma is_symbol_distinct: "wf_cfg cfg \<Longrightarrow> is_terminal cfg x \<noteq> is_nonterminal cfg x"
-  by (auto simp add: is_terminal_def is_nonterminal_def wf_cfg_defs)
-
 lemma is_terminal_nonterminal: "wf_cfg cfg \<Longrightarrow> is_terminal cfg x \<Longrightarrow> is_nonterminal cfg x \<Longrightarrow> False"
   by (auto simp: wf_cfg_defs disjoint_iff is_nonterminal_def is_terminal_def)
 
 lemma Derives1_leftmost:
-  assumes "Derives1 cfg a i r b" "wf_cfg cfg"
+  assumes "Derives1 cfg a i r b" "wf_cfg cfg" "wf_sentence cfg a"
   shows "\<exists> j. leftmost cfg j a \<and> j \<le> i"
 proof -
   let ?J = "{j . j < length a \<and> is_nonterminal cfg (a ! j)}"
@@ -217,25 +214,25 @@ proof -
   note M3 = this[OF J1]
   have is_word: "is_word cfg (take ?M a)"
     apply (auto simp add: is_word_def list_all_take)
-    using is_symbol_distinct less_le_not_le mem_Collect_eq set_take
+    using is_terminal_nonterminal[OF assms(2)] less_le_not_le mem_Collect_eq set_take
       \<open>\<And>j. j \<in> {j. j < length a \<and> is_nonterminal cfg (a ! j)} \<Longrightarrow> Min {j. j < length a \<and> is_nonterminal cfg (a ! j)} \<le> j\<close>
-    by (smt (verit) assms(2))
+    by (smt (verit, ccfv_threshold) assms(3) in_set_takeD wf_sentence_def)
  show ?thesis 
     apply (rule_tac exI[where x="?M"])
     apply (simp add: leftmost_def)
     by (metis (mono_tags, lifting) M1 M3 is_word mem_Collect_eq)
 qed
 
-lemma Derivation_leftmost: "wf_cfg cfg \<Longrightarrow> D \<noteq> [] \<Longrightarrow> Derivation cfg a D b \<Longrightarrow> \<exists> i. leftmost cfg i a"
+lemma Derivation_leftmost: "wf_cfg cfg \<Longrightarrow> wf_sentence cfg a \<Longrightarrow> D \<noteq> [] \<Longrightarrow> Derivation cfg a D b \<Longrightarrow> \<exists> i. leftmost cfg i a"
   apply (case_tac "D")
   apply (auto)
   apply (metis Derives1_leftmost)
   done
 
 lemma nonword_has_nonterminal:
-  "wf_cfg cfg \<Longrightarrow> \<not> (is_word cfg a) \<Longrightarrow> \<exists> k. k < length a \<and> is_nonterminal cfg (a ! k)"
+  "wf_cfg cfg \<Longrightarrow> wf_sentence cfg a \<Longrightarrow> \<not> (is_word cfg a) \<Longrightarrow> \<exists> k. k < length a \<and> is_nonterminal cfg (a ! k)"
   apply (auto simp add: list_all_iff is_word_def)
-  by (metis in_set_conv_nth is_symbol_distinct)
+  by (metis in_set_conv_nth wf_sentence_def)
 
 lemma leftmost_cons_nonterminal: 
   "is_nonterminal cfg x \<Longrightarrow> leftmost cfg 0 (x#xs)"
@@ -253,7 +250,7 @@ by (metis One_nat_def Suc_leI is_terminal_nonterminal less_diff_conv2
     list.size(4) nth_non_equal_first_eq)
 
 lemma leftmost_exists:
-  assumes "wf_cfg cfg"
+  assumes "wf_cfg cfg" "wf_sentence cfg a"
   shows "k < length a \<Longrightarrow> is_nonterminal cfg (a ! k) \<Longrightarrow> 
    \<exists> i. leftmost cfg i a \<and> i \<le> k"
   using assms
@@ -270,18 +267,19 @@ next
   next
     case False
     then have x: "is_terminal cfg x"
-      by (meson assms is_symbol_distinct)
-    note k = is_nonterminal_cons_terminal[OF assms x Cons(2) Cons(3)]
-    with Cons have "\<exists>i. leftmost cfg i a \<and> i \<le> k - 1" by blast
+      by (meson Cons.prems(4) list.set_intros(1) wf_sentence_def)
+    note k = is_nonterminal_cons_terminal[OF assms(1) x Cons(2) Cons(3)]
+    with Cons have "\<exists>i. leftmost cfg i a \<and> i \<le> k - 1"
+      by (meson list.set_intros(2) wf_sentence_def)
     then show ?thesis
-      apply (auto simp add: leftmost_cons_terminal[OF assms x])
+      apply (auto simp add: leftmost_cons_terminal[OF assms(1) x])
       by (metis le_diff_conv2 Suc_leI add_Suc_right add_diff_cancel_right' k 
           le_0_eq le_imp_less_Suc nat_le_linear)
   qed
 qed
 
 lemma nonword_leftmost_exists: 
-  "wf_cfg cfg \<Longrightarrow> \<not> (is_word cfg a) \<Longrightarrow> \<exists> i. leftmost cfg i a"
+  "wf_cfg cfg \<Longrightarrow> wf_sentence cfg a \<Longrightarrow> \<not> (is_word cfg a) \<Longrightarrow> \<exists> i. leftmost cfg i a"
   by (metis leftmost_exists nonword_has_nonterminal)
   
 lemma leftmost_unaffected_Derives1: "leftmost cfg j a \<Longrightarrow> j < i \<Longrightarrow> Derives1 cfg a i r b \<Longrightarrow> leftmost cfg j b"
@@ -412,16 +410,16 @@ lemma leftmost_notword: "wf_cfg cfg \<Longrightarrow> leftmost cfg i a \<Longrig
 lemma leftmost_unique: "wf_cfg cfg \<Longrightarrow> leftmost cfg i a \<Longrightarrow> leftmost cfg j a \<Longrightarrow> i = j" 
   by (metis leftmost_def leftmost_notword linorder_neqE_nat)
 
-lemma leftmost_Derives1: "wf_cfg cfg \<Longrightarrow> leftmost cfg i a \<Longrightarrow> Derives1 cfg a j r b \<Longrightarrow> i \<le> j"
+lemma leftmost_Derives1: "wf_cfg cfg \<Longrightarrow> wf_sentence cfg a \<Longrightarrow> leftmost cfg i a \<Longrightarrow> Derives1 cfg a j r b \<Longrightarrow> i \<le> j"
   using Derives1_leftmost leftmost_unique wf_cfg_def by blast
 
 lemma leftmost_Derives1_propagate:
-  assumes wf_cfg: "wf_cfg cfg"
+  assumes wf_cfg: "wf_cfg cfg" "wf_sentence cfg a" "wf_sentence cfg b"
   assumes leftmost: "leftmost cfg i a"
       and Derives1: "Derives1 cfg a j r b"
     shows "(is_word cfg b \<and> i = j) \<or> (\<exists> k. leftmost cfg k b \<and> i \<le> k)"
 proof -
-  from leftmost_Derives1[OF wf_cfg leftmost Derives1] have ij: "i \<le> j" by auto
+  from leftmost_Derives1[OF wf_cfg(1,2) leftmost Derives1] have ij: "i \<le> j" by auto
   show ?thesis
   proof (cases "is_word cfg b")
     case True show ?thesis
@@ -429,39 +427,66 @@ proof -
           leftmost_unaffected_Derives1 order_refl)
   next
     case False show ?thesis
-      by (metis Derives1 Derives1_take ij le_neq_implies_less leftmost leftmost_def leftmost_notword
-          leftmost_unaffected_Derives1 nonword_leftmost_exists not_le_imp_less wf_cfg)
+      using assms Derives1 Derives1_take ij le_neq_implies_less leftmost leftmost_def leftmost_notword
+          leftmost_unaffected_Derives1 nonword_leftmost_exists not_le_imp_less wf_cfg by metis
   qed
 qed
 
 lemma is_word_Derives1[elim]: "wf_cfg cfg \<Longrightarrow> is_word cfg a \<Longrightarrow> Derives1 cfg a i r b \<Longrightarrow> False"
-  by (meson Derives1_leftmost is_symbol_distinct is_word_is_terminal leftmost_def wf_cfg_def)
+  by (metis Derives1_leftmost append.right_neutral is_word_def leftmost_append leftmost_def linorder_not_less wf_sentence_def)
   
 lemma is_word_Derivation[elim]: "wf_cfg cfg \<Longrightarrow> is_word cfg a \<Longrightarrow> Derivation cfg a D b \<Longrightarrow> D = []"
-  by (meson Derivation_leftmost is_symbol_distinct is_word_is_terminal leftmost_def wf_cfg_def)
- 
+  by (meson Derivation.elims(2) is_word_Derives1)
+
+lemma Derives1_wf_sentence_propagate:
+  assumes "wf_cfg cfg" "wf_sentence cfg a" "Derives1 cfg a i r b"
+  shows "wf_sentence cfg b"
+proof -
+  obtain x y N \<alpha> where *:
+    "a = x @ [N] @ y" "b = x @ \<alpha> @ y" "(N,\<alpha>) \<in> set (\<RR> cfg)" "r = (N,\<alpha>)" "i = length x"
+    using assms(3) Derives1_def by (smt (verit, best))
+  have "wf_sentence cfg x" "wf_sentence cfg y"
+    using assms(2) *(1) unfolding wf_sentence_def by auto
+  moreover have "wf_sentence cfg \<alpha>"
+    using assms(1) *(3) unfolding wf_cfg_def valid_rules_def wf_sentence_def is_terminal_def is_nonterminal_def by blast
+  ultimately show ?thesis
+    using *(2) unfolding wf_sentence_def by auto
+qed
+
+lemma Derivation_wf_sentence_propagate:
+  assumes "wf_cfg cfg" "wf_sentence cfg a" "Derivation cfg a D b"
+  shows "wf_sentence cfg b"
+  using assms
+proof (induction D arbitrary: a b)
+  case (Cons d D)
+  thus ?case
+    apply (auto)
+    using Derives1_wf_sentence_propagate by blast
+qed simp
+
 lemma leftmost_Derivation:
-  assumes "wf_cfg cfg"
-  shows "leftmost cfg i a \<Longrightarrow> Derivation cfg a D b \<Longrightarrow> j \<le> i \<Longrightarrow> derivation_ge D j"
+  "wf_cfg cfg \<Longrightarrow> wf_sentence cfg a \<Longrightarrow> wf_sentence cfg b \<Longrightarrow> leftmost cfg i a \<Longrightarrow> Derivation cfg a D b \<Longrightarrow> j \<le> i \<Longrightarrow> derivation_ge D j"
 proof (induct D arbitrary: a b i j)
   case Nil thus ?case by auto
 next
   case (Cons d D)
   then have "\<exists> x. Derives1 cfg a (fst d) (snd d) x \<and> Derivation cfg x D b" by auto
   then obtain x where ax:"Derives1 cfg a (fst d) (snd d) x" and xb:"Derivation cfg x D b" by blast
-  note ji = Cons(4)
-  note i_fstd = leftmost_Derives1[OF assms Cons(2) ax]
-  note disj = leftmost_Derives1_propagate[OF assms Cons(2) ax]
+  note ji = Cons(7)
+  have "wf_sentence cfg x"
+    using Derives1_wf_sentence_propagate Cons.prems(1,2) ax by blast
+  note i_fstd = leftmost_Derives1[OF Cons(2,3) Cons(5) ax]
+  note disj = leftmost_Derives1_propagate[OF Cons(2,3) \<open>wf_sentence cfg x\<close> Cons(5) ax]
   thus ?case
   proof(induct rule: disjCases2)
     case 1 
     with xb have "D = []"
-      using assms by auto
+      using Cons.prems(1) by auto
     with 1 ji show ?case by (simp add: derivation_ge_def)
   next
     case 2 
     then obtain k where k: "leftmost cfg k x" and ik: "i \<le> k" by blast
-    note ge = Cons(1)[OF k xb, where j=j]
+    note ge = Cons(1)[OF Cons(2) \<open>wf_sentence cfg x\<close> Cons(4) k xb, where j=j]
     from ji ik i_fstd ge show ?case
       by (simp add: derivation_ge_cons)
   qed
@@ -623,11 +648,12 @@ using LeftDerives1_def LeftDerives1_implies_leftderives1
   leftderives1_implies_leftderives leftderives_trans by blast
 
 theorem Derivation_implies_leftderives_gen:
-  assumes "wf_cfg cfg"
+  assumes "wf_cfg cfg" "wf_sentence cfg a"
   shows "Derivation cfg a D (u@v) \<Longrightarrow> is_word cfg u \<Longrightarrow> (\<exists> w. 
           leftderives cfg a (u@w) \<and> 
           (v = [] \<longrightarrow> w = []) \<and> 
           (\<forall> X. is_first X v \<longrightarrow> is_first X w))"
+  using assms
 proof (induct "length D" arbitrary: D a u v)
   case 0
     then have "a = u@v" by auto
@@ -636,7 +662,7 @@ next
   case (Suc n)
     from Suc have "D \<noteq> []" by auto
     with Suc Derivation_leftmost have "\<exists> i. leftmost cfg i a"
-      by (metis assms)
+      by metis
     then obtain i where i: "leftmost cfg i a" by blast
     show "?case"
     proof (cases "derivation_ge D (Suc i)")
@@ -644,7 +670,7 @@ next
         with Suc have leftmost: "leftmost cfg i (u@v)" 
           by (rule_tac leftmost_unaffected_Derivation[OF True i], auto)
         have length_u: "length u \<le> i" 
-          using leftmost_append[OF assms leftmost Suc(4)] .
+          using leftmost_append[OF assms(1) leftmost Suc(4)] .
         have take_Suc: "take (Suc i) a = take (Suc i) (u@v)" 
           using  Derivation_take[OF True Suc(3)] .
         with length_u have is_prefix_u: "is_prefix u a"
@@ -678,8 +704,10 @@ next
           by (simp add: a v is_first_cons is_first_X)
     next
       case False
+      have "wf_sentence cfg (u @ v)"
+        using Derivation_wf_sentence_propagate Suc.prems(1,4) assms(1) by auto
       have Di: "derivation_ge D i" 
-      using leftmost_Derivation[OF assms i Suc(3), where j=i, simplified] .
+      using leftmost_Derivation[OF Suc(5,6) \<open>wf_sentence cfg (u @ v)\<close> i Suc(3), where j=i, simplified] .
       from split_derivation_leftmost[OF Di False]
       obtain E F r where D_split: "D = E @ [(i, r)] @ F" 
         and E_Suc: "derivation_ge E (Suc i)" by auto
@@ -693,20 +721,21 @@ next
       have length_D': "length ?D = n" using D_split Suc.hyps(2) by auto
       from Suc(1)[OF length_D'[symmetric] yuv Suc(4)] 
       obtain w where "leftderives cfg y (u @ w)" and "(v = [] \<longrightarrow> w = [])" 
-        and "\<forall>X. is_first X v \<longrightarrow> is_first X w" by blast 
+        and "\<forall>X. is_first X v \<longrightarrow> is_first X w"
+        using Derives1_wf_sentence_propagate Suc.prems(4) assms(1) ay by blast
       then show ?thesis using ay i leftmost_Derives1_leftderives by blast
     qed    
 qed   
 
 lemma derives_implies_leftderives_gen: 
-  assumes "wf_cfg cfg"
+  assumes "wf_cfg cfg" "wf_sentence cfg a"
   shows "derives cfg a (u@v) \<Longrightarrow> is_word cfg u \<Longrightarrow> (\<exists> w. 
           leftderives cfg a (u@w) \<and> 
           (v = [] \<longrightarrow> w = []) \<and> 
           (\<forall> X. is_first X v \<longrightarrow> is_first X w))"
 using Derivation_implies_leftderives_gen derives_implies_Derivation assms by blast
 
-lemma derives_implies_leftderives: "wf_cfg cfg \<Longrightarrow> derives cfg a b \<Longrightarrow> is_word cfg b \<Longrightarrow> leftderives cfg a b"
+lemma derives_implies_leftderives: "wf_cfg cfg \<Longrightarrow> wf_sentence cfg a \<Longrightarrow> derives cfg a b \<Longrightarrow> is_word cfg b \<Longrightarrow> leftderives cfg a b"
 using derives_implies_leftderives_gen by force
 
 fun LeftDerivation :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a derivation \<Rightarrow> 'a sentence \<Rightarrow> bool" where
@@ -818,18 +847,25 @@ lemma LeftDerives1_unique: "wf_cfg cfg \<Longrightarrow> LeftDerives1 cfg a i r 
 using Derives1_def LeftDerives1_def leftmost_unique by (smt (verit, ccfv_SIG) append_eq_append_conv list.size(4) nth_Cons_0)
  
 lemma leftlang: "wf_cfg cfg \<Longrightarrow> \<L> cfg = { v | v. is_word cfg v \<and> is_leftderivation cfg v }"
-by (metis (no_types, lifting) is_derivation_def is_leftderivation_def 
-    leftderivation_implies_derivation Collect_cong 
-    \<L>_def derives_implies_leftderives)
-  
+  using is_derivation_def is_leftderivation_def leftderivation_implies_derivation derives_implies_leftderives \<L>_def
+  apply auto
+  apply blast
+  apply (metis (no_types, lifting) bot_nat_0.extremum_unique in_set_conv_nth is_nonterminal_startsymbol length_Cons less_Suc_eq_le list.size(3) mem_Collect_eq nth_Cons' wf_sentence_def)
+  by blast
+
 lemma leftprefixlang: "wf_cfg cfg \<Longrightarrow> \<L>\<^sub>P cfg = { u | u v. is_word cfg u \<and> is_leftderivation cfg (u@v) }"
-apply (auto simp add: \<L>\<^sub>P_def)
-using derives_implies_leftderives_gen is_derivation_def is_leftderivation_def apply blast
-using leftderivation_implies_derivation by blast
+  apply (auto simp add: \<L>\<^sub>P_def)
+  using derives_implies_leftderives_gen is_derivation_def is_leftderivation_def
+  apply (metis is_nonterminal_startsymbol is_word_def leftmost_cons_nonterminal leftmost_def set_ConsD take_Cons' wf_sentence_def)
+  using leftderivation_implies_derivation by blast
+
+lemma is_word_implies_wf_sentence:
+  "is_word cfg a \<Longrightarrow> wf_sentence cfg a"
+  unfolding is_word_def wf_sentence_def by blast
 
 lemma derives_implies_leftderives_cons:
-  "wf_cfg cfg \<Longrightarrow> is_word cfg a \<Longrightarrow> derives cfg u (a@X#b) \<Longrightarrow> \<exists> c. leftderives cfg u  (a@X#c)"
-by (metis append_Cons append_Nil derives_implies_leftderives_gen is_first_def) 
+  "wf_cfg cfg \<Longrightarrow> wf_sentence cfg u \<Longrightarrow> is_word cfg a \<Longrightarrow> derives cfg u (a@X#b) \<Longrightarrow> \<exists> c. leftderives cfg u  (a@X#c)"
+  using derives_implies_leftderives_gen by (metis append_Cons append_Nil is_first_def)
 
 lemma is_word_append[simp]: "is_word cfg (a@b) = (is_word cfg a \<and> is_word cfg b)"
   by (auto simp add: is_word_def)

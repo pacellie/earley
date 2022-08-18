@@ -421,6 +421,267 @@ lemma wf_bins_\<II>_it:
   "wf_cfg cfg \<Longrightarrow> wf_bins cfg inp (\<II>_it cfg inp)"
   unfolding \<II>_it_def using wf_bins_\<I>_it by auto
 
+subsection \<open>Termination\<close>
+
+lemma Ex_wf_bins:
+  "\<exists>n bs inp cfg. n \<le> length inp \<and> length (bins bs) = Suc (length inp) \<and> wf_cfg cfg \<and> wf_bins cfg inp bs"
+  apply (rule exI[where x="0"])
+  apply (rule exI[where x="Bins [Bin []]"])
+  apply (rule exI[where x="[]"])
+  apply (auto simp: wf_bins_def wf_bin_def wf_cfg_defs split: prod.splits)
+  by (metis cfg.sel distinct.simps(1) empty_iff empty_set inf_bot_right list.set_intros(1))
+
+definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set" where
+  "wellformed_bins = { 
+    (k, cfg, inp, bs) | k cfg inp bs.
+      k \<le> length inp \<and>
+      length (bins bs) = length inp + 1 \<and>
+      wf_cfg cfg \<and>
+      wf_bins cfg inp bs
+  }"
+
+typedef 'a wf_bins = "wellformed_bins::(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set"
+  morphisms from_wf_bins to_wf_bins
+  using Ex_wf_bins by (auto simp: wellformed_bins_def)
+
+lemma wellformed_bins_elim:
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  shows "k \<le> length inp \<and> length (bins bs) = length inp + 1 \<and> wf_cfg cfg \<and> wf_bins cfg inp bs"
+  using assms(1) from_wf_bins wellformed_bins_def by (smt (verit) mem_Collect_eq old.prod.inject)
+
+lemma wellformed_bins_intro:
+  assumes "k \<le> length inp" "length (bins bs) = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+  shows "(k, cfg, inp, bs) \<in> wellformed_bins"
+  by (simp add: assms wellformed_bins_def)
+
+setup_lifting type_definition_wf_bins
+
+definition k_wf :: "'a wf_bins \<Rightarrow> nat" where
+  "k_wf wf_bs = (case from_wf_bins wf_bs of (k, _, _, _) \<Rightarrow> k)"
+
+definition cfg_wf :: "'a wf_bins \<Rightarrow> 'a cfg" where
+  "cfg_wf wf_bs = (case from_wf_bins wf_bs of (_, cfg, _, _) \<Rightarrow> cfg)"
+
+definition inp_wf :: "'a wf_bins \<Rightarrow> 'a sentence" where
+  "inp_wf wf_bs = (case from_wf_bins wf_bs of (_, _, inp, _) \<Rightarrow> inp)"
+
+definition bs_wf :: "'a wf_bins \<Rightarrow> 'a bins" where
+  "bs_wf wf_bs = (case from_wf_bins wf_bs of (_, _, _, bs) \<Rightarrow> bs)"
+
+lemmas wf_ex_defs = k_wf_def cfg_wf_def inp_wf_def bs_wf_def
+
+fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
+  "earley_measure (k, cfg, inp, bs) i = card { x | x. wf_item cfg inp x \<and> item_end x = k } - i"
+
+function \<pi>_it'_wf :: "'a wf_bins \<Rightarrow> nat \<Rightarrow> 'a wf_bins" where
+  "\<pi>_it'_wf wf_bs i = (
+    case from_wf_bins wf_bs of
+       (k, cfg, inp, bs) \<Rightarrow> 
+          if i \<ge> length (items (bins bs ! k)) then to_wf_bins (k, cfg, inp, bs)
+          else
+            let x = items (bins bs!k) ! i in
+            let bs' =
+              case next_symbol x of
+                Some a \<Rightarrow>
+                  if is_terminal cfg a then
+                    if k < length inp then app_bins bs (k+1) (Scan_it k inp a x)
+                    else bs
+                  else app_bins bs k (Predict_it k cfg a)
+              | None \<Rightarrow> app_bins bs k (Complete_it k x bs)
+            in \<pi>_it'_wf (to_wf_bins (k, cfg, inp, bs')) (i+1))"
+  by pat_completeness simp
+termination
+  apply (relation "measure (\<lambda>(wf_bs,i). earley_measure (from_wf_bins wf_bs) i)")
+  apply (auto)
+  subgoal premises prems for wf_bs i k cfg inp bs
+  proof -
+    let ?x = "items (bins bs ! k) ! i"
+    let ?bs = "
+      case next_symbol ?x of
+        None \<Rightarrow> app_bins bs k (Complete_it k ?x bs)
+      | Some a \<Rightarrow>
+         if is_terminal cfg a then
+            if k < length inp then app_bins bs (k + 1) (Scan_it k inp a ?x)
+            else bs
+         else app_bins bs k (Predict_it k cfg a)
+    "
+
+    have *: "k \<le> length inp" "length (bins bs) = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+      using wellformed_bins_elim prems(1) from_wf_bins by metis+
+    have x: "?x \<in> set_bin (bins bs ! k)"
+      using prems(2) by force
+
+    {
+      assume "next_symbol ?x = None"
+      have "item_origin ?x < length (bins bs)"
+        using x wf_bins_kth_bin *(1,2,4) wf_item_def 
+        by (metis One_nat_def add.right_neutral add_Suc_right dual_order.trans le_imp_less_Suc)
+      hence "distinct (Complete_it k ?x bs)"
+        using distinct_Complete_it *(4) by blast
+      moreover have "\<forall>x \<in> set (Complete_it k ?x bs). wf_item cfg inp x \<and> item_end x = k"
+        using wf_bins_Complete_it x *(1,2,4) by (metis Suc_eq_plus1 le_imp_less_Suc)
+      ultimately have "wf_bins cfg inp (app_bins bs k (Complete_it k ?x bs))"
+        using *(4) wf_bins_app_bins by blast
+    }
+    hence wf_bins_app_Complete_it: "next_symbol ?x = None \<Longrightarrow> wf_bins cfg inp (app_bins bs k (Complete_it k ?x bs))" .
+
+    have "k < length (bins bs)"
+      using *(1,2) by linarith
+
+    have "length (bins ?bs) = length inp + 1"
+      using * by (auto split: option.split)
+    moreover have "wf_bins cfg inp ?bs"
+      using distinct_Scan_it distinct_Predict_it wf_bins_app_bins x wf_bins_Scan_it wf_bins_Predict_it
+      apply (auto simp: wf_bins_app_Complete_it split: option.split)
+      using *(4) \<open>k < length (bins bs)\<close> apply fastforce
+      using *(3,4) \<open>k < length (bins bs)\<close> apply fastforce
+      using *(4) \<open>k < length (bins bs)\<close> apply fastforce
+      using *(1,3,4) \<open>k < length (bins bs)\<close> by fastforce
+    ultimately have 0: "(k, cfg, inp, ?bs) \<in> wellformed_bins"
+      using *(1,3) wellformed_bins_intro by blast
+
+    have 1: "earley_measure (from_wf_bins wf_bs) i = card { x | x. wf_item cfg inp x \<and> item_end x = k } - i"
+      by (metis (mono_tags, lifting) earley_measure.simps prems(1))
+    have 2: "earley_measure
+     (from_wf_bins
+       (to_wf_bins
+         (k, cfg, inp, ?bs))) (Suc i)
+          = card { x | x. wf_item cfg inp x \<and> item_end x = k } - Suc i"
+      using 0 to_wf_bins_inverse by fastforce
+
+    have 3: "set (items (bins bs ! k)) \<subseteq> { x | x. wf_item cfg inp x \<and> item_end x = k }"
+      using *(1,2,4) unfolding wf_bin_def wf_bins_def using order_le_less_trans by auto
+    have 4: "finite { x | x. wf_item cfg inp x \<and> item_end x = k }"
+      using finiteness_UNIV_wf_item by fastforce
+    have "Suc i \<le> length (items (bins bs ! k))"
+      using prems(2) by simp
+    also have "... \<le> card (set (items (bins bs ! k)))"
+      using prems distinct_card * wf_bins_def wf_bin_def
+      by (metis add.commute dual_order.eq_iff le_imp_less_Suc plus_1_eq_Suc)
+    also have "... \<le> card { x | x. wf_item cfg inp x \<and> item_end x = k }"
+      using 3 4 card_mono by blast
+    finally have "card { x | x. wf_item cfg inp x \<and> item_end x = k } \<ge> Suc i"
+      by blast
+    thus ?thesis
+      using 1 2 by simp
+  qed
+  done
+
+lemma \<pi>_it'_wf_simps[simp]:
+  "(k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> i \<ge> length (items (bins bs ! k)) \<Longrightarrow> 
+    \<pi>_it'_wf wf_bs i = to_wf_bins (k, cfg, inp, bs)"
+  "(k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow> 
+    x = items (bins bs!k) ! i \<Longrightarrow> next_symbol x = None \<Longrightarrow>
+    \<pi>_it'_wf wf_bs i = \<pi>_it'_wf (to_wf_bins (k, cfg, inp, app_bins bs k (Complete_it k x bs))) (i+1)"
+  "(k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+    x = items (bins bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow> is_terminal cfg a \<Longrightarrow> k < length inp \<Longrightarrow>
+    \<pi>_it'_wf wf_bs i = \<pi>_it'_wf (to_wf_bins (k, cfg, inp, app_bins bs (k+1) (Scan_it k inp a x))) (i+1)"
+  "(k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow>  \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+     x = items (bins bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow> is_terminal cfg a \<Longrightarrow> \<not> k < length inp \<Longrightarrow>
+    \<pi>_it'_wf wf_bs i = \<pi>_it'_wf (to_wf_bins (k, cfg, inp, bs)) (i+1)"
+  "(k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+     x = items (bins bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow> \<not> is_terminal cfg a \<Longrightarrow>
+    \<pi>_it'_wf wf_bs i = \<pi>_it'_wf (to_wf_bins (k, cfg, inp, app_bins bs k (Predict_it k cfg a))) (i+1)"
+  by (auto split!: prod.splits)
+
+declare \<pi>_it'_wf.simps[simp del]
+
+lemma \<pi>_it'_wf_induct[case_names Base Complete Scan Pass Predict]:
+  assumes base: "\<And>k cfg inp wf_bs bs i. (k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> i \<ge> length (items (bins bs ! k)) \<Longrightarrow> P wf_bs i"
+  assumes complete: "\<And>k cfg inp wf_bs bs i x. (k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+            x = items (bins bs ! k) ! i \<Longrightarrow> next_symbol x = None \<Longrightarrow>
+            P (to_wf_bins (k, cfg, inp, app_bins bs k (Complete_it k x bs))) (i+1) \<Longrightarrow> P wf_bs i"
+  assumes scan: "\<And>k cfg inp wf_bs bs i x a. (k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+            x = items (bins bs ! k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow> is_terminal cfg a \<Longrightarrow> k < length inp \<Longrightarrow> 
+            P (to_wf_bins (k, cfg, inp, app_bins bs (k+1) (Scan_it k inp a x))) (i+1) \<Longrightarrow> P wf_bs i"
+  assumes pass: "\<And>k cfg inp wf_bs bs i x a. (k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+            x = items (bins bs ! k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow> is_terminal cfg a \<Longrightarrow> \<not> k < length inp \<Longrightarrow>
+            P (to_wf_bins (k, cfg, inp, bs)) (i+1) \<Longrightarrow> P wf_bs i"
+  assumes predict: "\<And>k cfg inp wf_bs bs i x a. (k, cfg, inp, bs) = from_wf_bins wf_bs \<Longrightarrow> \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow>
+            x = items (bins bs ! k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow> \<not> is_terminal cfg a \<Longrightarrow> 
+            P (to_wf_bins (k, cfg, inp, app_bins bs k (Predict_it k cfg a))) (i+1) \<Longrightarrow> P wf_bs i"
+  shows "P wf_bs i"
+proof (induction wf_bs i rule: \<pi>_it'_wf.induct)
+  case (1 wf_bs i)
+  then obtain k cfg inp bs where *: "(k, cfg, inp, bs) = from_wf_bins wf_bs"
+    by (metis prod_cases4)
+  show ?case
+  proof cases
+    assume "i \<ge> length (items (bins bs ! k))"
+    thus ?thesis
+      using * base by blast
+  next
+    assume a1: "\<not> i \<ge> length (items (bins bs ! k))"
+    let ?x = "items (bins bs ! k) ! i"
+    show ?thesis
+    proof cases
+      assume a2: "next_symbol ?x = None"
+      show ?thesis
+        using * 1 a1 a2 complete by fastforce
+    next
+      assume a2: "\<not> next_symbol ?x = None"
+      then obtain a where a_def: "next_symbol ?x = Some a"
+        by blast
+      show ?thesis
+      proof cases
+        assume a3: "is_terminal cfg a"
+        show ?thesis
+        proof cases
+          assume a4: "k < length inp"
+          show ?thesis
+            using * 1 a1 a3 a4 a_def scan by fastforce
+        next
+          assume a4: "\<not> k < length inp"
+          show ?thesis
+            using * 1 a1 a3 a4 a_def pass by fastforce
+        qed
+      next
+        assume a3: "\<not> is_terminal cfg a"
+        show ?thesis
+          using * 1 a1 a3 a_def predict by fastforce
+      qed
+    qed
+  qed
+qed
+
+declare from_wf_bins_inverse [simp]
+declare to_wf_bins_inverse [simp]
+
+lemmas \<pi>_it'_wf.simps [code del]
+
+lemma \<pi>_it'_wf_eq_\<pi>_it':
+  "bs_wf (\<pi>_it'_wf wf_bs i) = \<pi>_it' (k_wf wf_bs) (cfg_wf wf_bs) (inp_wf wf_bs) (bs_wf wf_bs) i"
+proof (induction wf_bs i rule: \<pi>_it'_wf_induct)
+  case (Base k cfg inp wf_bs bs i)
+  thus ?case
+    by (auto simp: wf_ex_defs split: prod.splits)
+next
+  case (Complete k cfg inp wf_bs bs i x)
+
+  have "k \<le> length inp"
+    by (metis Complete.hyps(1) from_wf_bins wellformed_bins_elim)
+
+  thm wellformed_bins_intro
+
+  have "(k, cfg, inp, app_bins bs k (Complete_it k (items (bins bs ! k) ! i) bs)) \<in> wellformed_bins"
+    sorry
+  thus ?case
+    using Complete by (auto simp: wf_ex_defs split!: prod.splits)
+next
+  case (Scan k cfg inp wf_bs bs i x a)
+  then show ?case
+    sorry
+next
+  case (Pass k cfg inp wf_bs bs i x a)
+  thus ?case
+    by (auto simp: wf_ex_defs split!: prod.splits)
+next
+  case (Predict k cfg inp wf_bs bs i x a)
+  then show ?case
+    sorry
+qed
+
+
 subsection \<open>List to Set\<close>
 
 lemma Init_it_eq_Init:
@@ -501,7 +762,8 @@ proof standard
 qed
 
 lemma \<pi>_it'_sub_\<pi>:
-  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1" "k < length (bins bs)"
+  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "length (bins bs) = length inp + 1"
+  assumes "k < length (bins bs)"
   shows "set_bins (\<pi>_it' k cfg inp bs i) \<subseteq> \<pi> k cfg inp I"
   using assms
 proof (induction k cfg inp bs i arbitrary: I rule: \<pi>_it'_induct)
@@ -819,7 +1081,7 @@ lemma \<pi>_it'_mono:
 lemma \<pi>_step_sub_\<pi>_it':
   assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k cfg inp (set_bins_upto bs k i) \<subseteq> set_bins bs"
-  assumes "sound_items cfg inp (set_bins bs)" "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "sound_items cfg inp (set_bins bs)" "is_word cfg inp" "nonempty_derives cfg"
   shows "\<pi>_step k cfg inp (set_bins bs) \<subseteq> set_bins (\<pi>_it' k cfg inp bs i)"
   using assms
 proof (induction k cfg inp bs i rule: \<pi>_it'_induct)
@@ -998,7 +1260,7 @@ next
   case (Predict k cfg inp bs i x a)
   let ?bs' = "app_bins bs k (Predict_it k cfg a)"
   have "k \<ge> length inp \<or> \<not> inp!k = a"
-    using Predict.hyps(4) is_terminal_def Predict.prems(7) by force
+    using Predict.hyps(4) Predict.prems(7) by (metis is_word_is_terminal leI)
   have x: "x \<in> set_bin (bins bs ! k)"
     using Predict.hyps(1,2) by auto
   have len: "i < length (items (bins ?bs' ! k))"
@@ -1009,8 +1271,14 @@ next
     using sound_Predict_it[OF _ _ x] Predict.hyps(3) Predict.prems(1,2,3,6) sound_items_def
     apply (auto simp: set_bins_app_bins)
     by (metis Un_iff dual_order.refl sound_items_def)
-  have nonterm: "is_nonterminal cfg a"
-    using is_symbol_distinct Predict.hyps(3,4) Predict.prems(1) x by metis
+  have "item_rule x \<in> set (\<RR> cfg)"
+    using Predict.prems(2,3) wf_bins_kth_bin x wf_item_def by blast
+  hence "\<forall>s \<in> set (item_rule_body x). s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg)"
+    using Predict.prems(1) by (auto simp: wf_cfg_defs item_rule_body_def rule_body_def; fastforce)
+  hence "is_terminal cfg a \<or> is_nonterminal cfg a"
+    using Predict.hyps(3) by (auto simp: next_symbol_def is_complete_def is_nonterminal_def is_terminal_def split: if_splits)
+  hence nonterm: "is_nonterminal cfg a"
+    using Predict.hyps(4) by blast
   have "Scan k inp (set_bins_upto ?bs' k (i + 1)) \<subseteq> set_bins ?bs'"
   proof -
     have "Scan k inp (set_bins_upto ?bs' k (i + 1)) = Scan k inp (set_bins_upto ?bs' k i \<union> {items (bins ?bs' ! k) ! i})"
@@ -1060,7 +1328,7 @@ qed
 lemma \<pi>_step_sub_\<pi>_it:
   assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k cfg inp (set_bins_upto bs k 0) \<subseteq> set_bins bs"
-  assumes "sound_items cfg inp (set_bins bs)" "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "sound_items cfg inp (set_bins bs)" "is_word cfg inp" "nonempty_derives cfg"
   shows "\<pi>_step k cfg inp (set_bins bs) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
   using assms \<pi>_step_sub_\<pi>_it' \<pi>_it_def by metis
 
@@ -1267,7 +1535,7 @@ lemma \<pi>_it_idem:
 lemma funpower_\<pi>_step_sub_\<pi>_it:
   assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k cfg inp (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items cfg inp (set_bins bs)"
-  assumes "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "funpower (\<pi>_step k cfg inp) n (set_bins bs) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
   using assms
 proof (induction n)
@@ -1291,13 +1559,13 @@ qed
 lemma \<pi>_sub_\<pi>_it:
   assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
   assumes "\<pi>_step k cfg inp (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items cfg inp (set_bins bs)"
-  assumes "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "\<pi> k cfg inp (set_bins bs) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
   using assms funpower_\<pi>_step_sub_\<pi>_it \<pi>_def elem_limit_simp by fastforce
 
 lemma \<I>_sub_\<I>_it:
   assumes "wf_cfg cfg" "k < length (bins (Init_it cfg inp))"
-  assumes "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "\<I> k cfg inp \<subseteq> set_bins (\<I>_it k cfg inp)"
   using assms
 proof (induction k)
@@ -1332,7 +1600,7 @@ next
 qed
 
 lemma \<II>_sub_\<II>_it:
-  assumes "wf_cfg cfg" "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "\<II> cfg inp \<subseteq> set_bins (\<II>_it cfg inp)"
   using assms \<I>_sub_\<I>_it \<II>_def \<II>_it_def by (metis length_bins_Init_it less_add_one)
 
@@ -1342,7 +1610,7 @@ definition earley_recognized_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarro
   "earley_recognized_it cfg inp = (\<exists>x \<in> set (items (bins (\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
 
 theorem earley_recognized_it_iff_earley_recognized:
-  assumes "wf_cfg cfg" "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "earley_recognized_it cfg inp \<longleftrightarrow> earley_recognized cfg inp"
 proof -
   have "earley_recognized_it cfg inp = (\<exists>x \<in> set (items (bins (\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
@@ -1358,8 +1626,8 @@ proof -
 qed
 
 corollary correctness_list:
-  assumes "wf_cfg cfg" "set inp \<subseteq> set (\<TT> cfg)" "nonempty_derives cfg"
+  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "earley_recognized_it cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
-  using assms correctness earley_recognized_it_iff_earley_recognized by blast
+  using assms correctness_set earley_recognized_it_iff_earley_recognized by blast
 
 end

@@ -33,12 +33,11 @@ lemmas cfg_defs = cfg_def nonterminals_def terminals_def rules_def start_symbol_
 
 lemma wf_cfg:
   "wf_cfg cfg"
-  apply (auto simp: wf_cfg_defs cfg_defs)
-  by (metis n.exhaust s.exhaust t.exhaust)
+  by (auto simp: wf_cfg_defs cfg_defs)
 
-lemma wf_inp:
-  "set inp \<subseteq> set (\<TT> cfg)"
-  by (auto simp: cfg_defs inp_def)
+lemma is_word_inp:
+  "is_word cfg inp"
+  by (auto simp: is_word_def is_terminal_def cfg_defs inp_def)
 
 lemma nonempty_derives:
   "nonempty_derives cfg"
@@ -46,7 +45,7 @@ lemma nonempty_derives:
 
 lemma correctness:
   "earley_recognized_it cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
-  using correctness_list wf_cfg wf_inp nonempty_derives by blast
+  using correctness_list wf_cfg is_word_inp nonempty_derives by blast
 
 value "\<II>_it cfg inp"
 value "earley_recognized_it cfg inp"

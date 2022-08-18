@@ -20,9 +20,6 @@ datatype 'a cfg =
 definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
   "disjunct_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
 
-definition univ_symbols :: "'a cfg \<Rightarrow> bool" where
-  "univ_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<union> set (\<TT> cfg) = UNIV"
-
 definition valid_startsymbol :: "'a cfg \<Rightarrow> bool" where
   "valid_startsymbol cfg \<longleftrightarrow> \<SS> cfg \<in> set (\<NN> cfg)"
 
@@ -33,15 +30,18 @@ definition distinct_rules :: "'a cfg \<Rightarrow> bool" where
   "distinct_rules cfg = distinct (\<RR> cfg)"
 
 definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
-  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> univ_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg \<and> distinct_rules cfg"
+  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg \<and> distinct_rules cfg"
 
-lemmas wf_cfg_defs = wf_cfg_def valid_rules_def valid_startsymbol_def univ_symbols_def disjunct_symbols_def distinct_rules_def
+lemmas wf_cfg_defs = wf_cfg_def valid_rules_def valid_startsymbol_def disjunct_symbols_def distinct_rules_def
 
 definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
   "is_terminal cfg s = (s \<in> set (\<TT> cfg))"
 
 definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
   "is_nonterminal cfg s = (s \<in> set (\<NN> cfg))"
+
+definition wf_sentence :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "wf_sentence cfg s = (\<forall>x \<in> set s. is_terminal cfg x \<or> is_nonterminal cfg x)"
 
 lemma is_nonterminal_startsymbol: "wf_cfg cfg \<Longrightarrow> is_nonterminal cfg (\<SS> cfg)"
   by (simp add: is_nonterminal_def wf_cfg_defs)
