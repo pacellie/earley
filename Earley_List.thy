@@ -81,6 +81,22 @@ partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 
         | None \<Rightarrow> app_bins bs k (Complete_it k x bs)
       in \<pi>_it' k cfg inp bs' (i+1))"
 
+function (domintros) \<pi>_it'' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
+  "\<pi>_it'' k cfg inp bs i = (
+    if i \<ge> length (items (bins bs ! k)) then bs
+    else
+      let x = items (bins bs!k) ! i in
+      let bs' =
+        case next_symbol x of
+          Some a \<Rightarrow>
+            if is_terminal cfg a then
+              if k < length inp then app_bins bs (k+1) (Scan_it k inp a x)
+              else bs
+            else app_bins bs k (Predict_it k cfg a)
+        | None \<Rightarrow> app_bins bs k (Complete_it k x bs)
+      in \<pi>_it'' k cfg inp bs' (i+1))"
+  by auto
+
 declare \<pi>_it'.simps[code]
 
 definition \<pi>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
@@ -107,6 +123,9 @@ lemma \<pi>_it'_simps[simp]:
     \<not> is_terminal cfg a \<Longrightarrow> \<pi>_it' k cfg inp bs i = \<pi>_it' k cfg inp (app_bins bs k (Predict_it k cfg a)) (i+1)"
   by (subst \<pi>_it'.simps, simp)+
 
+thm \<pi>_it'.simps
+thm \<pi>_it'.fixp_induct
+
 lemma \<pi>_it'_induct[case_names Base Complete Scan Pass Predict]:
   assumes base: "\<And>k cfg inp bs i. i \<ge> length (items (bins bs ! k)) \<Longrightarrow> P k cfg inp bs i"
   assumes complete: "\<And>k cfg inp bs i x. \<not> i \<ge> length (items (bins bs ! k)) \<Longrightarrow> x = items (bins bs ! k) ! i \<Longrightarrow>
@@ -121,7 +140,7 @@ lemma \<pi>_it'_induct[case_names Base Complete Scan Pass Predict]:
             next_symbol x = Some a \<Longrightarrow> \<not> is_terminal cfg a \<Longrightarrow> 
             P k cfg inp (app_bins bs k (Predict_it k cfg a)) (i+1) \<Longrightarrow> P k cfg inp bs i"
   shows "P k cfg inp bs i"
-  sorry
+  sorry 
 (*
 proof (induction k cfg inp bs i rule: \<pi>_it'.induct)
   case (1 k inp bs i)
@@ -657,29 +676,105 @@ proof (induction wf_bs i rule: \<pi>_it'_wf_induct)
     by (auto simp: wf_ex_defs split: prod.splits)
 next
   case (Complete k cfg inp wf_bs bs i x)
-
-  have "k \<le> length inp"
-    by (metis Complete.hyps(1) from_wf_bins wellformed_bins_elim)
-
-  thm wellformed_bins_intro
-
-  have "(k, cfg, inp, app_bins bs k (Complete_it k (items (bins bs ! k) ! i) bs)) \<in> wellformed_bins"
-    sorry
+  let ?bs' = "app_bins bs k (Complete_it k x bs)"
+  have *: "k \<le> length inp" "length (bins bs) = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+    using Complete.hyps(1) from_wf_bins wellformed_bins_elim by metis+
+  have "k < length (bins bs)"
+    using *(1,2) by presburger
+  moreover have "x \<in> set_bin (bins bs ! k)"
+    using Complete.hyps(2,3) by auto
+  ultimately have "\<forall>y \<in> set (Complete_it k x bs). wf_item cfg inp y \<and> item_end y = k"
+    using wf_bins_Complete_it *(4) by blast
+  moreover have "item_origin x < length (bins bs)"
+    using *(4) \<open>k < length (bins bs)\<close> \<open>x \<in> set_bin (bins bs ! k)\<close> wf_bins_kth_bin wf_item_def order.strict_trans1 by blast
+  ultimately have "wf_bins cfg inp ?bs'"
+    using wf_bins_app_bins distinct_Complete_it *(4) by blast
+  hence "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using *(1-3) wellformed_bins_intro by fastforce
   thus ?case
     using Complete by (auto simp: wf_ex_defs split!: prod.splits)
 next
   case (Scan k cfg inp wf_bs bs i x a)
-  then show ?case
-    sorry
+  let ?bs' = "app_bins bs (k + 1) (Scan_it k inp a x)"
+  have *: "k \<le> length inp" "length (bins bs) = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+    using Scan.hyps(1) from_wf_bins wellformed_bins_elim by metis+
+  have "k < length (bins bs)"
+    using *(1,2) by presburger
+  moreover have "x \<in> set_bin (bins bs ! k)"
+    using Scan.hyps(2,3) by auto
+  ultimately have "\<forall>y \<in> set (Scan_it k inp a x). wf_item cfg inp y \<and> item_end y = k + 1"
+    using wf_bins_Scan_it *(1,4) Scan.hyps(4) by fastforce
+  hence "wf_bins cfg inp ?bs'"
+    using wf_bins_app_bins distinct_Scan_it *(4) by fast
+  hence "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using *(1-3) wellformed_bins_intro by fastforce
+  thus ?case
+    using Scan by (auto simp: wf_ex_defs split!: prod.splits)
 next
   case (Pass k cfg inp wf_bs bs i x a)
   thus ?case
     by (auto simp: wf_ex_defs split!: prod.splits)
 next
   case (Predict k cfg inp wf_bs bs i x a)
-  then show ?case
-    sorry
+  let ?bs' = "app_bins bs k (Predict_it k cfg a)"
+  have *: "k \<le> length inp" "length (bins bs) = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+    using Predict.hyps(1) from_wf_bins wellformed_bins_elim by metis+
+  have "k < length (bins bs)"
+    using *(1,2) by presburger
+  moreover have "x \<in> set_bin (bins bs ! k)"
+    using Predict.hyps(2,3) by auto
+  ultimately have "\<forall>y \<in> set (Predict_it k cfg a). wf_item cfg inp y \<and> item_end y = k"
+    using wf_bins_Predict_it *(1,3,4) by fast
+  hence "wf_bins cfg inp ?bs'"
+    using wf_bins_app_bins distinct_Predict_it *(3,4) by fastforce
+  hence "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using *(1-3) wellformed_bins_intro by fastforce
+  thus ?case
+    using Predict by (auto simp: wf_ex_defs split!: prod.splits)
 qed
+
+definition \<pi>_it_wf :: "'a wf_bins \<Rightarrow> 'a wf_bins" where
+  "\<pi>_it_wf wf_bs = \<pi>_it'_wf wf_bs 0"
+
+lemma \<pi>_it_wf_eq_\<pi>_it:
+  "bs_wf (\<pi>_it_wf wf_bs) = \<pi>_it (k_wf wf_bs) (cfg_wf wf_bs) (inp_wf wf_bs) (bs_wf wf_bs)"
+  by (simp add: \<pi>_it'_wf_eq_\<pi>_it' \<pi>_it_def \<pi>_it_wf_def)
+
+lemma \<pi>_it_wf_eq_\<pi>_it_alt:
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  shows "bs_wf (\<pi>_it_wf (to_wf_bins (k, cfg, inp, bs))) = \<pi>_it k cfg inp bs"
+  using assms by (subst \<pi>_it_wf_eq_\<pi>_it; auto simp: wf_ex_defs)
+
+fun \<I>_it_wf :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a wf_bins" where
+  "\<I>_it_wf 0 cfg inp = \<pi>_it_wf (to_wf_bins (0, cfg, inp, Init_it cfg inp))"
+| "\<I>_it_wf (Suc n) cfg inp = \<pi>_it_wf (to_wf_bins ((Suc n), cfg, inp, bs_wf (\<I>_it_wf n cfg inp)))"
+
+lemma \<I>_it_wf_eq_\<I>_it: \<comment>\<open>TODO: Clean\<close>
+  assumes "k \<le> length inp" "wf_cfg cfg"
+  shows "bs_wf (\<I>_it_wf k cfg inp) = \<I>_it k cfg inp"
+  using assms
+proof (induction k)
+  case 0
+  hence "(0, cfg, inp, Init_it cfg inp) \<in> wellformed_bins"
+    using wellformed_bins_intro wf_bins_Init_it length_bins_Init_it by blast
+  thus ?case
+    using 0 \<pi>_it_wf_eq_\<pi>_it_alt
+    by (auto simp: wf_ex_defs split: prod.splits; fastforce)
+next
+  case (Suc k)
+  then show ?case
+    using \<pi>_it_wf_eq_\<pi>_it_alt
+    apply (auto simp: wf_ex_defs split: prod.splits)
+    by (smt (verit) Suc_leD \<pi>_it_wf_eq_\<pi>_it_alt bs_wf_def case_prod_conv length_bins_Init_it length_bins_\<I>_it wellformed_bins_intro wf_bins_\<I>_it)
+qed
+
+definition \<II>_it_wf :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a wf_bins" where
+  "\<II>_it_wf cfg inp = \<I>_it_wf (length inp) cfg inp"
+
+lemma \<II>_it_wf_eq_\<II>_it:
+  assumes "wf_cfg cfg"
+  shows "bs_wf (\<II>_it_wf cfg inp) = \<II>_it cfg inp"
+  using assms by (simp add: \<I>_it_wf_eq_\<I>_it \<II>_it_def \<II>_it_wf_def)
 
 
 subsection \<open>List to Set\<close>
