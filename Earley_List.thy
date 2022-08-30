@@ -1357,44 +1357,44 @@ lemma \<pi>_step_sub_\<pi>_it:
   using assms \<pi>_step_sub_\<pi>_it' \<pi>_it_def by metis
 
 lemma \<pi>_it'_idem:
-  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "i \<le> j" "sound_items cfg inp (set_bins bs)" "nonempty_derives cfg"
   shows "\<pi>_it' k cfg inp (\<pi>_it' k cfg inp bs i) j = \<pi>_it' k cfg inp bs i"
   using assms
-proof (induction k cfg inp bs i arbitrary: j rule: \<pi>_it'_induct)
+proof (induction i arbitrary: j rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
   case (Complete k cfg inp bs i x)
   let ?bs' = "app_bins bs k (Complete_it k x bs)"
   have x: "x \<in> set_bin (bins bs ! k)"
     using Complete.hyps(1,2) by auto
-  have wf: "wf_bins cfg inp ?bs'"
-    using Complete.hyps Complete.prems(2,3) wf_bins_Complete_it wf_bins_app_bins
-      distinct_Complete_it wf_bins_kth_bin wf_item_def x
-    by (smt (verit) linorder_not_less order_trans)
-  have sound: "sound_items cfg inp (set_bins ?bs')"
-    using sound_Complete_it[OF _ _ _ Complete.prems(3) Complete.hyps(3)] wf_bins_impl_wf_items 
-          Complete.hyps(1,2) sound_items_def Complete.prems(1,2,3,6) by (auto simp: set_bins_app_bins; fastforce)
+  have wf: "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
+  have "sound_items cfg inp (set (Complete_it k x bs))"
+    using x sound_Complete_it \<pi>_mono Complete.hyps(3) Complete.prems set_bins_bin_exists 
+          sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
+  hence sound: "sound_items cfg inp (set_bins ?bs')"
+    by (metis Complete.prems(1) Complete.prems(3) UnE set_bins_app_bins sound_items_def wellformed_bins_elim)
   show ?case
   proof cases
     assume "i+1 \<le> j"
     thus ?thesis
-      using wf sound Complete by (metis \<pi>_it'_simps(2) length_bins_app_bins)
+      using wf sound Complete \<pi>_it'_simps(2) by metis
   next
     assume "\<not> i+1 \<le> j"
     hence "i = j"
-      using Complete.prems(5) by simp
+      using Complete.prems(2) by simp
     have "\<pi>_it' k cfg inp (\<pi>_it' k cfg inp bs i) j = \<pi>_it' k cfg inp (\<pi>_it' k cfg inp ?bs' (i+1)) j"
       using \<pi>_it'_simps(2) Complete.hyps(1-3) by simp
     also have "... = \<pi>_it' k cfg inp (\<pi>_it' k cfg inp ?bs' (i+1)) (j+1)"
     proof -
       let ?bs'' = "\<pi>_it' k cfg inp ?bs' (i+1)"
       have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
-        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans by blast
+        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans wf by blast
       hence 0: "\<not> length (items (bins ?bs'' ! k)) \<le> j"
         using \<open>i = j\<close> Complete.hyps(1) by linarith
       have "x = items (bins ?bs' ! k) ! j"
         using \<open>i = j\<close> kth_app_bins Complete.hyps(1,2) by (metis not_le_imp_less)
       hence 1: "x = items (bins ?bs'' ! k) ! j"
-        using \<open>i = j\<close> kth_\<pi>_it'_bins length_nth_bin_app_bins Complete.hyps(1) by (metis leI order_trans)
+        using \<open>i = j\<close> kth_\<pi>_it'_bins Complete.hyps Complete.prems(1) \<pi>_it'_simps(2) leI by metis
       have "\<pi>_it' k cfg inp ?bs'' j = \<pi>_it' k cfg inp (app_bins ?bs'' k (Complete_it k x ?bs'')) (j+1)"
         using \<pi>_it'_simps(2) 0 1 Complete.hyps(1,3) Complete.prems(2) by blast
       moreover have "app_bins ?bs'' k (Complete_it k x ?bs'') = ?bs''"
@@ -1403,21 +1403,22 @@ proof (induction k cfg inp bs i arbitrary: j rule: \<pi>_it'_induct)
         proof (cases "item_origin x = k")
           case True
           thus ?thesis
-            using impossible_complete_item True kth_bin_in_bins Complete.hyps(3) Complete.prems(1,2,3,6,7) 
+            using impossible_complete_item True kth_bin_in_bins Complete.hyps(3) Complete.prems wellformed_bins_elim
                   wf_bins_kth_bin x sound_items_def next_symbol_def by (metis option.distinct(1) subsetD)
         next
           case False
           hence "item_origin x < k"
-            using x Complete.prems(2,3) wf_bins_kth_bin wf_item_def nat_less_le by blast
+            using x Complete.prems(1) wf_bins_kth_bin wf_item_def nat_less_le by (metis wellformed_bins_elim)
           hence "set_bin (bins bs ! item_origin x) = set_bin (bins ?bs'' ! item_origin x)"
-            by (smt (verit, best) set_bin_def False nth_app_bins set_bin_\<pi>_it'_eq)
+            using set_bin_def False nth_app_bins set_bin_\<pi>_it'_eq wf by metis
           thus ?thesis
             using Complete_it_eq_item_origin by blast
         qed
         also have "... \<subseteq> set_bin (bins ?bs' ! k)"
-          using Complete.prems(3) app_bins_def set_bin_app_bin by (metis bins.sel Un_iff nth_list_update_eq subsetI)
+          using Complete.prems(1) app_bins_def set_bin_app_bin
+          by (metis bins.sel nth_list_update_eq sup_ge2 wellformed_bins_elim)
         also have "... \<subseteq> set_bin (bins ?bs'' ! k)"
-          using Complete.prems(3) nth_bin_sub_\<pi>_it' by (metis length_bins_app_bins)
+          using Complete.prems(1) nth_bin_sub_\<pi>_it' wf by blast
         finally have "set (Complete_it k x ?bs'') \<subseteq> set_bin (bins ?bs'' ! k)" .
         thus ?thesis
           using app_bins_eq Complete.prems(2) length_bins_\<pi>_it' length_bins_app_bins by blast
@@ -1426,8 +1427,7 @@ proof (induction k cfg inp bs i arbitrary: j rule: \<pi>_it'_induct)
         by presburger
     qed
     also have "... = \<pi>_it' k cfg inp ?bs' (i + 1)"
-      using Complete.IH Complete.prems(1-4,7) \<open>i = j\<close> Complete.hyps length_bins_app_bins 
-            wf_bins_Complete_it wf_bins_app_bins x wf sound by simp
+      using Complete.IH[OF wf _ sound Complete.prems(4)] \<open>i = j\<close> by blast
     finally show ?thesis
       using Complete.hyps by simp
   qed
@@ -1436,40 +1436,40 @@ next
   let ?bs' = "app_bins bs (k+1) (Scan_it k inp a x)"
   have x: "x \<in> set_bin (bins bs ! k)"
     using Scan.hyps(1,2) by auto
-  have wf: "wf_bins cfg inp ?bs'"
-    using Scan.prems(2,3) Scan.hyps wf_bins_app_bins wf_bins_Scan_it x distinct_Scan_it by (metis Option.option.discI nat_less_le)
-  have sound: "sound_items cfg inp (set_bins ?bs')"
-    using sound_Scan_it[OF Scan.prems(2) _ x Scan.prems(3)] Scan.hyps(3,5) Scan.prems(2,4,6) 
-          set_bins_app_bins sound_items_def wf_bins_impl_wf_items
-    by (metis Groups.ab_semigroup_add_class.add.commute Orderings.preorder_class.dual_order.refl UnE add_less_cancel_left)
+  hence "sound_items cfg inp (set (Scan_it k inp a x))"
+    using sound_Scan_it \<pi>_mono Scan.hyps(3) Scan.prems(1,2,3) set_bins_bin_exists 
+          sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
+  hence sound: "sound_items cfg inp (set_bins ?bs')"
+    using Scan.hyps(5) Scan.prems(1,3) set_bins_app_bins sound_items_def wellformed_bins_elim
+    by (metis UnE add_less_cancel_right)
   show ?case
   proof cases
     assume "i+1 \<le> j"
     thus ?thesis
-      using wf sound Scan by (metis length_bins_app_bins \<pi>_it'_simps(3))
+      using sound Scan by (metis \<pi>_it'_simps(3) wellformed_bins_Scan_it)
   next
     assume "\<not> i+1 \<le> j"
     hence "i = j"
-      using Scan.prems(5) by auto
+      using Scan.prems(2) by auto
     have "\<pi>_it' k cfg inp (\<pi>_it' k cfg inp bs i) j = \<pi>_it' k cfg inp (\<pi>_it' k cfg inp ?bs' (i+1)) j"
       using Scan.hyps by simp
     also have "... = \<pi>_it' k cfg inp (\<pi>_it' k cfg inp ?bs' (i+1)) (j+1)"
     proof -
       let ?bs'' = "\<pi>_it' k cfg inp ?bs' (i+1)"
       have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
-        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans by blast
+        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans Scan.hyps Scan.prems(1) \<pi>_it'_simps(3)
+        by (smt (verit, ccfv_SIG))
       hence "\<pi>_it' k cfg inp ?bs'' j = \<pi>_it' k cfg inp (app_bins ?bs'' (k+1) (Scan_it k inp a x)) (j+1)"
-        using \<open>i = j\<close> kth_\<pi>_it'_bins nth_app_bin \<pi>_it'_simps(3) Scan.hyps
-        by (smt (verit, ccfv_SIG) length_bins_\<pi>_it' less_or_eq_imp_le not_le_imp_less order_trans wf_bins_\<pi>_it')
+        using \<open>i = j\<close> kth_\<pi>_it'_bins nth_app_bin \<pi>_it'_simps(3) Scan.hyps Scan.prems(1) by (smt (verit, best) leI le_trans)
       moreover have "app_bins ?bs'' (k+1) (Scan_it k inp a x) = ?bs''"
       proof -
         have "set (Scan_it k inp a x) = set (Scan_it k inp a x)"
           unfolding Scan_it_def by blast
         also have "... \<subseteq> set_bin (bins ?bs' ! (k+1))"
-          using Scan.hyps(5) Scan.prems(4) app_bins_def set_bin_app_bin
-          by (metis bins.sel Groups.ab_semigroup_add_class.add.commute Suc_less_eq Un_iff nth_list_update_eq plus_1_eq_Suc subsetI)
+          using Scan.hyps(5) Scan.prems(1,2) app_bins_def set_bin_app_bin wellformed_bins_elim
+          by (metis Un_iff add_less_cancel_right bins.sel nth_list_update_eq subsetI )
         also have "... \<subseteq> set_bin (bins ?bs'' ! (k+1))"
-          using Scan.hyps(5) Scan.prems(3,4) nth_bin_sub_\<pi>_it' by (metis add.commute add_less_cancel_left length_bins_app_bins)
+          using Scan.hyps Scan.prems(1,2) nth_bin_sub_\<pi>_it' wellformed_bins_Scan_it by metis
         ultimately have "set (Scan_it k inp a x) \<subseteq> set_bin (bins ?bs'' ! (k+1))"
           using \<open>set (Scan_it k inp a x) \<subseteq> set_bin (bins (app_bins bs (k + 1) (Scan_it k inp a x)) ! (k + 1))\<close> by blast
         thus ?thesis
@@ -1479,7 +1479,7 @@ next
         by presburger
     qed
     also have "... = \<pi>_it' k cfg inp ?bs' (i + 1)"
-      using \<open>i = j\<close> Scan.IH Scan.prems(1,3,4,7) sound wf by (metis dual_order.refl length_bins_app_bins)
+      using \<open>i = j\<close> Scan.IH Scan.prems Scan.hyps sound wellformed_bins_Scan_it by fast
     finally show ?thesis
       using Scan.hyps by simp
   qed
@@ -1500,41 +1500,43 @@ next
   let ?bs' = "app_bins bs k (Predict_it k cfg a)"
   have x: "x \<in> set_bin (bins bs ! k)"
     using Predict.hyps(1,2) by auto
+  hence "sound_items cfg inp (set (Predict_it k cfg a))"
+    using sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems set_bins_bin_exists wellformed_bins_elim
+          sound_\<pi> wf_bins_kth_bin wf_items_def by metis
+  hence sound: "sound_items cfg inp (set_bins ?bs')"
+    using Predict.prems(1,3) UnE set_bins_app_bins sound_items_def wellformed_bins_elim by metis
+  have wf: "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
   have len: "i < length (items (bins ?bs' ! k))"
     using length_nth_bin_app_bins Predict.hyps(1) Orderings.preorder_class.dual_order.strict_trans1 linorder_not_less by blast
-  have wf: "wf_bins cfg inp ?bs'"
-    using Predict.prems(1-4) wf_bins_Predict_it wf_bins_app_bins distinct_Predict_it wf_bins_kth_bin x by fastforce
-  have sound: "sound_items cfg inp (set_bins ?bs')" 
-    using sound_Predict_it[OF _ _ x] Predict.hyps(3) Predict.prems(2,3,6) sound_items_def
-    apply (auto simp: set_bins_app_bins)
-    by (meson UnE dual_order.refl sound_items_def)
   show ?case
   proof cases
     assume "i+1 \<le> j"
     thus ?thesis
-      using sound wf Predict by (metis length_bins_app_bins \<pi>_it'_simps(5))
+      using sound wf Predict by (metis \<pi>_it'_simps(5))
   next
     assume "\<not> i+1 \<le> j"
     hence "i = j"
-      using Predict.prems(5) by auto
+      using Predict.prems(2) by auto
     have "\<pi>_it' k cfg inp (\<pi>_it' k cfg inp bs i) j = \<pi>_it' k cfg inp (\<pi>_it' k cfg inp ?bs' (i+1)) j"
       using Predict.hyps by simp
     also have "... = \<pi>_it' k cfg inp (\<pi>_it' k cfg inp ?bs' (i+1)) (j+1)"
     proof -
       let ?bs'' = "\<pi>_it' k cfg inp ?bs' (i+1)"
       have "length (items (bins ?bs'' ! k)) \<ge> length (items (bins bs ! k))"
-        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans by blast
+        using length_nth_bin_\<pi>_it' length_nth_bin_app_bins order_trans wf by blast
       hence "\<pi>_it' k cfg inp ?bs'' j = \<pi>_it' k cfg inp (app_bins ?bs'' k (Predict_it k cfg a)) (j+1)"
-        using \<open>i = j\<close> kth_\<pi>_it'_bins nth_app_bin \<pi>_it'_simps(5) Predict.hyps Predict.prems(3) length_bins_\<pi>_it'
-          wf_bins_\<pi>_it' by (smt (verit, best) Orderings.preorder_class.dual_order.trans leI wf_bins_kth_bin wf_item_def x)
+        using \<open>i = j\<close> kth_\<pi>_it'_bins nth_app_bin \<pi>_it'_simps(5) Predict.hyps Predict.prems(1) length_bins_\<pi>_it'
+          wf_bins_\<pi>_it' wf_bins_kth_bin wf_item_def x by (smt (verit, ccfv_SIG) linorder_not_le order.trans)
       moreover have "app_bins ?bs'' k (Predict_it k cfg a) = ?bs''"
       proof -
         have "set (Predict_it k cfg a) = set (Predict_it k cfg a)"
           unfolding Predict_it_def by blast
         also have "... \<subseteq> set_bin (bins ?bs' ! k)"
-          using Predict.prems(3) app_bins_def set_bin_app_bin by (metis bins.sel Un_upper2 nth_list_update_eq)
+          using Predict.prems(1) app_bins_def set_bin_app_bin wellformed_bins_elim
+          by (metis Un_iff bins.sel nth_list_update_eq subsetI)
         also have "... \<subseteq> set_bin (bins ?bs'' ! k)"
-          using Predict.prems(3) nth_bin_sub_\<pi>_it' by (metis length_bins_app_bins)
+          using Predict.prems(1) nth_bin_sub_\<pi>_it' wf by blast
         ultimately have "set (Predict_it k cfg a) \<subseteq> set_bin (bins ?bs'' ! k)"
           using \<open>set (Predict_it k cfg a) \<subseteq> set_bin (bins (app_bins bs k (Predict_it k cfg a)) ! k)\<close> by blast
         thus ?thesis
@@ -1544,20 +1546,20 @@ next
         by presburger
     qed
     also have "... = \<pi>_it' k cfg inp ?bs' (i + 1)"
-      using \<open>i = j\<close> Predict.IH Predict.prems(1,3,4,7) sound wf by (metis length_bins_app_bins order_refl)
+      using \<open>i = j\<close> Predict.IH Predict.prems sound wf by (metis order_refl)
     finally show ?thesis
       using Predict.hyps by simp
   qed
 qed simp
 
 lemma \<pi>_it_idem:
-  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_items cfg inp (set_bins bs)" "nonempty_derives cfg"
   shows "\<pi>_it k cfg inp (\<pi>_it k cfg inp bs) = \<pi>_it k cfg inp bs"
   using assms \<pi>_it'_idem \<pi>_it_def le0 by metis
 
 lemma funpower_\<pi>_step_sub_\<pi>_it:
-  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "\<pi>_step k cfg inp (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items cfg inp (set_bins bs)"
   assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "funpower (\<pi>_step k cfg inp) n (set_bins bs) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
@@ -1569,52 +1571,51 @@ proof (induction n)
 next
   case (Suc n)
   have 0: "\<pi>_step k cfg inp (set_bins_upto (\<pi>_it k cfg inp bs) k 0) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
-    using \<pi>_it'_mono set_bins_upto_k0_\<pi>_it'_eq \<pi>_it_def Suc.prems(3-5) order_trans by (metis (no_types, lifting))
+    using \<pi>_it'_mono set_bins_upto_k0_\<pi>_it'_eq \<pi>_it_def order_trans by (metis (no_types, lifting) assms(1,2))
   have "funpower (\<pi>_step k cfg inp) (Suc n) (set_bins bs) \<subseteq> (\<pi>_step k cfg inp) (set_bins (\<pi>_it k cfg inp bs))"
     using \<pi>_step_sub_mono Suc by (metis funpower.simps(2))
   also have "... \<subseteq> set_bins (\<pi>_it k cfg inp (\<pi>_it k cfg inp bs))"
-    using \<pi>_step_sub_\<pi>_it Suc.prems(1-4,6-8) wf_bins_\<pi>_it sound_\<pi>_it 0
-    by (metis add.commute length_bins_\<pi>_it less_Suc_eq_le plus_1_eq_Suc)
+    using \<pi>_step_sub_\<pi>_it Suc.prems wf_bins_\<pi>_it sound_\<pi>_it 0 wellformed_bins_\<pi>_it by blast
   also have "... \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
     using \<pi>_it_idem Suc.prems by fastforce
   finally show ?case .
 qed
 
 lemma \<pi>_sub_\<pi>_it:
-  assumes "wf_cfg cfg" "wf_bins cfg inp bs" "k < length (bins bs)" "length (bins bs) = length inp + 1"
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "\<pi>_step k cfg inp (set_bins_upto bs k 0) \<subseteq> set_bins bs" "sound_items cfg inp (set_bins bs)"
   assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "\<pi> k cfg inp (set_bins bs) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
   using assms funpower_\<pi>_step_sub_\<pi>_it \<pi>_def elem_limit_simp by fastforce
 
 lemma \<I>_sub_\<I>_it:
-  assumes "wf_cfg cfg" "k < length (bins (Init_it cfg inp))"
+  assumes "k \<le> length inp" "wf_cfg cfg"
   assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "\<I> k cfg inp \<subseteq> set_bins (\<I>_it k cfg inp)"
   using assms
 proof (induction k)
   case 0
   hence "\<pi> 0 cfg inp (Init cfg) \<subseteq> set_bins (\<pi>_it 0 cfg inp (Init_it cfg inp))"
-    using wf_bins_Init_it \<pi>_sub_\<pi>_it Init_it_eq_Init length_bins_Init_it Init_it_eq_Init 
-          sound_Init set_bins_upto_empty \<pi>_step_empty set_bins_upto_sub_set_bins by metis
+    using \<pi>_sub_\<pi>_it Init_it_eq_Init length_bins_Init_it Init_it_eq_Init sound_Init set_bins_upto_empty
+          \<pi>_step_empty set_bins_upto_sub_set_bins wellformed_bins_Init_it wellformed_bins_elim by metis
   thus ?case
     by simp
 next
   case (Suc k)
-  have wf: "wf_bins cfg inp (\<I>_it k cfg inp)"
-    using length_bins_Init_it Suc.prems wf_bins_\<I>_it by force
+  have wf: "(Suc k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
+    by (simp add: Suc.prems(1) Suc_leD assms(2) wellformed_bins_intro)
   have sub: "\<pi>_step (Suc k) cfg inp (set_bins_upto (\<I>_it k cfg inp) (Suc k) 0) \<subseteq> set_bins (\<I>_it k cfg inp)"
   proof -
     have "bin (set_bins_upto (\<I>_it k cfg inp) (Suc k) 0) (Suc k) = {}"
-      using kth_bin_set_bins_upto_empty wf Suc.prems by fastforce
+      using kth_bin_set_bins_upto_empty wf Suc.prems wellformed_bins_elim by blast
     hence "\<pi>_step (Suc k) cfg inp (set_bins_upto (\<I>_it k cfg inp) (Suc k) 0) = set_bins_upto (\<I>_it k cfg inp) (Suc k) 0"
       unfolding \<pi>_step_def Scan_def Complete_def Predict_def bin_def by blast
     also have "... \<subseteq> set_bins (\<I>_it k cfg inp)"
-      using wf Suc.prems set_bins_upto_sub_set_bins by (metis length_bins_\<I>_it)
+      using wf Suc.prems set_bins_upto_sub_set_bins wellformed_bins_elim by blast
     finally show ?thesis .
   qed
   have sound: "sound_items cfg inp (set_bins (\<I>_it k cfg inp))"
-    using Suc sound_\<I> \<I>_it_sub_\<I> by (metis Suc_lessD subset_antisym)
+    using Suc sound_\<I> \<I>_it_sub_\<I> by (metis Suc_leD subset_antisym)
   have "\<I> (Suc k) cfg inp \<subseteq> \<pi> (Suc k) cfg inp (set_bins (\<I>_it k cfg inp))"
     using Suc \<pi>_sub_mono by simp
   also have "... \<subseteq> set_bins (\<pi>_it (Suc k) cfg inp (\<I>_it k cfg inp))"
@@ -1626,7 +1627,7 @@ qed
 lemma \<II>_sub_\<II>_it:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "\<II> cfg inp \<subseteq> set_bins (\<II>_it cfg inp)"
-  using assms \<I>_sub_\<I>_it \<II>_def \<II>_it_def by (metis length_bins_Init_it less_add_one)
+  using assms \<I>_sub_\<I>_it \<II>_def \<II>_it_def by (metis le_refl)
 
 
 subsection \<open>Correctness\<close>
@@ -1641,8 +1642,9 @@ proof -
   have "earley_recognized_it cfg inp = (\<exists>x \<in> set (items (bins (\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
     unfolding earley_recognized_it_def by blast
   also have "... = (\<exists>x \<in> set_bins (\<II>_it cfg inp). is_finished cfg inp x)"
-    using is_finished_def kth_bin_in_bins \<II>_it_def length_bins_Init_it length_bins_\<I>_it wf_bins_\<II>_it
-      wf_item_in_kth_bin set_bin_def by (metis (mono_tags, lifting) assms(1) less_add_one subsetD)
+    using is_finished_def kth_bin_in_bins \<II>_it_def length_bins_Init_it wf_bins_\<II>_it
+      wf_item_in_kth_bin set_bin_def length_\<I>_it assms(1)
+    by (metis (mono_tags, lifting) dual_order.refl less_add_one subsetD)
   also have "... = (\<exists>x \<in> \<II> cfg inp. is_finished cfg inp x)"
     using assms \<II>_it_sub_\<II> \<II>_sub_\<II>_it by blast
   also have "... = earley_recognized cfg inp"
