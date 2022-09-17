@@ -3,11 +3,73 @@ theory Earley_List
     Earley_Set
 begin
 
+subsection \<open>List auxilaries\<close>
+
+fun find_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
+  "find_index' _  _ [] = None"
+| "find_index' n P (x#xs) = (if P x then Some n else find_index' (n+1) P xs)"
+
+definition find_index :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
+  "find_index = find_index' 0"
+
+lemma find_index'_None_iff: \<comment>\<open>TODO: Clean\<close>
+  "find_index' n P xs = None \<longleftrightarrow> (\<nexists>i. i < length xs \<and> P (xs ! i))"
+  apply (induction xs arbitrary: n)
+  apply (auto)
+  using less_Suc_eq_0_disj by fastforce
+
+lemma find_index'_Some_iff: \<comment>\<open>TODO: Clean\<close>
+  "find_index' n P xs = Some i = (\<exists>i. i-n < length xs \<and> P (xs ! (i-n)) \<and> (\<forall>j < i-n. \<not> P (xs ! j)))"
+  apply (induction xs arbitrary: n)
+  apply (auto split: if_splits)
+  sorry
+
+lemma find_index_None_iff:
+  "find_index P xs = None \<longleftrightarrow> (\<nexists>i. i < length xs \<and> P (xs ! i))"
+  by (simp add: find_index'_None_iff find_index_def)
+
+lemma find_index_Some_iff:
+  "find_index P xs = Some i = (\<exists>i. i < length xs \<and> P (xs ! i) \<and> (\<forall>j < i. \<not> P (xs ! j)))"
+  by (simp add: find_index'_Some_iff find_index_def)
+
+fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
+  "filter_with_index' _ _ [] = []"
+| "filter_with_index' i P (x#xs) = (
+    if P x then (x,i) # filter_with_index' (i+1) P xs
+    else filter_with_index' (i+1) P xs)"
+
+definition filter_with_index :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
+  "filter_with_index P xs = filter_with_index' 0 P xs"
+
+lemma filter_with_index'_cong_filter:
+  "map fst (filter_with_index' i P xs) = filter P xs"
+  by (induction xs arbitrary: i) auto
+
+lemma filter_with_index_cong_filter:
+  "map fst (filter_with_index P xs) = filter P xs"
+  by (simp add: filter_with_index'_cong_filter filter_with_index_def)
+
+lemma filter_with_index'_nth:
+  "(x, n) \<in> set (filter_with_index' i P xs) \<Longrightarrow> xs ! (n-i) = x"
+  sorry
+
+lemma filter_with_index_nth:
+  "(x, n) \<in> set (filter_with_index P xs) \<Longrightarrow> xs ! n = x"
+  by (metis diff_zero filter_with_index'_nth filter_with_index_def)
+
+
 subsection \<open>Bins\<close>
 
-datatype 'a bin = Bin (items: "'a item list")
+datatype pointer =
+  Pre nat
+  | PreRed nat nat
 
-datatype 'a bins = Bins (bins: "'a bin list")
+type_synonym 'a bin = "('a item \<times> pointer list) list"
+
+definition "items \<equiv> map fst"
+definition "pointers \<equiv> map snd"
+
+type_synonym 'a bins = "'a bin list"
 
 definition set_bin_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
   "set_bin_upto b i = { items b ! j | j. j < i \<and> j < length (items b) }"
@@ -16,53 +78,72 @@ definition set_bin :: "'a bin \<Rightarrow> 'a items" where
   "set_bin b = set (items b)"
 
 definition wf_bin :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
-  "wf_bin cfg inp k b \<longleftrightarrow> distinct (items b) \<and> (\<forall>x \<in> set (items b). wf_item cfg inp x \<and> item_end x = k)"
+  "wf_bin cfg inp k b \<longleftrightarrow> 
+    distinct (items b) \<and>
+    (\<forall>x \<in> set (items b). wf_item cfg inp x \<and> item_end x = k)"
 
 definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "wf_bins cfg inp bs \<longleftrightarrow> (\<forall>k < length (bins bs). wf_bin cfg inp k (bins bs ! k))"
+  "wf_bins cfg inp bs \<longleftrightarrow> (\<forall>k < length bs. wf_bin cfg inp k (bs ! k))"
 
 declare set_bin_def[simp]
 
 definition set_bins_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "set_bins_upto bs k i = \<Union> { set_bin (bins bs ! l) | l. l < k } \<union> set_bin_upto (bins bs ! k) i"
+  "set_bins_upto bs k i = \<Union> { set_bin (bs ! l) | l. l < k } \<union> set_bin_upto (bs ! k) i"
 
 definition set_bins :: "'a bins \<Rightarrow> 'a items" where
-  "set_bins bs = \<Union> { set_bin (bins bs ! k) | k. k < length (bins bs) }"
+  "set_bins bs = \<Union> { set_bin (bs ! k) | k. k < length bs }"
 
-definition app_bin :: "'a bin \<Rightarrow> 'a item list \<Rightarrow> 'a bin" where
-  "app_bin b is = Bin (items b @ (filter (\<lambda>i. i \<notin> set (items b)) is))"
+definition bin_ptr_upd :: "nat \<Rightarrow> pointer list \<Rightarrow> 'a bin \<Rightarrow>  'a bin" where
+  "bin_ptr_upd i ptrs b = zip (items b) ((pointers b)[i := ptrs @ (pointers b ! i)])"
 
-definition app_bins :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> 'a bins" where
-  "app_bins bs k is = Bins ((bins bs)[k := app_bin ((bins bs)!k) is])"
+definition bin_ins :: "'a item \<Rightarrow> pointer list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
+  "bin_ins item ptrs b = zip (items b @ [item]) (pointers b @ [ptrs])"
 
-lemma length_bins_app_bins[simp]:
-  "length (bins (app_bins bs k is)) = length (bins bs)"
-  unfolding app_bins_def by simp
+definition bin_upd :: "'a item \<times> pointer list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
+  "bin_upd ip b = (
+    case find_index (\<lambda>item. item = fst ip) (items b) of
+      None \<Rightarrow> bin_ins (fst ip) (snd ip) b
+    | Some i \<Rightarrow> bin_ptr_upd i (snd ip) b)"
 
-lemma length_nth_bin_app_bins:
-  "length (items (bins (app_bins bs k is) ! l)) \<ge> length (items (bins bs ! l))"
-  by (cases "k < length (bins bs)") (auto simp: nth_list_update app_bins_def app_bin_def)
+definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointer list) list \<Rightarrow> 'a bins" where
+  "bins_upd bs k ips = bs[k := fold bin_upd ips (bs!k)]"
 
-lemma length_nth_bin_app_bins_eq:
-  "k \<noteq> l \<Longrightarrow> length (items (bins (app_bins bs k is) ! l)) = length (items (bins bs ! l))"
-  by (cases "k < length (bins bs)") (auto simp: app_bins_def app_bin_def)
+lemma length_bin_upds[simp]:
+  "length (bins_upd bs k ips) = length bs"
+  unfolding bins_upd_def bin_upd_def bin_ptr_upd_def bin_ins_def by simp
 
-lemma app_bins_eq:
-  "set is \<subseteq> set_bin (bins bs ! k) \<Longrightarrow> app_bins bs k is = bs"
-  using filter_False unfolding app_bins_def app_bin_def by (auto simp: in_mono)
+lemma length_nth_bin_bins_upd:
+  "length (bins_upd bs k ips ! n) \<ge> length (bs ! n)"
+  sorry
 
-lemma nth_app_bin:
-  "i < length (items b) \<Longrightarrow> items (app_bin b is) ! i = items b ! i"
-  unfolding app_bin_def by (simp add: nth_append)
+corollary length_items_nth_bin_bins_upd:
+  "length (items (bins_upd bs k ips ! n)) \<ge> length (items (bs ! n))"
+  using items_def length_nth_bin_bins_upd by (metis length_map)
 
-lemma nth_app_bins:
-  "k \<noteq> l \<Longrightarrow> bins (app_bins bs k is) ! l = bins bs ! l"
-  unfolding app_bins_def nth_app_bin by simp
+lemma length_nth_bin_bins_upd_eq:
+  "k \<noteq> n \<Longrightarrow> length (bins_upd bs k ips ! n) = length (bs ! n)"
+  sorry
 
-lemma kth_app_bins:
-  assumes "i < length (items (bins bs ! k))"
-  shows "items (bins (app_bins bs k is) ! k) ! i = items (bins bs ! k) ! i"
-  by (cases "k < length (bins bs)") (auto simp: app_bins_def nth_app_bin assms)
+corollary length_items_nth_bin_bins_upd_eq:
+  "k \<noteq> n \<Longrightarrow> length (items (bins_upd bs k ips ! n)) = length (items (bs ! n))"
+  using items_def length_nth_bin_bins_upd_eq by (metis length_map)
+
+lemma set_bins_bins_upd_eq:
+  "set (items ips) \<subseteq> set_bin (bs ! k) \<Longrightarrow> set_bins (bins_upd bs k ips) = set_bins bs"
+  sorry
+
+lemma nth_bins_upd:
+  "k \<noteq> n \<Longrightarrow> bins_upd bs k ips ! n = bs ! n"
+  unfolding bins_upd_def by simp
+
+lemma mth_app_bins:
+  "m < length (bs ! k) \<Longrightarrow> (bins_upd bs k ips ! k) ! m = (bs ! k) ! m"
+  sorry
+
+corollary items_mth_app_bins:
+  "m < length (items (bs ! k)) \<Longrightarrow> items (bins_upd bs k ips ! k) ! m = items (bs ! k) ! m"
+  unfolding items_def using mth_app_bins length_nth_bin_bins_upd length_map nth_map
+  by (metis (no_types, lifting) dual_order.strict_trans1)
 
 lemma set_bin_upto_eq_set_bin:
   "i \<ge> length (items b) \<Longrightarrow> set_bin_upto b i = set_bin b"
@@ -72,57 +153,46 @@ lemma set_bins_upto_empty:
   "set_bins_upto bs 0 0 = {}"
   unfolding set_bins_upto_def set_bin_upto_def by simp
 
-lemma set_bin_app_bin[simp]:
-  "set_bin (app_bin b is) = set_bin b \<union> set is"
-  unfolding app_bin_def by auto
-
-lemma set_bins_app_bins:
-  "k < length (bins bs) \<Longrightarrow> set_bins (app_bins bs k is) = set_bins bs \<union> set is"
-  unfolding set_bins_def app_bins_def using set_bin_app_bin
-  by (auto; smt Un_iff nth_list_update_eq nth_list_update_neq set_bin_app_bin set_bin_def)+
+lemma set_bins_bins_upd:
+  "k < length bs \<Longrightarrow> set_bins (bins_upd bs k ips) = set_bins bs \<union> set (items ips)"
+  sorry
 
 lemma kth_bin_in_bins:
-  "k < length (bins bs) \<Longrightarrow> set_bin (bins bs ! k) \<subseteq> set_bins bs"
+  "k < length bs \<Longrightarrow> set_bin (bs ! k) \<subseteq> set_bins bs"
   unfolding set_bins_def set_bins_upto_def set_bin_upto_def by blast
 
 lemma set_bins_upto_kth_nth_id:
-  assumes "l < length (bins bs)" "k \<le> l" "i < length (items (bins bs ! k))"
-  shows "set_bins_upto (app_bins bs l is) k i = set_bins_upto bs k i"
-  unfolding set_bins_upto_def set_bin_def set_bin_upto_def app_bins_def app_bin_def
-  using assms by (auto simp: nth_append nth_list_update, metis not_less)
+  assumes "l < length bs" "k \<le> l" "n < length (bs ! k)"
+  shows "set_bins_upto (bins_upd bs l ips) k n = set_bins_upto bs k n"
+  sorry
 
 lemma set_bins_upto_sub_set_bins:
-  "k < length (bins bs) \<Longrightarrow> set_bins_upto bs k i \<subseteq> set_bins bs"
+  "k < length bs \<Longrightarrow> set_bins_upto bs k n \<subseteq> set_bins bs"
   unfolding set_bins_def set_bins_upto_def set_bin_upto_def using less_trans by (auto, blast)
 
 lemma set_bins_upto_Suc_Un:
-  "i < length (items (bins bs ! k)) \<Longrightarrow> set_bins_upto bs k (i+1) = set_bins_upto bs k i \<union> { items (bins bs ! k) ! i }"
-  unfolding set_bins_upto_def set_bin_upto_def using less_Suc_eq by auto
+  "n < length (bs ! k) \<Longrightarrow> set_bins_upto bs k (n+1) = set_bins_upto bs k n \<union> { items (bs ! k) ! n }"
+  unfolding set_bins_upto_def set_bin_upto_def using less_Suc_eq by (auto, metis items_def length_map)
 
 lemma set_bins_upto_Suc_eq:
-  "i \<ge> length (items (bins bs ! k)) \<Longrightarrow> set_bins_upto bs k (i+1) = set_bins_upto bs k i"
-  unfolding set_bins_upto_def set_bin_upto_def by auto
+  "n \<ge> length (bs ! k) \<Longrightarrow> set_bins_upto bs k (n+1) = set_bins_upto bs k n"
+  unfolding set_bins_upto_def set_bin_upto_def by (auto; metis dual_order.strict_trans1 items_def length_map)
 
 lemma set_bins_bin_exists:
-  "x \<in> set_bins bs \<Longrightarrow> \<exists>k < length (bins bs). x \<in> set_bin (bins bs ! k)"
+  "x \<in> set_bins bs \<Longrightarrow> \<exists>k < length bs. x \<in> set_bin (bs ! k)"
   unfolding set_bins_def by blast
 
-lemma distinct_app_bin:
-  "distinct (items b) \<Longrightarrow> distinct is \<Longrightarrow> distinct (items (app_bin b is))"
-  unfolding app_bin_def by auto
-
-lemma distinct_app_bins:
-  "distinct (items (bins bs ! k)) \<Longrightarrow> distinct is \<Longrightarrow> distinct (items (bins (app_bins bs k is) ! k))"
-  unfolding app_bins_def by (auto, metis distinct_app_bin list_update_beyond not_le_imp_less nth_list_update_eq)
+lemma distinct_bins_upd:
+  "distinct (items (bs ! k)) \<Longrightarrow> distinct (items ips) \<Longrightarrow> distinct (items (bins_upd bs k ips ! k))"
+  sorry
 
 lemma wf_bins_kth_bin:
-  "wf_bins cfg inp bs \<Longrightarrow> k < length (bins bs) \<Longrightarrow> x \<in> set_bin (bins bs ! k) \<Longrightarrow> wf_item cfg inp x \<and> item_end x = k"
+  "wf_bins cfg inp bs \<Longrightarrow> k < length bs \<Longrightarrow> x \<in> set_bin (bs ! k) \<Longrightarrow> wf_item cfg inp x \<and> item_end x = k"
   using set_bin_def wf_bin_def wf_bins_def by blast
 
-lemma wf_bins_app_bins:
-  "wf_bins cfg inp bs \<Longrightarrow> distinct xs \<Longrightarrow> \<forall>x \<in> set xs. wf_item cfg inp x \<and> item_end x = k \<Longrightarrow> wf_bins cfg inp (app_bins bs k xs)"
-  unfolding wf_bins_def wf_bin_def app_bins_def using set_bin_app_bin distinct_app_bin
-  by (cases "k < length (bins bs)") (auto simp: nth_list_update, blast+)
+lemma wf_bins_bins_upd:
+  "wf_bins cfg inp bs \<Longrightarrow> distinct (items ips) \<Longrightarrow> \<forall>x \<in> set (items ips). wf_item cfg inp x \<and> item_end x = k \<Longrightarrow> wf_bins cfg inp (bins_upd bs k ips)"
+  sorry
 
 lemma wf_bins_impl_wf_items:
   "wf_bins cfg inp bs \<Longrightarrow> wf_items cfg inp (set_bins bs)"
@@ -137,41 +207,41 @@ definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
 definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
   "Init_it cfg inp = (
     let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
-    let b0 = map (\<lambda>r. init_item r 0) rs in
-    let bs = replicate (length inp + 1) (Bin []) in
-    app_bins (Bins bs) 0 b0)"
+    let b0 = map (\<lambda>r. (init_item r 0, [])) rs in
+    let bs = replicate (length inp + 1) [] in
+    bins_upd bs 0 b0)"
 
-definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> 'a item list" where
-  "Scan_it k inp a x = (
-    if k < length inp \<and> inp!k = a then
+definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointer list) list" where
+  "Scan_it k inp a x pre = (
+    if k < length inp \<and> inp!k = a then \<comment>\<open>TODO: Remove redundant k < length inp check.\<close>
       let x' = inc_item x (k+1) in
-      [x']
+      [(x', [Pre pre])]
     else [])"
 
-definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a item list" where
-  "Predict_it k cfg X = (
+definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointer list) list" where
+  "Predict_it k cfg X pre = (
     let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
-    map (\<lambda>r. init_item r k) rs)"
+    map (\<lambda>r. (init_item r k, [Pre pre])) rs)"
 
-definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> 'a item list" where
-  "Complete_it k y bs = (
-    let orig = (bins bs)!(item_origin y) in
-    let is = filter (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
-    map (\<lambda>x. inc_item x k) is)"
+definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointer list) list" where
+  "Complete_it k y bs pre = (
+    let orig = bs ! (item_origin y) in
+    let is = filter_with_index (\<lambda>(x, _). next_symbol x = Some (item_rule_head y)) orig in
+    map (\<lambda>((x, _), red). (inc_item x k, [PreRed pre red])) is)"
 
 partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
   "\<pi>_it' k cfg inp bs i = (
-    if i \<ge> length (items (bins bs ! k)) then bs
+    if i \<ge> length (bs ! k) then bs
     else
-      let x = items (bins bs!k) ! i in
+      let x = (bs!k) ! i in
       let bs' =
-        case next_symbol x of
+        case next_symbol (fst x) of
           Some a \<Rightarrow>
             if is_terminal cfg a then
-              if k < length inp then app_bins bs (k+1) (Scan_it k inp a x)
+              if k < length inp then bins_upd bs (k+1) (Scan_it k inp a (fst x) i)
               else bs
-            else app_bins bs k (Predict_it k cfg a)
-        | None \<Rightarrow> app_bins bs k (Complete_it k x bs)
+            else bins_upd bs k (Predict_it k cfg a i)
+        | None \<Rightarrow> bins_upd bs k (Complete_it k (fst x) bs i)
       in \<pi>_it' k cfg inp bs' (i+1))"
 
 declare \<pi>_it'.simps[code]
@@ -190,16 +260,17 @@ definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" 
 subsection \<open>Well-formed bins\<close>
 
 lemma distinct_Scan_it:
-  "distinct (Scan_it k inp a x)"
+  "distinct (Scan_it k inp a x i)"
   unfolding Scan_it_def by simp
 
 lemma distinct_Predict_it:
-  "wf_cfg cfg \<Longrightarrow> distinct (Predict_it k cfg X)"
+  "wf_cfg cfg \<Longrightarrow> distinct (Predict_it k cfg X i)"
   unfolding Predict_it_def wf_cfg_defs by (auto simp: init_item_def rule_head_def distinct_map inj_on_def)
 
 lemma distinct_Complete_it:
-  "wf_bins cfg inp bs \<Longrightarrow> item_origin y < length (bins bs) \<Longrightarrow> distinct (Complete_it k y bs)"
-  unfolding Complete_it_def wf_bins_def wf_bin_def by (auto simp: distinct_map inj_on_def inc_item_def item.expand)
+  "wf_bins cfg inp bs \<Longrightarrow> item_origin y < length (bins bs) \<Longrightarrow> distinct (Complete_it k y bs i)"
+  unfolding Complete_it_def wf_bins_def wf_bin_def apply (auto simp: distinct_map inj_on_def inc_item_def item.expand)
+  sorry
 
 lemma wf_bins_Scan_it':
   assumes "wf_bins cfg inp bs" "k < length (bins bs)" "x \<in> set_bin (bins bs ! k)"
