@@ -418,7 +418,7 @@ lemma distinct_Complete_it:
   unfolding Complete_it_def wf_bins_def wf_bin_def
   apply (auto simp: Let_def distinct_map inj_on_def inc_item_def item.expand)
   apply (metis distinct_filter distinct_map filter_with_index_cong_filter)
-  sorry
+  sledgehammer
 
 lemma wf_bins_Scan_it':
   assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set_bin (bs ! k)"
