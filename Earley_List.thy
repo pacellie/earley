@@ -32,36 +32,64 @@ lemma find_index_Some_iff:
   "(\<exists>n. find_index P xs = Some n) \<longleftrightarrow> (\<exists>x. x \<in> set xs \<and> P x)"
   by (metis find_index_None_iff not_Some_eq)
 
+lemma find_index'_index_size_ge:
+  "find_index' i P xs = Some n \<Longrightarrow> n \<ge> i"
+  by (induction xs arbitrary: i) (auto simp: Suc_leD split: if_splits)
+
+lemma find_index'_index_size_gt:
+  "find_index' i P (x#xs) = Some n \<Longrightarrow> \<not> P x \<Longrightarrow> n > i"
+  by (cases xs) (auto split: if_splits, meson Suc_leD Suc_le_lessD find_index'_index_size_ge)
+
 lemma find_index'_Some_iff_i_1:
   "find_index' i P xs = Some n \<Longrightarrow> n - i < length xs"
-  apply (induction xs arbitrary: i)
-  apply (auto simp: split: if_splits)
-  by (metis Suc_diff_Suc less_Suc_eq_0_disj not_less_eq zero_less_diff)
+  by (induction xs arbitrary: i) (auto split: if_splits, force)
 
 lemma find_index'_Some_iff_i_2:
   "find_index' i P xs = Some n \<Longrightarrow> P (xs ! (n-i))"
-  apply (induction xs arbitrary: i)
-  apply (auto simp: nth_Cons' split: if_splits)
-  by (metis Suc_eq_plus1 diff_diff_left diff_is_0_eq' find_index'.elims leD length_tl lessI list.sel(2) list.size(3) nth_Cons_0 option.inject option.simps(3))
+proof (induction xs arbitrary: i)
+  case (Cons x xs)
+  show ?case
+  proof (cases "P x")
+    case True
+    thus ?thesis
+      using Cons by simp
+  next
+    case False
+    hence "0 < n - i"
+      using find_index'_index_size_gt Cons.prems by fastforce
+    thus ?thesis
+      using nth_Cons_pos Cons False by simp
+  qed
+qed simp
 
 lemma find_index'_Some_iff_i_3:
   "find_index' i P xs = Some n \<Longrightarrow> \<forall>m < (n-i). \<not> P (xs ! m)"
   by (induction xs arbitrary: i) (auto simp: nth_Cons' split: if_splits)
 
 lemma find_index'_Some_iff_i_4:
-  "n - i < length xs \<and> P (xs ! (n-i)) \<and> (\<forall>m < (n-i). \<not> P (xs ! m)) \<Longrightarrow> find_index' i P xs = Some n"
-  apply (induction xs arbitrary: i)
-   apply (auto)
-  subgoal sorry
-  sorry
-
-lemma find_index'_Some_iff_i:
-  "find_index' i P xs = Some n \<longleftrightarrow> n - i < length xs \<and> P (xs ! (n-i)) \<and> (\<forall>m < (n-i). \<not> P (xs ! m))"
-  sorry
+  "n \<ge> i \<Longrightarrow> n - i < length xs \<Longrightarrow> P (xs ! (n-i)) \<Longrightarrow> \<forall>m < (n-i). \<not> P (xs ! m) \<Longrightarrow> find_index' i P xs = Some n"
+proof (induction xs arbitrary: i)
+  case (Cons x xs)
+  show ?case
+  proof (cases "n = i")
+    case True
+    thus ?thesis
+      using Cons by simp
+  next
+    case False
+    hence *: "n > i"
+      using Cons.prems(1) by simp
+    moreover have "\<forall>m<n - (i+1). \<not> P (xs ! m)"
+      using * Cons.prems(4) by (auto, metis Suc_diff_Suc not_less_eq nth_Cons_Suc)
+    ultimately show ?thesis
+      using Cons.IH Cons.prems(2,3,4) by (auto, metis nth_Cons_0 zero_less_diff)
+  qed
+qed simp
 
 lemma find_index_Some_iff_i:
   "find_index P xs = Some n \<longleftrightarrow> n < length xs \<and> P (xs ! n) \<and> (\<forall>m < n. \<not> P (xs ! m))"
-  by (auto simp: find_index'_Some_iff_i find_index_def)
+  unfolding find_index_def using find_index'_Some_iff_i_1 find_index'_Some_iff_i_2
+  by (auto simp: find_index'_Some_iff_i_3 find_index'_Some_iff_i_4, fastforce+)
 
 fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
   "filter_with_index' _ _ [] = []"
@@ -197,6 +225,19 @@ lemma length_items_nth_bin_bins_upd:
   unfolding bins_upd_def using length_items_bin_upds
   by (metis linorder_not_le list_update_beyond nth_list_update_eq nth_list_update_neq order_refl)
 
+lemma length_pointers_bin_upd:
+  "length (pointers (bin_upd ip b)) \<ge> length (pointers b)"
+  unfolding bin_upd_def bin_ins_def bin_ptr_upd_def by (auto split: option.splits)
+
+lemma length_pointers_bin_upds:
+  "length (pointers (bin_upds ips b)) \<ge> length (pointers b)"
+  by (induction ips arbitrary: b) (auto, meson dual_order.trans length_pointers_bin_upd)
+
+lemma length_pointers_nth_bin_bins_upd:
+  "length (pointers (bins_upd bs k ips ! n)) \<ge> length (pointers (bs ! n))"
+  unfolding bins_upd_def using length_pointers_bin_upds
+  by (metis linorder_not_le list_update_beyond nth_list_update_eq nth_list_update_neq order_refl)
+
 lemma length_items_nth_bin_bins_upd_eq:
   "k \<noteq> n \<Longrightarrow> length (items (bins_upd bs k ips ! n)) = length (items (bs ! n))"
   unfolding bins_upd_def by simp
@@ -280,18 +321,6 @@ lemma set_bin_ptr_bin_upd_not_in:
   shows "ip \<in> set_bin_ptr (bin_upd ip b)"
   using assms unfolding set_bin_ptr_def bin_upd_def bin_ins_def bin_ptr_upd_def
   by (auto split: option.splits, metis (mono_tags, lifting) find_index_Some_iff)+
-
-lemma set_bin_ptr_bin_ptr_upd_in:
-  assumes "items b ! i = x" "i < length (items b)" "length (items b) = length (pointers b)"
-  shows "\<exists>(x, ptrs') \<in> set_bin_ptr (bin_ptr_upd i ptrs b). items b ! i = x \<and> set ptrs \<subseteq> set ptrs'"
-  using assms unfolding set_bin_ptr_def bin_ptr_upd_def sorry
-
-lemma set_bin_ptr_bin_upd_in:
-  assumes "fst ip \<in> set (items b)" "length (items b) = length (pointers b)"
-  shows "\<exists>(x, ptrs) \<in> set_bin_ptr (bin_upd ip b). fst ip = x \<and> set (snd ip) \<subseteq> set ptrs"
-  using assms unfolding set_bin_ptr_def bin_upd_def bin_ins_def bin_ptr_upd_def
-  apply (auto simp: find_index_None_iff split: option.splits)
-  sorry
                                                             
 lemma kth_bin_in_bins:
   "k < length bs \<Longrightarrow> set_bin (bs ! k) \<subseteq> set_bins bs"
@@ -405,7 +434,147 @@ lemma wf_bins_impl_wf_items:
   "wf_bins cfg inp bs \<Longrightarrow> wf_items cfg inp (set_bins bs)"
   unfolding wf_bins_def wf_bin_def wf_items_def wf_bin_items_def set_bins_def by auto
 
-lemma bins_upd_eq:
+lemma B3: \<comment>\<open>TODO: Clean\<close>
+  "j < length (pointers b) \<Longrightarrow> set (pointers b ! j) \<subseteq> set (pointers (bin_ins x ptrs b) ! j)"
+  unfolding bin_ins_def by (auto simp: nth_append)
+
+lemma B2: \<comment>\<open>TODO: Clean\<close>
+  "i < length (pointers b) \<Longrightarrow> set (pointers b ! j) \<subseteq> set (pointers (bin_ptr_upd i ptrs b) ! j)"
+  unfolding bin_ptr_upd_def by (auto simp: nth_list_update)
+
+lemma B1: \<comment>\<open>TODO: Clean\<close>
+  "j < length (pointers b) \<Longrightarrow> set (pointers b ! j) \<subseteq> set (pointers (bin_upd ip b) ! j)"
+  unfolding bin_upd_def using B3 B2 apply (auto split: option.splits) apply blast
+  by (smt (verit, best) B2 bin.sel(2) bin_ptr_upd_def in_mono nth_list_update_neq)
+
+lemma B0: \<comment>\<open>TODO: Clean\<close>
+  "j < length (pointers b) \<Longrightarrow> set (pointers b ! j) \<subseteq> set (pointers (bin_upds ips b) ! j)"
+  using B1
+  apply (induction ips arbitrary: b)
+   apply (auto)
+  using length_pointers_bin_upd order.strict_trans2 by blast
+
+lemma B: \<comment>\<open>TODO: Clean\<close>
+  "j < length (pointers (bs ! l)) \<Longrightarrow> set (pointers (bs ! l) ! j) \<subseteq> set (pointers (bins_upd bs k ips ! l) ! j)"
+  unfolding bins_upd_def using B0
+  by (metis dual_order.refl linorder_not_less list_update_beyond nth_list_update_eq nth_list_update_neq)
+
+lemma subsumes_mono: \<comment>\<open>TODO: Clean\<close>
+  assumes "\<forall>(x, ptrs) \<in> set b0. \<exists>(y, ptrs') \<in> set b1. x = y \<and> set ptrs \<subseteq> set ptrs'"
+  assumes "\<forall>(x, ptrs) \<in> set b1. \<exists>(y, ptrs') \<in> set b2. x = y \<and> set ptrs \<subseteq> set ptrs'"
+  shows "\<forall>(x, ptrs) \<in> set b0. \<exists>(y, ptrs') \<in> set b2. x = y \<and> set ptrs \<subseteq> set ptrs'"
+proof -
+  {
+    fix x ptrs
+    assume *: "(x, ptrs) \<in> set b0"
+    have "\<exists>(z, ptrs'') \<in> set b2. x = z \<and> set ptrs \<subseteq> set ptrs''"
+      using assms * case_prod_conv subset_trans surj_pair by (smt (verit, best))
+  }
+  thus ?thesis
+    by blast
+qed
+
+lemma A4: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items b) = length (pointers b)"
+  shows "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_ins x ptrs b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+  unfolding bin_ins_def set_bin_ptr_def using assms by simp
+
+lemma A3: \<comment>\<open>TODO: Clean\<close>
+  assumes "items b ! i = x" "i < length (items b)" "i < length (pointers b)"
+  shows "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_ptr_upd i ptrs b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+proof -
+  have "(items (bin_ptr_upd i ptrs b) ! i, pointers (bin_ptr_upd i ptrs b) ! i) \<in> set_bin_ptr (bin_ptr_upd i ptrs b)"
+    using assms(2,3) unfolding set_bin_ptr_def bin_ptr_upd_def using in_set_zip by fastforce
+  moreover have "items (bin_ptr_upd i ptrs b) ! i = x"
+    unfolding bin_ptr_upd_def using assms(1) by simp
+  moreover have "set ptrs \<subseteq> set (pointers (bin_ptr_upd i ptrs b) ! i)"
+    unfolding bin_ptr_upd_def using assms(3) by auto
+  ultimately show ?thesis
+    by blast
+qed
+
+lemma A2: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items b) = length (pointers b)" 
+  shows "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_upd ip b). fst ip = y \<and> set (snd ip) \<subseteq> set ptrs'"
+  unfolding bin_upd_def by (auto simp: assms A4 A3 find_index_Some_iff_i split: option.splits)
+
+lemma C4: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items b) = length (pointers b)"
+  shows "\<forall>(x, ptrs) \<in> set_bin_ptr b. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_ins (fst ip) (snd ip) b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+  unfolding bin_ins_def set_bin_ptr_def using assms by auto
+
+lemma C3: \<comment>\<open>TODO: Clean\<close>
+  assumes "i < length (items b)" "i < length (pointers b)"
+  shows "\<forall>(x, ptrs) \<in> set_bin_ptr b. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_ptr_upd i ptrs'' b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+proof -
+  thm bin_ptr_upd_def
+  {
+    fix x ptrs
+    assume *: "(x, ptrs) \<in> set_bin_ptr b"
+    obtain j where j: "x = items b ! j" "ptrs = pointers b ! j" "j < length (items b)" "j < length (pointers b)"
+      using * unfolding set_bin_ptr_def by (metis fst_eqD in_set_zip snd_conv)
+    have "x = items (bin_ptr_upd i ptrs'' b) ! j"
+      unfolding bin_ptr_upd_def using j(1) by simp
+    moreover have "set ptrs \<subseteq> set (pointers (bin_ptr_upd i ptrs'' b) ! j)"
+      unfolding bin_ptr_upd_def using j by (auto simp add: assms(2) nth_list_update)
+    moreover have "(items (bin_ptr_upd i ptrs'' b) ! j, pointers (bin_ptr_upd i ptrs'' b) ! j) \<in> set_bin_ptr (bin_ptr_upd i ptrs'' b)"
+      unfolding set_bin_ptr_def bin_ptr_upd_def using in_set_zip j(3,4) by (auto, fastforce)
+    ultimately have "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_ptr_upd i ptrs'' b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+      by blast
+  }
+  thus ?thesis
+    by blast
+qed
+
+lemma C2: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items b) = length (pointers b)" 
+  shows "\<forall>(x, ptrs) \<in> set_bin_ptr b. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upd ip b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+  unfolding bin_upd_def using C4 C3 apply (auto split: option.splits)
+   apply (smt (verit, best) C4 assms case_prod_conv)
+  by (smt (verit, ccfv_threshold) C3 assms case_prod_conv find_index_Some_iff_i)
+
+lemma C1: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items b) = length (pointers b)"
+  shows "\<forall>(x, ptrs) \<in> set_bin_ptr b. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds ips b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+  using assms
+proof (induction ips arbitrary: b)
+  case (Cons ip ips)
+  have 0: "\<forall>(x, ptrs) \<in> set_bin_ptr b. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upd ip b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+    using C2[OF Cons.prems] by simp
+  have "\<forall>(x, ptrs) \<in> set_bin_ptr (bin_upd ip b). \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds ips (bin_upd ip b)). x = y \<and> set ptrs \<subseteq> set ptrs'"
+    using Cons by (meson length_items_pointers_bin_upd)
+  hence 1: "\<forall>(x, ptrs) \<in> set_bin_ptr (bin_upd ip b). \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds (ip#ips) b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+    by simp 
+  show ?case
+    using 0 1 subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
+qed auto
+
+lemma A1: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items b) = length (pointers b)"
+  shows "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds ips b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+  using assms
+proof (induction ips arbitrary: b)
+  case (Cons ip ips)
+  have IH: "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds (ip#ips) b). x = y \<and> set ptrs \<subseteq> set ptrs'"
+    by (simp add: Cons.IH Cons.prems length_items_pointers_bin_upd)
+  obtain y ptrs' where *: "(y, ptrs') \<in> set_bin_ptr (bin_upd ip b)" "fst ip = y" "set (snd ip) \<subseteq> set ptrs'"
+    using A2 Cons.prems by blast
+  moreover have "\<forall>(x, ptrs) \<in> set_bin_ptr (bin_upd ip b). \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds ips (bin_upd ip b)). x = y \<and> set ptrs \<subseteq> set ptrs'"
+    using C1 Cons.prems length_items_pointers_bin_upd by blast
+  ultimately have "\<exists>(z, ptrs'') \<in> set_bin_ptr (bin_upds ips (bin_upd ip b)). y = z \<and> set ptrs' \<subseteq> set ptrs''"
+    by fast
+  hence "\<exists>(z, ptrs'') \<in> set_bin_ptr (bin_upds ips (bin_upd ip b)). fst ip = z \<and> set (snd ip) \<subseteq> set ptrs''" 
+    using * by auto
+  thus ?case
+    using IH by (simp add: case_prod_unfold)
+qed simp
+
+lemma A0: \<comment>\<open>TODO: Clean\<close>
+  assumes "length (items (bs!k)) = length (pointers (bs!k))" "k < length bs"
+  shows "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bins_upd bs k ips ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
+  by (simp add: A1 assms bins_upd_def)
+
+lemma bins_upd_eq: \<comment>\<open>TODO: Clean\<close>
   "\<forall>(x, ps) \<in> set ips. \<exists>(y, ptrs) \<in> set_bin_ptr (bs!k). x = y \<and> set ps \<subseteq> set ptrs \<Longrightarrow> bins_upd bs k ips = bs"
   sorry
 
@@ -865,7 +1034,35 @@ lemma kth_\<pi>_it'_bins_ptr_sub:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "j < length (pointers (bs ! l))"
   shows "set (pointers (bs ! l) ! j) \<subseteq> set (pointers (\<pi>_it' k cfg inp bs i ! l) ! j)"
-  sorry
+  using assms(2)
+proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
+  case (Complete k cfg inp bs i x)
+  let ?bs' = "bins_upd bs k (Complete_it k x bs i)"
+  have "set (pointers (bs ! l) ! j) \<subseteq> set (pointers (?bs' ! l) ! j)"
+    using B Complete.prems by blast
+  also have "set (pointers (?bs' ! l) ! j) \<subseteq> set (pointers (\<pi>_it' k cfg inp ?bs' (i + 1) ! l) ! j)"
+    using Complete.IH Complete.prems length_pointers_nth_bin_bins_upd dual_order.strict_trans1 by blast
+  finally show ?case
+    using Complete.hyps by simp
+next
+  case (Scan k cfg inp bs i x a)
+  let ?bs' = "bins_upd bs (k+1) (Scan_it k inp a x i)"
+  have "set (pointers (bs ! l) ! j) \<subseteq> set (pointers (?bs' ! l) ! j)"
+    using B Scan.prems by blast
+  also have "set (pointers (?bs' ! l) ! j) \<subseteq> set (pointers (\<pi>_it' k cfg inp ?bs' (i + 1) ! l) ! j)"
+    using Scan.IH Scan.prems length_pointers_nth_bin_bins_upd dual_order.strict_trans1 by blast
+  finally show ?case
+    using Scan.hyps by simp
+next
+  case (Predict k cfg inp bs i x a)
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  have "set (pointers (bs ! l) ! j) \<subseteq> set (pointers (?bs' ! l) ! j)"
+    using B Predict.prems by blast
+  also have "set (pointers (?bs' ! l) ! j) \<subseteq> set (pointers (\<pi>_it' k cfg inp ?bs' (i + 1) ! l) ! j)"
+    using Predict.IH Predict.prems length_pointers_nth_bin_bins_upd dual_order.strict_trans1 by blast
+  finally show ?case
+    using Predict.hyps by simp
+qed simp_all
 
 lemma kth_\<pi>_it'_bins:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
@@ -1768,76 +1965,6 @@ lemma \<pi>_step_sub_\<pi>_it:
   shows "\<pi>_step k cfg inp (set_bins bs) \<subseteq> set_bins (\<pi>_it k cfg inp bs)"
   using assms \<pi>_step_sub_\<pi>_it' \<pi>_it_def by metis
 
-lemma A4:
-  assumes "length (items b) = length (pointers b)"
-  shows "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_ins x ptrs b). x = y \<and> set ptrs \<subseteq> set ptrs'"
-  unfolding bin_ins_def set_bin_ptr_def using assms by simp
-
-lemma A3:
-  assumes "items b ! i = x" "i < length (items b)" "i < length (pointers b)"
-  shows "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_ptr_upd i ptrs b). x = y \<and> set ptrs \<subseteq> set ptrs'"
-proof -
-  have "(items (bin_ptr_upd i ptrs b) ! i, pointers (bin_ptr_upd i ptrs b) ! i) \<in> set_bin_ptr (bin_ptr_upd i ptrs b)"
-    using assms(2,3) unfolding set_bin_ptr_def bin_ptr_upd_def using in_set_zip by fastforce
-  moreover have "items (bin_ptr_upd i ptrs b) ! i = x"
-    unfolding bin_ptr_upd_def using assms(1) by simp
-  moreover have "set ptrs \<subseteq> set (pointers (bin_ptr_upd i ptrs b) ! i)"
-    unfolding bin_ptr_upd_def using assms(3) by auto
-  ultimately show ?thesis
-    by blast
-qed
-
-lemma A2:
-  assumes "length (items b) = length (pointers b)" 
-  shows "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_upd ip b). fst ip = y \<and> set (snd ip) \<subseteq> set ptrs'"
-  unfolding bin_upd_def by (auto simp: assms A4 A3 find_index_Some_iff_i split: option.splits)
-
-lemma bins_upd_mono:
-  "set ips1 \<subseteq> set ips2 \<Longrightarrow> set (items (bin_upds ips1 b)) \<subseteq>"
-  sorry
-
-lemma A1:
-  assumes "length (items b) = length (pointers b)"
-  shows "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds ips b). x = y \<and> set ptrs \<subseteq> set ptrs'"
-  using assms
-proof (induction ips arbitrary: b)
-  case (Cons ip ips)
-  have IH: "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds (ip#ips) b). x = y \<and> set ptrs \<subseteq> set ptrs'"
-    by (simp add: Cons.IH Cons.prems length_items_pointers_bin_upd)
-  show ?case
-  proof (cases "fst ip \<notin> set (items b)")
-    case True
-    hence "ip \<in> set_bin_ptr (bin_upd ip b)"
-      using set_bin_ptr_bin_upd_not_in Cons.prems by blast
-    hence "ip \<in> set_bin_ptr (bin_upds (ip#ips) b)"
-      using bins_upd_mono by auto
-    hence 0: "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds (ip # ips) b). fst ip = y \<and> set (snd ip) \<subseteq> set ptrs'"
-      by fastforce
-    show ?thesis
-    proof -
-      {
-        fix x ptrs
-        assume "(x, ptrs) \<in> set (ip # ips)"
-        have "\<exists>(y, ptrs') \<in> set_bin_ptr (bin_upds (ip # ips) b). x = y \<and> set ptrs \<subseteq> set ptrs'"
-          using IH 0 apply (auto) sledgehammer
-      }
-      thus ?thesis
-        by blast
-    qed
-  next
-    case False
-    then show ?thesis sorry
-  qed
-    using IH set_bin_ptr_bin_upd_not_in set_bin_ptr_bin_upd_in apply (auto)
-    sledgehammer
-    sledgehammer
-qed simp
-
-lemma A0:
-  assumes "length (items (bs!k)) = length (pointers (bs!k))" "k < length bs"
-  shows "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bins_upd bs k ips ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
-  using bins_upd_def A1 assms sorry
-
 lemma \<pi>_it'_idem:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "i \<le> j" "sound_items cfg inp (set_bins bs)" "nonempty_derives cfg"
@@ -1924,6 +2051,8 @@ next
   hence sound: "sound_items cfg inp (set_bins ?bs')"
     using Scan.hyps(5) Scan.prems(1,3) set_bins_bins_upd sound_items_def wellformed_bins_elim
     by (metis UnE add_less_cancel_right)
+  have wf: "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
   show ?case
   proof cases
     assume "i+1 \<le> j"
@@ -1945,15 +2074,18 @@ next
         using \<open>i = j\<close> kth_\<pi>_it'_bins nth_bins_upd \<pi>_it'_simps(3) Scan.hyps Scan.prems(1) by (smt (verit, best) leI le_trans)
       moreover have "bins_upd ?bs'' (k+1) (Scan_it k inp a x i) = ?bs''"
       proof -
-        have 0: "set (map fst (Scan_it k inp a x i)) \<subseteq> set_bin (?bs' ! (k+1))"
-          using Scan.hyps(5) Scan.prems(1,2) bins_upd_def wellformed_bins_elim
-          (* by (smt (verit, del_insts) Scan.hyps(3) add_less_cancel_right distinct_Scan_it in_mono option.distinct(1) set_bins_bins_upd subsetI sup_ge2 wf_bins_Scan_it wf_bins_bins_upd wf_item_in_kth_bin x) *)
-          sorry
-        also have "... \<subseteq> set_bin (?bs'' ! (k+1))"
-          using Scan.hyps Scan.prems(1,2) nth_bin_sub_\<pi>_it' wellformed_bins_Scan_it by metis
-        finally have "set (map fst (Scan_it k inp a x i)) \<subseteq> set_bin (?bs'' ! (k+1))" .
+        have "length (items (bs ! (k+1))) = length (pointers (bs ! (k+1)))"
+          by (metis Scan.hyps(5) Scan.prems(1) add_less_cancel_right wellformed_bins_elim wf_bin_def wf_bins_def)
+        moreover have "k+1 < length bs" "k < length bs" "k+1 < length ?bs'"
+          using Scan.hyps(5) Scan.prems wellformed_bins_elim by fastforce+
+        ultimately have 1: "\<forall>(x, ptrs) \<in> set (Scan_it k inp a x i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs' ! (k+1)). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          using A0 by blast
+        moreover have 2: "\<forall>(x, ptrs) \<in> set_bin_ptr (?bs' ! (k+1)). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! (k+1)). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          using wf \<pi>_it'_kth_subsumes[OF wf \<open>k+1 < length ?bs'\<close>] by simp
+        ultimately have "\<forall>(x, ptrs) \<in> set (Scan_it k inp a x i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! (k+1)). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          using subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
         thus ?thesis
-          using Scan.hyps(5) Scan.prems(3) length_bins_\<pi>_it' bins_upd_eq sorry
+          using bins_upd_eq by blast
       qed
       ultimately show ?thesis
         by presburger
@@ -2010,42 +2142,14 @@ next
           wf_bins_\<pi>_it' wf_bins_kth_bin wf_item_def x by (smt (verit, ccfv_SIG) linorder_not_le order.trans)
       moreover have "bins_upd ?bs'' k (Predict_it k cfg a i) = ?bs''"
       proof -
-
-  (*
-        have 0: "set (map fst (Predict_it k cfg a i)) \<subseteq> set_bin (?bs' ! k)"
-          using Predict.prems(1) bins_upd_def wellformed_bins_elim wf set_bins_bins_upd wf_bins_Predict_it wf_item_in_kth_bin
-          by (smt (verit, ccfv_threshold) inf_sup_ord(4) subsetD subsetI) 
-        also have "... \<subseteq> set_bin (?bs'' ! k)"
-          using Predict.prems(1) nth_bin_sub_\<pi>_it' wf by blast
-        finally have "set (map fst (Predict_it k cfg a i)) \<subseteq> set_bin (?bs'' ! k)" .
-  *)
-
-        \<comment>\<open>BEGIN TODO: Refactor into lemma?\<close>
         have "length (items (bs ! k)) = length (pointers (bs ! k))" "k < length bs"
           using wellformed_bins_elim[OF Predict.prems(1)] wf_bins_def wf_bin_def by blast+
-        hence 1: "\<forall>(x, ps) \<in> set (Predict_it k cfg a i). \<exists>(y, ptrs) \<in> set_bin_ptr (?bs' ! k). x = y \<and> set ps \<subseteq> set ptrs"
+        hence 1: "\<forall>(x, ptrs) \<in> set (Predict_it k cfg a i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
           using A0 by fast
-        have "\<forall>(x, ps) \<in> set (Predict_it k cfg a i). \<exists>(y, ptrs) \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ps \<subseteq> set ptrs"
-        proof -
-          {
-            fix x ps
-            assume *: "(x, ps) \<in> set (Predict_it k cfg a i)"
-            obtain y ptrs where y: "(y, ptrs) \<in> set_bin_ptr (?bs' ! k)" "x = y" "set ps \<subseteq> set ptrs"
-              using 1 * by blast
-            moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
-              using wf by auto
-            moreover have "k < length ?bs'"
-              using wellformed_bins_elim wf by blast
-            ultimately obtain z ptrs' where "(z, ptrs') \<in> set_bin_ptr (?bs'' ! k)" "z = y" "set ptrs \<subseteq> set ptrs'"
-              using \<pi>_it'_kth_subsumes by blast
-            hence "\<exists>(y, ptrs) \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ps \<subseteq> set ptrs"
-              using dual_order.trans y(2,3) by blast
-          }
-          thus ?thesis
-            by blast
-        qed
-        \<comment>\<open>END TODO\<close>
- 
+        moreover have 2: "\<forall>(x, ptrs) \<in> set_bin_ptr (?bs' ! k). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          by (simp add: \<open>k < length bs\<close> \<pi>_it'_kth_subsumes wf)
+        ultimately have "\<forall>(x, ptrs) \<in> set (Predict_it k cfg a i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          using subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
         thus ?thesis
           using bins_upd_eq by blast
       qed
