@@ -2058,6 +2058,8 @@ proof (induction i arbitrary: j rule: \<pi>_it'_induct[OF assms(1), case_names B
         using \<pi>_it'_simps(2) 0 1 Complete.hyps(1,3) Complete.prems(2) \<open>i = j\<close> by blast
       moreover have "bins_upd ?bs'' k (Complete_it k x ?bs'' i) = ?bs''"
       proof -
+
+
         have "set (map fst (Complete_it k x ?bs'' i)) = set (map fst (Complete_it k x bs i))"
         proof (cases "item_origin x = k")
           case True
@@ -2079,8 +2081,25 @@ proof (induction i arbitrary: j rule: \<pi>_it'_induct[OF assms(1), case_names B
         also have "... \<subseteq> set_bin (?bs'' ! k)"
           using Complete.prems(1) nth_bin_sub_\<pi>_it' wf by blast
         finally have "set (map fst (Complete_it k x ?bs'' i)) \<subseteq> set_bin (?bs'' ! k)" .
-        thus ?thesis
-          using Complete.prems(2) length_bins_\<pi>_it' length_bins_upd bins_upd_eq sorry
+
+
+        have "k < length bs"
+          using Complete.prems(1) wellformed_bins_elim by blast
+
+        have 0: "\<forall>(x', ptrs) \<in> set (Complete_it k x bs i). \<exists>(y, ptrs') \<in> set (Complete_it k x ?bs'' i). x' = y \<and> set ptrs \<subseteq> set ptrs'"
+          sorry
+
+        have 1: "\<forall>(x, ptrs) \<in> set (Complete_it k x ?bs'' i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          sorry
+
+        have 2: "\<forall>(x, ptrs) \<in> set_bin_ptr (?bs' ! k). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          by (simp add: \<open>k < length bs\<close> \<pi>_it'_kth_subsumes wf)
+        have 3: "\<forall>(x, ptrs) \<in> set (Complete_it k x ?bs'' i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
+          using 1 2 subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
+        moreover have "distinct (items (?bs'' ! k))"
+          using \<open>k < length bs\<close> length_bins_\<pi>_it' length_bins_upd wf wf_bin_def wf_bins_\<pi>_it' wf_bins_def by metis
+        ultimately show ?thesis
+          using bins_upd_eq by blast
       qed
       ultimately show ?thesis
         by presburger
@@ -2134,8 +2153,10 @@ next
           using wf \<pi>_it'_kth_subsumes[OF wf \<open>k+1 < length ?bs'\<close>] by simp
         ultimately have "\<forall>(x, ptrs) \<in> set (Scan_it k inp a x i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! (k+1)). x = y \<and> set ptrs \<subseteq> set ptrs'"
           using subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
-        thus ?thesis
-          using bins_upd_eq sorry
+        moreover have "distinct (items (?bs'' ! (k+1)))"
+          using \<open>k+1 < length bs\<close> length_bins_\<pi>_it' length_bins_upd local.wf wf_bin_def wf_bins_\<pi>_it' wf_bins_def by metis
+        ultimately show ?thesis
+          using bins_upd_eq by blast
       qed
       ultimately show ?thesis
         by presburger
@@ -2200,8 +2221,10 @@ next
           by (simp add: \<open>k < length bs\<close> \<pi>_it'_kth_subsumes wf)
         ultimately have "\<forall>(x, ptrs) \<in> set (Predict_it k cfg a i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
           using subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
-        thus ?thesis
-          using bins_upd_eq sorry
+        moreover have "distinct (items (?bs'' ! k))"
+          using \<open>k < length bs\<close> length_bins_\<pi>_it' length_bins_upd local.wf wf_bin_def wf_bins_\<pi>_it' wf_bins_def by metis
+        ultimately show ?thesis
+          using bins_upd_eq by blast
       qed
       ultimately show ?thesis
         by presburger
