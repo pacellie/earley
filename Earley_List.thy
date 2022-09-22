@@ -574,9 +574,59 @@ lemma A0: \<comment>\<open>TODO: Clean\<close>
   shows "\<forall>(x, ptrs) \<in> set ips. \<exists>(y, ptrs') \<in> set_bin_ptr (bins_upd bs k ips ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
   by (simp add: A1 assms bins_upd_def)
 
+lemma D4: \<comment>\<open>TODO: Clean\<close>
+  assumes "x \<notin> set (items b)" "\<exists>(y, ptrs') \<in> set_bin_ptr b. x = y \<and> set ptrs \<subseteq> set ptrs'"
+  shows "False"
+  using assms unfolding bin_ins_def set_bin_ptr_def by (auto, meson set_zip_leftD)
+
+lemma D3: \<comment>\<open>TODO: Clean\<close>
+  "set ptrs \<subseteq> set (pointers b ! i) \<Longrightarrow> bin_ptr_upd i ptrs b = b"
+  unfolding bin_ptr_upd_def set_bin_ptr_def by (auto simp add: subsetD)
+
+lemma D2: \<comment>\<open>TODO: Clean\<close>
+  assumes "distinct (items b)" "\<exists>(y, ptrs) \<in> set_bin_ptr b. fst ip = y \<and> set (snd ip) \<subseteq> set ptrs"
+  shows "bin_upd ip b = b"
+  using bin_upd_def
+proof (cases "find_index (\<lambda>x. x = fst ip) (items b) = None")
+  case True
+  hence "fst ip \<notin> set (items b)"
+    by (simp add: find_index_None_iff)
+  then show ?thesis
+    using D4 assms(2) by blast
+next
+  case False
+  then obtain i where i: "find_index (\<lambda>x. x = fst ip) (items b) = Some i"
+    by blast
+  hence "i < length (items b)" "items b ! i = fst ip"
+    using find_index_Some_iff_i by fastforce+
+  hence "\<nexists>j. j < length (items b) \<and> j \<noteq> i \<and> items b ! j = fst ip"
+    using assms(1) by (metis nth_eq_iff_index_eq)
+  hence "set (snd ip) \<subseteq> set (pointers b ! i)"
+    using assms(2) unfolding set_bin_ptr_def by (metis (mono_tags, lifting) in_set_zip split_beta)
+  thus ?thesis
+    using i D3 False by (auto simp: bin_upd_def)
+qed
+
+lemma D1: \<comment>\<open>TODO: Clean\<close>
+  assumes "distinct (items b)" "\<forall>(x, ps) \<in> set ips. \<exists>(y, ptrs) \<in> set_bin_ptr b. x = y \<and> set ps \<subseteq> set ptrs"
+  shows "bin_upds ips b = b"
+  using assms
+proof (induction ips arbitrary: b)
+  case (Cons ip ips)
+  have IH: "bin_upds ips b = b"
+    using Cons by simp
+  moreover have "\<exists>(y, ptrs) \<in> set_bin_ptr b. fst ip = y \<and> set (snd ip) \<subseteq> set ptrs"
+    by (smt (verit, ccfv_threshold) Cons.prems(2) list.set_intros(1) split_beta)
+  ultimately have "bin_upd ip b = b"
+    using Cons.prems(1) D2 by blast
+  thus ?case
+    using IH by simp
+qed simp
+
 lemma bins_upd_eq: \<comment>\<open>TODO: Clean\<close>
-  "\<forall>(x, ps) \<in> set ips. \<exists>(y, ptrs) \<in> set_bin_ptr (bs!k). x = y \<and> set ps \<subseteq> set ptrs \<Longrightarrow> bins_upd bs k ips = bs"
-  sorry
+  assumes "distinct (items (bs!k))"
+  shows "\<forall>(x, ps) \<in> set ips. \<exists>(y, ptrs) \<in> set_bin_ptr (bs!k). x = y \<and> set ps \<subseteq> set ptrs \<Longrightarrow> bins_upd bs k ips = bs"
+  unfolding bins_upd_def using D1 assms by (smt (verit, best) case_prodD case_prodI2 list_update_id)
 
 
 subsection \<open>Earley algorithm\<close>
@@ -2085,7 +2135,7 @@ next
         ultimately have "\<forall>(x, ptrs) \<in> set (Scan_it k inp a x i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! (k+1)). x = y \<and> set ptrs \<subseteq> set ptrs'"
           using subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
         thus ?thesis
-          using bins_upd_eq by blast
+          using bins_upd_eq sorry
       qed
       ultimately show ?thesis
         by presburger
@@ -2151,7 +2201,7 @@ next
         ultimately have "\<forall>(x, ptrs) \<in> set (Predict_it k cfg a i). \<exists>(y, ptrs') \<in> set_bin_ptr (?bs'' ! k). x = y \<and> set ptrs \<subseteq> set ptrs'"
           using subsumes_mono unfolding set_bin_ptr_def by (smt (z3) case_prodE old.prod.case order_trans)
         thus ?thesis
-          using bins_upd_eq by blast
+          using bins_upd_eq sorry
       qed
       ultimately show ?thesis
         by presburger
