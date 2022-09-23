@@ -633,7 +633,7 @@ definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" w
 
 definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointers) list" where
   "Scan_it k inp a x pre = (
-    if k < length inp \<and> inp!k = a then \<comment>\<open>TODO: Remove redundant k < length inp check.\<close>
+    if inp!k = a then
       let x' = inc_item x (k+1) in
       [(x', [Pre pre])]
     else [])"
@@ -725,10 +725,9 @@ lemma wf_bins_Scan_it':
   by (auto split: if_splits)
 
 lemma wf_bins_Scan_it:
-  assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set_bin (bs ! k)"
-  assumes "k \<le> length inp" "next_symbol x \<noteq> None"
-  shows "\<forall>y \<in> set (map fst (Scan_it k inp a x i)). wf_item cfg inp y \<and> item_end y = (k+1)" 
-  using wf_bins_Scan_it'[OF assms(1-3) _ assms(5)] by (simp add: Scan_it_def)
+  assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set_bin (bs ! k)" "k < length inp" "next_symbol x \<noteq> None"
+  shows "\<forall>y \<in> set (map fst (Scan_it k inp a x i)). wf_item cfg inp y \<and> item_end y = (k+1)"
+  using wf_bins_Scan_it'[OF assms] by (simp add: Scan_it_def)
 
 lemma wf_bins_Predict_it:
   assumes "wf_bins cfg inp bs" "k < length bs" "k \<le> length inp" "wf_cfg cfg"
@@ -844,7 +843,7 @@ proof -
   have x: "x \<in> set_bin (bs ! k)"
     using assms(2,3) by simp
   have "wf_bins cfg inp (bins_upd bs (k+1) (Scan_it k inp a x i))"
-    using * x assms(1,4) distinct_Scan_it distinct_ptrs_Scan_it wf_bins_Scan_it wf_bins_bins_upd wellformed_bins_elim
+    using * x assms(1,4,6) distinct_Scan_it distinct_ptrs_Scan_it wf_bins_Scan_it wf_bins_bins_upd wellformed_bins_elim
     by (metis option.discI)
   thus ?thesis
     by (simp add: *(1-3) wellformed_bins_def)
@@ -950,7 +949,7 @@ proof (induction n\<equiv>"earley_measure (k, cfg, inp, bs) i" arbitrary: bs i r
           assume a4: "k < length inp"
           let ?bs' = "bins_upd bs (k+1) (Scan_it k inp a ?x i)"
           have wf_bins': "wf_bins cfg inp ?bs'"
-            using wf_bins_Scan_it distinct_Scan_it distinct_ptrs_Scan_it wf(1,4) wf_bins_bins_upd a2 k x by metis
+            using wf_bins_Scan_it distinct_Scan_it distinct_ptrs_Scan_it wf(1,4) wf_bins_bins_upd a2 a4 k x by metis
           hence wf': "(k, cfg, inp, ?bs') \<in> wellformed_bins"
             using wf(1,2,3) wellformed_bins_intro by fastforce
           have sub: "set (items (?bs' ! k)) \<subseteq> { x | x. wf_item cfg inp x \<and> item_end x = k }"
@@ -1284,7 +1283,7 @@ proof -
 qed
 
 lemma Scan_it_sub_Scan:
-  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bs ! k)" "k < length bs"
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bs ! k)" "k < length bs" "k < length inp"
   assumes "next_symbol x = Some a"
   shows "set (map fst (Scan_it k inp a x i)) \<subseteq> Scan k inp I"
 proof standard
@@ -1297,10 +1296,10 @@ proof standard
     hence "y = inc_item x (k+1)"
       using * unfolding Scan_it_def by simp
     hence "y \<in> Scan k inp I"
-      using \<open>x \<in> bin I k\<close> # assms(5) unfolding Scan_def by blast
+      using \<open>x \<in> bin I k\<close> # assms(6) unfolding Scan_def by blast
   }
   thus "y \<in> Scan k inp I"
-    using * unfolding Scan_it_def by fastforce
+    using * assms(5) unfolding Scan_it_def by fastforce
 qed
 
 lemma Predict_it_sub_Predict:
@@ -1447,7 +1446,7 @@ lemma \<II>_it_sub_\<II>:
 subsection \<open>Soundness\<close>
 
 lemma sound_Scan_it:
-  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bs ! k)" "k < length bs"
+  assumes "wf_bins cfg inp bs" "set_bins bs \<subseteq> I" "x \<in> set_bin (bs ! k)" "k < length bs" "k < length inp"
   assumes "next_symbol x = Some a" "wf_items cfg inp I" "sound_items cfg inp I"
   shows "sound_items cfg inp (set (map fst (Scan_it k inp a x i)))"
   using sound_Scan Scan_it_sub_Scan assms by (smt (verit, best) sound_items_def subsetD)
@@ -1490,7 +1489,7 @@ next
   have "x \<in> set_bin (bs ! k)"
     using Scan.hyps(1,2) by force
   hence "sound_items cfg inp (set (map fst (Scan_it k inp a x i)))"
-    using sound_Scan_it \<pi>_mono Scan.hyps(3) Scan.prems(1,2) set_bins_bin_exists 
+    using sound_Scan_it \<pi>_mono Scan.hyps(3,5) Scan.prems(1,2) set_bins_bin_exists 
           sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
@@ -1805,7 +1804,7 @@ next
   have x: "x \<in> set_bin (bs ! k)"
     using Scan.hyps(1,2) by auto
   hence sound: "sound_items cfg inp (set (map fst (Scan_it k inp a x i)))"
-    using sound_Scan_it \<pi>_mono Scan.hyps(3) Scan.prems(1,2,3) set_bins_bin_exists 
+    using sound_Scan_it \<pi>_mono Scan.hyps(3,5) Scan.prems(1,2,3) set_bins_bin_exists 
           sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
   have wf: "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
@@ -2084,7 +2083,7 @@ next
   have x: "x \<in> set_bin (bs ! k)"
     using Scan.hyps(1,2) by auto
   hence "sound_items cfg inp (set (map fst (Scan_it k inp a x i)))"
-    using sound_Scan_it \<pi>_mono Scan.hyps(3) Scan.prems(1,2,3) set_bins_bin_exists 
+    using sound_Scan_it \<pi>_mono Scan.hyps(3,5) Scan.prems(1,2,3) set_bins_bin_exists 
           sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
   hence sound: "sound_items cfg inp (set_bins ?bs')"
     using Scan.hyps(5) Scan.prems(1,3) set_bins_bins_upd sound_items_def wellformed_bins_elim
