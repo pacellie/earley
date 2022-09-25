@@ -856,8 +856,8 @@ next
   qed
 qed
 
-definition partially_complete :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
-  "partially_complete k cfg inp I P = (
+definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
+  "partially_completed k cfg inp I P = (
     \<forall>i j x a D.
       i \<le> j \<and> j \<le> k \<and> k \<le> length inp \<and>
       x \<in> bin I i \<and> next_symbol x = Some a \<and>
@@ -865,11 +865,11 @@ definition partially_complete :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sent
       inc_item x j \<in> I
   )"
 
-lemma fully_complete:
+lemma fully_completed:
   assumes "j \<le> k" "k \<le> length inp"
   assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "wf_items cfg inp I"
   assumes "Derivation cfg (item_\<beta> x) D (slice j k inp)"
-  assumes "partially_complete k cfg inp I (\<lambda>D'. length D' \<le> length D)"
+  assumes "partially_completed k cfg inp I (\<lambda>D'. length D' \<le> length D)"
   shows "Item (N,\<alpha>) (length \<alpha>) i k \<in> I"
   using assms
 proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
@@ -900,9 +900,9 @@ next
   moreover have "next_symbol x = Some b"
     using Cons unfolding item_defs(4) next_symbol_def is_complete_def by (auto, metis nth_via_drop)
   ultimately have "inc_item x j' \<in> I"
-    using *(1,3-5) Cons.prems(2-4,7) partially_complete_def by metis
-  moreover have "partially_complete k cfg inp I (\<lambda>D'. length D' \<le> length F)"
-    using Cons.prems(7) *(6) unfolding partially_complete_def by fastforce
+    using *(1,3-5) Cons.prems(2-4,7) partially_completed_def by metis
+  moreover have "partially_completed k cfg inp I (\<lambda>D'. length D' \<le> length F)"
+    using Cons.prems(7) *(6) unfolding partially_completed_def by fastforce
   moreover have "bs = item_\<beta> (Item (N,\<alpha>) (d+1) i j')"
     using Cons.hyps(2) Cons.prems(3) unfolding item_defs(4) item_rule_body_def 
     by (auto, metis List.list.sel(3) drop_Suc drop_tl)
@@ -910,10 +910,10 @@ next
     using Cons.hyps(1) *(2,4) Cons.prems(2,3,5) wf_items_def by (auto simp: inc_item_def)
 qed
 
-lemma partially_complete_\<I>:
+lemma partially_completed_\<I>:
   assumes "wf_cfg cfg"
-  shows "partially_complete k cfg inp (\<I> k cfg inp) (\<lambda>_. True)"
-  unfolding partially_complete_def
+  shows "partially_completed k cfg inp (\<I> k cfg inp) (\<lambda>_. True)"
+  unfolding partially_completed_def
 proof (standard, standard, standard, standard, standard, standard)
   fix x i a D j
   assume
@@ -966,17 +966,17 @@ proof (standard, standard, standard, standard, standard, standard)
           unfolding init_item_def using y_def by (simp add: bin_def wf_Init wf_items_def)
         have "length D' < length D"
           using \<open>D = d # D'\<close> by fastforce
-        hence "partially_complete k cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
-          unfolding partially_complete_def using "1.hyps" "1.prems" le_less_trans by blast
-        hence "partially_complete j cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
-          unfolding partially_complete_def using "1.prems" by force
+        hence "partially_completed k cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
+          unfolding partially_completed_def using "1.hyps" "1.prems" le_less_trans by blast
+        hence "partially_completed j cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
+          unfolding partially_completed_def using "1.prems" by force
         moreover have "Derivation cfg (item_\<beta> y) D' (slice i j inp)"
           using #(2) *(2) item_\<beta>_def item_rule_body_def rule_body_def y_def
           by (metis item.sel(1) item.sel(2) drop0 snd_conv)
         ultimately have 0: "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (\<I> k cfg inp) j"
-          using fully_complete wf_\<I> "1.prems" wf_items_def \<open>y \<in> bin (\<I> k cfg inp) i\<close>
+          using fully_completed wf_\<I> "1.prems" wf_items_def \<open>y \<in> bin (\<I> k cfg inp) i\<close>
           apply (auto simp: bin_def y_def)
-          using fully_complete le_trans partially_complete_def by (smt (verit, best) wf_\<I>)
+          using fully_completed le_trans partially_completed_def by (smt (verit, best) wf_\<I>)
         have 1: "x \<in> bin (\<I> k cfg inp) i"
           by (simp add: "1.prems")
         have "next_symbol x = Some N"
@@ -988,9 +988,9 @@ proof (standard, standard, standard, standard, standard, standard)
   qed
 qed
 
-lemma partially_complete_\<II>:
-  "wf_cfg cfg \<Longrightarrow> partially_complete (length inp) cfg inp (\<II> cfg inp) (\<lambda>_. True)"
-  by (simp add: \<II>_def partially_complete_\<I>)
+lemma partially_completed_\<II>:
+  "wf_cfg cfg \<Longrightarrow> partially_completed (length inp) cfg inp (\<II> cfg inp) (\<lambda>_. True)"
+  by (simp add: \<II>_def partially_completed_\<I>)
 
 lemma Init_sub_\<I>:
   "Init cfg \<subseteq> \<I> k cfg inp"
@@ -1023,13 +1023,12 @@ proof -
   let ?x = "Item (\<SS> cfg,\<alpha>) 0 0 0"
   have "?x \<in> \<II> cfg inp" "wf_item cfg inp ?x"
     unfolding \<II>_def using *(1) Init_sub_\<I> Init_def wf_Init by (auto simp: init_item_def, fast, fast)
-  moreover have "derives cfg (item_\<beta> ?x) (slice 0 (length inp) inp)"
+  moreover have "derives cfg (item_\<beta> ?x) inp"
     using *(2) item_defs(4) by (simp add: item_\<beta>_def item_rule_body_def rule_body_def)
   ultimately have "Item (\<SS> cfg,\<alpha>) (length \<alpha>) 0 (length inp) \<in> \<II> cfg inp"
-    using partially_complete_\<II> fully_complete unfolding partially_complete_def 
-    using fully_complete wf_\<II> derives_implies_Derivation
-    apply (auto)
-    by (smt (verit, ccfv_SIG) assms derives_implies_Derivation fully_complete length_0_conv nat_le_linear partially_complete_\<II> partially_complete_def slice_empty slice_id wf_\<II>)
+    using partially_completed_\<II> fully_completed wf_\<II> derives_implies_Derivation assms slice_id
+      slice_empty wf_item_def partially_completed_def
+    by (smt (verit, ccfv_SIG) item.sel(4) nat_le_linear)
   then show ?thesis
     unfolding earley_recognized_def is_finished_def by (auto simp: is_complete_def item_defs, force)
 qed
