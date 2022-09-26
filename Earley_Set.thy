@@ -4,6 +4,7 @@ theory Earley_Set
     Limit
 begin
 
+
 section \<open>Slices\<close>
 
 \<comment>\<open>slice a b xs: a is inclusive, b is exclusive\<close>
@@ -79,6 +80,7 @@ lemma slice_singleton:
 lemma slice_shift:
   "slice (a+i) (b+i) xs = slice a b (slice i (length xs) xs)"
   unfolding slice_drop_take by (simp add: drop_take)
+
 
 section \<open>Additional Derivation Lemmas\<close>
 
@@ -249,6 +251,12 @@ definition is_complete :: "'a item \<Rightarrow> bool" where
 definition next_symbol :: "'a item \<Rightarrow> 'a option" where
   "next_symbol x = (if is_complete x then None else Some ((item_rule_body x) ! (item_dot x)))"
 
+definition is_opening :: "'a item \<Rightarrow> bool" where
+  "is_opening x = (item_dot x = 0)"
+
+definition prev_symbol :: "'a item \<Rightarrow> 'a option" where
+  "prev_symbol x = (if is_opening x then None else Some ((item_rule_body x) ! (item_dot x - 1)))"
+
 definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
   "inc_item x k = Item (item_rule x) (item_dot x + 1) (item_origin x) k"
 
@@ -266,6 +274,7 @@ definition wf_item :: "'a cfg \<Rightarrow> 'a sentence => 'a item \<Rightarrow>
 
 definition wf_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> bool" where
   "wf_items cfg inp I = (\<forall>x \<in> I. wf_item cfg inp x)"
+
 
 subsection \<open>Epsilon Productions\<close>
 
@@ -359,6 +368,7 @@ definition is_finished :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a ite
 definition earley_recognized :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
   "earley_recognized cfg inp = (\<exists>x \<in> \<II> cfg inp. is_finished cfg inp x)"
 
+
 subsection \<open>Wellformedness\<close>
 
 lemma wf_items_Un:
@@ -409,6 +419,7 @@ lemma wf_\<I>:
 lemma wf_\<II>:
   "wf_items cfg inp (\<II> cfg inp)"
   unfolding \<II>_def using wf_\<I> by blast
+
 
 subsection \<open>Soundness\<close>
 
@@ -552,6 +563,7 @@ theorem soundness:
   "earley_recognized cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
   using earley_recognized_def sound_\<II> sound_defs
   by (metis drop_eq_Nil is_complete_def is_finished_def item_\<beta>_def self_append_conv slice_id)
+
 
 subsection \<open>Monotonicity and Absorption\<close>
 
@@ -764,6 +776,7 @@ next
   show "x \<in> bin (\<pi> k cfg inp I) i"
     using \<pi>_mono \<open>x \<in> bin I i\<close> by (metis (no_types, lifting) bin_def mem_Collect_eq subsetD)
 qed
+
 
 subsection \<open>Completeness\<close>
 
@@ -1039,6 +1052,7 @@ corollary correctness_set:
   assumes "wf_cfg cfg" "is_word cfg inp"
   shows "earley_recognized cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms soundness completeness by blast
+
 
 subsection \<open>Finiteness\<close>
 

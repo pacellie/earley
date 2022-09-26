@@ -3,6 +3,8 @@ theory Earley_List
     Earley_Set
 begin
 
+section \<open>Earley recognizer with traces\<close>
+
 subsection \<open>List auxilaries\<close>
 
 fun find_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
@@ -618,7 +620,7 @@ lemma bins_upd_eq:
   unfolding bins_upd_def using bin_upds_eq assms by fastforce
 
 
-subsection \<open>Earley algorithm\<close>
+subsection \<open>Main algorithm\<close>
 
 definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
   "Init_it cfg inp = (
@@ -640,10 +642,10 @@ definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow
     map (\<lambda>r. (init_item r k, [Pre pre])) rs)"
 
 definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointers) list" where
-  "Complete_it k y bs pre = (
+  "Complete_it k y bs red = (
     let orig = bs ! (item_origin y) in
     let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
-    map (\<lambda>(x, red). (inc_item x k, [PreRed pre red])) is)"
+    map (\<lambda>(x, pre). (inc_item x k, [PreRed pre red])) is)"
 
 partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
   "\<pi>_it' k cfg inp bs i = (
@@ -693,7 +695,7 @@ lemma distinct_Complete_it:
 proof -
   let ?orig = "bs ! (item_origin y)"
   let ?is = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?is' = "map (\<lambda>(x, red). (inc_item x k, [PreRed i red])) ?is"
+  let ?is' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed pre i])) ?is"
   have wf: "wf_bin cfg inp (item_origin y) ?orig"
     using assms wf_bins_def by blast
   have 0: "\<forall>x \<in> set (map fst ?is). item_end x = (item_origin y)"
@@ -741,7 +743,7 @@ lemma wf_bins_Complete_it:
 proof -
   let ?orig = "bs ! (item_origin y)"
   let ?is = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?is' = "map (\<lambda>(x, red). (inc_item x k, [PreRed i red])) ?is"
+  let ?is' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed pre i])) ?is"
   {
     fix x
     assume *: "x \<in> set (map fst ?is)"
@@ -2304,5 +2306,102 @@ corollary correctness_list:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "earley_recognized_it cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms correctness_set earley_recognized_it_iff_earley_recognized by blast
+
+
+section \<open>Earley parse tree\<close>
+
+subsection \<open>Main definitions\<close>
+
+datatype 'a ptree =
+  Leaf 'a
+  | Node 'a "'a ptree list"
+
+fun yield_ptree :: "'a ptree \<Rightarrow> 'a sentence" where
+  "yield_ptree (Leaf a) = [a]"
+| "yield_ptree (Node _ ts) = concat (map yield_ptree ts)"
+
+fun root_ptree :: "'a ptree \<Rightarrow> 'a" where
+  "root_ptree (Leaf a) = a"
+| "root_ptree (Node N _) = N"
+
+fun rule_ptree :: "'a ptree \<Rightarrow> 'a rule" where
+  "rule_ptree (Leaf a) = (a, [])"
+| "rule_ptree (Node N ts) = (N, map root_ptree ts)"
+
+fun wf_ptree :: "'a cfg \<Rightarrow> 'a ptree \<Rightarrow> bool" where
+  "wf_ptree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a \<or> is_nonterminal cfg a"
+| "wf_ptree cfg (Node N ts) \<longleftrightarrow> 
+    (\<exists>r \<in> set (\<RR> cfg). r = (N, map root_ptree ts)) \<and>
+    (\<forall>t \<in> set ts. wf_ptree cfg t)"
+
+fun complete_ptree :: "'a cfg \<Rightarrow> 'a ptree \<Rightarrow> bool" where
+  "complete_ptree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a"
+| "complete_ptree cfg (Node _ ts) \<longleftrightarrow> (\<forall>t \<in> set ts. complete_ptree cfg t)"
+
+definition sound_ptree :: "'a cfg \<Rightarrow> 'a ptree \<Rightarrow> bool" where
+  "sound_ptree cfg t = derives cfg [root_ptree t] (yield_ptree t)"
+
+function build_ptree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a ptree" where
+  "build_ptree' bs k i = (
+    let x = items (bs!k) ! i in
+    let ptrs = pointers (bs!k) ! i in
+    case prev_symbol x of 
+      None \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x))
+    | Some a \<Rightarrow> (
+      case (hd ptrs) of
+        Pre pre \<Rightarrow> build_ptree' bs (k-1) pre
+      | PreRed pre red \<Rightarrow>
+        let orig = item_origin (items (bs!k) ! red) in (
+        case build_ptree' bs orig pre of
+          Node N ts \<Rightarrow> Node N (ts[item_dot x - 1 := build_ptree' bs k pre])
+        | _ \<Rightarrow> undefined)
+  ))"
+  by pat_completeness auto
+termination sorry
+
+declare build_ptree'.simps [simp del]
+
+definition build_ptree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a ptree option" where
+  "build_ptree cfg inp bs = (
+    let k = length bs - 1 in
+    case find_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
+      Some i \<Rightarrow> Some (build_ptree' bs k i)
+    | None \<Rightarrow> None
+  )"
+
+
+subsection \<open>Lemmas\<close>
+
+lemma ex_Node_build_tree':
+  "\<exists>N ts. build_ptree' bs k i = Node N ts"
+  apply (induction bs k i rule: build_ptree'.induct)
+  apply (subst build_ptree'.simps)
+  apply (auto simp: Let_def split: option.splits ptree.splits pointer.splits)
+  apply (metis ptree.distinct(1))
+  done
+
+lemma nex_Leaf_build_tree':
+  "\<nexists>a. build_ptree' bs k i = Leaf a"
+  using ex_Node_build_tree' by (metis ptree.distinct(1))
+
+lemma wf_ptree_build_ptree':
+  "wf_bins cfg inp bs \<Longrightarrow> wf_ptree cfg (build_ptree' bs k i)"
+  sorry
+
+lemma sound_ptree_build_tree':
+  "wf_bins cfg inp bs \<Longrightarrow> sound_ptree cfg (build_ptree' bs k i)"
+  sorry
+
+lemma sound_ptree_build_tree:
+  "wf_bins cfg inp bs \<Longrightarrow> sound_items cfg inp (bins bs) \<Longrightarrow> build_ptree cfg inp bs = Some t \<Longrightarrow> sound_ptree cfg t"
+  sorry
+
+thm sound_items_def sound_item_def
+thm sound_\<II> \<II>_sub_\<II>_it \<II>_it_sub_\<II>
+thm soundness correctness_set correctness_list
+
+
+section \<open>Earley parse forest\<close>
+
 
 end
