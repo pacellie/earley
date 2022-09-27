@@ -40,8 +40,11 @@ definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
 definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
   "is_nonterminal cfg s = (s \<in> set (\<NN> cfg))"
 
+definition is_symbol :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_symbol cfg s \<longleftrightarrow> is_terminal cfg s \<or> is_nonterminal cfg s"
+
 definition wf_sentence :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "wf_sentence cfg s = (\<forall>x \<in> set s. is_terminal cfg x \<or> is_nonterminal cfg x)"
+  "wf_sentence cfg s = (\<forall>x \<in> set s. is_symbol cfg x)"
 
 lemma is_nonterminal_startsymbol: "wf_cfg cfg \<Longrightarrow> is_nonterminal cfg (\<SS> cfg)"
   by (simp add: is_nonterminal_def wf_cfg_defs)

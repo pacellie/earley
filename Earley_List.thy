@@ -142,8 +142,8 @@ lemma filter_with_index_nth:
 subsection \<open>Bins\<close>
 
 datatype pointer =
-  Pre nat
-  | PreRed nat nat
+  Pre nat \<comment>\<open>pred index in current bin\<close>
+  | PreRed nat nat nat \<comment>\<open>pred bin, pred index, red index in current bin\<close>
 
 type_synonym pointers = "pointer list"
 
@@ -636,16 +636,16 @@ definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightar
       [(x', [Pre pre])]
     else [])"
 
-definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointers) list" where
-  "Predict_it k cfg X pre = (
+definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> ('a item \<times> pointers) list" where
+  "Predict_it k cfg X = (
     let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
-    map (\<lambda>r. (init_item r k, [Pre pre])) rs)"
+    map (\<lambda>r. (init_item r k, [])) rs)"
 
 definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> ('a item \<times> pointers) list" where
   "Complete_it k y bs red = (
     let orig = bs ! (item_origin y) in
     let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
-    map (\<lambda>(x, pre). (inc_item x k, [PreRed pre red])) is)"
+    map (\<lambda>(x, pre). (inc_item x k, [PreRed (item_origin y) pre red])) is)"
 
 partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
   "\<pi>_it' k cfg inp bs i = (
@@ -658,7 +658,7 @@ partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 
             if is_terminal cfg a then
               if k < length inp then bins_upd bs (k+1) (Scan_it k inp a x i)
               else bs
-            else bins_upd bs k (Predict_it k cfg a i)
+            else bins_upd bs k (Predict_it k cfg a)
         | None \<Rightarrow> bins_upd bs k (Complete_it k x bs i)
       in \<pi>_it' k cfg inp bs' (i+1))"
 
@@ -678,11 +678,11 @@ definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" 
 subsection \<open>Well-formed bins\<close>
 
 lemma distinct_Scan_it:
-  "distinct (map fst (Scan_it k inp a x i))"
+  "distinct (map fst (Scan_it k inp a x pre))"
   unfolding Scan_it_def by simp
 
 lemma distinct_Predict_it:
-  "wf_cfg cfg \<Longrightarrow> distinct (map fst (Predict_it k cfg X i))"
+  "wf_cfg cfg \<Longrightarrow> distinct (map fst (Predict_it k cfg X))"
   unfolding Predict_it_def wf_cfg_defs by (auto simp: init_item_def rule_head_def distinct_map inj_on_def)
 
 lemma inj_on_inc_item:
@@ -691,11 +691,11 @@ lemma inj_on_inc_item:
   
 lemma distinct_Complete_it:
   assumes "wf_bins cfg inp bs" "item_origin y < length bs"
-  shows "distinct (map fst (Complete_it k y bs i))"
+  shows "distinct (map fst (Complete_it k y bs red))"
 proof -
   let ?orig = "bs ! (item_origin y)"
   let ?is = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?is' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed pre i])) ?is"
+  let ?is' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed (item_origin y) pre red])) ?is"
   have wf: "wf_bin cfg inp (item_origin y) ?orig"
     using assms wf_bins_def by blast
   have 0: "\<forall>x \<in> set (map fst ?is). item_end x = (item_origin y)"
@@ -724,12 +724,12 @@ lemma wf_bins_Scan_it':
 
 lemma wf_bins_Scan_it:
   assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set (items (bs ! k))" "k < length inp" "next_symbol x \<noteq> None"
-  shows "\<forall>y \<in> set (map fst (Scan_it k inp a x i)). wf_item cfg inp y \<and> item_end y = (k+1)"
+  shows "\<forall>y \<in> set (map fst (Scan_it k inp a x pre)). wf_item cfg inp y \<and> item_end y = (k+1)"
   using wf_bins_Scan_it'[OF assms] by (simp add: Scan_it_def)
 
 lemma wf_bins_Predict_it:
   assumes "wf_bins cfg inp bs" "k < length bs" "k \<le> length inp" "wf_cfg cfg"
-  shows "\<forall>y \<in> set (map fst (Predict_it k cfg X i)). wf_item cfg inp y \<and> item_end y = k"
+  shows "\<forall>y \<in> set (map fst (Predict_it k cfg X)). wf_item cfg inp y \<and> item_end y = k"
   using assms by (auto simp: Predict_it_def wf_item_def wf_bins_def wf_bin_def init_item_def wf_cfg_defs)
 
 lemma wf_item_inc_item:
@@ -739,11 +739,11 @@ lemma wf_item_inc_item:
 
 lemma wf_bins_Complete_it:
   assumes "wf_bins cfg inp bs" "k < length bs" "y \<in> set (items (bs ! k))"
-  shows "\<forall>x \<in> set (map fst (Complete_it k y bs i)). wf_item cfg inp x \<and> item_end x = k"
+  shows "\<forall>x \<in> set (map fst (Complete_it k y bs red)). wf_item cfg inp x \<and> item_end x = k"
 proof -
   let ?orig = "bs ! (item_origin y)"
   let ?is = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?is' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed pre i])) ?is"
+  let ?is' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed (item_origin y) pre red])) ?is"
   {
     fix x
     assume *: "x \<in> set (map fst ?is)"
@@ -770,15 +770,15 @@ proof -
 qed
 
 lemma distinct_ptrs_Scan_it:
-  "distinct_ptrs (map snd (Scan_it k inp a x i))"
+  "distinct_ptrs (map snd (Scan_it k inp a x pre))"
   unfolding Scan_it_def distinct_ptrs_def by auto
 
 lemma distinct_ptrs_Predict_it:
-  "distinct_ptrs (map snd (Predict_it k cfg a i))"
+  "distinct_ptrs (map snd (Predict_it k cfg a))"
   unfolding Predict_it_def distinct_ptrs_def by auto
 
 lemma distinct_ptrs_Complete_it:
-  "distinct_ptrs (map snd (Complete_it k x bs i))"
+  "distinct_ptrs (map snd (Complete_it k x bs red))"
   unfolding Complete_it_def distinct_ptrs_def by auto
 
 lemma Ex_wf_bins:
@@ -815,7 +815,7 @@ lemma wellformed_bins_intro:
 lemma wellformed_bins_Complete_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs ! k)) \<le> i"
   assumes "x = items (bs ! k) ! i" "next_symbol x = None"
-  shows "(k, cfg, inp, bins_upd bs k (Complete_it k x bs i)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs k (Complete_it k x bs red)) \<in> wellformed_bins"
 proof -
   have *: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
     using wellformed_bins_elim assms(1) by metis+
@@ -824,7 +824,7 @@ proof -
   have "item_origin x < length bs"
     using x wf_bins_kth_bin *(1,2,4) wf_item_def 
     by (metis One_nat_def add.right_neutral add_Suc_right dual_order.trans le_imp_less_Suc)
-  hence "wf_bins cfg inp (bins_upd bs k (Complete_it k x bs i))"
+  hence "wf_bins cfg inp (bins_upd bs k (Complete_it k x bs red))"
     using *(1,2,4) Suc_eq_plus1 distinct_Complete_it distinct_ptrs_Complete_it le_imp_less_Suc wf_bins_Complete_it wf_bins_bins_upd x by metis
   thus ?thesis
     by (simp add: *(1-3) wellformed_bins_def)
@@ -834,13 +834,13 @@ lemma wellformed_bins_Scan_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs ! k)) \<le> i"
   assumes "x = items (bs ! k) ! i" "next_symbol x = Some a"
   assumes "is_terminal cfg a" "k < length inp"
-  shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_it k inp a x i)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_it k inp a x pre)) \<in> wellformed_bins"
 proof -
   have *: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
     using wellformed_bins_elim assms(1) by metis+
   have x: "x \<in> set (items(bs ! k))"
     using assms(2,3) by simp
-  have "wf_bins cfg inp (bins_upd bs (k+1) (Scan_it k inp a x i))"
+  have "wf_bins cfg inp (bins_upd bs (k+1) (Scan_it k inp a x pre))"
     using * x assms(1,4,6) distinct_Scan_it distinct_ptrs_Scan_it wf_bins_Scan_it wf_bins_bins_upd wellformed_bins_elim
     by (metis option.discI)
   thus ?thesis
@@ -850,13 +850,13 @@ qed
 lemma wellformed_bins_Predict_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs ! k)) \<le> i"
   assumes "x = items (bs ! k) ! i" "next_symbol x = Some a" "\<not> is_terminal cfg a"
-  shows "(k, cfg, inp, bins_upd bs k (Predict_it k cfg a i)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs k (Predict_it k cfg a)) \<in> wellformed_bins"
 proof -
   have *: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
     using wellformed_bins_elim assms(1) by metis+
   have x: "x \<in> set (items (bs ! k))"
     using assms(2,3) by simp
-  hence "wf_bins cfg inp (bins_upd bs k (Predict_it k cfg a i))"
+  hence "wf_bins cfg inp (bins_upd bs k (Predict_it k cfg a))"
     using * x assms(1,4) distinct_Predict_it distinct_ptrs_Predict_it wf_bins_Predict_it wf_bins_bins_upd wellformed_bins_elim by metis
   thus ?thesis
     by (simp add: *(1-3) wellformed_bins_def)
@@ -874,7 +874,7 @@ lemma \<pi>_it'_simps[simp]:
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
     is_terminal cfg a \<Longrightarrow> \<not> k < length inp \<Longrightarrow> \<pi>_it' k cfg inp bs i = \<pi>_it' k cfg inp bs (i+1)"
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
-    \<not> is_terminal cfg a \<Longrightarrow> \<pi>_it' k cfg inp bs i = \<pi>_it' k cfg inp (bins_upd bs k (Predict_it k cfg a i)) (i+1)"
+    \<not> is_terminal cfg a \<Longrightarrow> \<pi>_it' k cfg inp bs i = \<pi>_it' k cfg inp (bins_upd bs k (Predict_it k cfg a)) (i+1)"
   by (subst \<pi>_it'.simps, simp)+
 
 lemma \<pi>_it'_induct[case_names Base Complete Scan Pass Predict]:
@@ -890,7 +890,7 @@ lemma \<pi>_it'_induct[case_names Base Complete Scan Pass Predict]:
             P k cfg inp bs (i+1) \<Longrightarrow> P k cfg inp bs i"
   assumes predict: "\<And>k cfg inp bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
             next_symbol x = Some a \<Longrightarrow> \<not> is_terminal cfg a \<Longrightarrow> 
-            P k cfg inp (bins_upd bs k (Predict_it k cfg a i)) (i+1) \<Longrightarrow> P k cfg inp bs i"
+            P k cfg inp (bins_upd bs k (Predict_it k cfg a)) (i+1) \<Longrightarrow> P k cfg inp bs i"
   shows "P k cfg inp bs i"
   using assms(1)
 proof (induction n\<equiv>"earley_measure (k, cfg, inp, bs) i" arbitrary: bs i rule: nat_less_induct)
@@ -984,7 +984,7 @@ proof (induction n\<equiv>"earley_measure (k, cfg, inp, bs) i" arbitrary: bs i r
         qed
       next
         assume a3: "\<not> is_terminal cfg a"
-        let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+        let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
         have wf_bins': "wf_bins cfg inp ?bs'"
           using wf_bins_Predict_it distinct_Predict_it distinct_ptrs_Predict_it wf(1,3,4) wf_bins_bins_upd k x by metis
         hence wf': "(k, cfg, inp, ?bs') \<in> wellformed_bins"
@@ -1029,7 +1029,7 @@ next
     using Scan.IH Scan.hyps by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Predict.hyps Predict.prems wellformed_bins_Predict_it by metis
   thus ?case
@@ -1092,7 +1092,7 @@ next
     using Scan.hyps by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "set (pointers (bs ! l) ! j) \<subseteq> set (pointers (?bs' ! l) ! j)"
     using set_pointers_bins_upd Predict.prems by blast
   also have "set (pointers (?bs' ! l) ! j) \<subseteq> set (pointers (\<pi>_it' k cfg inp ?bs' (i + 1) ! l) ! j)"
@@ -1126,7 +1126,7 @@ next
     using Scan.hyps by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "items (\<pi>_it' k cfg inp ?bs' (i + 1) ! l) ! j = items (?bs' ! l) ! j"
     using Predict.IH Predict.prems length_items_nth_bin_bins_upd order.strict_trans2 by blast
   also have "... = items (bs ! l) ! j"
@@ -1283,10 +1283,10 @@ qed
 lemma Scan_it_sub_Scan:
   assumes "wf_bins cfg inp bs" "bins bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs" "k < length inp"
   assumes "next_symbol x = Some a"
-  shows "set (map fst (Scan_it k inp a x i)) \<subseteq> Scan k inp I"
+  shows "set (map fst (Scan_it k inp a x pre)) \<subseteq> Scan k inp I"
 proof standard
   fix y
-  assume *: "y \<in> set (map fst (Scan_it k inp a x i))"
+  assume *: "y \<in> set (map fst (Scan_it k inp a x pre))"
   have "x \<in> bin I k"
     using kth_bin_sub_bins assms(1-4) set_bin_def wf_bin_def wf_bins_def wf_bin_items_def bin_def by fast
   {
@@ -1303,10 +1303,10 @@ qed
 lemma Predict_it_sub_Predict:
   assumes "wf_bins cfg inp bs" "bins bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol x = Some X"
-  shows "set (map fst (Predict_it k cfg X i)) \<subseteq> Predict k cfg I"
+  shows "set (map fst (Predict_it k cfg X)) \<subseteq> Predict k cfg I"
 proof standard
   fix y
-  assume *: "y \<in> set (map fst (Predict_it k cfg X i))"
+  assume *: "y \<in> set (map fst (Predict_it k cfg X))"
   have "x \<in> bin I k"
     using kth_bin_sub_bins assms(1-4) set_bin_def wf_bin_def wf_bins_def bin_def wf_bin_items_def by fast
   let ?rs = "filter (\<lambda>r. rule_head r = X) (\<RR> cfg)"
@@ -1322,16 +1322,16 @@ qed
 lemma Complete_it_sub_Complete:
   assumes "wf_bins cfg inp bs" "bins bs \<subseteq> I" "y \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol y = None"
-  shows "set (map fst (Complete_it k y bs i)) \<subseteq> Complete k I"
+  shows "set (map fst (Complete_it k y bs red)) \<subseteq> Complete k I"
   thm Complete_it_def
 proof standard
   fix x
-  assume *: "x \<in> set (map fst (Complete_it k y bs i))"
+  assume *: "x \<in> set (map fst (Complete_it k y bs red))"
   have "y \<in> bin I k"
     using kth_bin_sub_bins assms set_bin_def wf_bin_def wf_bins_def bin_def wf_bin_items_def by fast
   let ?orig = "bs ! item_origin y"
   let ?xs = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?xs' = "map (\<lambda>(x, red). (inc_item x k, [PreRed i red])) ?xs"
+  let ?xs' = "map (\<lambda>(x, pre). (inc_item x k, [PreRed (item_origin y) pre red])) ?xs"
   have 0: "item_origin y < length bs"
     using wf_bins_def wf_bin_def wf_item_def wf_bin_items_def assms(1,3,4)
     by (metis Orderings.preorder_class.dual_order.strict_trans1 leD not_le_imp_less)
@@ -1398,7 +1398,7 @@ next
     by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "x \<in> set (items (bs ! k))"
     using Predict.hyps(1,2) by force
   hence "bins ?bs' \<subseteq> I \<union> Predict k cfg I"
@@ -1452,7 +1452,7 @@ lemma sound_Scan_it:
 lemma sound_Predict_it:
   assumes "wf_bins cfg inp bs" "bins bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol x = Some X" "sound_items cfg inp I"
-  shows "sound_items cfg inp (set (map fst (Predict_it k cfg X i)))"
+  shows "sound_items cfg inp (set (map fst (Predict_it k cfg X)))"
   using sound_Predict Predict_it_sub_Predict sound_items_def assms by (smt (verit, ccfv_SIG) in_mono)
 
 lemma sound_Complete_it:
@@ -1498,10 +1498,10 @@ next
     using Scan.hyps by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "x \<in> set (items (bs ! k))"
     using Predict.hyps(1,2) by force
-  hence "sound_items cfg inp (set (map fst (Predict_it k cfg a i)))"
+  hence "sound_items cfg inp (set (map fst (Predict_it k cfg a)))"
     using sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems bins_bin_exists wellformed_bins_elim
           sound_\<pi> wf_bins_kth_bin wf_items_def by metis
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
@@ -1627,7 +1627,7 @@ qed
 
 lemma Complete_sub_bins_Un_Complete_it:
   assumes "Complete k I \<subseteq> bins bs" "I \<subseteq> bins bs" "is_complete z" "wf_bins cfg inp bs" "wf_item cfg inp z"
-  shows "Complete k (I \<union> {z}) \<subseteq> bins bs \<union> set (map fst (Complete_it k z bs i))"
+  shows "Complete k (I \<union> {z}) \<subseteq> bins bs \<union> set (map fst (Complete_it k z bs red))"
 proof standard
   fix w
   assume "w \<in> Complete k (I \<union> {z})"
@@ -1637,7 +1637,7 @@ proof standard
     unfolding Complete_def by blast
   consider (A) "x = z" | (B) "y = z" | "\<not> (x = z \<or> y = z)"
     by blast
-  thus "w \<in> bins bs \<union> set (map fst (Complete_it k z bs i))"
+  thus "w \<in> bins bs \<union> set (map fst (Complete_it k z bs red))"
   proof cases
     case A
     thus ?thesis
@@ -1662,7 +1662,7 @@ proof standard
 qed
 
 lemma Complete_it_eq_item_origin:
-  "bs ! item_origin y = bs' ! item_origin y \<Longrightarrow> Complete_it k y bs i = Complete_it k y bs' i"
+  "bs ! item_origin y = bs' ! item_origin y \<Longrightarrow> Complete_it k y bs red = Complete_it k y bs' red"
   by (auto simp: Complete_it_def)
 
 lemma kth_bin_bins_upto_empty:
@@ -1712,7 +1712,7 @@ next
     using Scan.hyps by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have wf: "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
   hence "bins bs \<subseteq> bins ?bs'"
@@ -1915,12 +1915,12 @@ next
     using bins_bins_upd Pass.hyps Pass.prems by simp
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "k \<ge> length inp \<or> \<not> inp!k = a"
     using Predict.hyps(4) Predict.prems(4) is_word_is_terminal leI by blast
   have x: "x \<in> set (items (bs ! k))"
     using Predict.hyps(1,2) by auto
-  hence sound: "sound_items cfg inp (set (map fst (Predict_it k cfg a i)))"
+  hence sound: "sound_items cfg inp (set (map fst (Predict_it k cfg a)))"
     using sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems bins_bin_exists wellformed_bins_elim
           sound_\<pi> wf_bins_kth_bin wf_items_def by metis
   have wf: "(k, cfg, inp, ?bs') \<in> wellformed_bins"
@@ -1958,7 +1958,7 @@ next
       by (metis leI less_or_eq_imp_le)
     also have "... \<subseteq> bins bs \<union> Predict k cfg {x}"
       using Predict.prems(2,3) Predict_Un Predict_\<pi>_step_mono by fastforce
-    also have "... = bins bs \<union> set (map fst (Predict_it k cfg a i))"
+    also have "... = bins bs \<union> set (map fst (Predict_it k cfg a))"
       using Predict.hyps Predict.prems(1-3) wellformed_bins_elim apply (auto simp: Predict_def Predict_it_def bin_def)
       using wf_bins_kth_bin x by blast
     finally show ?thesis
@@ -2146,10 +2146,10 @@ next
   qed
 next
   case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a i)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have x: "x \<in> set (items (bs ! k))"
     using Predict.hyps(1,2) by auto
-  hence "sound_items cfg inp (set (map fst (Predict_it k cfg a i)))"
+  hence "sound_items cfg inp (set (map fst (Predict_it k cfg a)))"
     using sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems bins_bin_exists wellformed_bins_elim
           sound_\<pi> wf_bins_kth_bin wf_items_def by metis
   hence sound: "sound_items cfg inp (bins ?bs')"
@@ -2174,18 +2174,18 @@ next
       let ?bs'' = "\<pi>_it' k cfg inp ?bs' (i+1)"
       have "length (items (?bs'' ! k)) \<ge> length (items (bs ! k))"
         using length_nth_bin_\<pi>_it' length_items_nth_bin_bins_upd order_trans wf by blast
-      hence "\<pi>_it' k cfg inp ?bs'' j = \<pi>_it' k cfg inp (bins_upd ?bs'' k (Predict_it k cfg a i)) (j+1)"
+      hence "\<pi>_it' k cfg inp ?bs'' j = \<pi>_it' k cfg inp (bins_upd ?bs'' k (Predict_it k cfg a)) (j+1)"
         using \<open>i = j\<close> kth_\<pi>_it'_bins nth_bins_upd \<pi>_it'_simps(5) Predict.hyps Predict.prems(1) length_bins_\<pi>_it'
           wf_bins_\<pi>_it' wf_bins_kth_bin wf_item_def x by (smt (verit, ccfv_SIG) linorder_not_le order.trans)
-      moreover have "bins_upd ?bs'' k (Predict_it k cfg a i) = ?bs''"
+      moreover have "bins_upd ?bs'' k (Predict_it k cfg a) = ?bs''"
       proof -
         have "length (items (bs ! k)) = length (pointers (bs ! k))" "k < length bs"
           using wellformed_bins_elim[OF Predict.prems(1)] wf_bins_def wf_bin_def by blast+
-        hence 1: "set (Predict_it k cfg a i) \<sqsubseteq> bin_ptr (?bs' ! k)"
+        hence 1: "set (Predict_it k cfg a) \<sqsubseteq> bin_ptr (?bs' ! k)"
           using subsumed_bins_upd_ips by fast
         moreover have 2: "bin_ptr (?bs' ! k) \<sqsubseteq> bin_ptr (?bs'' ! k)"
           by (simp add: \<open>k < length bs\<close> \<pi>_it'_kth_subsumed_by wf)
-        ultimately have "set (Predict_it k cfg a i) \<sqsubseteq> bin_ptr (?bs'' ! k)"
+        ultimately have "set (Predict_it k cfg a) \<sqsubseteq> bin_ptr (?bs'' ! k)"
           using subsumed_by_mono by blast
         moreover have "distinct (items (?bs'' ! k))"
           using \<open>k < length bs\<close> length_bins_\<pi>_it' length_bins_upd local.wf wf_bin_def wf_bins_\<pi>_it' wf_bins_def by metis
@@ -2312,93 +2312,114 @@ section \<open>Earley parse tree\<close>
 
 subsection \<open>Main definitions\<close>
 
-datatype 'a ptree =
+datatype 'a dtree =
   Leaf 'a
-  | Node 'a "'a ptree list"
+  | Node 'a "'a dtree list"
 
-fun yield_ptree :: "'a ptree \<Rightarrow> 'a sentence" where
-  "yield_ptree (Leaf a) = [a]"
-| "yield_ptree (Node _ ts) = concat (map yield_ptree ts)"
+fun yield_dtree :: "'a dtree \<Rightarrow> 'a sentence" where
+  "yield_dtree (Leaf a) = [a]"
+| "yield_dtree (Node _ ts) = concat (map yield_dtree ts)"
 
-fun root_ptree :: "'a ptree \<Rightarrow> 'a" where
-  "root_ptree (Leaf a) = a"
-| "root_ptree (Node N _) = N"
+fun root_dtree :: "'a dtree \<Rightarrow> 'a" where
+  "root_dtree (Leaf a) = a"
+| "root_dtree (Node N _) = N"
 
-fun rule_ptree :: "'a ptree \<Rightarrow> 'a rule" where
-  "rule_ptree (Leaf a) = (a, [])"
-| "rule_ptree (Node N ts) = (N, map root_ptree ts)"
+\<comment>\<open>Implies: derives cfg [root_dtree t] (yield_dtree t)\<close>
+fun wf_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "wf_dtree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a \<or> is_nonterminal cfg a"
+| "wf_dtree cfg (Node N ts) \<longleftrightarrow>
+    (\<exists>r \<in> set (\<RR> cfg). r = (N, map root_dtree ts)) \<and>
+    (\<forall>t \<in> set ts. wf_dtree cfg t)"
 
-fun wf_ptree :: "'a cfg \<Rightarrow> 'a ptree \<Rightarrow> bool" where
-  "wf_ptree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a \<or> is_nonterminal cfg a"
-| "wf_ptree cfg (Node N ts) \<longleftrightarrow> 
-    (\<exists>r \<in> set (\<RR> cfg). r = (N, map root_ptree ts)) \<and>
-    (\<forall>t \<in> set ts. wf_ptree cfg t)"
+\<comment>\<open>Implied by wf_dtree\<close>
+definition sound_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "sound_dtree cfg t = derives cfg [root_dtree t] (yield_dtree t)"
 
-fun complete_ptree :: "'a cfg \<Rightarrow> 'a ptree \<Rightarrow> bool" where
-  "complete_ptree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a"
-| "complete_ptree cfg (Node _ ts) \<longleftrightarrow> (\<forall>t \<in> set ts. complete_ptree cfg t)"
+\<comment>\<open>Refine to prefix of yield depending on item_dot and Leafs default to true.\<close>
+definition inp_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "inp_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
 
-definition sound_ptree :: "'a cfg \<Rightarrow> 'a ptree \<Rightarrow> bool" where
-  "sound_ptree cfg t = derives cfg [root_ptree t] (yield_ptree t)"
-
-function build_ptree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a ptree" where
-  "build_ptree' bs k i = (
-    let x = items (bs!k) ! i in
-    let ptrs = pointers (bs!k) ! i in
-    case prev_symbol x of 
-      None \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x))
-    | Some a \<Rightarrow> (
-      case (hd ptrs) of
-        Pre pre \<Rightarrow> build_ptree' bs (k-1) pre
-      | PreRed pre red \<Rightarrow>
-        let orig = item_origin (items (bs!k) ! red) in (
-        case build_ptree' bs orig pre of
-          Node N ts \<Rightarrow> Node N (ts[item_dot x - 1 := build_ptree' bs k pre])
-        | _ \<Rightarrow> undefined)
-  ))"
+function build_dtree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a dtree" where
+  "build_dtree' bs k i = (
+    let kb = bs ! k in
+    let x = items kb ! i in (
+    case pointers kb ! i of
+      [] \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x)) \<comment>\<open>start building sub-tree\<close>
+    | (Pre pre) # _ \<Rightarrow> build_dtree' bs (k-1) pre \<comment>\<open>traverse terminal in the input\<close>
+    | (PreRed k' pre red) # _ \<Rightarrow> ( \<comment>\<open>update non-terminal with complete sub-tree\<close>
+      case build_dtree' bs k' pre of
+        Node N ts \<Rightarrow> Node N (ts[item_dot x - 1 := build_dtree' bs k red])
+      | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>)))"
   by pat_completeness auto
 termination sorry
 
-declare build_ptree'.simps [simp del]
+declare build_dtree'.simps [simp del]
 
-definition build_ptree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a ptree option" where
-  "build_ptree cfg inp bs = (
+definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a dtree option" where
+  "build_dtree cfg inp bs = (
     let k = length bs - 1 in
     case find_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
-      Some i \<Rightarrow> Some (build_ptree' bs k i)
+      Some i \<Rightarrow> Some (build_dtree' bs k i)
     | None \<Rightarrow> None
   )"
 
 
-subsection \<open>Lemmas\<close>
+subsection \<open>Lemmas about valid bin pointers\<close>
+
+definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
+  "mono_ptrs bs = (\<forall>k < length bs. \<forall>i < length (pointers (bs!k)).
+    (\<forall>pre. Pre pre \<in> set (pointers (bs!k) ! i) \<longrightarrow>
+      pre < length (pointers (bs!(k-1)))) \<and>
+    (\<forall>k' pre red. PreRed k' pre red \<in> set (pointers (bs!k) ! i) \<longrightarrow> 
+      k' < k \<and> pre < length (pointers (bs!k')) \<and> red < i)
+  )"
+
+
+subsection \<open>Main lemmas\<close>
 
 lemma ex_Node_build_tree':
-  "\<exists>N ts. build_ptree' bs k i = Node N ts"
-  apply (induction bs k i rule: build_ptree'.induct)
-  apply (subst build_ptree'.simps)
-  apply (auto simp: Let_def split: option.splits ptree.splits pointer.splits)
-  apply (metis ptree.distinct(1))
+  "\<exists>N ts. build_dtree' bs k i = Node N ts"
+  apply (induction bs k i rule: build_dtree'.induct)
+  apply (subst build_dtree'.simps)
+  apply (auto simp: Let_def split: list.splits dtree.splits pointer.splits)
+  apply (metis dtree.distinct(1))
   done
 
 lemma nex_Leaf_build_tree':
-  "\<nexists>a. build_ptree' bs k i = Leaf a"
-  using ex_Node_build_tree' by (metis ptree.distinct(1))
+  "\<nexists>a. build_dtree' bs k i = Leaf a"
+  using ex_Node_build_tree' by (metis dtree.distinct(1))
 
-lemma wf_ptree_build_ptree':
-  "wf_bins cfg inp bs \<Longrightarrow> wf_ptree cfg (build_ptree' bs k i)"
+lemma Derivation_imp_ex_wf_yield:
+  "Derivation cfg [a] D \<alpha> \<Longrightarrow> is_symbol cfg a \<Longrightarrow> \<exists>t. root_dtree t = a \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
   sorry
 
-lemma sound_ptree_build_tree':
-  "wf_bins cfg inp bs \<Longrightarrow> sound_ptree cfg (build_ptree' bs k i)"
+lemma wf_tree_imp_ex_Derivation:
+  "wf_dtree cfg t \<Longrightarrow> \<exists>D. Derivation cfg [root_dtree t] D (yield_dtree t)"
   sorry
 
-lemma sound_ptree_build_tree:
-  "wf_bins cfg inp bs \<Longrightarrow> sound_items cfg inp (bins bs) \<Longrightarrow> build_ptree cfg inp bs = Some t \<Longrightarrow> sound_ptree cfg t"
+lemma derives_imp_ex_wf_yield:
+  "wf_cfg cfg \<Longrightarrow> derives cfg [\<SS> cfg] \<alpha> \<Longrightarrow> \<exists>t. root_dtree t = \<SS> \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
   sorry
 
-thm sound_items_def sound_item_def
-thm sound_\<II> \<II>_sub_\<II>_it \<II>_it_sub_\<II>
-thm soundness correctness_set correctness_list
+lemma wf_tree_imp_ex_derives:
+  "wf_dtree cfg t \<Longrightarrow> derives cfg [root_dtree t] (yield_dtree t)"
+  sorry
+
+lemma wf_dtree_build_dtree':
+  "wf_bins cfg inp bs \<Longrightarrow> wf_dtree cfg (build_dtree' bs k i)"
+  sorry
+
+lemma inp_dtree_build_dtree':
+  "inp_dtree inp (items (bs!k) ! i) (build_dtree' bs k i)"
+  sorry
+
+lemma sound_dtree_build_tree':
+  "sound_dtree cfg (build_dtree' bs k i)"
+  sorry
+
+lemma sound_dtree_build_tree:
+  "build_dtree cfg inp bs = Some t \<Longrightarrow> sound_dtree cfg t"
+  sorry
 
 
 section \<open>Earley parse forest\<close>

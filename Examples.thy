@@ -49,6 +49,7 @@ lemma correctness:
 
 value "\<II>_it cfg inp"
 value "earley_recognized_it cfg inp"
+value "build_dtree cfg inp (\<II>_it cfg inp)"
 
 export_code earley_recognized_it in SML
 
