@@ -142,6 +142,151 @@ lemma filter_with_index_nth:
 subsection \<open>Bins\<close>
 
 datatype pointer =
+  Null
+  | Pre nat \<comment>\<open>pre index in previous bin\<close>
+  | PreRed "(nat \<times> nat \<times> nat) list" \<comment>\<open>pre bin, pre index, red index in current bin\<close>
+
+datatype 'a entry =
+  Entry
+    (item : "'a item")
+    (pointer : pointer)
+
+type_synonym 'a bin = "'a entry list"
+type_synonym 'a bins = "'a bin list"
+
+definition items :: "'a bin \<Rightarrow> 'a item list" where
+  "items b = map item b"
+
+definition pointers :: "'a bin \<Rightarrow> pointer list" where
+  "pointers b = map pointer b"
+
+definition bins_items :: "'a bins \<Rightarrow> 'a items" where
+  "bins_items bs = \<Union> { set (items (bs ! k)) | k. k < length bs }"
+
+definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bin_items_upto b i = { items b ! j | j. j < i \<and> j < length (items b) }"
+
+definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bins_items_upto bs k i = \<Union> { set (items (bs ! l)) | l. l < k } \<union> bin_items_upto (bs ! k) i"
+
+fun distinct_pointer :: "pointer \<Rightarrow> bool" where
+  "distinct_pointer (PreRed xs) = distinct xs"
+| "distinct_pointer _ = True"
+
+definition distinct_pointers :: "pointer list \<Rightarrow> bool" where
+  "distinct_pointers ps = (\<forall>p \<in> set ps. distinct_pointer p)"
+
+definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
+  "wf_bin_items cfg inp k xs = (\<forall>x \<in> set xs. wf_item cfg inp x \<and> item_end x = k)"
+
+definition wf_bin :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
+  "wf_bin cfg inp k b \<longleftrightarrow> 
+    distinct (items b) \<and>
+    wf_bin_items cfg inp k (items b) \<and>
+    distinct_pointers (pointers b)"
+
+definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
+  "wf_bins cfg inp bs \<longleftrightarrow> (\<forall>k < length bs. wf_bin cfg inp k (bs ! k))"
+
+definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
+  "nonempty_derives cfg = (\<forall>N. N \<in> set (\<NN> cfg) \<longrightarrow> \<not> derives cfg [N] [])"
+
+
+subsection \<open>Main algorithm\<close>
+
+definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+  "Init_it cfg inp = (
+    let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
+    let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
+    let bs = replicate (length inp + 1) ([]) in
+    bs[0 := b0])"
+
+definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry option" where
+  "Scan_it k inp a x pre = (
+    if inp!k = a then
+      let x' = inc_item x (k+1) in
+      Some (Entry x' (Pre pre))
+    else None)"
+
+definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
+  "Predict_it k cfg X = (
+    let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
+    map (\<lambda>r. (Entry (init_item r k) Null)) rs)"
+
+definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+  "Complete_it k y bs red = (
+    let orig = bs ! (item_origin y) in
+    let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
+    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed [(item_origin y, pre, red)]))) is)"
+
+fun bin_upd_Scan_it :: "'a bin \<Rightarrow> 'a entry option \<Rightarrow> 'a bin" where
+  "bin_upd_Scan_it b None = b"
+| "bin_upd_Scan_it b (Some e) = b @ [e]"
+
+fun bin_upd_Predict_it :: "'a bin \<Rightarrow> 'a entry list \<Rightarrow> 'a bin" where
+  "bin_upd_Predict_it b [] = b"
+| "bin_upd_Predict_it [] es = es"
+| "bin_upd_Predict_it (e#es) nes = (
+    let nes' = filter (\<lambda>ne. e \<noteq> ne) nes in
+    e # bin_upd_Predict_it es nes'
+  )"
+
+fun prered_upd :: "'a entry \<Rightarrow> 'a entry list \<Rightarrow> 'a entry" where
+  "prered_upd (Entry x (PreRed xs)) ((Entry y (PreRed ys))#es) =
+    Entry x (PreRed (filter (\<lambda>y. y \<notin> set xs) ys @ xs))"
+| "prered_upd e _ = e"
+
+fun bin_upd_Complete_it :: "'a bin \<Rightarrow> 'a entry list \<Rightarrow> 'a bin" where
+  "bin_upd_Complete_it b [] = b"
+| "bin_upd_Complete_it [] es = es"
+| "bin_upd_Complete_it (e#es) nes = (
+    let (old, new) = partition (\<lambda>ne. item e = item ne) nes in
+    prered_upd e old # bin_upd_Complete_it es new
+  )"
+
+partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
+  "\<pi>_it' k cfg inp bs i = (
+    if i \<ge> length (items (bs ! k)) then bs
+    else
+      let x = items (bs!k) ! i in
+      let bs' =
+        case next_symbol x of
+          Some a \<Rightarrow>
+            if is_terminal cfg a then
+              if k < length inp then bs[k+1 := bin_upd_Scan_it (bs!(k+1)) (Scan_it k inp a x i)]
+              else bs
+            else bs[k := bin_upd_Predict_it (bs!k) (Predict_it k cfg a)]
+        | None \<Rightarrow> bs[k := bin_upd_Complete_it (bs!k) (Complete_it k x bs i)]
+      in \<pi>_it' k cfg inp bs' (i+1))"
+
+declare \<pi>_it'.simps[code]
+
+definition \<pi>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
+  "\<pi>_it k cfg inp bs = \<pi>_it' k cfg inp bs 0"
+
+fun \<I>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+  "\<I>_it 0 cfg inp = \<pi>_it 0 cfg inp (Init_it cfg inp)"
+| "\<I>_it (Suc n) cfg inp = \<pi>_it (Suc n) cfg inp (\<I>_it n cfg inp)"
+
+definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+  "\<II>_it cfg inp = \<I>_it (length inp) cfg inp"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+subsection \<open>Bins\<close>
+
+datatype pointer =
   Pre nat \<comment>\<open>pred index in current bin\<close>
   | PreRed nat nat nat \<comment>\<open>pred bin, pred index, red index in current bin\<close>
 
