@@ -74,6 +74,12 @@ definition items :: "'a bin \<Rightarrow> 'a item list" where
 definition pointers :: "'a bin \<Rightarrow> pointer list" where
   "pointers b = map pointer b"
 
+definition bin_eq_items :: "'a bin \<Rightarrow> 'a bin \<Rightarrow> bool" where
+  "bin_eq_items b0 b1 \<longleftrightarrow> length b0 = length b1 \<and> (\<forall>i < length b0. item (b0!i) = item (b1!i))"
+
+definition bins_eq_items :: "'a bins \<Rightarrow> 'a bins \<Rightarrow> bool" where
+  "bins_eq_items bs0 bs1 \<longleftrightarrow> length bs0 = length bs1 \<and> (\<forall>k < length bs0. bin_eq_items (bs0!k) (bs1!k))"
+
 definition bins_items :: "'a bins \<Rightarrow> 'a items" where
   "bins_items bs = \<Union> { set (items (bs ! k)) | k. k < length bs }"
 
@@ -94,33 +100,6 @@ definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Righ
 
 definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
   "nonempty_derives cfg = (\<forall>N. N \<in> set (\<NN> cfg) \<longrightarrow> \<not> derives cfg [N] [])"
-
-definition subsumed_by :: "'a entry \<Rightarrow> 'a entry \<Rightarrow> bool" (infixl "\<sqsubseteq>" 50) where
-  "subsumed_by a b = (
-    case (a, b) of
-      (Entry x Null, Entry y Null) \<Rightarrow> x = y
-    | (Entry x (Pre xp), Entry y (Pre yp)) \<Rightarrow> x = y \<and> xp = yp
-    | (Entry x (PreRed xs), Entry y (PreRed ys)) \<Rightarrow> x = y \<and> set xs \<subseteq> set ys
-    | _ \<Rightarrow> False)"
-
-definition subsumed_by_set :: "'a entry set \<Rightarrow> 'a entry set \<Rightarrow> bool" (infixl "\<preceq>" 50) where
-  "subsumed_by_set A B = (\<forall>x \<in> A. \<exists>y \<in> B. subsumed_by x y)"
-
-lemma subsumed_by_id[simp]:
-  "x \<sqsubseteq> x"
-  unfolding subsumed_by_def by (auto split: entry.splits pointer.splits)
-
-lemma subsumed_by_mono:
-  "x \<sqsubseteq> y \<Longrightarrow> y \<sqsubseteq> z \<Longrightarrow> x \<sqsubseteq> z"
-  unfolding subsumed_by_def by (auto split: entry.splits pointer.splits)
-
-lemma subsumed_by_set_id[simp]:
-  "x \<preceq> x"
-  unfolding subsumed_by_set_def using subsumed_by_id by blast
-
-lemma subsumed_by_set_mono:
-  "A \<preceq> B \<Longrightarrow> B \<preceq> C \<Longrightarrow> A \<preceq> C"
-  unfolding subsumed_by_set_def using subsumed_by_mono by blast
 
 
 subsubsection \<open>Main algorithm\<close>
@@ -521,76 +500,11 @@ lemma wf_bins_impl_wf_items:
   "wf_bins cfg inp bs \<Longrightarrow> wf_items cfg inp (bins_items bs)"
   unfolding wf_bins_def wf_bin_def wf_items_def wf_bin_items_def bins_items_def by auto
 
-lemma subsumed_by_bin_upd:
-  "j < length b \<Longrightarrow> b ! j \<sqsubseteq> bin_upd e b ! j"
-  using less_Suc_eq_0_disj nth_Cons'
-  by (induction e b arbitrary: j rule: bin_upd.induct)
-     (auto simp: nth_Cons' subsumed_by_def split!: entry.splits pointer.splits, fastforce+)
-
-lemma subsumed_by_bin_upds:
-  "j < length b \<Longrightarrow> b ! j \<sqsubseteq> bin_upds es b ! j"
-  by (induction es arbitrary: b) (auto, meson length_bin_upd order_less_le_trans subsumed_by_bin_upd subsumed_by_mono)
-
-lemma subsumed_by_bins_upd:
-  "j < length (bs ! l) \<Longrightarrow> (bs ! l) ! j \<sqsubseteq> (bins_upd bs k ips ! l) ! j"
-  unfolding bins_upd_def using subsumed_by_bin_upds subsumed_by_id
-  by (metis linorder_not_le list_update_beyond nth_list_update_eq nth_list_update_neq )
-
-lemma bin_subsumed_by_bin_upd:
-  "set b \<preceq> set (bin_upd e b)"
-  by (induction e b rule: bin_upd.induct) 
-     (auto simp add: subsumed_by_set_def subsumed_by_def split: entry.splits pointer.splits)
-  
-lemma bin_subsumed_by_bin_upds:
- "set b \<preceq> set (bin_upds es b)"
-  by (induction es arbitrary: b) (auto, metis bin_subsumed_by_bin_upd subsumed_by_set_mono)
-
-lemma kth_bin_subsumed_by_bins_upd:
- "set (bs!k) \<preceq> set (bins_upd bs k es ! k)"
-  using bin_subsumed_by_bin_upds bins_upd_def subsumed_by_set_id
-  by (metis linorder_not_less list_update_beyond nth_list_update_eq)
-
-\<comment>\<open>TODO\<close>
-
-lemma ex_subsumed_by_bin_upd:
-  "e1 \<in> set b \<Longrightarrow> e0 \<sqsubseteq> e1 \<Longrightarrow> \<exists>e2 \<in> set (bin_upd e0 b). e1 \<sqsubseteq> e2"
-  by (induction e0 b rule: bin_upd.induct) (auto simp: subsumed_by_def split!: entry.splits pointer.splits)
-
-lemma entry_subsumed_by_bin_upd:
-  "item e \<notin> set (items b) \<or> {e} \<preceq> set b  \<Longrightarrow> {e} \<preceq> set (bin_upd e b)"
-  by (induction e b rule: bin_upd.induct) (auto simp: items_def subsumed_by_set_def subsumed_by_def)
-
-lemma entries_subsumed_by_bin_upds: \<comment>\<open>TODO\<close>
-  assumes "distinct (items es)" "\<forall>e \<in> set es. item e \<notin> set (items b) \<or> {e} \<preceq> set b"
-  shows "set es \<preceq> set (bin_upds es b)"
-  using assms
-proof (induction es arbitrary: b)
-  case (Cons e es)
-
-  have 0: "distinct (items es)"
-    using Cons.prems(1) by (auto simp: items_def)
-
-  have "set es \<preceq> set (bin_upds es (bin_upd e b))"
-    using Cons.IH[of \<open>bin_upd e b\<close>, OF 0]
-    by (metis Cons.prems(1) Cons.prems(2) UnE bin_subsumed_by_bin_upd distinct.simps(2) imageI image_set items_def list.set_intros(2) list.simps(9) set_items_bin_upd singleton_iff subsumed_by_set_mono)
-
-  have "bin_upds (e # es) b = bin_upds es (bin_upd e b)"
-    by simp
-
-  show ?case
-    by (smt (z3) Cons.prems(2) \<open>bin_upds (e # es) b = bin_upds es (bin_upd e b)\<close> \<open>set es \<preceq> set (bin_upds es (bin_upd e b))\<close> bin_subsumed_by_bin_upds entry_subsumed_by_bin_upd insert_iff list.simps(15) subsumed_by_set_def subsumed_by_set_mono)
-qed (auto simp: items_def subsumed_by_set_def)
-
-lemma entries_subsumed_by_bins_upd:
-  assumes "distinct (items es)" "\<forall>e \<in> set es. item e \<notin> set (items (bs!k)) \<or> {e} \<preceq> set (bs!k)" "k < length bs"
-  shows "set es \<preceq> set (bins_upd bs k es ! k)"
-  using entries_subsumed_by_bin_upds assms unfolding bins_upd_def by auto
-
 lemma bin_upd_eq_items:
   "item e \<in> set (items b) \<Longrightarrow> set (items (bin_upd e b)) = set (items b)"
   by (induction e b rule: bin_upd.induct) (auto simp: items_def)
 
-lemma bin_upds_eq_items: \<comment>\<open>TODO\<close>
+lemma bin_upds_eq_items:
   "set (items es) \<subseteq> set (items b) \<Longrightarrow> set (items (bin_upds es b)) = set (items b)"
   apply (induction es arbitrary: b)
   apply (auto simp: set_items_bin_upd set_items_bin_upds)
@@ -1116,7 +1030,7 @@ lemma wf_bins_\<II>_it:
 
 subsection \<open>List to set\<close>
 
-lemma Init_it_eq_Init:
+lemma Init_it_eq_Init: \<comment>\<open>TODO\<close>
   "bins_items (Init_it cfg inp) = Init cfg"
 proof -
   let ?rs = "filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg)"
@@ -1817,7 +1731,8 @@ next
     also have "... \<subseteq> bins_items bs \<union> Predict k cfg {x}"
       using Predict.prems(2,3) Predict_Un Predict_\<pi>_step_mono by fastforce
     also have "... = bins_items bs \<union> set (items (Predict_it k cfg a))"
-      using Predict.hyps Predict.prems(1-3) wellformed_bins_elim apply (auto simp: Predict_def Predict_it_def bin_def items_def)
+      using Predict.hyps Predict.prems(1-3) wellformed_bins_elim 
+      apply (auto simp: Predict_def Predict_it_def bin_def items_def)
       using wf_bins_kth_bin x by blast
     finally show ?thesis
       using Predict.prems(1) wellformed_bins_elim bins_bins_upd by blast
@@ -1852,17 +1767,94 @@ lemma \<pi>_step_sub_\<pi>_it:
   shows "\<pi>_step k cfg inp (bins_items bs) \<subseteq> bins_items (\<pi>_it k cfg inp bs)"
   using assms \<pi>_step_sub_\<pi>_it' \<pi>_it_def by metis
 
-text\<open>
-  Stronger assumption:
+lemma bin_eq_items_bin_upd:
+  "item e \<in> set (items b) \<Longrightarrow> bin_eq_items (bin_upd e b) b"
+  by (induction e b rule: bin_upd.induct) (auto simp: items_def bin_eq_items_def nth_Cons')
 
-  length bs = length bs' \<and>
-  (\<forall>k < length bs. length (bs!k) = length (bs'!k) \<and> 
-    (\<forall>i < length (bs!k). item ((bs!k)!i) = item ((bs'!k)!i)))
-\<close>
-lemma \<pi>_it'_bins_items_eq:
-  assumes "bins_items bs = bins_items bs'"
-  shows "bins_items (\<pi>_it' k cfg inp bs i) = bins_items (\<pi>_it' k cfg inp bs' i)"
+lemma bin_eq_items_bin_upds:
+  assumes "set (items es) \<subseteq> set (items b)"
+  shows "bin_eq_items (bin_upds es b) b"
+  using assms
+proof (induction es arbitrary: b)
+  case (Cons e es)
+  have "bin_eq_items (bin_upds es (bin_upd e b)) (bin_upd e b)"
+    using Cons bin_upds_eq_items set_items_bin_upd set_items_bin_upds
+    by (metis Un_upper2 bin_upds.simps(2) sup.coboundedI1)
+  moreover have "bin_eq_items (bin_upd e b) b"
+    using bin_eq_items_bin_upd Cons.prems by (auto simp: items_def)
+  ultimately show ?case
+    by (simp add: bin_eq_items_def)
+qed (auto simp: items_def bin_eq_items_def)
+  
+lemma bins_eq_items_bins_upd:
+  assumes "set (items es) \<subseteq> set (items (bs!k))"
+  shows "bins_eq_items (bins_upd bs k es) bs"
+  unfolding bins_upd_def using assms bin_eq_items_bin_upds bin_eq_items_def bins_eq_items_def
+  by (smt (verit, best) length_list_update nth_list_update_eq nth_list_update_neq)
+
+lemma bins_eq_items_imp_eq_bins_items:
+  "bins_eq_items bs bs' \<Longrightarrow> bins_items bs = bins_items bs'"
+  unfolding bins_eq_items_def bin_eq_items_def bins_items_def items_def
+  apply (auto simp: in_set_conv_nth)
+  apply (metis imageI nth_mem)+
+  done
+
+lemma bin_eq_items_dist_bin_upd:
+  assumes "bin_eq_items a b"
+  shows "bin_eq_items (bin_upd e a) (bin_upd e b)"
   sorry
+
+lemma bin_eq_items_dist_bin_upds:
+  assumes "bin_eq_items a b"
+  shows "bin_eq_items (bin_upds es a) (bin_upds es b)"
+  sorry
+
+lemma bins_eq_items_dist_bins_upd:
+  assumes "bins_eq_items as bs"
+  shows "bins_eq_items (bins_upd as k es) (bins_upd bs k es)"
+  sorry
+
+lemma \<pi>_it'_bins_items_eq:
+  assumes "(k, cfg, inp, as) \<in> wellformed_bins"
+  assumes "bins_eq_items as bs"
+  shows "bins_eq_items (\<pi>_it' k cfg inp as i) (\<pi>_it' k cfg inp bs i)"
+  using assms
+proof (induction i arbitrary: bs rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
+  case (Base k cfg inp as i)
+  have "\<pi>_it' k cfg inp as i = as"
+    by (simp add: Base.hyps)
+  moreover have "\<pi>_it' k cfg inp bs i = bs"
+    using Base.hyps Base.prems(1,2) unfolding bins_eq_items_def bin_eq_items_def
+    by (metis \<pi>_it'_simps(1) items_def length_map wellformed_bins_elim)
+  ultimately show ?case
+    using Base.prems(2) by presburger
+next
+  case (Complete k cfg inp as i x)
+  then show ?case sorry
+next
+  case (Scan k cfg inp as i x a)
+  then show ?case sorry
+next
+  case (Pass k cfg inp as i x a)
+  then show ?case sorry
+next
+  case (Predict k cfg inp as i x a)
+  let ?as' = "bins_upd as k (Predict_it k cfg a)"
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
+  have "(k, cfg, inp, ?as') \<in> wellformed_bins"
+    using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by fast
+  moreover have "bins_eq_items ?as' ?bs'"
+    using Predict.prems(2) bins_eq_items_dist_bins_upd by blast
+  ultimately have "bins_eq_items (\<pi>_it' k cfg inp ?as' (i + 1)) (\<pi>_it' k cfg inp ?bs' (i + 1))"
+    using Predict.IH by blast
+  moreover have "\<pi>_it' k cfg inp as i = \<pi>_it' k cfg inp ?as' (i+1)"
+    using Predict.hyps by simp
+  moreover have "\<pi>_it' k cfg inp bs i = \<pi>_it' k cfg inp ?bs' (i+1)"
+    using Predict.hyps Predict.prems unfolding bins_eq_items_def bin_eq_items_def
+    by (metis \<pi>_it'_simps(5) items_def length_map not_le_imp_less nth_map wellformed_bins_elim)
+  ultimately show ?case
+    by argo
+qed
 
 lemma \<pi>_it'_idem:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
@@ -1933,10 +1925,10 @@ proof (induction i arbitrary: j rule: \<pi>_it'_induct[OF assms(1), case_names B
         also have "... \<subseteq> set (items (?bs'' ! k))"
           by (simp add: wf nth_bin_sub_\<pi>_it')
         finally show ?thesis
-          using subsumed_by_mono bins_upd_eq_items by blast
+          using bins_upd_eq_items by blast
       qed
       ultimately show ?thesis
-        using \<pi>_it'_bins_items_eq by blast
+        using \<pi>_it'_bins_items_eq sorry
     qed
     also have "... = bins_items (\<pi>_it' k cfg inp ?bs' (i + 1))"
       using Complete.IH[OF wf _ sound Complete.prems(4)] \<open>i = j\<close> by blast
@@ -1984,10 +1976,10 @@ next
         also have "... \<subseteq> set (items (?bs'' ! (k+1)))"
           using wf nth_bin_sub_\<pi>_it' by blast
         finally show ?thesis
-          using subsumed_by_mono bins_upd_eq_items by blast
+          using bins_upd_eq_items by blast
       qed
       ultimately show ?thesis
-        using \<pi>_it'_bins_items_eq by blast
+        using \<pi>_it'_bins_items_eq sorry
     qed
     also have "... = bins_items (\<pi>_it' k cfg inp ?bs' (i + 1))"
       using \<open>i = j\<close> Scan.IH Scan.prems Scan.hyps sound wellformed_bins_Scan_it by fast
@@ -2041,7 +2033,7 @@ next
       hence "bins_items (\<pi>_it' k cfg inp ?bs'' j) = bins_items (\<pi>_it' k cfg inp (bins_upd ?bs'' k (Predict_it k cfg a)) (j+1))"
         using \<open>i = j\<close> kth_\<pi>_it'_bins nth_idem_bins_upd \<pi>_it'_simps(5) Predict.hyps Predict.prems(1) length_bins_\<pi>_it'
           wf_bins_\<pi>_it' wf_bins_kth_bin wf_item_def x by (smt (verit, ccfv_SIG) linorder_not_le order.trans)
-      moreover have "bins_items (bins_upd ?bs'' k (Predict_it k cfg a)) = bins_items ?bs''"
+      moreover have "bins_eq_items (bins_upd ?bs'' k (Predict_it k cfg a)) ?bs''"
       proof -
         have "k < length bs"
           using wellformed_bins_elim[OF Predict.prems(1)] by blast
@@ -2050,10 +2042,14 @@ next
         also have "... \<subseteq> set (items (?bs'' ! k))"
           using wf nth_bin_sub_\<pi>_it' by blast
         finally show ?thesis
-          by (meson bins_upd_eq_items)
+          using bins_eq_items_bins_upd by blast
       qed
+      moreover have "(k, cfg, inp, bins_upd ?bs'' k (Predict_it k cfg a)) \<in> wellformed_bins"
+        using wellformed_bins_\<pi>_it' wellformed_bins_Predict_it Predict.hyps Predict.prems(1)
+          \<open>length (items (bs ! k)) \<le> length (items (?bs'' ! k))\<close> kth_\<pi>_it'_bins
+        by (smt (verit, best) \<pi>_it'_simps(5) dual_order.trans not_le_imp_less)
       ultimately show ?thesis
-        using \<pi>_it'_bins_items_eq by blast
+        using \<pi>_it'_bins_items_eq bins_eq_items_imp_eq_bins_items by blast
     qed
     also have "... = bins_items (\<pi>_it' k cfg inp ?bs' (i + 1))"
       using \<open>i = j\<close> Predict.IH Predict.prems sound wf by (metis order_refl)
@@ -2201,15 +2197,16 @@ definition inp_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtre
 
 function build_dtree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a dtree" where
   "build_dtree' bs k i = (
-    let kb = bs ! k in
-    let x = items kb ! i in (
-    case pointers kb ! i of
-      [] \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x)) \<comment>\<open>start building sub-tree\<close>
-    | (Pre pre) # _ \<Rightarrow> build_dtree' bs (k-1) pre \<comment>\<open>traverse terminal in the input\<close>
-    | (PreRed k' pre red) # _ \<Rightarrow> ( \<comment>\<open>update non-terminal with complete sub-tree\<close>
+    let e = (bs!k) ! i in
+    let x = item e in (
+    case pointer e of
+      Null \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x)) \<comment>\<open>start building sub-tree\<close>
+    | (Pre pre) \<Rightarrow> build_dtree' bs (k-1) pre \<comment>\<open>traverse terminal in the input\<close>
+    | (PreRed ((k', pre, red) # _)) \<Rightarrow> ( \<comment>\<open>update non-terminal with complete sub-tree\<close>
       case build_dtree' bs k' pre of
         Node N ts \<Rightarrow> Node N (ts[item_dot x - 1 := build_dtree' bs k red])
-      | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>)))"
+      | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>)
+    | _ \<Rightarrow> undefined))" \<comment>\<open>Fix this by stronger typing\<close>
   by pat_completeness auto
 termination sorry
 
@@ -2218,14 +2215,15 @@ declare build_dtree'.simps [simp del]
 definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a dtree option" where
   "build_dtree cfg inp bs = (
     let k = length bs - 1 in
-    case find_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
-      Some i \<Rightarrow> Some (build_dtree' bs k i)
-    | None \<Rightarrow> None
+    case filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
+      [] \<Rightarrow> None
+    | (_,i)#_ \<Rightarrow> Some (build_dtree' bs k i)
   )"
 
 
 subsection \<open>Lemmas about valid bin pointers\<close>
 
+(*
 definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
   "mono_ptrs bs = (\<forall>k < length bs. \<forall>i < length (pointers (bs!k)).
     (\<forall>pre. Pre pre \<in> set (pointers (bs!k) ! i) \<longrightarrow>
@@ -2233,6 +2231,7 @@ definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
     (\<forall>k' pre red. PreRed k' pre red \<in> set (pointers (bs!k) ! i) \<longrightarrow> 
       k' < k \<and> pre < length (pointers (bs!k')) \<and> red < i)
   )"
+*)
 
 
 subsection \<open>Main lemmas\<close>
@@ -2242,7 +2241,7 @@ lemma ex_Node_build_tree':
   apply (induction bs k i rule: build_dtree'.induct)
   apply (subst build_dtree'.simps)
   apply (auto simp: Let_def split: list.splits dtree.splits pointer.splits)
-  apply (metis dtree.distinct(1))
+  sledgehammer
   done
 
 lemma nex_Leaf_build_tree':
