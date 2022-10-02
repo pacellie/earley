@@ -58,7 +58,7 @@ subsection \<open>Definitions\<close>
 datatype pointer =
   Null
   | Pre nat
-  | PreRed "(nat \<times> nat \<times> nat) list" \<comment>\<open>TODO: at least one!\<close>
+  | PreRed "(nat \<times> nat \<times> nat)" "(nat \<times> nat \<times> nat) list"
 
 datatype 'a entry =
   Entry
@@ -124,14 +124,14 @@ definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rig
   "Complete_it k y bs red = (
     let orig = bs ! (item_origin y) in
     let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
-    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed [(item_origin y, pre, red)]))) is)"
+    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is)"
 
 fun bin_upd :: "'a entry \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
   "bin_upd e' [] = [e']"
 | "bin_upd e' (e#es) = (
     case (e', e) of
-      (Entry x (PreRed xs), Entry y (PreRed ys)) \<Rightarrow> 
-        if x = y then Entry x (PreRed (xs@ys)) # es
+      (Entry x (PreRed px xs), Entry y (PreRed py ys)) \<Rightarrow> 
+        if x = y then Entry x (PreRed px (py#xs@ys)) # es
         else e # bin_upd e' es
       | _ \<Rightarrow> 
         if item e' = item e then e # es
@@ -226,9 +226,9 @@ lemma set_items_bin_upd:
 proof (induction b arbitrary: e)
   case (Cons b bs)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
       by blast
     thus ?thesis
       using Cons.IH by (auto simp: items_def)
@@ -299,9 +299,9 @@ lemma bin_items_upto_nth_idem_bin_upd:
 proof (induction b arbitrary: e n)
   case (Cons b bs)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
       by blast
     thus ?thesis
       using Cons bin_items_upto_Cons_0
@@ -370,9 +370,9 @@ lemma distinct_bin_upd:
 proof (induction b arbitrary: e)
   case (Cons b bs)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
       by blast
     thus ?thesis
       using Cons
@@ -419,9 +419,9 @@ lemma wf_bin_bin_upd:
 proof (induction b arbitrary: e)
   case (Cons b bs)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
       by blast
     thus ?thesis
       using Cons distinct_bin_upd wf_bin_def wf_bin_items_def set_items_bin_upd
@@ -468,9 +468,9 @@ lemma bin_upd_eq_items:
 proof (induction b arbitrary: e)
   case (Cons b bs)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
       by blast
     thus ?thesis
       using Cons set_items_bin_upd by (metis Un_insert_right insert_absorb sup_bot_right)
@@ -510,9 +510,9 @@ lemma bin_eq_items_bin_upd:
 proof (induction b arbitrary: e)
   case (Cons b bs)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
       by blast
     thus ?thesis
       using Cons by (auto simp: items_def)
@@ -570,9 +570,9 @@ proof (induction a arbitrary: e b)
   obtain b' bs where bs: "b = b' # bs" "item a = item b'" "items as = items bs"
     using Cons.prems by (auto simp: items_def)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> a = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> a = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where #: "e = Entry x (PreRed xs)" "a = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where #: "e = Entry x (PreRed xp xs)" "a = Entry y (PreRed yp ys)"
       by blast
     show ?thesis
     proof cases
@@ -634,9 +634,9 @@ lemma bin_eq_items_dist_bin_upd_entry:
 proof (induction b arbitrary: e e')
   case (Cons a as)
   show ?case
-  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> a = Entry y (PreRed ys)")
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> a = Entry y (PreRed yp ys)")
     case True
-    then obtain x xs y ys where #: "e = Entry x (PreRed xs)" "a = Entry y (PreRed ys)"
+    then obtain x xp xs y yp ys where #: "e = Entry x (PreRed xp xs)" "a = Entry y (PreRed yp ys)"
       by blast
     show ?thesis
     proof cases
@@ -714,7 +714,7 @@ lemma distinct_Complete_it:
 proof -
   let ?orig = "bs ! (item_origin y)"
   let ?is = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?is' = "map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed [(item_origin y, pre, red)]))) ?is"
+  let ?is' = "map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) ?is"
   have wf: "wf_bin cfg inp (item_origin y) ?orig"
     using assms wf_bins_def by blast
   have 0: "\<forall>x \<in> set (map fst ?is). item_end x = (item_origin y)"
@@ -762,7 +762,7 @@ lemma wf_bins_Complete_it:
 proof -
   let ?orig = "bs ! (item_origin y)"
   let ?is = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?is' = "map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed [(item_origin y, pre, red)]))) ?is"
+  let ?is' = "map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) ?is"
   {
     fix x
     assume *: "x \<in> set (map fst ?is)"
@@ -1280,7 +1280,7 @@ proof standard
     using kth_bin_sub_bins assms items_def wf_bin_def wf_bins_def bin_def wf_bin_items_def by fast
   let ?orig = "bs ! item_origin y"
   let ?xs = "filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items ?orig)"
-  let ?xs' = "map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed [(item_origin y, pre, red)]))) ?xs"
+  let ?xs' = "map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) ?xs"
   have 0: "item_origin y < length bs"
     using wf_bins_def wf_bin_def wf_item_def wf_bin_items_def assms(1,3,4)
     by (metis Orderings.preorder_class.dual_order.strict_trans1 leD not_le_imp_less)
@@ -2399,12 +2399,12 @@ function build_dtree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarr
     let x = item e in (
     case pointer e of
       Null \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x)) \<comment>\<open>start building sub-tree\<close>
-    | (Pre pre) \<Rightarrow> build_dtree' bs (k-1) pre \<comment>\<open>traverse terminal in the input\<close>
-    | (PreRed ((k', pre, red) # _)) \<Rightarrow> ( \<comment>\<open>update non-terminal with complete sub-tree\<close>
+    | Pre pre \<Rightarrow> build_dtree' bs (k-1) pre \<comment>\<open>traverse terminal in the input\<close>
+    | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>update non-terminal with complete sub-tree\<close>
       case build_dtree' bs k' pre of
         Node N ts \<Rightarrow> Node N (ts[item_dot x - 1 := build_dtree' bs k red])
-      | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>)
-    | _ \<Rightarrow> undefined))" \<comment>\<open>Fix this by stronger typing\<close>
+      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
+    ))"
   by pat_completeness auto
 termination sorry
 
@@ -2439,8 +2439,7 @@ lemma ex_Node_build_tree':
   apply (induction bs k i rule: build_dtree'.induct)
   apply (subst build_dtree'.simps)
   apply (auto simp: Let_def split: list.splits dtree.splits pointer.splits)
-  sledgehammer
-  done
+  by (metis dtree.distinct(1))
 
 lemma nex_Leaf_build_tree':
   "\<nexists>a. build_dtree' bs k i = Leaf a"
