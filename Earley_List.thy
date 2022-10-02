@@ -296,7 +296,7 @@ qed
 
 lemma bin_items_upto_nth_idem_bin_upd:
   "n < length b \<Longrightarrow> bin_items_upto (bin_upd e b) n = bin_items_upto b n"
-proof (induction b arbitrary: e)
+proof (induction b arbitrary: e n)
   case (Cons b bs)
   show ?case
   proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
@@ -304,7 +304,8 @@ proof (induction b arbitrary: e)
     then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
       by blast
     thus ?thesis
-      sorry
+      using Cons bin_items_upto_Cons_0
+      by (cases n) (auto simp: items_def bin_items_upto_Cons, blast+)
   next
     case False
     then show ?thesis
@@ -319,8 +320,8 @@ proof (induction b arbitrary: e)
       hence "bin_upd e (b # bs) = b # bin_upd e bs"
         using False by (auto split: pointer.splits entry.splits)
       thus ?thesis
-        using * Cons.IH apply (auto simp: items_def)
-        sledgehammer
+        using * Cons bin_items_upto_Cons_0
+        by (cases n) (auto simp: items_def bin_items_upto_Cons, blast+)
     qed
   qed
 qed (auto simp: items_def)
@@ -366,90 +367,36 @@ lemma bins_bin_exists:
 
 lemma distinct_bin_upd:
   "distinct (items b) \<Longrightarrow> distinct (items (bin_upd e b))"
-proof (induction e b rule: bin_upd.induct)
-  case (2 x xs y ys es)
+proof (induction b arbitrary: e)
+  case (Cons b bs)
   show ?case
-  proof (cases "x = y")
+  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
     case True
-    then show ?thesis
-      using 2 by (auto simp: items_def)
+    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+      by blast
+    thus ?thesis
+      using Cons
+      apply (auto simp: items_def)
+      by (metis Un_insert_right entry.sel(1) imageI items_def list.set_map list.simps(15) set_ConsD set_items_bin_upd sup_bot_right)
   next
     case False
-    have "distinct (items (bin_upd (Entry x (PreRed xs)) es))"
-      using False 2 by (simp add: items_def)
-    moreover have "y \<notin> set (items (bin_upd (Entry x (PreRed xs)) es))"
-      using "2.prems" False set_items_bin_upd items_def
-      by (metis UnE distinct.simps(2) empty_iff entry.sel(1) insertE list.simps(9))
-    ultimately show ?thesis
-      using False by (auto simp: items_def)
-  qed
-next
-  case ("3_1" x e es)
-  show ?case
-  proof (cases "x = item e")
-    case True
     then show ?thesis
-      using "3_1" by (auto simp: items_def)
-  next
-    case False
-    have "distinct (items (bin_upd (Entry x Null) es))"
-      using False "3_1" by (simp add: items_def)
-    moreover have "item e \<notin> set (items (bin_upd (Entry x Null) es))"
-      using "3_1.prems" False set_items_bin_upd items_def
-      by (metis UnE distinct.simps(2) empty_iff entry.sel(1) insertE list.simps(9))
-    ultimately show ?thesis
-      using False by (auto simp: items_def)
-  qed
-next
-  case ("3_2" x xs e es)
-  show ?case
-  proof (cases "x = item e")
-    case True
-    then show ?thesis
-      using "3_2" by (auto simp: items_def)
-  next
-    case False
-    have "distinct (items (bin_upd (Entry x (Pre xs)) es))"
-      using False "3_2" by (simp add: items_def)
-    moreover have "item e \<notin> set (items (bin_upd (Entry x (Pre xs)) es))"
-      using "3_2.prems" False set_items_bin_upd items_def
-      by (metis UnE distinct.simps(2) empty_iff entry.sel(1) insertE list.simps(9))
-    ultimately show ?thesis
-      using False by (auto simp: items_def)
-  qed
-next
-  case ("3_3" e' x es)
-  show ?case
-  proof (cases "item e' = x")
-    case True
-    then show ?thesis
-      using "3_3" by (auto simp: items_def)
-  next
-    case False
-    have "distinct (items (bin_upd e' es))"
-      using False "3_3" by (simp add: items_def)
-    moreover have "x \<notin> set (items (bin_upd e' es))"
-      using "3_3.prems" False set_items_bin_upd items_def
-      by (metis UnE distinct.simps(2) empty_iff entry.sel(1) insertE list.simps(9))
-    ultimately show ?thesis
-      using False by (auto simp: items_def)
-  qed
-next
-  case ("3_4" e' x xs es)
-  show ?case
-  proof (cases "item e' = x")
-    case True
-    then show ?thesis
-      using "3_4" by (auto simp: items_def)
-  next
-    case False
-    have "distinct (items (bin_upd e' es))"
-      using False "3_4" by (simp add: items_def)
-    moreover have "x \<notin> set (items (bin_upd e' es))"
-      using "3_4.prems" False set_items_bin_upd items_def
-      by (metis UnE distinct.simps(2) empty_iff entry.sel(1) insertE list.simps(9))
-    ultimately show ?thesis
-      using False by (auto simp: items_def)
+    proof cases
+      assume *: "item e = item b"
+      hence "bin_upd e (b # bs) = b # bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons.prems by (auto simp: items_def)
+    next
+      assume *: "\<not> item e = item b"
+      hence "bin_upd e (b # bs) = b # bin_upd e bs"
+        using False by (auto split: pointer.splits entry.splits)
+      moreover have "distinct (items (bin_upd e bs))"
+        using Cons by (auto simp: items_def)
+      ultimately show ?thesis
+        using * Cons.prems set_items_bin_upd
+        by (metis Un_insert_right distinct.simps(2) insertE items_def list.simps(9) sup_bot_right)
+    qed
   qed
 qed (auto simp: items_def)
 
@@ -469,10 +416,35 @@ lemma wf_bin_bin_upd:
   assumes "wf_bin cfg inp k b" "wf_item cfg inp (item e) \<and> item_end (item e) = k"
   shows "wf_bin cfg inp k (bin_upd e b)"
   using assms
-  apply (induction e b rule: bin_upd.induct)
-  apply (auto simp: wf_bin_def wf_bin_items_def items_def)
-  apply (metis UnE entry.sel(1) imageI image_set items_def set_items_bin_upd singleton_iff)+
-  done
+proof (induction b arbitrary: e)
+  case (Cons b bs)
+  show ?case
+  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+    case True
+    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+      by blast
+    thus ?thesis
+      using Cons distinct_bin_upd wf_bin_def wf_bin_items_def set_items_bin_upd
+      by (smt (verit, best) Un_insert_right insertE sup_bot.right_neutral)
+  next
+    case False
+    then show ?thesis
+    proof cases
+      assume *: "item e = item b"
+      hence "bin_upd e (b # bs) = b # bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons.prems by (auto simp: items_def)
+    next
+      assume *: "\<not> item e = item b"
+      hence "bin_upd e (b # bs) = b # bin_upd e bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons.prems set_items_bin_upd distinct_bin_upd wf_bin_def wf_bin_items_def
+        by (smt (verit, best) Un_insert_right insertE sup_bot_right)
+    qed
+  qed
+qed (auto simp: items_def wf_bin_def wf_bin_items_def)
 
 lemma wf_bin_bin_upds:
   assumes "wf_bin cfg inp k b" "distinct (items es)"
@@ -493,9 +465,35 @@ lemma wf_bins_impl_wf_items:
 
 lemma bin_upd_eq_items:
   "item e \<in> set (items b) \<Longrightarrow> set (items (bin_upd e b)) = set (items b)"
-  by (induction e b rule: bin_upd.induct) (auto simp: items_def)
+proof (induction b arbitrary: e)
+  case (Cons b bs)
+  show ?case
+  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+    case True
+    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+      by blast
+    thus ?thesis
+      using Cons set_items_bin_upd by (metis Un_insert_right insert_absorb sup_bot_right)
+  next
+    case False
+    then show ?thesis
+    proof cases
+      assume *: "item e = item b"
+      hence "bin_upd e (b # bs) = b # bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons.prems by (auto simp: items_def)
+    next
+      assume *: "\<not> item e = item b"
+      hence "bin_upd e (b # bs) = b # bin_upd e bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons.prems set_items_bin_upd by (metis Un_insert_right insert_absorb sup_bot_right)
+    qed
+  qed
+qed (auto simp: items_def)
 
-lemma bin_upds_eq_items: \<comment>\<open>TODO\<close>
+lemma bin_upds_eq_items:
   "set (items es) \<subseteq> set (items b) \<Longrightarrow> set (items (bin_upds es b)) = set (items b)"
   apply (induction es arbitrary: b)
   apply (auto simp: set_items_bin_upd set_items_bin_upds)
@@ -1768,7 +1766,33 @@ lemma \<pi>_step_sub_\<pi>_it:
 
 lemma bin_eq_items_bin_upd:
   "item e \<in> set (items b) \<Longrightarrow> items (bin_upd e b) = items b"
-  by (induction e b rule: bin_upd.induct) (auto simp: items_def)
+proof (induction b arbitrary: e)
+  case (Cons b bs)
+  show ?case
+  proof (cases "\<exists>x xs y ys. e = Entry x (PreRed xs) \<and> b = Entry y (PreRed ys)")
+    case True
+    then obtain x xs y ys where "e = Entry x (PreRed xs)" "b = Entry y (PreRed ys)"
+      by blast
+    thus ?thesis
+      using Cons by (auto simp: items_def)
+  next
+    case False
+    then show ?thesis
+    proof cases
+      assume *: "item e = item b"
+      hence "bin_upd e (b # bs) = b # bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons.prems by (auto simp: items_def)
+    next
+      assume *: "\<not> item e = item b"
+      hence "bin_upd e (b # bs) = b # bin_upd e bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using * Cons by (auto simp: items_def)
+    qed
+  qed
+qed (auto simp: items_def)
 
 lemma bin_eq_items_bin_upds:
   assumes "set (items es) \<subseteq> set (items b)"
@@ -1799,60 +1823,7 @@ lemma bins_eq_items_imp_eq_bins_items:
 lemma bin_eq_items_dist_bin_upd:
   assumes "items a = items b"
   shows "items (bin_upd e a) = items (bin_upd e b)"
-  using assms
-proof (induction e a arbitrary: b rule: bin_upd.induct)
-  case (2 x xs y ys es)
-  show ?case sorry
-next
-  case ("3_1" x e es)
-  then obtain e' es' where *: "b = e'#es'" "item e = item e'" "items es = items es'"
-    by (auto simp: items_def)
-  thus ?case
-    using "3_1" by (cases "item (Entry x Null) \<noteq> item e") (auto simp: items_def)
-next
-  case ("3_2" x p e es)
-  then obtain e' es' where *: "b = e'#es'" "item e = item e'" "items es = items es'"
-    by (auto simp: items_def)
-  thus ?case
-    using "3_2" by (cases "item (Entry x (Pre p)) \<noteq> item e") (auto simp: items_def)
-next
-  case ("3_3" e' x es)
-  then obtain e es' where *: "b = e#es'" "item (Entry x Null) = item e" "items es = items es'"
-    by (auto simp: items_def)
-  hence "item e = x"
-    by simp
-
-(*
-| "bin_upd e' (e#es) = (
-    if item e' = item e then e # es
-    else e # bin_upd e' es
-*)
-  
-
-  show ?case
-  proof  (cases "item e' \<noteq> item (Entry x Null)")
-    case True
-    hence "items (bin_upd e' es) = items (bin_upd e' es')"
-      using * "3_3.IH" by blast
-    have "items (bin_upd e' (Entry x Null # es)) = x # items (bin_upd e' es)"
-      using True by (simp add: items_def)
-    have "items (bin_upd e' b) = items (bin_upd e' (e#es'))"
-      using * by blast
-    also have "... = items (e # es')"
-      using *(2) True apply (auto split: entry.splits)
-      sorry
-    then show ?thesis sorry
-  next
-    case False
-    then show ?thesis
-      using * apply (auto simp: items_def)
-      by (metis bin_eq_items_bin_upd items_def list.set_intros(1) list.simps(9))
-  qed
-next
-  case ("3_4" e' x p es)
-  then show ?case sorry
-qed (auto simp: items_def)
-
+  sorry
 
 lemma bin_eq_items_dist_bin_upds:
   assumes "items a = items b"
