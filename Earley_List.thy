@@ -2362,7 +2362,7 @@ corollary correctness_list:
   using assms correctness_set earley_recognized_it_iff_earley_recognized by blast
 
 
-section \<open>Earley parse tree\<close>
+section \<open>Earley parse trees\<close>
 
 subsection \<open>Main definitions\<close>
 
@@ -2378,31 +2378,30 @@ fun root_dtree :: "'a dtree \<Rightarrow> 'a" where
   "root_dtree (Leaf a) = a"
 | "root_dtree (Node N _) = N"
 
-\<comment>\<open>Implies: derives cfg [root_dtree t] (yield_dtree t)\<close>
 fun wf_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
   "wf_dtree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a \<or> is_nonterminal cfg a"
 | "wf_dtree cfg (Node N ts) \<longleftrightarrow>
     (\<exists>r \<in> set (\<RR> cfg). r = (N, map root_dtree ts)) \<and>
     (\<forall>t \<in> set ts. wf_dtree cfg t)"
 
-\<comment>\<open>Implied by wf_dtree\<close>
 definition sound_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
   "sound_dtree cfg t = derives cfg [root_dtree t] (yield_dtree t)"
 
-\<comment>\<open>Refine to prefix of yield depending on item_dot and Leafs default to true.\<close>
-definition inp_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "inp_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
+definition parses_inp_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "parses_inp_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
 
 function build_dtree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a dtree" where
   "build_dtree' bs k i = (
-    let e = (bs!k) ! i in
-    let x = item e in (
+    let e = (bs!k) ! i in (
     case pointer e of
-      Null \<Rightarrow> Node (item_rule_head x) (map Leaf (item_rule_body x)) \<comment>\<open>start building sub-tree\<close>
-    | Pre pre \<Rightarrow> build_dtree' bs (k-1) pre \<comment>\<open>traverse terminal in the input\<close>
-    | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>update non-terminal with complete sub-tree\<close>
+      Null \<Rightarrow> Node (item_rule_head (item e)) [] \<comment>\<open>start building sub-tree\<close>
+    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-tree starting from terminal\<close>
+      case build_dtree' bs (k-1) pre of
+        Node N ts \<Rightarrow> Node N (ts @ [Leaf (item_rule_body (item e) ! (item_dot (item e) - 1))])
+      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
+    | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>add sub-tree starting from non-terminal\<close>
       case build_dtree' bs k' pre of
-        Node N ts \<Rightarrow> Node N (ts[item_dot x - 1 := build_dtree' bs k red])
+        Node N ts \<Rightarrow> Node N (ts @ [build_dtree' bs k red])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     ))"
   by pat_completeness auto
@@ -2421,15 +2420,29 @@ definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bin
 
 subsection \<open>Lemmas about valid bin pointers\<close>
 
-(*
 definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
-  "mono_ptrs bs = (\<forall>k < length bs. \<forall>i < length (pointers (bs!k)).
-    (\<forall>pre. Pre pre \<in> set (pointers (bs!k) ! i) \<longrightarrow>
-      pre < length (pointers (bs!(k-1)))) \<and>
-    (\<forall>k' pre red. PreRed k' pre red \<in> set (pointers (bs!k) ! i) \<longrightarrow> 
-      k' < k \<and> pre < length (pointers (bs!k')) \<and> red < i)
-  )"
-*)
+  "mono_ptrs bs = (\<forall>k < length bs. \<forall>i < length (bs!k).
+    (\<forall>pre. Pre pre = pointer (bs!k!i) \<longrightarrow> pre < length (bs!(k-1))) \<and>
+    (\<forall>p ps k' pre red. PreRed p ps = pointer (bs!k!i) \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
+      k' < k \<and> pre < length (bs!k') \<and> red < i))"
+
+definition predicts :: "'a item \<Rightarrow> bool" where
+  "predicts x \<longleftrightarrow> item_dot x = 0"
+
+definition scans :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "scans inp k x y \<longleftrightarrow> y = inc_item x k \<and> 
+    (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
+
+definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "completes k x y z \<longleftrightarrow> y = inc_item x k \<and> is_complete z \<and>
+    (\<exists>N. next_symbol x = Some N \<and> N = item_rule_head z)"
+
+definition wf_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" where
+  "wf_ptrs inp bs \<longleftrightarrow> (\<forall>k < length bs. \<forall>i < length (bs!k). (
+    (pointer (bs!k!i) = Null \<longleftrightarrow> predicts (item (bs!k!i))) \<and>
+    (\<forall>pre. pointer (bs!k!i) = Pre pre \<longleftrightarrow> scans inp k (item (bs!k!i)) (item (bs!k!i))) \<and>
+    (\<forall>p ps k' pre red. (pointer (bs!k!i) = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps)) \<longleftrightarrow> 
+      completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red)))))"
 
 
 subsection \<open>Main lemmas\<close>
@@ -2439,11 +2452,19 @@ lemma ex_Node_build_tree':
   apply (induction bs k i rule: build_dtree'.induct)
   apply (subst build_dtree'.simps)
   apply (auto simp: Let_def split: list.splits dtree.splits pointer.splits)
-  by (metis dtree.distinct(1))
+  by (metis dtree.distinct(1))+
 
 lemma nex_Leaf_build_tree':
   "\<nexists>a. build_dtree' bs k i = Leaf a"
   using ex_Node_build_tree' by (metis dtree.distinct(1))
+
+lemma mono_ptrs_\<pi>_it':
+  "mono_ptrs (\<pi>_it' k cfg inp bs i)"
+  sorry
+
+lemma wf_ptrs_\<pi>_it':
+  "wf_ptrs inp (\<pi>_it' k cfg inp bs i)"
+  sorry
 
 lemma Derivation_imp_ex_wf_yield:
   "Derivation cfg [a] D \<alpha> \<Longrightarrow> is_symbol cfg a \<Longrightarrow> \<exists>t. root_dtree t = a \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
@@ -2454,7 +2475,7 @@ lemma wf_tree_imp_ex_Derivation:
   sorry
 
 lemma derives_imp_ex_wf_yield:
-  "wf_cfg cfg \<Longrightarrow> derives cfg [\<SS> cfg] \<alpha> \<Longrightarrow> \<exists>t. root_dtree t = \<SS> \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
+  "wf_cfg cfg \<Longrightarrow> derives cfg [a] \<alpha> \<Longrightarrow> \<exists>t. root_dtree t = a \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
   sorry
 
 lemma wf_tree_imp_ex_derives:
@@ -2466,7 +2487,7 @@ lemma wf_dtree_build_dtree':
   sorry
 
 lemma inp_dtree_build_dtree':
-  "inp_dtree inp (items (bs!k) ! i) (build_dtree' bs k i)"
+  "parses_inp_dtree inp (item ((bs!k) ! i)) (build_dtree' bs k i)"
   sorry
 
 lemma sound_dtree_build_tree':
@@ -2476,9 +2497,6 @@ lemma sound_dtree_build_tree':
 lemma sound_dtree_build_tree:
   "build_dtree cfg inp bs = Some t \<Longrightarrow> sound_dtree cfg t"
   sorry
-
-
-section \<open>Earley parse forest\<close>
 
 
 end
