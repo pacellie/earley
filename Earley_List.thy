@@ -16,6 +16,14 @@ fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarro
 definition filter_with_index :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
   "filter_with_index P xs = filter_with_index' 0 P xs"
 
+lemma filter_with_index'_P:
+  "(x, n) \<in> set (filter_with_index' i P xs) \<Longrightarrow> P x"
+  by (induction xs arbitrary: i) (auto split: if_splits)
+
+lemma filter_with_index_P:
+  "(x, n) \<in> set (filter_with_index P xs) \<Longrightarrow> P x"
+  by (metis filter_with_index'_P filter_with_index_def)
+
 lemma filter_with_index'_cong_filter:
   "map fst (filter_with_index' i P xs) = filter P xs"
   by (induction xs arbitrary: i) auto
@@ -27,6 +35,14 @@ lemma filter_with_index_cong_filter:
 lemma size_index_filter_with_index':
   "(x, n) \<in> set (filter_with_index' i P xs) \<Longrightarrow> n \<ge> i"
   by (induction xs arbitrary: i) (auto simp: Suc_leD split: if_splits)
+
+lemma index_filter_with_index'_lt_length:
+  "(x, n) \<in> set (filter_with_index' i P xs) \<Longrightarrow> n-i < length xs"
+  by (induction xs arbitrary: i)(auto simp: less_Suc_eq_0_disj split: if_splits; metis Suc_diff_Suc leI)+
+
+lemma index_filter_with_index_lt_length:
+  "(x, n) \<in> set (filter_with_index P xs) \<Longrightarrow> n < length xs"
+  by (metis filter_with_index_def index_filter_with_index'_lt_length minus_nat.diff_0)
 
 lemma filter_with_index'_nth:
   "(x, n) \<in> set (filter_with_index' i P xs) \<Longrightarrow> xs ! (n-i) = x"
@@ -2378,30 +2394,24 @@ fun root_dtree :: "'a dtree \<Rightarrow> 'a" where
   "root_dtree (Leaf a) = a"
 | "root_dtree (Node N _) = N"
 
-fun wf_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "wf_dtree cfg (Leaf a) \<longleftrightarrow> is_terminal cfg a \<or> is_nonterminal cfg a"
-| "wf_dtree cfg (Node N ts) \<longleftrightarrow>
-    (\<exists>r \<in> set (\<RR> cfg). r = (N, map root_dtree ts)) \<and>
-    (\<forall>t \<in> set ts. wf_dtree cfg t)"
+definition wf_root_dtree :: "'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "wf_root_dtree x t \<longleftrightarrow> root_dtree t = item_rule_head x"
 
-definition sound_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "sound_dtree cfg t = derives cfg [root_dtree t] (yield_dtree t)"
+definition wf_yield_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "wf_yield_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
 
-definition parses_inp_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "parses_inp_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
-
-function build_dtree' :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a dtree" where
-  "build_dtree' bs k i = (
-    let e = (bs!k) ! i in (
+function build_dtree' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a dtree" where
+  "build_dtree' bs inp k i = (
+    let e = bs!k!i in (
     case pointer e of
       Null \<Rightarrow> Node (item_rule_head (item e)) [] \<comment>\<open>start building sub-tree\<close>
     | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-tree starting from terminal\<close>
-      case build_dtree' bs (k-1) pre of
-        Node N ts \<Rightarrow> Node N (ts @ [Leaf (item_rule_body (item e) ! (item_dot (item e) - 1))])
+      case build_dtree' bs inp (k-1) pre of
+        Node N ts \<Rightarrow> Node N (ts @ [Leaf (inp!(k-1))])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>add sub-tree starting from non-terminal\<close>
-      case build_dtree' bs k' pre of
-        Node N ts \<Rightarrow> Node N (ts @ [build_dtree' bs k red])
+      case build_dtree' bs inp k' pre of
+        Node N ts \<Rightarrow> Node N (ts @ [build_dtree' bs inp k red])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     ))"
   by pat_completeness auto
@@ -2414,11 +2424,8 @@ definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bin
     let k = length bs - 1 in
     case filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
       [] \<Rightarrow> None
-    | (_,i)#_ \<Rightarrow> Some (build_dtree' bs k i)
+    | (_,i)#_ \<Rightarrow> Some (build_dtree' bs inp k i)
   )"
-
-
-subsection \<open>Lemmas about valid bin pointers\<close>
 
 definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
   "mono_ptrs bs = (\<forall>k < length bs. \<forall>i < length (bs!k).
@@ -2427,76 +2434,250 @@ definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
       k' < k \<and> pre < length (bs!k') \<and> red < i))"
 
 definition predicts :: "'a item \<Rightarrow> bool" where
-  "predicts x \<longleftrightarrow> item_dot x = 0"
+  "predicts x \<longleftrightarrow> item_origin x = item_end x"
 
 definition scans :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "scans inp k x y \<longleftrightarrow> y = inc_item x k \<and> 
+  "scans inp k x y \<longleftrightarrow> 0 < k \<and> y = inc_item x k \<and> 
     (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
 
 definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "completes k x y z \<longleftrightarrow> y = inc_item x k \<and> is_complete z \<and>
+  "completes k x y z \<longleftrightarrow> y = inc_item x k \<and> is_complete z \<and> item_origin z = item_end x \<and>
     (\<exists>N. next_symbol x = Some N \<and> N = item_rule_head z)"
 
 definition wf_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "wf_ptrs inp bs \<longleftrightarrow> (\<forall>k < length bs. \<forall>i < length (bs!k). (
     (pointer (bs!k!i) = Null \<longleftrightarrow> predicts (item (bs!k!i))) \<and>
-    (\<forall>pre. pointer (bs!k!i) = Pre pre \<longleftrightarrow> scans inp k (item (bs!k!i)) (item (bs!k!i))) \<and>
+    (\<forall>pre. pointer (bs!k!i) = Pre pre \<longleftrightarrow> scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))) \<and>
     (\<forall>p ps k' pre red. (pointer (bs!k!i) = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps)) \<longleftrightarrow> 
       completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red)))))"
 
 
-subsection \<open>Main lemmas\<close>
+subsection \<open>Lemmas\<close>
+
+lemma build_tree'_simps[simp]:
+  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_dtree' bs inp k i = Node (item_rule_head (item e)) []"
+  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_dtree' bs inp (k-1) pre = Node N ts \<Longrightarrow> 
+    build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> build_dtree' bs inp k' pre = Node N ts \<Longrightarrow>
+    build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
+  by (auto simp: build_dtree'.simps Let_def)
 
 lemma ex_Node_build_tree':
-  "\<exists>N ts. build_dtree' bs k i = Node N ts"
-  apply (induction bs k i rule: build_dtree'.induct)
+  "\<exists>N ts. build_dtree' bs inp k i = Node N ts"
+  apply (induction bs inp k i rule: build_dtree'.induct)
   apply (subst build_dtree'.simps)
   apply (auto simp: Let_def split: list.splits dtree.splits pointer.splits)
   by (metis dtree.distinct(1))+
 
 lemma nex_Leaf_build_tree':
-  "\<nexists>a. build_dtree' bs k i = Leaf a"
+  "\<nexists>a. build_dtree' bs inp k i = Leaf a"
   using ex_Node_build_tree' by (metis dtree.distinct(1))
 
 lemma mono_ptrs_\<pi>_it':
-  "mono_ptrs (\<pi>_it' k cfg inp bs i)"
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "mono_ptrs bs"
+  shows "mono_ptrs (\<pi>_it' k cfg inp bs i)"
   sorry
 
 lemma wf_ptrs_\<pi>_it':
-  "wf_ptrs inp (\<pi>_it' k cfg inp bs i)"
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "wf_bins cfg inp bs"
+  shows "wf_ptrs inp (\<pi>_it' k cfg inp bs i)"
   sorry
 
-lemma Derivation_imp_ex_wf_yield:
-  "Derivation cfg [a] D \<alpha> \<Longrightarrow> is_symbol cfg a \<Longrightarrow> \<exists>t. root_dtree t = a \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
+lemma wf_root_dtree_build_dtree':
+  assumes "wf_ptrs inp bs"
+  assumes "mono_ptrs bs" "k < length bs" "i < length (bs!k)"
+  shows "wf_root_dtree (item (bs!k!i)) (build_dtree' bs inp k i)"
+  using assms
+proof (induction bs inp k i rule: build_dtree'.induct)
+  case (1 bs inp k i)
+  let ?e = "bs!k!i"
+  consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
+    by (meson PreRed pointer.exhaust)
+  thus ?case
+  proof cases
+    case Null
+    hence "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
+      by simp
+    thus ?thesis
+      unfolding wf_root_dtree_def by simp
+  next
+    case Pre
+    then obtain pre where pre: "pointer ?e = Pre pre"
+      by blast
+    obtain N ts where node: "build_dtree' bs inp (k-1) pre = Node N ts"
+      by (meson ex_Node_build_tree')
+    hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+      using pre by simp
+    have "scans inp k (item (bs!(k-1)!pre)) (item ?e)"
+      using "1.prems"(1,3,4) pre unfolding wf_ptrs_def by simp
+    hence "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item ?e)"
+      unfolding scans_def inc_item_def item_rule_head_def by simp
+    moreover have "wf_root_dtree (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
+      using "1.IH"(1) "1.prems" pre mono_ptrs_def by fastforce
+    ultimately show ?thesis
+      unfolding wf_root_dtree_def using simp node by simp
+  next
+    case PreRed
+    then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
+      by auto
+    obtain N ts where node: "build_dtree' bs inp k' pre = Node N ts"
+      by (meson ex_Node_build_tree')
+    hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
+      using prered by simp
+    have bounds: "k' < k" "pre < length (bs ! k')" "red < i"
+      using "1.prems"(2,3,4) prered unfolding mono_ptrs_def by (metis list.set_intros(1))+
+    have "completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!red))"
+      using "1.prems"(1,3,4) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
+    hence "item_rule_head (item (bs!k'!pre)) = item_rule_head (item ?e)"
+      unfolding completes_def inc_item_def item_rule_head_def by simp
+    moreover have "wf_root_dtree (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
+      using "1.IH"(2) "1.prems"(1,2,3) prered bounds by simp
+    ultimately show ?thesis
+      unfolding wf_root_dtree_def using simp node by simp
+  qed
+qed
+
+lemma wf_yield_dtree_build_dtree':
+  assumes "wf_bins cfg inp bs"
+  assumes "wf_ptrs inp bs"
+  assumes "mono_ptrs bs" "k < length bs" "i < length (bs!k)" "k \<le> length inp"
+  shows "wf_yield_dtree inp (item (bs!k!i)) (build_dtree' bs inp k i)"
+  using assms
+proof (induction bs inp k i rule: build_dtree'.induct)
+  case (1 bs inp k i)
+  let ?e = "bs!k!i"
+  consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
+    by (meson PreRed pointer.exhaust)
+  thus ?case
+  proof cases
+    case Null
+    hence simp: "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
+      by simp
+    have "predicts (item ?e)"
+      using Null "1.prems"(2,4,5) unfolding wf_ptrs_def by blast
+    hence "item_origin (item ?e) = item_end (item ?e)"
+      unfolding predicts_def by blast
+    thus ?thesis
+      unfolding wf_yield_dtree_def using simp by (simp add: slice_empty)
+  next
+    case Pre
+    then obtain pre where pre: "pointer ?e = Pre pre"
+      by blast
+    obtain N ts where node: "build_dtree' bs inp (k-1) pre = Node N ts"
+      by (meson ex_Node_build_tree')
+    hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+      using pre by simp
+    have bounds: "pre < length (bs!(k-1))"
+      using "1.prems"(3,4,5) pre unfolding mono_ptrs_def by metis
+    have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
+      using "1.prems"(2,4,5) pre unfolding wf_ptrs_def by simp
+    have IH: "wf_yield_dtree inp (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
+      using "1.IH"(1) pre "1.prems"(1,2,3,4,6) bounds by simp
+    have wf: 
+      "item_origin (item (bs!(k-1)!pre)) \<le> item_end (item (bs!(k-1)!pre))"
+      "item_end (item (bs!(k-1)!pre)) = k-1"
+      "item_end (item (bs!k!i)) = k"
+      using "1.prems"(1,4,5) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
+      by (auto, meson less_imp_diff_less nth_mem)
+    have "yield_dtree (build_dtree' bs inp k i) = concat (map yield_dtree (ts @ [Leaf (inp!(k-1))]))"
+      using simp by simp
+    also have "... = concat (map yield_dtree ts) @ [inp!(k-1)]"
+      by simp
+    also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre))) inp @ [inp!(k-1)]"
+      using node IH by (simp add: wf_yield_dtree_def)
+    also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre)) + 1) inp"
+      using slice_append_nth wf "1.prems"(6) by (metis One_nat_def Suc_pred leD not_less_eq scans scans_def)
+    also have "... = slice (item_origin (item ?e)) (item_end (item (bs!(k-1)!pre)) + 1) inp"
+      using scans unfolding scans_def inc_item_def by simp
+    also have "... = slice (item_origin (item ?e)) k inp"
+      using scans wf unfolding scans_def by simp
+    also have "... = slice (item_origin (item ?e)) (item_end (item ?e)) inp"
+      using wf by auto
+    finally show ?thesis
+      using wf_yield_dtree_def by blast
+  next
+    case PreRed
+    then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
+      by auto
+    obtain N ts where node: "build_dtree' bs inp k' pre = Node N ts"
+      by (meson ex_Node_build_tree')
+    hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
+      using prered by simp
+    have bounds: "k' < k" "pre < length (bs ! k')" "red < i"
+      using "1.prems"(3,4,5) prered unfolding mono_ptrs_def by (metis list.set_intros(1))+
+    have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
+      using "1.prems"(2,4,5) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
+    have IH_pre: "wf_yield_dtree inp (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
+      using "1.IH"(2) "1.prems"(1-4,6) bounds prered by simp
+    have IH_red: "wf_yield_dtree inp (item (bs!k!red)) (build_dtree' bs inp k red)"
+      using "1.IH"(3) "1.prems"(1-6) bounds prered node by simp
+    have wf1: 
+      "item_origin (item (bs!k'!pre)) \<le> item_end (item (bs!k'!pre))"
+      "item_origin (item (bs!k!red)) \<le> item_end (item (bs!k!red))"
+      using "1.prems"(1,4,5) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
+      by (metis length_map nth_map nth_mem order_less_trans)+
+    have wf2:
+      "item_end (item (bs!k!red)) = k"
+      "item_end (item (bs!k!i)) = k"
+      using "1.prems"(1,4,5) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def by simp_all
+    have "yield_dtree (build_dtree' bs inp k i) = concat (map yield_dtree (ts @ [build_dtree' bs inp k red]))"
+      using simp by simp
+    also have "... = concat (map yield_dtree ts) @ yield_dtree (build_dtree' bs inp k red)"
+      by simp
+    also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k'!pre))) inp @ 
+      slice (item_origin (item (bs!k!red))) (item_end (item (bs!k!red))) inp"
+      using IH_pre IH_red by (simp add: node wf_yield_dtree_def)
+    also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k!red))) inp"
+      using slice_concat wf1 completes_def completes by (metis (no_types, lifting))
+    also have "... = slice (item_origin (item ?e)) (item_end (item (bs!k!red))) inp"
+      using completes unfolding completes_def inc_item_def by simp
+    also have "... = slice (item_origin (item ?e)) (item_end (item ?e)) inp"
+      using wf2 by simp
+    finally show ?thesis
+      using wf_yield_dtree_def by blast
+  qed
+qed
+
+lemma build_dtree_Some_wf: \<comment>\<open>TODO: Better filter_with_index lemmas\<close>
+  assumes "wf_bins cfg inp bs" "wf_ptrs inp bs" "mono_ptrs bs" "length bs = length inp + 1"
+  assumes "Some t = build_dtree cfg inp bs"
+  shows "root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
+proof -
+  let ?k = "length bs - 1"
+  obtain x i xs where *: "filter_with_index (is_finished cfg inp) (items (bs!?k)) = (x,i)#xs"
+    using assms(5) unfolding build_dtree_def by (auto simp: Let_def split: list.splits)
+  have 0: "?k < length bs" "?k \<le> length inp"
+    using assms(4) by simp_all
+  have 1: "i < length (bs ! ?k)"
+    using index_filter_with_index_lt_length * items_def by (metis length_map list.set_intros(1))
+  have "x \<in> set (filter (is_finished cfg inp) (items (bs!?k)))"
+    using * by (metis filter_set filter_with_index_P filter_with_index_nth index_filter_with_index_lt_length list.set_intros(1) member_filter nth_mem)
+  hence 2: "is_finished cfg inp (item (bs!?k!i))"
+    by (metis * 1 add.commute add_diff_cancel_left' assms(4) filter_set filter_with_index_nth items_def list.set_intros(1) member_filter nth_map)
+  have "root_dtree (build_dtree' bs inp ?k i) = item_rule_head (item (bs!?k!i))"
+    using 0 1 assms(2,3) wf_root_dtree_build_dtree' wf_root_dtree_def by blast
+  hence 3: "root_dtree (build_dtree' bs inp ?k i) = \<SS> cfg"
+    using 2 is_finished_def by auto
+  have "yield_dtree (build_dtree' bs inp ?k i) = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) inp"
+    using 0 1 assms(1,2,3) wf_yield_dtree_build_dtree' wf_yield_dtree_def by blast
+  hence 4: "yield_dtree (build_dtree' bs inp ?k i) = inp"
+    using 2 unfolding is_finished_def by simp
+  show ?thesis
+    using * 3 4 assms(5) unfolding build_dtree_def by simp
+qed
+
+thm sound_items_def sound_item_def
+
+lemma build_dtree_Some_derives:
+  assumes "wf_bins cfg inp bs"
+  shows "(\<exists>t. Some t = build_dtree cfg inp bs) \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   sorry
 
-lemma wf_tree_imp_ex_Derivation:
-  "wf_dtree cfg t \<Longrightarrow> \<exists>D. Derivation cfg [root_dtree t] D (yield_dtree t)"
+lemma build_dtree_None:
+  assumes "wf_bins cfg inp bs"
+  shows "None = build_dtree cfg inp bs \<longleftrightarrow> \<not> derives cfg [\<SS> cfg] inp"
   sorry
-
-lemma derives_imp_ex_wf_yield:
-  "wf_cfg cfg \<Longrightarrow> derives cfg [a] \<alpha> \<Longrightarrow> \<exists>t. root_dtree t = a \<and> yield_dtree t = \<alpha> \<and> wf_dtree cfg t"
-  sorry
-
-lemma wf_tree_imp_ex_derives:
-  "wf_dtree cfg t \<Longrightarrow> derives cfg [root_dtree t] (yield_dtree t)"
-  sorry
-
-lemma wf_dtree_build_dtree':
-  "wf_bins cfg inp bs \<Longrightarrow> wf_dtree cfg (build_dtree' bs k i)"
-  sorry
-
-lemma inp_dtree_build_dtree':
-  "parses_inp_dtree inp (item ((bs!k) ! i)) (build_dtree' bs k i)"
-  sorry
-
-lemma sound_dtree_build_tree':
-  "sound_dtree cfg (build_dtree' bs k i)"
-  sorry
-
-lemma sound_dtree_build_tree:
-  "build_dtree cfg inp bs = Some t \<Longrightarrow> sound_dtree cfg t"
-  sorry
-
 
 end
