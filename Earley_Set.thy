@@ -365,8 +365,8 @@ definition is_finished :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a ite
     item_end x = length inp \<and> 
     is_complete x)"
 
-definition earley_recognized :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "earley_recognized cfg inp = (\<exists>x \<in> \<II> cfg inp. is_finished cfg inp x)"
+definition earley_recognized :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "earley_recognized I cfg inp = (\<exists>x \<in> I. is_finished cfg inp x)"
 
 
 subsection \<open>Wellformedness\<close>
@@ -560,7 +560,7 @@ lemma sound_\<II>:
   unfolding \<II>_def using sound_\<I> by blast
 
 theorem soundness:
-  "earley_recognized cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
+  "earley_recognized (\<II> cfg inp) cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
   using earley_recognized_def sound_\<II> sound_defs
   by (metis drop_eq_Nil is_complete_def is_finished_def item_\<beta>_def self_append_conv slice_id)
 
@@ -1029,7 +1029,7 @@ qed
 
 theorem completeness:
   assumes "derives cfg [\<SS> cfg] inp" "is_word cfg inp" "wf_cfg cfg"
-  shows "earley_recognized cfg inp"
+  shows "earley_recognized (\<II> cfg inp) cfg inp"
 proof -
   obtain \<alpha> where *: "(\<SS> cfg,\<alpha>) \<in> set (\<RR> cfg)" "derives cfg \<alpha> inp"
     using Derivation_\<SS>1 assms Derivation_implies_derives derives_implies_Derivation by metis
@@ -1050,7 +1050,7 @@ subsection \<open>Correctness\<close>
 
 corollary correctness_set:
   assumes "wf_cfg cfg" "is_word cfg inp"
-  shows "earley_recognized cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "earley_recognized (\<II> cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms soundness completeness by blast
 
 

@@ -2352,14 +2352,14 @@ lemma \<II>_sub_\<II>_it:
 
 subsection \<open>Correctness\<close>
 
-definition earley_recognized_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "earley_recognized_it cfg inp = (\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
+definition earley_recognized_it :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "earley_recognized_it I cfg inp = (\<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x)"
 
 theorem earley_recognized_it_iff_earley_recognized:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_it cfg inp \<longleftrightarrow> earley_recognized cfg inp"
+  shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> earley_recognized (\<II> cfg inp) cfg inp"
 proof -
-  have "earley_recognized_it cfg inp = (\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
+  have "earley_recognized_it (\<II>_it cfg inp) cfg inp = (\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
     unfolding earley_recognized_it_def by blast
   also have "... = (\<exists>x \<in> bins_items (\<II>_it cfg inp). is_finished cfg inp x)"
     using is_finished_def kth_bin_sub_bins \<II>_it_def length_bins_Init_it wf_bins_\<II>_it
@@ -2367,14 +2367,14 @@ proof -
     by (smt (verit) le_eq_less_or_eq subset_code(1) wellformed_bins_\<I>_it wellformed_bins_elim)
   also have "... = (\<exists>x \<in> \<II> cfg inp. is_finished cfg inp x)"
     using assms \<II>_it_sub_\<II> \<II>_sub_\<II>_it by blast
-  also have "... = earley_recognized cfg inp"
+  also have "... = earley_recognized (\<II> cfg inp) cfg inp"
     unfolding earley_recognized_def by blast
   finally show ?thesis .
 qed
 
 corollary correctness_list:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_it cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms correctness_set earley_recognized_it_iff_earley_recognized by blast
 
 
@@ -2394,8 +2394,17 @@ fun root_dtree :: "'a dtree \<Rightarrow> 'a" where
   "root_dtree (Leaf a) = a"
 | "root_dtree (Node N _) = N"
 
-definition wf_root_dtree :: "'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "wf_root_dtree x t \<longleftrightarrow> root_dtree t = item_rule_head x"
+fun wf_rule_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "wf_rule_dtree _ (Leaf a) \<longleftrightarrow> True"
+| "wf_rule_dtree cfg (Node N ts) \<longleftrightarrow> (
+    (\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_dtree ts = rule_body r) \<and>
+    (\<forall>t \<in> set ts. wf_rule_dtree cfg t))"
+
+fun wf_item_rule_dtree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
+  "wf_item_rule_dtree cfg _ (Leaf a) \<longleftrightarrow> True"
+| "wf_item_rule_dtree cfg x (Node N ts) \<longleftrightarrow> (
+    N = item_rule_head x \<and> map root_dtree ts = take (item_dot x) (item_rule_body x) \<and>
+    (\<forall>t \<in> set ts. wf_rule_dtree cfg t))"
 
 definition wf_yield_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
   "wf_yield_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
@@ -2427,14 +2436,14 @@ definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bin
     | (_,i)#_ \<Rightarrow> Some (build_dtree' bs inp k i)
   )"
 
-definition mono_ptrs :: "'a bins \<Rightarrow> bool" where
-  "mono_ptrs bs = (\<forall>k < length bs. \<forall>i < length (bs!k).
+definition valid_ptrs :: "'a bins \<Rightarrow> bool" where
+  "valid_ptrs bs = (\<forall>k < length bs. \<forall>i < length (bs!k).
     (\<forall>pre. Pre pre = pointer (bs!k!i) \<longrightarrow> pre < length (bs!(k-1))) \<and>
     (\<forall>p ps k' pre red. PreRed p ps = pointer (bs!k!i) \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
       k' < k \<and> pre < length (bs!k') \<and> red < i))"
 
 definition predicts :: "'a item \<Rightarrow> bool" where
-  "predicts x \<longleftrightarrow> item_origin x = item_end x"
+  "predicts x \<longleftrightarrow> item_origin x = item_end x \<and> item_dot x = 0"
 
 definition scans :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "scans inp k x y \<longleftrightarrow> 0 < k \<and> y = inc_item x k \<and> 
@@ -2473,10 +2482,14 @@ lemma nex_Leaf_build_tree':
   "\<nexists>a. build_dtree' bs inp k i = Leaf a"
   using ex_Node_build_tree' by (metis dtree.distinct(1))
 
-lemma mono_ptrs_\<pi>_it':
+lemma valid_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "mono_ptrs bs"
-  shows "mono_ptrs (\<pi>_it' k cfg inp bs i)"
+  assumes "valid_ptrs bs"
+  shows "valid_ptrs (\<pi>_it' k cfg inp bs i)"
+  sorry
+
+lemma valid_ptrs_\<II>_it:
+  "valid_ptrs (\<II>_it cfg inp)"
   sorry
 
 lemma wf_ptrs_\<pi>_it':
@@ -2485,10 +2498,15 @@ lemma wf_ptrs_\<pi>_it':
   shows "wf_ptrs inp (\<pi>_it' k cfg inp bs i)"
   sorry
 
-lemma wf_root_dtree_build_dtree':
+lemma wf_ptrs_\<II>_it:
+  "wf_ptrs inp (\<II>_it cfg inp)"
+  sorry
+
+lemma wf_item_rule_dtree_build_dtree':
+  assumes "wf_bins cfg inp bs"
   assumes "wf_ptrs inp bs"
-  assumes "mono_ptrs bs" "k < length bs" "i < length (bs!k)"
-  shows "wf_root_dtree (item (bs!k!i)) (build_dtree' bs inp k i)"
+  assumes "valid_ptrs bs" "k < length bs" "i < length (bs!k)"
+  shows "wf_item_rule_dtree cfg (item (bs!k!i)) (build_dtree' bs inp k i)"
   using assms
 proof (induction bs inp k i rule: build_dtree'.induct)
   case (1 bs inp k i)
@@ -2498,10 +2516,14 @@ proof (induction bs inp k i rule: build_dtree'.induct)
   thus ?case
   proof cases
     case Null
-    hence "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
+    hence 0: "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
       by simp
+    have "predicts (item ?e)"
+      using Null "1.prems"(2,4,5) unfolding wf_ptrs_def by blast
+    hence "item_dot (item ?e) = 0"
+      unfolding predicts_def by blast
     thus ?thesis
-      unfolding wf_root_dtree_def by simp
+      using 0 by simp
   next
     case Pre
     then obtain pre where pre: "pointer ?e = Pre pre"
@@ -2510,14 +2532,28 @@ proof (induction bs inp k i rule: build_dtree'.induct)
       by (meson ex_Node_build_tree')
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
-    have "scans inp k (item (bs!(k-1)!pre)) (item ?e)"
-      using "1.prems"(1,3,4) pre unfolding wf_ptrs_def by simp
-    hence "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item ?e)"
-      unfolding scans_def inc_item_def item_rule_head_def by simp
-    moreover have "wf_root_dtree (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
-      using "1.IH"(1) "1.prems" pre mono_ptrs_def by fastforce
-    ultimately show ?thesis
-      unfolding wf_root_dtree_def using simp node by simp
+    have bounds: "pre < length (bs!(k-1))"
+      using "1.prems"(3,4,5) pre unfolding valid_ptrs_def by metis
+    have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
+      using "1.prems"(2,4,5) pre unfolding wf_ptrs_def by simp
+    have IH: "wf_item_rule_dtree cfg (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
+      using "1.IH"(1) pre "1.prems"(1,2,3,4) bounds by simp
+    have *: 
+      "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item (bs!k!i))"
+      "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item (bs!k!i))"
+      "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item (bs!k!i))"
+      "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
+      using scans unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
+    have "map root_dtree (ts @ [Leaf (inp!(k-1))]) = map root_dtree ts @ [inp!(k-1)]"
+      by simp
+    also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
+      using IH node by simp
+    also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!k!i))) @ [inp!(k-1)]"
+      using *(2) by simp
+    also have "... = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))"
+      using *(2-4) by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
+    finally show ?thesis
+      using *(1) IH node simp by simp
   next
     case PreRed
     then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
@@ -2527,22 +2563,50 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
       using prered by simp
     have bounds: "k' < k" "pre < length (bs ! k')" "red < i"
-      using "1.prems"(2,3,4) prered unfolding mono_ptrs_def by (metis list.set_intros(1))+
-    have "completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!red))"
-      using "1.prems"(1,3,4) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
-    hence "item_rule_head (item (bs!k'!pre)) = item_rule_head (item ?e)"
-      unfolding completes_def inc_item_def item_rule_head_def by simp
-    moreover have "wf_root_dtree (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
-      using "1.IH"(2) "1.prems"(1,2,3) prered bounds by simp
-    ultimately show ?thesis
-      unfolding wf_root_dtree_def using simp node by simp
+      using "1.prems"(3,4,5) prered unfolding valid_ptrs_def by (metis list.set_intros(1))+
+    have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
+      using "1.prems"(2,4,5) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
+    have IH_pre: "wf_item_rule_dtree cfg (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
+      using "1.IH"(2) "1.prems"(1-4) bounds prered by simp
+    have IH_red: "wf_item_rule_dtree cfg (item (bs!k!red)) (build_dtree' bs inp k red)"
+      using "1.IH"(3) "1.prems"(1-5) bounds prered node by simp
+    have *: 
+      "item_rule_head (item (bs!k'!pre)) = item_rule_head (item (bs!k!i))"
+      "item_rule_body (item (bs!k'!pre)) = item_rule_body (item (bs!k!i))"
+      "item_dot (item (bs!k'!pre)) + 1 = item_dot (item (bs!k!i))"
+      "next_symbol (item (bs!k'!pre)) = Some (item_rule_head (item (bs!k!red)))"
+      "is_complete (item (bs!k!red))"
+      using completes unfolding completes_def inc_item_def
+      by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
+    have "map root_dtree (ts @ [build_dtree' bs inp k red]) = map root_dtree ts @ [root_dtree (build_dtree' bs inp k red)]"
+      by simp
+    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_dtree (build_dtree' bs inp k red)]"
+      using IH_pre node by force
+    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!red))]"
+      using IH_red ex_Node_build_tree' by (metis root_dtree.simps(2) wf_item_rule_dtree.simps(2))
+    also have "... = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))"
+      using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
+    finally have 0: "map root_dtree (ts @ [build_dtree' bs inp k red]) = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))" .
+    have wf: "wf_item cfg inp (item (bs!k!red))"
+      using "1.prems"(1,4,5) bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
+    obtain N' ts' where node': "build_dtree' bs inp k red = Node N' ts'"
+      by (meson ex_Node_build_tree')
+    hence "N' = item_rule_head (item (bs!k!red))"
+          "map root_dtree ts' = item_rule_body (item (bs!k!red))"
+      using IH_red *(5) by (auto simp: is_complete_def)
+    hence "\<exists>r \<in> set (\<RR> cfg). N' = rule_head r \<and> map root_dtree ts' = rule_body r"
+      using wf unfolding wf_item_def item_rule_body_def item_rule_head_def by auto
+    hence 1: "wf_rule_dtree cfg (build_dtree' bs inp k red)"
+      using IH_red node' by simp
+    show ?thesis
+      using *(1) 0 1 IH_pre node simp by simp
   qed
 qed
 
 lemma wf_yield_dtree_build_dtree':
   assumes "wf_bins cfg inp bs"
   assumes "wf_ptrs inp bs"
-  assumes "mono_ptrs bs" "k < length bs" "i < length (bs!k)" "k \<le> length inp"
+  assumes "valid_ptrs bs" "k < length bs" "i < length (bs!k)" "k \<le> length inp"
   shows "wf_yield_dtree inp (item (bs!k!i)) (build_dtree' bs inp k i)"
   using assms
 proof (induction bs inp k i rule: build_dtree'.induct)
@@ -2570,7 +2634,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "pre < length (bs!(k-1))"
-      using "1.prems"(3,4,5) pre unfolding mono_ptrs_def by metis
+      using "1.prems"(3,4,5) pre unfolding valid_ptrs_def by metis
     have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
       using "1.prems"(2,4,5) pre unfolding wf_ptrs_def by simp
     have IH: "wf_yield_dtree inp (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
@@ -2606,7 +2670,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
       using prered by simp
     have bounds: "k' < k" "pre < length (bs ! k')" "red < i"
-      using "1.prems"(3,4,5) prered unfolding mono_ptrs_def by (metis list.set_intros(1))+
+      using "1.prems"(3,4,5) prered unfolding valid_ptrs_def by (metis list.set_intros(1))+
     have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
       using "1.prems"(2,4,5) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
     have IH_pre: "wf_yield_dtree inp (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
@@ -2640,44 +2704,89 @@ proof (induction bs inp k i rule: build_dtree'.induct)
   qed
 qed
 
-lemma build_dtree_Some_wf: \<comment>\<open>TODO: Better filter_with_index lemmas\<close>
-  assumes "wf_bins cfg inp bs" "wf_ptrs inp bs" "mono_ptrs bs" "length bs = length inp + 1"
+theorem build_dtree_Some_wf_rule_dtree:
+  assumes "wf_bins cfg inp bs" "wf_ptrs inp bs" "valid_ptrs bs" "length bs = length inp + 1"
   assumes "Some t = build_dtree cfg inp bs"
-  shows "root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
+  shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
 proof -
   let ?k = "length bs - 1"
   obtain x i xs where *: "filter_with_index (is_finished cfg inp) (items (bs!?k)) = (x,i)#xs"
     using assms(5) unfolding build_dtree_def by (auto simp: Let_def split: list.splits)
-  have 0: "?k < length bs" "?k \<le> length inp"
+  have k: "?k < length bs" "?k \<le> length inp"
     using assms(4) by simp_all
-  have 1: "i < length (bs ! ?k)"
+  have i: "i < length (bs ! ?k)"
     using index_filter_with_index_lt_length * items_def by (metis length_map list.set_intros(1))
-  have "x \<in> set (filter (is_finished cfg inp) (items (bs!?k)))"
-    using * by (metis filter_set filter_with_index_P filter_with_index_nth index_filter_with_index_lt_length list.set_intros(1) member_filter nth_mem)
-  hence 2: "is_finished cfg inp (item (bs!?k!i))"
-    by (metis * 1 add.commute add_diff_cancel_left' assms(4) filter_set filter_with_index_nth items_def list.set_intros(1) member_filter nth_map)
-  have "root_dtree (build_dtree' bs inp ?k i) = item_rule_head (item (bs!?k!i))"
-    using 0 1 assms(2,3) wf_root_dtree_build_dtree' wf_root_dtree_def by blast
-  hence 3: "root_dtree (build_dtree' bs inp ?k i) = \<SS> cfg"
-    using 2 is_finished_def by auto
+  have x: "x = item (bs!?k!i)"
+    using * i filter_with_index_nth items_def nth_map by (metis list.set_intros(1))
+  have finished: "is_finished cfg inp x"
+    using * filter_with_index_P by (metis list.set_intros(1))
+  hence wf_item_rule: "wf_item_rule_dtree cfg x (build_dtree' bs inp ?k i)"
+    using wf_item_rule_dtree_build_dtree'[OF assms(1-3) k(1) i] x by blast
+  have wf_item: "wf_item cfg inp (item (bs!?k!i))"
+    using k(1) i assms(1) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
+  obtain N ts where node: "build_dtree' bs inp ?k i = Node N ts"
+    by (meson ex_Node_build_tree')
+  hence "N = item_rule_head x"
+    "map root_dtree ts = item_rule_body x"
+    using finished wf_item_rule by (auto simp: is_finished_def is_complete_def)
+  hence "\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_dtree ts = rule_body r"
+    using wf_item x unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
+  hence wf_rule: "wf_rule_dtree cfg (build_dtree' bs inp ?k i)"
+    using wf_item_rule node by simp
+  have root: "root_dtree (build_dtree' bs inp ?k i) = \<SS> cfg"
+    using finished node \<open>N = item_rule_head x\<close> by (auto simp: is_finished_def)
   have "yield_dtree (build_dtree' bs inp ?k i) = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) inp"
-    using 0 1 assms(1,2,3) wf_yield_dtree_build_dtree' wf_yield_dtree_def by blast
-  hence 4: "yield_dtree (build_dtree' bs inp ?k i) = inp"
-    using 2 unfolding is_finished_def by simp
+    using k i assms(1,2,3) wf_yield_dtree_build_dtree' wf_yield_dtree_def by blast
+  hence yield: "yield_dtree (build_dtree' bs inp ?k i) = inp"
+    using finished x unfolding is_finished_def by simp
   show ?thesis
-    using * 3 4 assms(5) unfolding build_dtree_def by simp
+    using * wf_rule root yield assms(5) unfolding build_dtree_def by simp
 qed
 
-thm sound_items_def sound_item_def
+corollary build_dtree_Some_wf_rule_dtree_\<II>_it:
+  assumes "wf_cfg cfg" "Some t = build_dtree cfg inp (\<II>_it cfg inp)"
+  shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
+  using assms build_dtree_Some_wf_rule_dtree wf_bins_\<II>_it valid_ptrs_\<II>_it wf_ptrs_\<II>_it \<II>_it_def
+    length_\<I>_it length_bins_Init_it by (metis nle_le)
 
-lemma build_dtree_Some_derives:
-  assumes "wf_bins cfg inp bs"
-  shows "(\<exists>t. Some t = build_dtree cfg inp bs) \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
-  sorry
-
-lemma build_dtree_None:
-  assumes "wf_bins cfg inp bs"
-  shows "None = build_dtree cfg inp bs \<longleftrightarrow> \<not> derives cfg [\<SS> cfg] inp"
-  sorry
+theorem build_dtree_Some_\<II>_it:
+  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
+  shows "(\<exists>t. Some t = build_dtree cfg inp (\<II>_it cfg inp)) \<longleftrightarrow> derives cfg [\<SS> cfg] inp" (is "?L \<longleftrightarrow> ?R")
+proof standard
+  assume *: ?L
+  let ?k = "length (\<II>_it cfg inp) - 1"
+  obtain t where "Some t = build_dtree cfg inp (\<II>_it cfg inp)"
+    using * by blast
+  then obtain x i xs where *: "filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k)) = (x,i)#xs"
+    unfolding build_dtree_def by (auto simp: Let_def split: list.splits)
+  have k: "?k < length (\<II>_it cfg inp)" "?k \<le> length inp"
+    by (simp_all add: \<II>_it_def assms(1))
+  have i: "i < length ((\<II>_it cfg inp) ! ?k)"
+    using index_filter_with_index_lt_length * items_def by (metis length_map list.set_intros(1))
+  have x: "x = item ((\<II>_it cfg inp)!?k!i)"
+    using * i filter_with_index_nth items_def nth_map by (metis list.set_intros(1))
+  have finished: "is_finished cfg inp x"
+    using * filter_with_index_P by (metis list.set_intros(1))
+  moreover have "x \<in> set (items ((\<II>_it cfg inp) ! ?k))"
+    using x by (auto simp: items_def; metis One_nat_def i imageI nth_mem)
+  ultimately have "(\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
+    by (metis assms(1) is_finished_def k(1) wf_bins_\<II>_it wf_bins_kth_bin)    
+  hence "earley_recognized_it (\<II>_it cfg inp) cfg inp"
+    using earley_recognized_it_def by blast
+  thus ?R
+    using correctness_list assms by blast
+next
+  assume ?R
+  hence "earley_recognized_it (\<II>_it cfg inp) cfg inp"
+    using assms(1) assms(2) assms(3) correctness_list by blast
+  hence "(\<exists>x\<in>set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
+    using earley_recognized_it_def by blast
+  hence "(\<exists>x\<in>set (items ((\<II>_it cfg inp) ! (length (\<II>_it cfg inp) - 1))). is_finished cfg inp x)"
+    by (simp add: \<II>_it_def assms(1))
+  hence "\<exists>x i xs. filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)! (length (\<II>_it cfg inp) - 1))) = (x,i)#xs"
+    using filter_with_index_cong_filter list.exhaust list.simps(8) prod.collapse by (metis empty_filter_conv)
+  thus ?L
+    by (auto simp: build_dtree_def)
+qed
 
 end
