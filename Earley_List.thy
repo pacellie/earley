@@ -2482,15 +2482,276 @@ lemma nex_Leaf_build_tree':
   "\<nexists>a. build_dtree' bs inp k i = Leaf a"
   using ex_Node_build_tree' by (metis dtree.distinct(1))
 
+(*
+valid_ptrs ?bs =
+(\<forall>k<length ?bs.
+    \<forall>i<length (?bs ! k).
+       (\<forall>pre. Pre pre = pointer (?bs ! k ! i) \<longrightarrow> pre < length (?bs ! (k - 1))) \<and>
+       (\<forall>p ps k' pre red. PreRed p ps = pointer (?bs ! k ! i) \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow> k' < k \<and> pre < length (?bs ! k') \<and> red < i))
+*)
+
+lemma valid_ptrs_bin_upd: \<comment>\<open>TODO\<close>
+  assumes "valid_ptrs bins" "b = bins!k" "k < length bins"
+  assumes "(\<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bins!(k-1)))"
+  assumes "(\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bins!k') \<and> red < length (bins!k))"
+  shows "valid_ptrs (bins[k := bin_upd e b])"
+  using assms
+proof (induction b arbitrary: e bins)
+  case Nil
+  let ?bs = "bins[k := [e]]"
+
+  have 1: "\<And>l. l \<noteq> k \<Longrightarrow> l < length ?bs \<Longrightarrow> 
+    \<forall>i<length (?bs ! l).
+       (\<forall>pre. Pre pre = pointer (?bs ! l ! i) \<longrightarrow> pre < length (?bs ! (l - 1))) \<and>
+       (\<forall>p ps k' pre red. PreRed p ps = pointer (?bs ! l ! i) \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow> k' < l \<and> pre < length (?bs ! k') \<and> red < i)"
+    using Nil.prems(1,2) unfolding valid_ptrs_def by (smt (z3) gr_implies_not0 length_list_update list.size(3) nth_list_update_neq)
+
+
+
+  have "?bs!k!0 = e"
+    by (simp add: Nil.prems(3))
+
+  then show ?case
+  proof (cases k)
+    case 0
+    have "length (?bs!(k-1)) = length (bins!(k-1)) + 1"
+      using 0 Nil.prems(2,3) by auto
+
+  have "k < length ?bs \<Longrightarrow>
+    \<forall>i<length (?bs ! k).
+       (\<forall>pre. Pre pre = pointer (?bs ! k ! i) \<longrightarrow> pre < length (?bs ! (k - 1))) \<and>
+       (\<forall>p ps k' pre red. PreRed p ps = pointer (?bs ! k ! i) \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow> k' < k \<and> pre < length (?bs ! k') \<and> red < i)"
+    using Nil.prems by (simp add: 0)
+
+
+  thus ?thesis
+    using 1 by (smt (verit, ccfv_threshold) bin_upd.simps(1) valid_ptrs_def)
+  next
+    case (Suc n)
+
+    have "?bs ! Suc n ! 0 = e"
+      using Suc \<open>bins[k := [e]] ! k ! 0 = e\<close> by blast
+    have "(\<forall>pre. Pre pre = pointer (?bs ! Suc n ! 0) \<longrightarrow> pre < length (?bs ! (Suc n - 1)))"
+      using Nil.prems(4) Suc \<open>bins[k := [e]] ! k ! 0 = e\<close> by auto
+    have "(\<forall>p ps k' pre red. PreRed p ps = pointer (?bs ! Suc n ! 0) \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow> k' < Suc n \<and> pre < length (?bs ! k') \<and> red < 0)"
+      using Nil.prems(5) Suc \<open>bins[k := [e]] ! k ! 0 = e\<close> Nil.prems(2) by force
+
+  have "Suc n < length ?bs \<Longrightarrow>
+    \<forall>i<length (?bs ! Suc n).
+       (\<forall>pre. Pre pre = pointer (?bs ! Suc n ! i) \<longrightarrow> pre < length (?bs ! (Suc n - 1))) \<and>
+       (\<forall>p ps k' pre red. PreRed p ps = pointer (?bs ! Suc n ! i) \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow> k' < Suc n \<and> pre < length (?bs ! k') \<and> red < i)"
+    using Nil.prems using Suc by simp
+
+
+    then show ?thesis
+      using 1 by (smt (verit, ccfv_threshold) Suc bin_upd.simps(1) valid_ptrs_def)
+  qed
+next
+  case (Cons b bs)
+  show ?case
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
+    case True
+    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
+      by blast
+
+    thm Cons bin_upd.simps
+
+    thus ?thesis
+      sorry
+  next
+    case False
+    then show ?thesis
+    proof cases
+      assume *: "item e = item b"
+      hence "bin_upd e (b # bs) = b # bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        sorry
+    next
+      assume *: "\<not> item e = item b"
+      hence "bin_upd e (b # bs) = b # bin_upd e bs"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        sorry
+    qed
+  qed
+qed
+
+lemma valid_ptrs_bin_upds: \<comment>\<open>TODO\<close>
+  assumes "valid_ptrs bs" "b = bs!k" "k < length bs"
+  assumes "(\<forall>e \<in> set es. \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
+  assumes "(\<forall>e \<in> set es. \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
+  shows "valid_ptrs (bs[k := bin_upds es b])"
+  using assms
+proof (induction es arbitrary: b bs)
+  case (Cons e es)
+  have 0: "valid_ptrs (bs[k := bin_upd e b])"
+    using valid_ptrs_bin_upd[OF Cons.prems(1,2,3)] Cons.prems(4,5) by auto
+  have 1: "bin_upd e b = (bs[k := bin_upd e b]) ! k"
+    using Cons.prems(3) by simp
+  have 2: "k < length (bs[k := bin_upd e b])"
+    using Cons.prems(3) by simp
+  have "valid_ptrs ((bs[k := bin_upd e b])[k := bin_upds es (bin_upd e b)])"
+    using Cons.IH[OF 0 1 2] Cons.prems(4,5)
+    by (smt (verit) "1" Cons.prems(2) dual_order.strict_trans1 insert_iff length_bin_upd list.set(2) nth_list_update_neq)
+  thus ?case
+    by simp
+qed simp
+
+lemma valid_ptrs_bins_upd: \<comment>\<open>TODO\<close>
+  assumes "valid_ptrs bs" "k < length bs"
+  assumes "(\<forall>e \<in> set xs. \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
+  assumes "(\<forall>e \<in> set xs. \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
+  shows "valid_ptrs (bins_upd bs k xs)"
+  unfolding bins_upd_def using valid_ptrs_bin_upds[OF assms(1) _ assms(2,3,4)] by blast
+
 lemma valid_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "valid_ptrs bs"
+  assumes "valid_ptrs bs" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
   shows "valid_ptrs (\<pi>_it' k cfg inp bs i)"
-  sorry
+  using assms
+proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
+  case (Complete k cfg inp bs i x)
+  let ?bs' = "bins_upd bs k (Complete_it k x bs i)"
+  have x: "x \<in> set (items (bs ! k))"
+    using Complete.hyps(1,2) by force
+  hence "sound_items cfg inp (set (items (Complete_it k x bs i)))"
+    using sound_Complete_it \<pi>_mono Complete.hyps(3) Complete.prems bins_bin_exists 
+          sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
+  hence sound: "sound_items cfg inp (bins_items ?bs')"
+    using Complete.prems(1,3) bins_bins_upd sound_items_def wellformed_bins_elim UnE by metis
+  {
+    fix e
+    assume a0: "e \<in> set (Complete_it k x bs i)"
+    fix p ps k' pre red
+    assume a1: "PreRed p ps = pointer e" "(k', pre, red) \<in> set (p#ps)"
+    have "k' = item_origin x"
+      using a0 a1 unfolding Complete_it_def by auto
+    moreover have "wf_item cfg inp x" "item_end x = k"
+      using Complete.prems(1) x wellformed_bins_elim wf_bins_kth_bin by blast+
+    ultimately have 0: "k' \<le> k"
+      using wf_defs(1) by blast
+    have 1: "k' \<noteq> k"
+    proof (rule ccontr)
+      assume "\<not> k' \<noteq> k"
+      have "sound_item cfg inp x"
+        using Complete.prems(1,3) x sound_items_def kth_bin_sub_bins wellformed_bins_elim by (metis subset_eq)
+      moreover have "is_complete x"
+        using Complete.hyps(3) by (auto simp: next_symbol_def split: if_splits)
+      moreover have "item_origin x = k"
+        using \<open>\<not> k' \<noteq> k\<close> \<open>k' = item_origin x\<close> by auto
+      ultimately show False
+        using impossible_complete_item Complete.prems(1,4) wellformed_bins_elim \<open>item_end x = k\<close> \<open>wf_item cfg inp x\<close> by blast
+    qed
+    have 2: "pre < length (bs!k')"
+      using a0 a1 index_filter_with_index_lt_length unfolding Complete_it_def by (auto simp: items_def; fastforce)
+    have 3: "red < i+1"
+      using a0 a1 unfolding Complete_it_def by auto
+    have "k' < k" "pre < length (bs!k')" "red < i+1"
+      using 0 1 2 3 by simp_all
+  }
+  hence "(\<forall>e \<in> set (Complete_it k x bs i). \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bs!k') \<and> red < i+1)"
+    by blast
+  moreover have "k < length bs"
+    using Complete.prems(1) wellformed_bins_elim by auto
+  moreover have "(\<forall>e \<in> set (Complete_it k x bs i). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
+    unfolding Complete_it_def by auto
+  ultimately have "valid_ptrs ?bs'"
+    using valid_ptrs_bins_upd Complete.hyps(1) Complete.prems(2) by (auto simp: items_def; fastforce) 
+  moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
+  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+    using Complete.IH Complete.prems(4) sound by blast
+  thus ?case
+    using Complete.hyps by simp
+next
+  case (Scan k cfg inp bs i x a)
+  let ?bs' = "bins_upd bs (k+1) (Scan_it k inp a x i)"
+  have "x \<in> set (items (bs ! k))"
+    using Scan.hyps(1,2) by force
+  hence "sound_items cfg inp (set (items (Scan_it k inp a x i)))"
+    using sound_Scan_it \<pi>_mono Scan.hyps(3,5) Scan.prems(1,2,3) bins_bin_exists 
+          sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
+  hence sound: "sound_items cfg inp (bins_items ?bs')"
+    using Scan.hyps(5) Scan.prems(1,3) bins_bins_upd sound_items_def wellformed_bins_elim UnE by (metis add_less_cancel_right)
+  have "(\<forall>e \<in> set (Scan_it k inp a x i). \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k+1 \<and> pre < length (bs!k') \<and> red < i+1)"
+    unfolding Scan_it_def by simp
+  moreover have "k+1 < length bs"
+    using Scan.hyps(5) Scan.prems(1) wellformed_bins_elim by force
+  moreover have "(\<forall>e \<in> set (Scan_it k inp a x i). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!((k+1)-1)))"
+    unfolding Scan_it_def using Scan.hyps(1) by (auto simp: items_def)
+  ultimately have "valid_ptrs ?bs'"
+    using valid_ptrs_bins_upd Scan.hyps(1) Scan.prems(2) by (auto simp: items_def Scan_it_def valid_ptrs_bins_upd)
+  moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
+  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+    using Scan.IH Scan.prems(4) sound by blast
+  thus ?case
+    using Scan.hyps by simp
+next
+  case (Predict k cfg inp bs i x a)
+  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
+  have "x \<in> set (items (bs ! k))"
+    using Predict.hyps(1,2) by force
+  hence "sound_items cfg inp (set (items(Predict_it k cfg a)))"
+    using sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems bins_bin_exists wellformed_bins_elim
+          sound_\<pi> wf_bins_kth_bin wf_items_def by metis
+  hence sound: "sound_items cfg inp (bins_items ?bs')"
+    using Predict.prems(1,3) bins_bins_upd sound_items_def wellformed_bins_elim by (metis UnE)
+  have "(\<forall>e \<in> set (Predict_it k cfg a). \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bs!k') \<and> red < i+1)"
+    unfolding Predict_it_def by simp
+  moreover have "k < length bs"
+    using Predict.prems(1) wellformed_bins_elim by force
+  moreover have "(\<forall>e \<in> set (Predict_it k cfg a). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
+    unfolding Predict_it_def by simp
+  ultimately have "valid_ptrs ?bs'"
+    using valid_ptrs_bins_upd Predict.hyps(1) Predict.prems(2) by (auto simp: items_def; fastforce)
+  moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
+    using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
+  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+    using Predict.IH Predict.prems(4) sound by blast
+  thus ?case
+    using Predict.hyps by simp
+qed simp_all
+
+lemma valid_ptrs_\<pi>_it:
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "valid_ptrs bs" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
+  shows "valid_ptrs (\<pi>_it k cfg inp bs)"
+  using assms valid_ptrs_\<pi>_it' \<pi>_it_def by metis
+
+lemma valid_ptrs_Init_it:
+  "valid_ptrs (Init_it cfg inp)"
+  unfolding valid_ptrs_def Init_it_def by (auto simp: less_Suc_eq_0_disj)
+
+lemma valid_ptrs_\<I>_it:
+  assumes "k \<le> length inp" "wf_cfg cfg" "nonempty_derives cfg"
+  shows "valid_ptrs (\<I>_it k cfg inp)"
+  using assms
+proof (induction k)
+  case 0
+  have "(0, cfg, inp, (Init_it cfg inp)) \<in> wellformed_bins"
+    using assms(2) wellformed_bins_Init_it by blast
+  moreover have "sound_items cfg inp (bins_items (Init_it cfg inp))"
+    by (simp add: Init_it_eq_Init sound_Init)
+  ultimately show ?case
+    using valid_ptrs_\<pi>_it valid_ptrs_Init_it "0.prems"(2,3) by fastforce
+next
+  case (Suc k)
+  have "(Suc k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
+    by (simp add: Suc.prems(1) Suc_leD assms(2) wellformed_bins_intro)
+  moreover have "valid_ptrs (\<I>_it k cfg inp)"
+    using Suc by simp
+  moreover have "sound_items cfg inp (bins_items (\<I>_it k cfg inp))"
+    using sound_\<I> \<I>_it_sub_\<I> Suc.prems(1,2) sound_items_def by (metis Suc_leD subsetD)
+  ultimately show ?case
+    using Suc.prems(3) valid_ptrs_\<pi>_it by auto
+qed
 
 lemma valid_ptrs_\<II>_it:
-  "valid_ptrs (\<II>_it cfg inp)"
-  sorry
+  assumes "wf_cfg cfg" "nonempty_derives cfg"
+  shows "valid_ptrs (\<II>_it cfg inp)"
+  using assms valid_ptrs_\<I>_it \<II>_it_def by (metis dual_order.refl)
 
 lemma wf_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
@@ -2744,7 +3005,7 @@ proof -
 qed
 
 corollary build_dtree_Some_wf_rule_dtree_\<II>_it:
-  assumes "wf_cfg cfg" "Some t = build_dtree cfg inp (\<II>_it cfg inp)"
+  assumes "wf_cfg cfg" "Some t = build_dtree cfg inp (\<II>_it cfg inp)" "nonempty_derives cfg"
   shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
   using assms build_dtree_Some_wf_rule_dtree wf_bins_\<II>_it valid_ptrs_\<II>_it wf_ptrs_\<II>_it \<II>_it_def
     length_\<I>_it length_bins_Init_it by (metis nle_le)
