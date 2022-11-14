@@ -3022,6 +3022,572 @@ next
   qed
 qed
 
+lemma valid_pre_ptrs_bin_upd: \<comment>\<open>TODO: Total disaster: Shorten\<close>
+  assumes "valid_prered_ptrs bs c k" "k < length bs" "es = bs!k"
+  assumes "\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow>
+          k' < k \<and> red < length (bs!k) \<and> (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k'))"
+  shows "valid_prered_ptrs (bs[k := bin_upd e es]) c k"
+  using assms
+proof (induction es arbitrary: e bs c)
+  case Nil
+  let ?bs = "bs[k := [e]]"
+  {
+    fix l i p ps k' pre red
+    assume a0: "l < length ?bs"
+    assume a1: "i < length (?bs!l)"
+    assume a2: "PreRed p ps = pointer (?bs!l!i)"
+    assume a3: "(k', pre, red) \<in> set (p#ps)"
+    have "k' < l \<and> red < i \<and> (k'=k \<longrightarrow> pre < length (?bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs!k'))"
+    proof cases
+      assume a4: "k'=k"
+      hence "l\<noteq>k"
+        using Nil.prems(2,4) a1 a2 a3 apply (auto, blast)
+        using Nil.prems(4) a3 by blast
+      hence "l < length bs" "i < length (bs!l)" "PreRed p ps = pointer (bs!l!i)"
+        using a0 a1 a2 by auto
+      hence "k' < l" "red < i" "pre < length (bs!k') + c"
+        using a3 a4 Nil.prems(1) unfolding valid_prered_ptrs_def by blast+
+      thus ?thesis
+        using Nil.prems(3) a4 by force
+    next
+      assume a4: "k'\<noteq>k"
+      show ?thesis
+      proof cases
+        assume a5: "l=k"
+        hence "PreRed p ps = pointer e"
+          using Nil.prems(2) a1 a2 by force
+        hence "k' < l" "red < length (bs!l)" "pre < length (bs ! k')"
+          using Nil.prems(4) a3 a5 by blast+
+        thus ?thesis
+          using Nil.prems(3) a5 by fastforce
+      next
+        assume a5: "l\<noteq>k"
+        hence "l < length bs" "i < length (bs!l)" "PreRed p ps = pointer (bs!l!i)"
+          using a0 a1 a2 by auto
+        hence "k' < l" "red < i" "pre < length (bs!k')"
+          using a3 a4 Nil.prems(1) unfolding valid_prered_ptrs_def by blast+
+        thus ?thesis
+          using Nil.prems(3) a4 by force
+      qed
+    qed
+  }
+  hence "valid_prered_ptrs (?bs[k := bin_upd e []]) c k"
+    unfolding valid_prered_ptrs_def by (metis bin_upd.simps(1) list_update_overwrite)
+  thus ?case
+    by simp
+next
+  case (Cons e' es')
+  show ?case
+  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> e' = Entry y (PreRed yp ys)")
+    case True
+    then obtain x xp xs y yp ys where ee': "e = Entry x (PreRed xp xs)" "e' = Entry y (PreRed yp ys)"
+      by blast
+    thus ?thesis
+    proof cases
+      assume *: "x = y"
+      let ?bs = "bs[k := Entry x (PreRed xp (yp # xs @ ys)) # es']"
+      {
+        fix l i p ps k' pre red
+        assume a0: "l < length ?bs"
+        assume a1: "i < length (?bs!l)"
+        assume a2: "PreRed p ps = pointer (?bs!l!i)"
+        assume a3: "(k', pre, red) \<in> set (p#ps)"
+        have l: "l < length bs"
+          using a0 by simp
+        have i: "i < length (bs!l)"
+          by (metis Cons.prems(2) Cons.prems(3) a1 list.size(4) nth_list_update)
+        have "k' < l \<and> red < i \<and> (k'=k \<longrightarrow> pre < length (?bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs!k'))"
+        proof cases
+          assume a4: "k'=k"
+          show ?thesis
+          proof cases
+            assume a5: "l=k"
+            show ?thesis
+            proof cases
+              assume a6: "?bs!l!i = bs!l!i"
+              hence "PreRed p ps = pointer (bs!l!i)"
+                using a2 by simp
+              hence "k' < l" "red < i" "pre < length (bs!k') + c"
+                using Cons.prems(1) l i a3 a4 unfolding valid_prered_ptrs_def by blast+
+              thus ?thesis
+                using a4 a5 by blast
+            next
+              assume a6: "?bs!l!i \<noteq> bs!l!i"
+              hence "i = 0"
+                by (metis Cons.prems(2,3) a5 nth_Cons' nth_list_update_eq)
+              show ?thesis
+              proof cases
+                assume a7: "(k', pre, red) \<in> set (xp#xs)"
+                hence "k' < l" "red < length (bs!l)" "pre < length (bs!k') + c"
+                  using Cons.prems(4) a4 a5 ee'(1) by (metis entry.sel(2))+
+                thus ?thesis
+                  using a4 a5 by force
+              next
+                assume a7: "(k', pre, red) \<notin> set (xp#xs)"
+                hence "(k', pre, red) \<in> set (yp#ys)"
+                  using Cons.prems(2) \<open>i = 0\<close> a2 a3 a5 by simp
+                then obtain p' ps' where "PreRed p' ps' = pointer (bs!l!i)" "(k', pre, red) \<in> set (p'#ps')"
+                  by (metis Cons.prems(3) \<open>i = 0\<close> a5 ee'(2) entry.sel(2) nth_Cons')
+                hence "k' < l" "red < i" "pre < length (bs!k') + c"
+                  using Cons.prems(1) l i a4 unfolding valid_prered_ptrs_def by blast+
+                thus ?thesis
+                  using a4 a5 by blast
+              qed
+            qed
+          next
+            assume a5: "l\<noteq>k"
+            hence "PreRed p ps = pointer (bs!l!i)"
+              using a2 by simp
+            hence "k' < l" "red < i" "pre < length (bs!k') + c"
+              using Cons.prems(1) l i a3 a4 unfolding valid_prered_ptrs_def by blast+
+            thus ?thesis
+              using Cons.prems(2,3) a4 by (metis length_Cons nth_list_update_eq)
+          qed
+        next
+          assume a4: "k'\<noteq>k"
+          show ?thesis
+          proof cases
+            assume a5: "l=k"
+            show ?thesis
+            proof cases
+              assume a6: "?bs!l!i = bs!l!i"
+              hence "PreRed p ps = pointer (bs!l!i)"
+                using a2 by simp
+              hence "k' < l" "red < i" "pre < length (bs!k')"
+                using Cons.prems(1) l i a3 a4 unfolding valid_prered_ptrs_def by blast+
+              thus ?thesis
+                using a4 by fastforce
+            next
+              assume a6: "?bs!l!i \<noteq> bs!l!i"
+              hence "i = 0"
+                by (metis Cons.prems(2,3) a5 nth_Cons' nth_list_update_eq)
+              show ?thesis
+              proof cases
+                assume a7: "(k', pre, red) \<in> set (xp#xs)"
+                hence "k' < l" "red < length (bs!l)" "pre < length (bs!k')"
+                  using Cons.prems(4) a4 a5 ee'(1) by (metis entry.sel(2))+
+                moreover have "length (?bs!k') = length (bs!k')"
+                  using a4 by auto
+                ultimately have "k' < l" "red < length (bs!k)" "pre < length (?bs!k')"
+                  using a5 by simp_all
+                thus ?thesis
+                  using a4 a5
+                  sorry
+              next
+                assume a7: "(k', pre, red) \<notin> set (xp#xs)"
+                hence "(k', pre, red) \<in> set (yp#ys)"
+                  using Cons.prems(2) \<open>i = 0\<close> a2 a3 a5 by simp
+                then obtain p' ps' where "PreRed p' ps' = pointer (bs!l!i)" "(k', pre, red) \<in> set (p'#ps')"
+                  by (metis Cons.prems(3) \<open>i = 0\<close> a5 ee'(2) entry.sel(2) nth_Cons')
+                hence "k' < l" "red < i" "pre < length (bs!k')"
+                  using Cons.prems(1) l i a4 unfolding valid_prered_ptrs_def by blast+
+                thus ?thesis
+                  using \<open>i = 0\<close> by blast
+              qed
+            qed
+          next
+            assume a5: "l\<noteq>k"
+            hence "PreRed p ps = pointer (bs!l!i)"
+              using a2 by simp
+            hence "k' < l" "red < i" "pre < length (bs!k')"
+              using Cons.prems(1) l i a3 a4 unfolding valid_prered_ptrs_def by blast+
+            thus ?thesis
+              using a4 by simp
+          qed
+        qed
+      }
+      hence "valid_prered_ptrs ?bs c k"
+        unfolding valid_prered_ptrs_def by blast
+      moreover have "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
+        using ee' * by simp
+      ultimately show ?thesis
+        by simp
+    next
+      assume *: "\<not> x = y"
+      let ?bs = "bs[k := es']"
+      {
+        fix l i pre
+        assume a0: "l < length ?bs"
+        assume a1: "i < length (?bs!l)"
+        assume a2: "Pre pre = pointer (?bs!l!i)"
+        have "l < length bs"
+          using a0 by simp
+        have "(l-1 = k \<longrightarrow> pre < length (?bs!(l-1)) + (c+1)) \<and> (l-1 \<noteq> k \<longrightarrow> pre < length (?bs!(l-1)))"
+        proof cases
+          assume a3: "l-1 = k"
+          have len: "length (bs!(l-1)) = length (?bs!(l-1)) + 1"
+            using Cons.prems(2,3) a3 by (auto, metis length_Cons)
+          have "pre < length (?bs!(l-1)) + (c+1)"
+          proof cases
+            assume a4: "l = k"
+            hence "bs!l!(i+1) = ?bs!l!i"
+              using Cons.prems(2,3) by (auto, metis nth_Cons_Suc)
+            moreover have "i+1 < length (bs!l)"
+              using Cons.prems(3) \<open>l < length bs\<close> a1 a4 by (auto, metis Suc_less_eq length_Cons)
+            ultimately have "pre < length (bs!(l-1)) + c"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a4 unfolding valid_pre_ptrs_def by fastforce
+            thus ?thesis
+              using len by simp
+          next
+            assume a4: "\<not> l = k"
+            hence "bs!l!i = ?bs!l!i"
+              by simp
+            moreover have "i < length (bs!l)"
+              using a1 a4 by force
+            ultimately have "pre < length (bs!(l-1)) + c"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a3 unfolding valid_pre_ptrs_def by simp
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by blast
+        next
+          assume a3: "\<not> l-1 = k"
+          have len: "length (bs!(l-1)) = length (?bs!(l-1))"
+            using a3 by simp
+          have "pre < length (?bs!(l-1))"
+          proof cases
+            assume a4: "l = k"
+            hence "bs!l!(i+1) = ?bs!l!i"
+              using Cons.prems(2,3) by (auto, metis nth_Cons_Suc)
+            moreover have "i+1 < length (bs!l)"
+              using Cons.prems(3) \<open>l < length bs\<close> a1 a4 by (auto, metis Suc_less_eq length_Cons)
+            ultimately have "pre < length (bs!(l-1))"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a3 a4 unfolding valid_pre_ptrs_def by fastforce
+            thus ?thesis
+              using len by simp
+          next
+            assume a4: "\<not> l = k"
+            hence "bs!l!i = ?bs!l!i"
+              by simp
+            moreover have "i < length (bs!l)"
+              using a1 a4 by force
+            ultimately have "pre < length (bs!(l-1))"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a3 unfolding valid_pre_ptrs_def by simp
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by blast
+        qed
+      }
+      hence "valid_pre_ptrs ?bs (c+1) k"
+        unfolding valid_pre_ptrs_def by blast
+      moreover have "\<forall>pre. Pre pre = pointer e \<longrightarrow> (k-1=k \<longrightarrow> pre < length (bs!(k-1)) + c) \<and> (k-1\<noteq>k \<longrightarrow> pre < length (bs!(k-1)))"
+        using True by force
+      ultimately have "valid_pre_ptrs (?bs[k := bin_upd e es']) (c+1) k"
+        using Cons.IH Cons.prems(2) ee'(1) by force
+      hence "valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k"
+        by simp
+      let ?bs' = "bs[k := e' # bin_upd e es']"
+      {
+        fix l i pre
+        assume a0: "l < length ?bs'"
+        assume a1: "i < length (?bs'!l)"
+        assume a2: "Pre pre = pointer (?bs'!l!i)"
+        have "l < length bs"
+          using a0 by fastforce
+        have "(l-1 = k \<longrightarrow> pre < length (?bs'!(l-1)) + c) \<and> (l-1 \<noteq> k \<longrightarrow> pre < length (?bs'!(l-1)))"
+        proof cases
+          assume a3: "l-1 = k"
+          have len: "length (bs!(l-1)) \<le> length (?bs'!(l-1))"
+            using a3 Cons.prems(2,3) length_bin_upd by (metis add_le_mono1 list.size(4) nth_list_update)
+          have "pre < length (?bs'!(l-1)) + c"
+          proof cases
+            assume a4: "l = k"
+            show ?thesis
+            proof cases
+              assume a5: "i = 0"
+              hence "?bs'!l!i = e'"
+                using Cons.prems(2) a4 by simp
+              moreover have "i < length (bs!l)"
+                using Cons.prems(3) a4 a5 by force
+              ultimately have "pre < length (bs!(l-1)) + c"
+                using a2 ee'(2) by fastforce
+              thus ?thesis
+                using len by simp
+            next
+              assume a5: "\<not> i = 0"
+              let ?bs'' = "bs[k := bin_upd e es']"
+              have "l < length ?bs''"
+                using a0 by force
+              moreover have "i-1 < length (?bs''!l)"
+                using Cons.prems(2) a1 a4 a5 by simp
+              moreover have "Pre pre = pointer (?bs''!l!(i-1))"
+                using Cons.prems(2) a2 a4 a5 by simp
+              ultimately have "pre < length (?bs''!(l-1)) + (c+1)"
+                using \<open>valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k\<close> a3 unfolding valid_pre_ptrs_def by blast
+              moreover have "length (?bs''!(l-1)) + 1 = length (?bs'!(l-1))"
+                using Cons.prems(2) a3 by simp
+              ultimately show ?thesis
+                by simp
+            qed
+          next
+            assume a4: "\<not> l = k"
+            have "i < length (bs!l)"
+              using a1 a4 by simp
+            moreover have "Pre pre = pointer (bs!l!i)"
+              using a2 a4 by simp
+            ultimately have "pre < length (bs!(l-1)) + c"
+              using Cons.prems(1) \<open>l < length bs\<close> a3 a4 unfolding valid_pre_ptrs_def by blast
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by blast
+        next
+          assume a3: "\<not> l-1 = k"
+          have len: "length (bs!(l-1)) = length (?bs'!(l-1))"
+            using a3 by simp
+          have "pre < length (?bs'!(l-1))"
+          proof cases
+            assume a4: "l = k"
+            show ?thesis
+            proof cases
+              assume a5: "i = 0"
+              hence "?bs'!l!i = e'"
+                using Cons.prems(2) a4 by simp
+              moreover have "i < length (bs!l)"
+                using Cons.prems(3) a4 a5 by force
+              ultimately have "pre < length (bs!(l-1))"
+                using a2 ee'(2) by fastforce
+              thus ?thesis
+                using len by simp
+            next
+              assume a5: "\<not> i = 0"
+              let ?bs'' = "bs[k := bin_upd e es']"
+              have "l < length ?bs''"
+                using a0 by force
+              moreover have "i-1 < length (?bs''!l)"
+                using Cons.prems(2) a1 a4 a5 by simp
+              moreover have "Pre pre = pointer (?bs''!l!(i-1))"
+                using Cons.prems(2) a2 a4 a5 by simp
+              ultimately have "pre < length (?bs''!(l-1))"
+                using \<open>valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k\<close> a3 unfolding valid_pre_ptrs_def by blast
+              moreover have "length (?bs''!(l-1)) = length (?bs'!(l-1))"
+                using Cons.prems(2) a3 by simp
+              ultimately show ?thesis
+                by simp
+            qed
+          next
+            assume a4: "\<not> l = k"
+            have "i < length (bs!l)"
+              using a1 a4 by simp
+            moreover have "Pre pre = pointer (bs!l!i)"
+              using a2 a4 by simp
+            ultimately have "pre < length (bs!(l-1))"
+              using Cons.prems(1) \<open>l < length bs\<close> a3 a4 unfolding valid_pre_ptrs_def by blast
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by simp
+        qed
+      }
+      hence "valid_pre_ptrs (bs[k := e' # bin_upd e es']) c k"
+        unfolding valid_pre_ptrs_def by blast
+      thus ?thesis
+        using ee' * by simp
+    qed
+  next
+    case False
+    show ?thesis
+    proof cases
+      assume *: "item e = item e'"
+      hence "bin_upd e (e' # es') = e' # es'"
+        using False by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using Cons.prems(1,2,3) by auto
+    next
+      assume *: "\<not> item e = item e'"
+      let ?bs = "bs[k := es']"
+      {
+        fix l i pre
+        assume a0: "l < length ?bs"
+        assume a1: "i < length (?bs!l)"
+        assume a2: "Pre pre = pointer (?bs!l!i)"
+        have "l < length bs"
+          using a0 by simp
+        have "(l-1 = k \<longrightarrow> pre < length (?bs!(l-1)) + (c+1)) \<and> (l-1 \<noteq> k \<longrightarrow> pre < length (?bs!(l-1)))"
+        proof cases
+          assume a3: "l-1 = k"
+          have len: "length (bs!(l-1)) = length (?bs!(l-1)) + 1"
+            using Cons.prems(2,3) a3 by (auto, metis length_Cons)
+          have "pre < length (?bs!(l-1)) + (c+1)"
+          proof cases
+            assume a4: "l = k"
+            hence "bs!l!(i+1) = ?bs!l!i"
+              using Cons.prems(2,3) by (auto, metis nth_Cons_Suc)
+            moreover have "i+1 < length (bs!l)"
+              using Cons.prems(3) \<open>l < length bs\<close> a1 a4 by (auto, metis Suc_less_eq length_Cons)
+            ultimately have "pre < length (bs!(l-1)) + c"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a4 unfolding valid_pre_ptrs_def by fastforce
+            thus ?thesis
+              using len by simp
+          next
+            assume a4: "\<not> l = k"
+            hence "bs!l!i = ?bs!l!i"
+              by simp
+            moreover have "i < length (bs!l)"
+              using a1 a4 by force
+            ultimately have "pre < length (bs!(l-1)) + c"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a3 unfolding valid_pre_ptrs_def by simp
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by blast
+        next
+          assume a3: "\<not> l-1 = k"
+          have len: "length (bs!(l-1)) = length (?bs!(l-1))"
+            using a3 by simp
+          have "pre < length (?bs!(l-1))"
+          proof cases
+            assume a4: "l = k"
+            hence "bs!l!(i+1) = ?bs!l!i"
+              using Cons.prems(2,3) by (auto, metis nth_Cons_Suc)
+            moreover have "i+1 < length (bs!l)"
+              using Cons.prems(3) \<open>l < length bs\<close> a1 a4 by (auto, metis Suc_less_eq length_Cons)
+            ultimately have "pre < length (bs!(l-1))"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a3 a4 unfolding valid_pre_ptrs_def by fastforce
+            thus ?thesis
+              using len by simp
+          next
+            assume a4: "\<not> l = k"
+            hence "bs!l!i = ?bs!l!i"
+              by simp
+            moreover have "i < length (bs!l)"
+              using a1 a4 by force
+            ultimately have "pre < length (bs!(l-1))"
+              using Cons.prems(1) \<open>l < length bs\<close> a2 a3 unfolding valid_pre_ptrs_def by simp
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by blast
+        qed
+      }
+      hence "valid_pre_ptrs ?bs (c+1) k"
+        unfolding valid_pre_ptrs_def by blast
+      moreover have "\<forall>pre. Pre pre = pointer e \<longrightarrow> (k-1=k \<longrightarrow> pre < length (?bs!(k-1)) + (c+1)) \<and> (k-1\<noteq>k \<longrightarrow> pre < length (?bs!(k-1)))"
+        using Cons.prems(2,3,4) by (auto, metis add_Suc length_Cons)
+      ultimately have "valid_pre_ptrs (?bs[k := bin_upd e es']) (c+1) k"
+        using Cons.IH Cons.prems(2) by (metis length_list_update nth_list_update_eq)
+      hence "valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k"
+        by simp
+      let ?bs' = "bs[k := e' # bin_upd e es']"
+      {
+        fix l i pre
+        assume a0: "l < length ?bs'"
+        assume a1: "i < length (?bs'!l)"
+        assume a2: "Pre pre = pointer (?bs'!l!i)"
+        have "l < length bs"
+          using a0 by fastforce
+        have "(l-1 = k \<longrightarrow> pre < length (?bs'!(l-1)) + c) \<and> (l-1 \<noteq> k \<longrightarrow> pre < length (?bs'!(l-1)))"
+        proof cases
+          assume a3: "l-1 = k"
+          have len: "length (bs!(l-1)) \<le> length (?bs'!(l-1))"
+            using a3 Cons.prems(2,3) length_bin_upd by (metis add_le_mono1 list.size(4) nth_list_update)
+          have "pre < length (?bs'!(l-1)) + c"
+          proof cases
+            assume a4: "l = k"
+            show ?thesis
+            proof cases
+              assume a5: "i = 0"
+              hence "?bs'!l!i = e'"
+                using Cons.prems(2) a4 by simp
+              moreover have "i < length (bs!l)"
+                using Cons.prems(3) a4 a5 by force
+              ultimately have "pre < length (bs!(l-1)) + c"
+                using a2 a3 a4 a5 Cons.prems(1,2,3) unfolding valid_pre_ptrs_def by (metis nth_Cons_0)
+              thus ?thesis
+                using len by simp
+            next
+              assume a5: "\<not> i = 0"
+              let ?bs'' = "bs[k := bin_upd e es']"
+              have "l < length ?bs''"
+                using a0 by force
+              moreover have "i-1 < length (?bs''!l)"
+                using Cons.prems(2) a1 a4 a5 by simp
+              moreover have "Pre pre = pointer (?bs''!l!(i-1))"
+                using Cons.prems(2) a2 a4 a5 by simp
+              ultimately have "pre < length (?bs''!(l-1)) + (c+1)"
+                using \<open>valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k\<close> a3 unfolding valid_pre_ptrs_def by blast
+              moreover have "length (?bs''!(l-1)) + 1 = length (?bs'!(l-1))"
+                using Cons.prems(2) a3 by simp
+              ultimately show ?thesis
+                by simp
+            qed
+          next
+            assume a4: "\<not> l = k"
+            have "i < length (bs!l)"
+              using a1 a4 by simp
+            moreover have "Pre pre = pointer (bs!l!i)"
+              using a2 a4 by simp
+            ultimately have "pre < length (bs!(l-1)) + c"
+              using Cons.prems(1) \<open>l < length bs\<close> a3 a4 unfolding valid_pre_ptrs_def by blast
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by blast
+        next
+          assume a3: "\<not> l-1 = k"
+          have len: "length (bs!(l-1)) = length (?bs'!(l-1))"
+            using a3 by simp
+          have "pre < length (?bs'!(l-1))"
+          proof cases
+            assume a4: "l = k"
+            show ?thesis
+            proof cases
+              assume a5: "i = 0"
+              hence "?bs'!l!i = e'"
+                using Cons.prems(2) a4 by simp
+              moreover have "i < length (bs!l)"
+                using Cons.prems(3) a4 a5 by force
+              ultimately have "pre < length (bs!(l-1))"
+                using a2 a3 a4 a5 Cons.prems(1,2,3) unfolding valid_pre_ptrs_def by (metis nth_Cons_0)
+              thus ?thesis
+                using len by simp
+            next
+              assume a5: "\<not> i = 0"
+              let ?bs'' = "bs[k := bin_upd e es']"
+              have "l < length ?bs''"
+                using a0 by force
+              moreover have "i-1 < length (?bs''!l)"
+                using Cons.prems(2) a1 a4 a5 by simp
+              moreover have "Pre pre = pointer (?bs''!l!(i-1))"
+                using Cons.prems(2) a2 a4 a5 by simp
+              ultimately have "pre < length (?bs''!(l-1))"
+                using \<open>valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k\<close> a3 unfolding valid_pre_ptrs_def by blast
+              moreover have "length (?bs''!(l-1)) = length (?bs'!(l-1))"
+                using Cons.prems(2) a3 by simp
+              ultimately show ?thesis
+                by simp
+            qed
+          next
+            assume a4: "\<not> l = k"
+            have "i < length (bs!l)"
+              using a1 a4 by simp
+            moreover have "Pre pre = pointer (bs!l!i)"
+              using a2 a4 by simp
+            ultimately have "pre < length (bs!(l-1))"
+              using Cons.prems(1) \<open>l < length bs\<close> a3 a4 unfolding valid_pre_ptrs_def by blast
+            thus ?thesis
+              using len by simp
+          qed
+          thus ?thesis
+            using a3 by simp
+        qed
+      }
+      hence "valid_pre_ptrs (bs[k := e' # bin_upd e es']) c k"
+        unfolding valid_pre_ptrs_def by blast
+      thus ?thesis
+        using False * by (auto split: pointer.splits entry.splits)
+    qed
+  qed
+qed
+
 lemma valid_ptrs_bin_upd: \<comment>\<open>TODO\<close>
   assumes "valid_ptrs bs" "es = bs!k" "k < length bs"
   assumes "(\<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
