@@ -2436,14 +2436,14 @@ definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bin
     | (_,i)#_ \<Rightarrow> Some (build_dtree' bs inp k i)
   )"
 
-definition valid_pre_ptrs :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-  "valid_pre_ptrs bs c k = (
+definition bounded_pre_ptrs :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
+  "bounded_pre_ptrs bs c k = (
     \<forall>l < length bs. \<forall>e \<in> set (bs!l).
       \<forall>pre. Pre pre = pointer e \<longrightarrow>
         (l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1))))" 
 
-definition valid_prered_ptrs :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-  "valid_prered_ptrs bs c k = (
+definition bounded_prered_ptrs :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
+  "bounded_prered_ptrs bs c k = (
     \<forall>l < length bs. \<forall>e \<in> set (bs!l).
       \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
         k' < l \<and>
@@ -2451,8 +2451,8 @@ definition valid_prered_ptrs :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<R
        (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))
     )" \<comment>\<open>red < i\<close>
 
-definition valid_ptrs :: "'a bins \<Rightarrow> bool" where
-  "valid_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k).
+definition bounded_ptrs :: "'a bins \<Rightarrow> bool" where
+  "bounded_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k).
     (\<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1))) \<and>
     (\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
       k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k)))" \<comment>\<open>red < i\<close>
@@ -2468,19 +2468,27 @@ definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Right
   "completes k x y z \<longleftrightarrow> y = inc_item x k \<and> is_complete z \<and> item_origin z = item_end x \<and>
     (\<exists>N. next_symbol x = Some N \<and> N = item_rule_head z)"
 
-definition wf_null_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-  "wf_null_ptr bs k i = (pointer (bs!k!i) = Null \<longleftrightarrow> predicts (item (bs!k!i)))"
+definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
+  "sound_null_ptr e = (pointer e = Null \<longrightarrow> predicts (item e))"
 
-definition wf_pre_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "wf_pre_ptr bs k i inp = (\<forall>pre. pointer (bs!k!i) = Pre pre \<longleftrightarrow> scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i)))"
+definition sound_null_ptrs :: "'a bins \<Rightarrow> bool" where
+  "sound_null_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_null_ptr e)"
 
-definition wf_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-  "wf_prered_ptr bs k i = (\<forall>p ps k' pre red. (pointer (bs!k!i) = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps)) \<longleftrightarrow>
-    completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red)))"
+definition sound_pre_ptr :: "'a bins \<Rightarrow> 'a sentence  \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
+  "sound_pre_ptr bs inp k e = (\<forall>pre. pointer e = Pre pre \<longrightarrow> scans inp k (item (bs!(k-1)!pre)) (item e))" \<comment>\<open>Generalize this to c???\<close>
 
-definition wf_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "wf_ptrs inp bs \<longleftrightarrow> (\<forall>k < length bs. \<forall>i < length (bs!k). (
-    wf_null_ptr bs k i \<and> wf_pre_ptr bs k i inp \<and> wf_prered_ptr bs k i))"
+definition sound_pre_ptrs :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "sound_pre_ptrs bs inp = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_pre_ptr bs inp k e)"
+
+definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
+  "sound_prered_ptr bs k e = (\<forall>p ps k' pre red. (pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps)) \<longrightarrow>
+    completes k (item (bs!k'!pre)) (item e) (item (bs!k!red)))"
+
+definition sound_prered_ptrs :: "'a bins \<Rightarrow> bool" where
+  "sound_prered_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_prered_ptr bs k e)"
+
+definition sound_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" where
+  "sound_ptrs inp bs \<longleftrightarrow> sound_null_ptrs bs \<and> sound_pre_ptrs bs inp \<and> sound_prered_ptrs bs"
 
 
 subsection \<open>Lemmas\<close>
@@ -2504,10 +2512,10 @@ lemma nex_Leaf_build_tree':
   "\<nexists>a. build_dtree' bs inp k i = Leaf a"
   using ex_Node_build_tree' by (metis dtree.distinct(1))
 
-lemma valid_pre_ptrs_bin_upd:
-  assumes "valid_pre_ptrs bs c k" "k < length bs" "es = bs!k"
+lemma bounded_pre_ptrs_bin_upd:
+  assumes "bounded_pre_ptrs bs c k" "k < length bs" "es = bs!k"
   assumes "\<forall>pre. Pre pre = pointer e \<longrightarrow> (k-1=k \<longrightarrow> pre < length (bs!(k-1)) + c) \<and> (k-1\<noteq>k \<longrightarrow> pre < length (bs!(k-1)))"
-  shows "valid_pre_ptrs (bs[k := bin_upd e es]) c k"
+  shows "bounded_pre_ptrs (bs[k := bin_upd e es]) c k"
   using assms
 proof (induction es arbitrary: e bs c)
   case Nil
@@ -2529,13 +2537,13 @@ proof (induction es arbitrary: e bs c)
     next
       assume a3: "l\<noteq>k"
       hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-        using Nil.prems(1) a0 a1 a2 valid_pre_ptrs_def by fastforce
+        using Nil.prems(1) a0 a1 a2 bounded_pre_ptrs_def by fastforce
       thus ?thesis
         using len by auto
     qed
   }
-  hence "valid_pre_ptrs (?bs[k := bin_upd e []]) c k"
-    unfolding valid_pre_ptrs_def by simp
+  hence "bounded_pre_ptrs (?bs[k := bin_upd e []]) c k"
+    unfolding bounded_pre_ptrs_def by simp
   thus ?case
     by simp
 next
@@ -2565,7 +2573,7 @@ next
           proof cases
             assume a4: "elem \<in> set es'"
             hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-              using Cons.prems(1,2,3) a2 a3 valid_pre_ptrs_def by (metis list.set_intros(2))
+              using Cons.prems(1,2,3) a2 a3 bounded_pre_ptrs_def by (metis list.set_intros(2))
             thus ?thesis
               using len by linarith
           next
@@ -2576,13 +2584,13 @@ next
         next
           assume a3: "l\<noteq>k"
           hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-            using Cons.prems(1) a0 a1 a2 valid_pre_ptrs_def by fastforce
+            using Cons.prems(1) a0 a1 a2 bounded_pre_ptrs_def by fastforce
           thus ?thesis
             using len by linarith
         qed
       }
-      hence "valid_pre_ptrs ?bs c k"
-        unfolding valid_pre_ptrs_def by blast
+      hence "bounded_pre_ptrs ?bs c k"
+        unfolding bounded_pre_ptrs_def by blast
       moreover have "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
         using ee' * by simp
       ultimately show ?thesis
@@ -2610,25 +2618,25 @@ next
       proof cases
         assume a3: "l=k"
         hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-          using Cons.prems(1,2,3) a0 a1 a2 unfolding valid_pre_ptrs_def
+          using Cons.prems(1,2,3) a0 a1 a2 unfolding bounded_pre_ptrs_def
           by (metis nth_list_update_eq set_subset_Cons subset_code(1))
         thus ?thesis
           using len by simp
       next
         assume a3: "l\<noteq>k"
         hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-          using Cons.prems(1,2) a0 a1 a2 unfolding valid_pre_ptrs_def by force
+          using Cons.prems(1,2) a0 a1 a2 unfolding bounded_pre_ptrs_def by force
         thus ?thesis
           using len by simp
       qed
     }
-    hence "valid_pre_ptrs ?bs (c+1) k"
-      unfolding valid_pre_ptrs_def by blast
+    hence "bounded_pre_ptrs ?bs (c+1) k"
+      unfolding bounded_pre_ptrs_def by blast
     moreover have "\<forall>pre. Pre pre = pointer e \<longrightarrow> (k-1=k \<longrightarrow> pre < length (?bs!(k-1)) + (c+1)) \<and> (k-1\<noteq>k \<longrightarrow> pre < length (?bs!(k-1)))"
       using Cons.prems(2,3,4) by (auto, metis add_Suc length_Cons)
-    ultimately have "valid_pre_ptrs (?bs[k := bin_upd e es']) (c+1) k"
+    ultimately have "bounded_pre_ptrs (?bs[k := bin_upd e es']) (c+1) k"
       using Cons.IH Cons.prems(2) by (metis length_list_update nth_list_update_eq)
-    hence IH: "valid_pre_ptrs (bs[k := bin_upd e es']) (c+1) k"
+    hence IH: "bounded_pre_ptrs (bs[k := bin_upd e es']) (c+1) k"
       by simp
     let ?bs' = "bs[k := e' # bin_upd e es']"
     {
@@ -2646,37 +2654,37 @@ next
         proof cases
           assume a4: "elem \<in> set (bin_upd e es')"
           hence "(l-1=k \<longrightarrow> pre < length (?bs''!(l-1)) + (c+1)) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (?bs''!(l-1)))"
-            using IH a0 a2 a3 unfolding valid_pre_ptrs_def by (metis length_list_update nth_list_update_eq)
+            using IH a0 a2 a3 unfolding bounded_pre_ptrs_def by (metis length_list_update nth_list_update_eq)
           thus ?thesis
             using Cons.prems(2) by force
         next
           assume a4: "elem \<notin> set (bin_upd e es')"
           hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-            using Cons.prems(1,2,3) a1 a2 a3 unfolding valid_pre_ptrs_def by (metis list.set_intros(1) nth_list_update set_ConsD)
+            using Cons.prems(1,2,3) a1 a2 a3 unfolding bounded_pre_ptrs_def by (metis list.set_intros(1) nth_list_update set_ConsD)
           thus ?thesis
             using len order_less_le_trans by auto
         qed
       next
         assume a3: "l\<noteq>k"
         hence "(l-1=k \<longrightarrow> pre < length (bs!(l-1)) + c) \<and> (l-1\<noteq>k \<longrightarrow> pre < length (bs!(l-1)))"
-          using Cons.prems(1) a0 a1 a2 valid_pre_ptrs_def by fastforce
+          using Cons.prems(1) a0 a1 a2 bounded_pre_ptrs_def by fastforce
         thus ?thesis
           using len by auto
       qed
     }
-    hence "valid_pre_ptrs (bs[k := e' # bin_upd e es']) c k"
-      unfolding valid_pre_ptrs_def by blast
+    hence "bounded_pre_ptrs (bs[k := e' # bin_upd e es']) c k"
+      unfolding bounded_pre_ptrs_def by blast
     thus ?thesis
       using simp by simp
   qed
 qed
 
-lemma valid_prered_ptrs_bin_upd:
-  assumes "valid_prered_ptrs bs c k" "k < length bs" "es = bs!k"
+lemma bounded_prered_ptrs_bin_upd:
+  assumes "bounded_prered_ptrs bs c k" "k < length bs" "es = bs!k"
   assumes "\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p # ps) \<longrightarrow>
           k' < k \<and> (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and> 
           red < length (bs!k) + c"
-  shows "valid_prered_ptrs (bs[k := bin_upd e es]) c k"
+  shows "bounded_prered_ptrs (bs[k := bin_upd e es]) c k"
   using assms
 proof (induction es arbitrary: e bs c)
   case Nil
@@ -2701,13 +2709,13 @@ proof (induction es arbitrary: e bs c)
         using a1 by force
       hence "k' < l \<and> (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
         (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-        using a0 a2 Nil.prems(1) unfolding valid_prered_ptrs_def by (metis length_list_update)
+        using a0 a2 Nil.prems(1) unfolding bounded_prered_ptrs_def by (metis length_list_update)
       thus ?thesis
         using Nil.prems(3) by auto
     qed
   }
-  hence "valid_prered_ptrs (?bs[k := bin_upd e []]) c k"
-    unfolding valid_prered_ptrs_def by (metis bin_upd.simps(1) list_update_overwrite)
+  hence "bounded_prered_ptrs (?bs[k := bin_upd e []]) c k"
+    unfolding bounded_prered_ptrs_def by (metis bin_upd.simps(1) list_update_overwrite)
   thus ?case
     by simp
 next
@@ -2741,7 +2749,7 @@ next
             hence "k' < l \<and>
               (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
               (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-              using a0 a2 a3 a4 Cons.prems(1,2) unfolding valid_prered_ptrs_def by blast
+              using a0 a2 a3 a4 Cons.prems(1,2) unfolding bounded_prered_ptrs_def by blast
             thus ?thesis
               using Cons.prems(2,3) by (metis list.size(4) nth_list_update)
           next
@@ -2752,7 +2760,7 @@ next
             proof cases
               assume a5: "(k', pre, red) \<in> set (xp#xs)"
               thus ?thesis
-                using Cons.prems(2,3,4) a2 a3 unfolding valid_prered_ptrs_def ee'(1)
+                using Cons.prems(2,3,4) a2 a3 unfolding bounded_prered_ptrs_def ee'(1)
                 by (metis entry.sel(2) length_Cons nth_list_update_eq nth_list_update_neq)
             next
               assume a5: "(k', pre, red) \<notin> set (xp#xs)"
@@ -2761,7 +2769,7 @@ next
               hence "k' < l \<and>
                 (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
                 (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-                using ee'(2) Cons.prems(1,2,3) a3 unfolding valid_prered_ptrs_def by (metis entry.sel(2) list.set_intros(1))
+                using ee'(2) Cons.prems(1,2,3) a3 unfolding bounded_prered_ptrs_def by (metis entry.sel(2) list.set_intros(1))
               thus ?thesis
                 using Cons.prems(2,3) by (metis list.size(4) nth_list_update)
             qed
@@ -2773,13 +2781,13 @@ next
           hence "k' < l \<and>
             (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
             (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-            using a0 a2 Cons.prems(1) unfolding valid_prered_ptrs_def by (metis length_list_update)
+            using a0 a2 Cons.prems(1) unfolding bounded_prered_ptrs_def by (metis length_list_update)
           thus ?thesis
             using Cons.prems(2,3) by (metis list.size(4) nth_list_update)
         qed
       }
-      hence "valid_prered_ptrs ?bs c k"
-        unfolding valid_prered_ptrs_def by blast
+      hence "bounded_prered_ptrs ?bs c k"
+        unfolding bounded_prered_ptrs_def by blast
       moreover have "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
         using ee' * by simp
       ultimately show ?thesis
@@ -2809,7 +2817,7 @@ next
         hence "k' < l \<and>
           (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
           (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-          using Cons.prems(1,2,3) a0 a1 a2 unfolding valid_prered_ptrs_def
+          using Cons.prems(1,2,3) a0 a1 a2 unfolding bounded_prered_ptrs_def
           by (smt (verit, ccfv_SIG) nth_list_update_eq set_subset_Cons subset_code(1))
         thus ?thesis
           using Cons.prems(2,3)
@@ -2819,22 +2827,22 @@ next
         hence "k' < l \<and>
           (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
           (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-          using Cons.prems(1) a0 a1 a2 unfolding valid_prered_ptrs_def
+          using Cons.prems(1) a0 a1 a2 unfolding bounded_prered_ptrs_def
           by (metis length_list_update nth_list_update_neq)
         thus ?thesis
           using Cons.prems(2,3)
           by (metis Suc_eq_plus1 add_Suc add_Suc_right length_Cons nth_list_update_eq nth_list_update_neq)
       qed
     }
-    hence "valid_prered_ptrs ?bs (c+1) k"
-      unfolding valid_prered_ptrs_def by blast
+    hence "bounded_prered_ptrs ?bs (c+1) k"
+      unfolding bounded_prered_ptrs_def by blast
     moreover have "\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
        k' < k \<and> (k'=k \<longrightarrow> pre < length (?bs!k') + (c+1)) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs!k')) \<and> red < length (?bs!k) + (c+1)"
       using Cons.prems(2,3,4)
       by (metis (no_types, opaque_lifting) Suc_eq_plus1 add_Suc add_Suc_right length_Cons nth_list_update_eq nth_list_update_neq)
-    ultimately have "valid_prered_ptrs (?bs[k := bin_upd e es']) (c+1) k"
+    ultimately have "bounded_prered_ptrs (?bs[k := bin_upd e es']) (c+1) k"
       using Cons.IH Cons.prems(2) by (metis length_list_update nth_list_update_eq)
-    hence IH: "valid_prered_ptrs (bs[k := bin_upd e es']) (c+1) k"
+    hence IH: "bounded_prered_ptrs (bs[k := bin_upd e es']) (c+1) k"
       by simp
     let ?bs' = "bs[k := e' # bin_upd e es']"
     {
@@ -2854,7 +2862,7 @@ next
           hence "k' < l \<and>
             (k'=k \<longrightarrow> pre < length (?bs''!k') + (c+1)) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs''!k')) \<and>
             (l=k \<longrightarrow> red < length (?bs''!l) + (c+1)) \<and> (l\<noteq>k \<longrightarrow> red < length (?bs''!l))"
-            using IH a0 a2 unfolding valid_prered_ptrs_def by (metis length_list_update)
+            using IH a0 a2 unfolding bounded_prered_ptrs_def by (metis length_list_update)
           thus ?thesis
             using Cons.prems(2) by auto
         next
@@ -2864,7 +2872,7 @@ next
           hence "k' < l \<and>
             (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
             (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-            using Cons.prems(1,2) a2 a3 unfolding valid_prered_ptrs_def by (metis trans_less_add1)
+            using Cons.prems(1,2) a2 a3 unfolding bounded_prered_ptrs_def by (metis trans_less_add1)
           moreover have "length (bs!l) \<le> length (?bs'!l)"
             using Cons.prems(2,3) a3 by (metis length_bin_upd nth_list_update_eq simp)
           moreover have "length (bs!k') = length (?bs'!k')"
@@ -2877,7 +2885,7 @@ next
         hence "k' < l \<and>
           (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
           (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-          using Cons.prems(1) a0 a1 a2 unfolding valid_prered_ptrs_def
+          using Cons.prems(1) a0 a1 a2 unfolding bounded_prered_ptrs_def
           by (metis length_list_update nth_list_update_neq trans_less_add1)
         moreover have "length (bs!l) = length (?bs'!l)"
           using a3 by force
@@ -2887,64 +2895,66 @@ next
           by linarith
       qed
     }
-    hence "valid_prered_ptrs (bs[k := e' # bin_upd e es']) c k"
-      unfolding valid_prered_ptrs_def by blast
+    hence "bounded_prered_ptrs (bs[k := e' # bin_upd e es']) c k"
+      unfolding bounded_prered_ptrs_def by blast
     thus ?thesis
       using simp by simp
   qed
 qed
 
-lemma valid_ptrs_bin_upd:
-  assumes "valid_ptrs bs" "es = bs!k" "k < length bs"
+lemma bounded_ptrs_bin_upd:
+  assumes "bounded_ptrs bs" "es = bs!k" "k < length bs"
   assumes "(\<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
-  assumes "(\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
-  shows "valid_ptrs (bs[k := bin_upd e es])"
+  assumes "(\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
+    k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
+  shows "bounded_ptrs (bs[k := bin_upd e es])"
 proof -
-  have "valid_pre_ptrs bs 0 k"
-    using assms(1) unfolding valid_ptrs_def valid_pre_ptrs_def by (metis trans_less_add1)
-  hence 0: "valid_pre_ptrs (bs[k := bin_upd e es]) 0 k"
-    using valid_pre_ptrs_bin_upd assms(2-4) trans_less_add1 by blast
-  have "valid_prered_ptrs bs 0 k"
-    using assms(1) unfolding valid_ptrs_def valid_prered_ptrs_def by (metis trans_less_add1)
-  hence 1: "valid_prered_ptrs (bs[k := bin_upd e es]) 0 k"
-    using valid_prered_ptrs_bin_upd assms(2,3,5) trans_less_add1 by (smt (verit, best))
+  have "bounded_pre_ptrs bs 0 k"
+    using assms(1) unfolding bounded_ptrs_def bounded_pre_ptrs_def by (metis trans_less_add1)
+  hence 0: "bounded_pre_ptrs (bs[k := bin_upd e es]) 0 k"
+    using bounded_pre_ptrs_bin_upd assms(2-4) trans_less_add1 by blast
+  have "bounded_prered_ptrs bs 0 k"
+    using assms(1) unfolding bounded_ptrs_def bounded_prered_ptrs_def by (metis trans_less_add1)
+  hence 1: "bounded_prered_ptrs (bs[k := bin_upd e es]) 0 k"
+    using bounded_prered_ptrs_bin_upd assms(2,3,5) trans_less_add1 by (smt (verit, best))
   show ?thesis
-    using 0 1 unfolding valid_ptrs_def valid_pre_ptrs_def valid_prered_ptrs_def by (smt (verit) add_cancel_left_right)
+    using 0 1 unfolding bounded_ptrs_def bounded_pre_ptrs_def bounded_prered_ptrs_def by (smt (verit) add_cancel_left_right)
 qed
 
-lemma valid_ptrs_bin_upds:
-  assumes "valid_ptrs bs" "b = bs!k" "k < length bs"
+lemma bounded_ptrs_bin_upds:
+  assumes "bounded_ptrs bs" "b = bs!k" "k < length bs"
   assumes "(\<forall>e \<in> set es. \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
-  assumes "(\<forall>e \<in> set es. \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
-  shows "valid_ptrs (bs[k := bin_upds es b])"
+  assumes "(\<forall>e \<in> set es. \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
+    k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
+  shows "bounded_ptrs (bs[k := bin_upds es b])"
   using assms
 proof (induction es arbitrary: b bs)
   case (Cons e es)
-  have 0: "valid_ptrs (bs[k := bin_upd e b])"
-    using valid_ptrs_bin_upd[OF Cons.prems(1,2,3)] Cons.prems(4,5) by auto
+  have 0: "bounded_ptrs (bs[k := bin_upd e b])"
+    using bounded_ptrs_bin_upd[OF Cons.prems(1,2,3)] Cons.prems(4,5) by auto
   have 1: "bin_upd e b = (bs[k := bin_upd e b]) ! k"
     using Cons.prems(3) by simp
   have 2: "k < length (bs[k := bin_upd e b])"
     using Cons.prems(3) by simp
-  have "valid_ptrs ((bs[k := bin_upd e b])[k := bin_upds es (bin_upd e b)])"
+  have "bounded_ptrs ((bs[k := bin_upd e b])[k := bin_upds es (bin_upd e b)])"
     using Cons.IH[OF 0 1 2] Cons.prems(4,5)
     by (smt (verit) "1" Cons.prems(2) dual_order.strict_trans1 insert_iff length_bin_upd list.set(2) nth_list_update_neq)
   thus ?case
     by simp
 qed simp
 
-lemma valid_ptrs_bins_upd:
-  assumes "valid_ptrs bs" "k < length bs"
+lemma bounded_ptrs_bins_upd:
+  assumes "bounded_ptrs bs" "k < length bs"
   assumes "(\<forall>e \<in> set xs. \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
   assumes "(\<forall>e \<in> set xs. \<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow> 
     k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k))"
-  shows "valid_ptrs (bins_upd bs k xs)"
-  unfolding bins_upd_def using valid_ptrs_bin_upds[OF assms(1) _ assms(2,3,4)] by blast
+  shows "bounded_ptrs (bins_upd bs k xs)"
+  unfolding bins_upd_def using bounded_ptrs_bin_upds[OF assms(1) _ assms(2,3,4)] by blast
 
-lemma valid_ptrs_\<pi>_it':
+lemma bounded_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "valid_ptrs bs" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
-  shows "valid_ptrs (\<pi>_it' k cfg inp bs i)"
+  assumes "bounded_ptrs bs" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
+  shows "bounded_ptrs (\<pi>_it' k cfg inp bs i)"
   using assms
 proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
   case (Complete k cfg inp bs i x)
@@ -2993,11 +3003,11 @@ proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete 
     using Complete.prems(1) wellformed_bins_elim by auto
   moreover have "(\<forall>e \<in> set (Complete_it k x bs i). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
     unfolding Complete_it_def by auto
-  ultimately have "valid_ptrs ?bs'"
-    using valid_ptrs_bins_upd Complete.hyps(1) Complete.prems(2) by (auto simp: items_def; fastforce) 
+  ultimately have "bounded_ptrs ?bs'"
+    using bounded_ptrs_bins_upd Complete.hyps(1) Complete.prems(2) by (auto simp: items_def; fastforce) 
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
-  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+  ultimately have "bounded_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
     using Complete.IH Complete.prems(4) sound by blast
   thus ?case
     using Complete.hyps by simp
@@ -3018,11 +3028,11 @@ next
     using Scan.hyps(5) Scan.prems(1) wellformed_bins_elim by force
   moreover have "(\<forall>e \<in> set (Scan_it k inp a x i). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!((k+1)-1)))"
     unfolding Scan_it_def using Scan.hyps(1) by (auto simp: items_def)
-  ultimately have "valid_ptrs ?bs'"
-    using valid_ptrs_bins_upd Scan.hyps(1) Scan.prems(2) by (auto simp: items_def Scan_it_def valid_ptrs_bins_upd)
+  ultimately have "bounded_ptrs ?bs'"
+    using bounded_ptrs_bins_upd Scan.hyps(1) Scan.prems(2) by (auto simp: items_def Scan_it_def bounded_ptrs_bins_upd)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
-  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+  ultimately have "bounded_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
     using Scan.IH Scan.prems(4) sound by blast
   thus ?case
     using Scan.hyps by simp
@@ -3043,29 +3053,29 @@ next
     using Predict.prems(1) wellformed_bins_elim by force
   moreover have "(\<forall>e \<in> set (Predict_it k cfg a). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
     unfolding Predict_it_def by simp
-  ultimately have "valid_ptrs ?bs'"
-    using valid_ptrs_bins_upd Predict.hyps(1) Predict.prems(2) by (auto simp: items_def; fastforce)
+  ultimately have "bounded_ptrs ?bs'"
+    using bounded_ptrs_bins_upd Predict.hyps(1) Predict.prems(2) by (auto simp: items_def; fastforce)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
-  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+  ultimately have "bounded_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
     using Predict.IH Predict.prems(4) sound by blast
   thus ?case
     using Predict.hyps by simp
 qed simp_all
 
-lemma valid_ptrs_\<pi>_it:
+lemma bounded_ptrs_\<pi>_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "valid_ptrs bs" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
-  shows "valid_ptrs (\<pi>_it k cfg inp bs)"
-  using assms valid_ptrs_\<pi>_it' \<pi>_it_def by metis
+  assumes "bounded_ptrs bs" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
+  shows "bounded_ptrs (\<pi>_it k cfg inp bs)"
+  using assms bounded_ptrs_\<pi>_it' \<pi>_it_def by metis
 
-lemma valid_ptrs_Init_it:
-  "valid_ptrs (Init_it cfg inp)"
-  unfolding valid_ptrs_def Init_it_def by (auto simp: less_Suc_eq_0_disj)
+lemma bounded_ptrs_Init_it:
+  "bounded_ptrs (Init_it cfg inp)"
+  unfolding bounded_ptrs_def Init_it_def by (auto simp: less_Suc_eq_0_disj)
 
-lemma valid_ptrs_\<I>_it:
+lemma bounded_ptrs_\<I>_it:
   assumes "k \<le> length inp" "wf_cfg cfg" "nonempty_derives cfg"
-  shows "valid_ptrs (\<I>_it k cfg inp)"
+  shows "bounded_ptrs (\<I>_it k cfg inp)"
   using assms
 proof (induction k)
   case 0
@@ -3074,31 +3084,27 @@ proof (induction k)
   moreover have "sound_items cfg inp (bins_items (Init_it cfg inp))"
     by (simp add: Init_it_eq_Init sound_Init)
   ultimately show ?case
-    using valid_ptrs_\<pi>_it valid_ptrs_Init_it "0.prems"(2,3) by fastforce
+    using bounded_ptrs_\<pi>_it bounded_ptrs_Init_it "0.prems"(2,3) by fastforce
 next
   case (Suc k)
   have "(Suc k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
     by (simp add: Suc.prems(1) Suc_leD assms(2) wellformed_bins_intro)
-  moreover have "valid_ptrs (\<I>_it k cfg inp)"
+  moreover have "bounded_ptrs (\<I>_it k cfg inp)"
     using Suc by simp
   moreover have "sound_items cfg inp (bins_items (\<I>_it k cfg inp))"
     using sound_\<I> \<I>_it_sub_\<I> Suc.prems(1,2) sound_items_def by (metis Suc_leD subsetD)
   ultimately show ?case
-    using Suc.prems(3) valid_ptrs_\<pi>_it by auto
+    using Suc.prems(3) bounded_ptrs_\<pi>_it by auto
 qed
 
-lemma valid_ptrs_\<II>_it:
+lemma bounded_ptrs_\<II>_it:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
-  shows "valid_ptrs (\<II>_it cfg inp)"
-  using assms valid_ptrs_\<I>_it \<II>_it_def by (metis dual_order.refl)
+  shows "bounded_ptrs (\<II>_it cfg inp)"
+  using assms bounded_ptrs_\<I>_it \<II>_it_def by (metis dual_order.refl)
 
-lemma wf_ptrs_bin_upd:
-  assumes "valid_ptrs bs" "wf_ptrs inp bs" "es = bs!k" "k < length bs"
-  assumes "pointer e = Null \<longleftrightarrow> predicts (item e)"
-  assumes "\<forall>pre. pointer e = Pre pre \<longleftrightarrow> scans inp k (item (bs!(k-1)!pre)) (item e)"
-  assumes "\<forall>p ps k' pre red. (pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps)) \<longleftrightarrow>
-    completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
-  shows "wf_ptrs inp (bs[k := bin_upd e es])"
+lemma sound_null_ptrs_bin_upd:
+  assumes "sound_null_ptrs bs" "es = bs!k" "k < length bs" "sound_null_ptr e"
+  shows "sound_null_ptrs (bs[k := bin_upd e es])"
 proof (induction es arbitrary: bs e)
   case Nil
   then show ?case sorry
@@ -3107,10 +3113,134 @@ next
   then show ?case sorry
 qed
 
-lemma wf_ptrs_\<pi>_it':
+lemma sound_pre_ptrs_bin_upd:
+  assumes "sound_pre_ptrs bs inp" "es = bs!k" "k < length bs" "sound_pre_ptr bs inp k e"
+  shows "sound_pre_ptrs (bs[k := bin_upd e es]) inp"
+  using assms
+proof (induction es arbitrary: e bs)
+  case Nil
+  let ?bs = "bs[k := [e]]"
+  {
+    fix l elem pre
+    assume a0: "l < length ?bs"
+    assume a1: "elem \<in> set (?bs!l)"
+    assume a2: "Pre pre = pointer elem"
+    have "scans inp l (item (?bs!(l-1)!pre)) (item elem)"
+    proof cases
+      assume a3: "l=k"
+      have "scans inp l (item (bs!(l-1)!pre)) (item elem)"
+        using Nil.prems(3,4) a1 a2 a3 unfolding sound_pre_ptr_def by simp
+      thus ?thesis
+        using a3 unfolding scans_def by auto
+    next
+      assume a3: "l\<noteq>k"
+      have "scans inp l (item (bs!(l-1)!pre)) (item elem)"
+        using Nil.prems(1) a0 a1 a2 a3 unfolding sound_pre_ptrs_def sound_pre_ptr_def by simp
+      
+      have "l-1=k \<Longrightarrow> pre < length (bs!(l-1)) + 1"
+        using Nil.prems(3) a0 a1 a2 a3 unfolding bounded_ptrs_def sorry
+
+      hence "l-1=k \<Longrightarrow> scans inp l (item (?bs!(l-1)!(pre+1))) (item elem)"
+using \<open>scans inp l (item (bs ! (l - 1) ! pre)) (item elem)\<close> 
+        unfolding scans_def using Nil.prems(2,3) apply auto done
+  
+      ultimately show ?thesis
+        using Nil.prems(2) by (cases "l-1=k") auto
+    qed
+  }
+  thus ?case
+    unfolding sound_pre_ptrs_def sound_pre_ptr_def by simp
+next
+  case (Cons e' es')
+  show ?case
+  proof cases
+    assume *: "item e = item e'"
+    show ?thesis
+    proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> e' = Entry y (PreRed yp ys)")
+      case True
+      then obtain x xp xs y yp ys where ee': "e = Entry x (PreRed xp xs)" "e' = Entry y (PreRed yp ys)" "x = y"
+        using * by auto
+      have simp: "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
+        using True ee' by simp
+      let ?bs = "bs[k := Entry x (PreRed xp (yp # xs @ ys)) # es']"
+      {
+        fix l elem pre
+        assume a0: "l < length ?bs"
+        assume a1: "elem \<in> set (?bs!l)"
+        assume a2: "Pre pre = pointer elem"
+        have "scans inp l (item (?bs!(l-1)!pre)) (item elem)"
+        proof cases
+          assume a3: "l=k"
+          show ?thesis
+          proof cases
+            assume a4: "elem \<in> set es'"
+            hence "elem \<in> set (bs!l)"
+              using Cons.prems(2) a3 by (metis list.set_intros(2))
+            hence "scans inp l (item (bs!(l-1)!pre)) (item elem)"
+              using Cons.prems(1,3) a2 a3 unfolding sound_pre_ptrs_def sound_pre_ptr_def by simp
+            thus ?thesis
+              using a3 scans_def by (metis Suc_diff_1 lessI less_irrefl_nat nth_list_update_neq)
+          next
+            assume a4: "elem \<notin> set es'"
+            show ?thesis
+              using Cons.prems(3) a1 a2 a3 a4 by auto
+          qed
+        next
+          assume a3: "l\<noteq>k"
+          have "scans inp l (item (bs!(l-1)!pre)) (item elem)"
+            using Cons.prems(1) a0 a1 a2 a3 unfolding sound_pre_ptrs_def sound_pre_ptr_def by simp
+          thus ?thesis
+            using Cons.prems(2,3) ee'(2,3)
+            by (metis entry.sel(1) nth_Cons' nth_list_update_eq nth_list_update_neq)
+        qed
+      }
+      thus ?thesis
+        unfolding sound_pre_ptrs_def sound_pre_ptr_def using simp by auto
+    next
+      case False
+      hence "bin_upd e (e' # es') = e' # es'"
+        using * by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using Cons.prems(1,2,3) by auto
+    qed
+  next
+    assume *: "item e \<noteq> item e'"
+    have simp: "bin_upd e (e' # es') = e' # bin_upd e es'"
+      using * by (auto split: pointer.splits entry.splits)
+    let ?bs = "bs[k := es']"
+    let ?bs' = "bs[k := e' # bin_upd e es']"
+    let ?bs'' = "bs[k := bin_upd e es']"
+
+    {
+      fix l elem pre
+      assume a0: "l < length ?bs"
+      assume a1: "elem \<in> set (?bs!l)"
+      assume a2: "Pre pre = pointer elem"
+      have "scans inp l (item (?bs!(l-1)!pre)) (item elem)"
+      proof cases
+        assume a3: "l=k"
+        show ?thesis
+          sledgehammer
+      next
+        assume a3: "l\<noteq>k"
+        show ?thesis
+          sledgehammer
+      qed
+    }
+    hence "sound_pre_ptrs ?bs inp"
+      unfolding sound_pre_ptrs_def sound_pre_ptr_def by simp
+
+    thm Cons.IH
+
+    show ?thesis
+      sorry
+  qed
+qed
+
+lemma sound_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "wf_ptrs inp bs"
-  shows "wf_ptrs inp (\<pi>_it' k cfg inp bs i)"
+  assumes "sound_ptrs inp bs"
+  shows "sound_ptrs inp (\<pi>_it' k cfg inp bs i)"
   using assms
 proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
   case (Complete k cfg inp bs i x)
@@ -3121,11 +3251,11 @@ proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete 
     using Complete.prems(1) wellformed_bins_elim by auto
   moreover have "(\<forall>e \<in> set (Complete_it k x bs i). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
     unfolding Complete_it_def by auto
-  ultimately have "valid_ptrs ?bs'"
-    using valid_ptrs_bins_upd Complete.hyps(1) Complete.prems(2) by (auto simp: items_def; fastforce) 
+  ultimately have "bounded_ptrs ?bs'"
+    using bounded_ptrs_bins_upd Complete.hyps(1) Complete.prems(2) by (auto simp: items_def; fastforce) 
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
-  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+  ultimately have "bounded_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
     using Complete.IH Complete.prems(4) sound by blast
   thus ?case
     using Complete.hyps by simp
@@ -3145,11 +3275,11 @@ next
     using Scan.hyps(5) Scan.prems(1) wellformed_bins_elim by force
   moreover have "(\<forall>e \<in> set (Scan_it k inp a x i). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!((k+1)-1)))"
     unfolding Scan_it_def using Scan.hyps(1) by (auto simp: items_def)
-  ultimately have "valid_ptrs ?bs'"
-    using valid_ptrs_bins_upd Scan.hyps(1) Scan.prems(2) by (auto simp: items_def Scan_it_def valid_ptrs_bins_upd)
+  ultimately have "bounded_ptrs ?bs'"
+    using bounded_ptrs_bins_upd Scan.hyps(1) Scan.prems(2) by (auto simp: items_def Scan_it_def bounded_ptrs_bins_upd)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
-  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+  ultimately have "bounded_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
     using Scan.IH Scan.prems(4) sound by blast
   thus ?case
     using Scan.hyps by simp
@@ -3169,24 +3299,24 @@ next
     using Predict.prems(1) wellformed_bins_elim by force
   moreover have "(\<forall>e \<in> set (Predict_it k cfg a). \<forall>pre. Pre pre = pointer e \<longrightarrow> pre < length (bs!(k-1)))"
     unfolding Predict_it_def by simp
-  ultimately have "valid_ptrs ?bs'"
-    using valid_ptrs_bins_upd Predict.hyps(1) Predict.prems(2) by (auto simp: items_def; fastforce)
+  ultimately have "bounded_ptrs ?bs'"
+    using bounded_ptrs_bins_upd Predict.hyps(1) Predict.prems(2) by (auto simp: items_def; fastforce)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
-  ultimately have "valid_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
+  ultimately have "bounded_ptrs (\<pi>_it' k cfg inp ?bs' (i + 1))"
     using Predict.IH Predict.prems(4) sound by blast
   thus ?case
     using Predict.hyps by simp
 qed simp_all
 
-lemma wf_ptrs_\<II>_it:
-  "wf_ptrs inp (\<II>_it cfg inp)"
+lemma sound_ptrs_\<II>_it:
+  "sound_ptrs inp (\<II>_it cfg inp)"
   sorry
 
 lemma wf_item_dtree_build_dtree':
   assumes "wf_bins cfg inp bs"
-  assumes "wf_ptrs inp bs"
-  assumes "valid_ptrs bs" "k < length bs" "i < length (bs!k)"
+  assumes "sound_ptrs inp bs"
+  assumes "bounded_ptrs bs" "k < length bs" "i < length (bs!k)"
   shows "wf_item_dtree cfg (item (bs!k!i)) (build_dtree' bs inp k i)"
   using assms
 proof (induction bs inp k i rule: build_dtree'.induct)
@@ -3200,7 +3330,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence 0: "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
       by simp
     have "predicts (item ?e)"
-      using Null "1.prems"(2,4,5) unfolding wf_ptrs_def by blast
+      using Null "1.prems"(2,4,5) unfolding sound_ptrs_def by blast
     hence "item_dot (item ?e) = 0"
       unfolding predicts_def by blast
     thus ?thesis
@@ -3214,9 +3344,9 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "pre < length (bs!(k-1))"
-      using "1.prems"(3,4,5) pre unfolding valid_ptrs_def by metis
+      using "1.prems"(3,4,5) pre unfolding bounded_ptrs_def by metis
     have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
-      using "1.prems"(2,4,5) pre unfolding wf_ptrs_def by simp
+      using "1.prems"(2,4,5) pre unfolding sound_ptrs_def by simp
     have IH: "wf_item_dtree cfg (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
       using "1.IH"(1) pre "1.prems"(1,2,3,4) bounds by simp
     have *: 
@@ -3244,9 +3374,9 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
       using prered by simp
     have bounds: "k' < k" "pre < length (bs ! k')" "red < i"
-      using "1.prems"(3,4,5) prered unfolding valid_ptrs_def by (metis list.set_intros(1))+
+      using "1.prems"(3,4,5) prered unfolding bounded_ptrs_def by (metis list.set_intros(1))+
     have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
-      using "1.prems"(2,4,5) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
+      using "1.prems"(2,4,5) prered unfolding sound_ptrs_def by (meson list.set_intros(1))
     have IH_pre: "wf_item_dtree cfg (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
       using "1.IH"(2) "1.prems"(1-4) bounds prered by simp
     have IH_red: "wf_item_dtree cfg (item (bs!k!red)) (build_dtree' bs inp k red)"
@@ -3286,8 +3416,8 @@ qed
 
 lemma wf_yield_dtree_build_dtree':
   assumes "wf_bins cfg inp bs"
-  assumes "wf_ptrs inp bs"
-  assumes "valid_ptrs bs" "k < length bs" "i < length (bs!k)" "k \<le> length inp"
+  assumes "sound_ptrs inp bs"
+  assumes "bounded_ptrs bs" "k < length bs" "i < length (bs!k)" "k \<le> length inp"
   shows "wf_yield_dtree inp (item (bs!k!i)) (build_dtree' bs inp k i)"
   using assms
 proof (induction bs inp k i rule: build_dtree'.induct)
@@ -3301,7 +3431,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
       by simp
     have "predicts (item ?e)"
-      using Null "1.prems"(2,4,5) unfolding wf_ptrs_def by blast
+      using Null "1.prems"(2,4,5) unfolding sound_ptrs_def by blast
     hence "item_origin (item ?e) = item_end (item ?e)"
       unfolding predicts_def by blast
     thus ?thesis
@@ -3315,9 +3445,9 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "pre < length (bs!(k-1))"
-      using "1.prems"(3,4,5) pre unfolding valid_ptrs_def by metis
+      using "1.prems"(3,4,5) pre unfolding bounded_ptrs_def by metis
     have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
-      using "1.prems"(2,4,5) pre unfolding wf_ptrs_def by simp
+      using "1.prems"(2,4,5) pre unfolding sound_ptrs_def by simp
     have IH: "wf_yield_dtree inp (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
       using "1.IH"(1) pre "1.prems"(1,2,3,4,6) bounds by simp
     have wf: 
@@ -3351,9 +3481,9 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
       using prered by simp
     have bounds: "k' < k" "pre < length (bs ! k')" "red < i"
-      using "1.prems"(3,4,5) prered unfolding valid_ptrs_def by (metis list.set_intros(1))+
+      using "1.prems"(3,4,5) prered unfolding bounded_ptrs_def by (metis list.set_intros(1))+
     have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
-      using "1.prems"(2,4,5) prered unfolding wf_ptrs_def by (meson list.set_intros(1))
+      using "1.prems"(2,4,5) prered unfolding sound_ptrs_def by (meson list.set_intros(1))
     have IH_pre: "wf_yield_dtree inp (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
       using "1.IH"(2) "1.prems"(1-4,6) bounds prered by simp
     have IH_red: "wf_yield_dtree inp (item (bs!k!red)) (build_dtree' bs inp k red)"
@@ -3386,7 +3516,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
 qed
 
 theorem build_dtree_Some_wf_rule_dtree:
-  assumes "wf_bins cfg inp bs" "wf_ptrs inp bs" "valid_ptrs bs" "length bs = length inp + 1"
+  assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "bounded_ptrs bs" "length bs = length inp + 1"
   assumes "Some t = build_dtree cfg inp bs"
   shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
 proof -
@@ -3427,7 +3557,7 @@ qed
 corollary build_dtree_Some_wf_rule_dtree_\<II>_it:
   assumes "wf_cfg cfg" "nonempty_derives cfg" "Some t = build_dtree cfg inp (\<II>_it cfg inp)"
   shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
-  using assms build_dtree_Some_wf_rule_dtree wf_bins_\<II>_it valid_ptrs_\<II>_it wf_ptrs_\<II>_it \<II>_it_def
+  using assms build_dtree_Some_wf_rule_dtree wf_bins_\<II>_it bounded_ptrs_\<II>_it sound_ptrs_\<II>_it \<II>_it_def
     length_\<I>_it length_bins_Init_it by (metis nle_le)
 
 theorem build_dtree_Some_\<II>_it:
