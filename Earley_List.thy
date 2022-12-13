@@ -2478,8 +2478,8 @@ definition bounded_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<
 definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> nat \<Rightarrow> bool" where
   "sound_prered_ptr bs k l e c = (\<forall>p ps k' pre red.
     PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
-      (l=k \<longrightarrow> c \<le> pre \<longrightarrow> completes l (item (bs!k'!(pre-c))) (item e) (item (bs!l!red))) \<and>
-      (k'=k \<longrightarrow> c \<le> red \<longrightarrow> completes l (item (bs!k'!pre)) (item e) (item (bs!l!(red-c)))) \<and>
+      (l=k \<longrightarrow> c \<le> red \<longrightarrow> completes l (item (bs!k'!pre)) (item e) (item (bs!l!(red-c)))) \<and>
+      (k'=k \<longrightarrow> c \<le> pre \<longrightarrow> completes l (item (bs!k'!(pre-c))) (item e) (item (bs!l!red))) \<and>
       (l\<noteq>k \<and> k'\<noteq>k \<longrightarrow> completes l (item (bs!k'!pre)) (item e) (item (bs!l!red))))"
 
 definition sound_prered_ptrs :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
@@ -2882,17 +2882,33 @@ proof (induction es arbitrary: e bs c)
         by blast
       hence "k' < l \<and>
         (l = k \<longrightarrow> pre < length (?bs!k') \<and> red < length (?bs!l) + c \<and> 
-          completes l (item (?bs!k'!(pre-c))) (item elem) (item (?bs!l!red))) \<and> 
+          (c \<le> red \<longrightarrow> completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!(red-c))))) \<and> 
         (k' = k \<longrightarrow> pre < length (?bs!k') + c \<and> red < length (?bs!l) \<and>
-          completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!(red-c)))) \<and>
+          (c \<le> pre \<longrightarrow> completes l (item (?bs!k'!(pre-c))) (item elem) (item (?bs!l!red)))) \<and>
         (l \<noteq> k \<and> k' \<noteq> k \<longrightarrow> pre < length (?bs!k') \<and> red < length (?bs!l) \<and>
           completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!red)))"
       proof cases
         case A
-        then show ?thesis sorry
+        have "elem = e"
+          using A Nil.prems(2) a1 by force
+        hence e: "k' < l" "pre < length (bs!k')" "red < length (bs!l) + c"
+          using Nil.prems(4) A a2 unfolding bounded_prered_ptr_def by blast+
+        have "c > red"
+          using A Nil.prems(3) e(3) by auto
+        thus ?thesis
+          using A e(1,2) by fastforce
       next
         case B
-        then show ?thesis sorry
+        have "l\<noteq>k"
+          using B Nil.prems(2,4) a1 a2 unfolding bounded_prered_ptr_def
+          by (metis length_pos_if_in_set less_irrefl_nat list.size(3) nth_list_update_eq set_ConsD)
+        hence bs: "k' < l" "pre < length (bs!k') + c" "red < length (bs!l)"
+          using B Nil.prems(1) a0 a1 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def
+          by (metis length_list_update nth_list_update_neq)+
+        have "c > pre"
+          using B Nil.prems(3) bs(2) by auto
+        then show ?thesis
+          using bs(1,3) B by simp
       next
         case C
         have "k' < l" "pre < length (bs!k')" "red < length (bs!l)"
@@ -2923,71 +2939,127 @@ next
       have simp: "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
         using True ee' by simp
       let ?bs = "bs[k := Entry x (PreRed xp (yp # xs @ ys)) # es']"
-      show ?thesis
-        sorry
-(*
       {
-        fix l elem p ps k' pre red
+        fix l elem
         assume a0: "l < length ?bs"
         assume a1: "elem \<in> set (?bs!l)"
-        assume a2: "PreRed p ps = pointer elem" "(k', pre, red) \<in> set (p#ps)"
-        hence "k' < l \<and>
-          (k'=k \<longrightarrow> pre < length (?bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs!k')) \<and>
-          (l=k \<longrightarrow> red < length (?bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (?bs!l))"
-        proof cases
-          assume a3: "l=k"
-          show ?thesis
+        {
+          fix p ps k' pre red
+          assume a2: "PreRed p ps = pointer elem" "(k', pre, red) \<in> set (p#ps)"
+          have len: "length (?bs!l) = length (bs!l)" "length (?bs!k') = length (bs!k')"
+            using Cons.prems(2,3) by (metis list.size(4) nth_list_update)+
+          consider (A) "l=k" | (B) "k'=k" | (C) "l\<noteq>k \<and> k'\<noteq>k"
+            by blast
+          hence "k' < l \<and>
+            (l = k \<longrightarrow> pre < length (?bs!k') \<and> red < length (?bs!l) + c \<and> 
+              (c \<le> red \<longrightarrow> completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!(red-c))))) \<and> 
+            (k' = k \<longrightarrow> pre < length (?bs!k') + c \<and> red < length (?bs!l) \<and>
+              (c \<le> pre \<longrightarrow> completes l (item (?bs!k'!(pre-c))) (item elem) (item (?bs!l!red)))) \<and>
+            (l \<noteq> k \<and> k' \<noteq> k \<longrightarrow> pre < length (?bs!k') \<and> red < length (?bs!l) \<and>
+              completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!red)))"
           proof cases
-            assume a4: "elem \<in> set es'"
-            hence "elem \<in> set (bs!k)"
-              using Cons.prems(3) by (metis list.set_intros(2))
-            hence "k' < l \<and>
-              (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
-              (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-              using a0 a2 a3 a4 Cons.prems(1,2) unfolding bounded_prered_ptrs_def by blast
-            thus ?thesis
-              using Cons.prems(2,3) by (metis list.size(4) nth_list_update)
-          next
-            assume a4: "elem \<notin> set es'"
-            hence "elem = Entry x (PreRed xp (yp # xs @ ys))"
-              using Cons.prems(2) a1 a3 by auto
+            case A
             show ?thesis
             proof cases
-              assume a5: "(k', pre, red) \<in> set (xp#xs)"
-              thus ?thesis
-                using Cons.prems(2,3,4) a2 a3 unfolding bounded_prered_ptrs_def ee'(1)
-                by (metis entry.sel(2) length_Cons nth_list_update_eq nth_list_update_neq)
+              assume a3: "elem \<in> set es'"
+              hence "elem \<in> set (bs!l)"
+                using A Cons.prems(3) by (metis list.set_intros(2))
+              hence "k' < l" "pre < length (bs!k')" "red < length (bs!l) + c"
+                "c \<le> red \<longrightarrow> completes l (item (bs!k'!pre)) (item elem) (item (bs!l!(red-c)))"
+                using A Cons.prems(1,2) a0 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def by metis+
+              moreover have "item (?bs!l!(red-c)) = item (bs!l!(red-c))"
+                using A Cons.prems(2,3) ee' by (metis entry.sel(1) nth_Cons' nth_list_update_eq)
+              ultimately show ?thesis
+                using len A by simp
             next
-              assume a5: "(k', pre, red) \<notin> set (xp#xs)"
-              hence "(k', pre, red) \<in> set (yp#ys)"
-                using \<open>elem = Entry x (PreRed xp (yp # xs @ ys))\<close> a2 by auto
-              hence "k' < l \<and>
-                (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
-                (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-                using ee'(2) Cons.prems(1,2,3) a3 unfolding bounded_prered_ptrs_def by (metis entry.sel(2) list.set_intros(1))
-              thus ?thesis
-                using Cons.prems(2,3) by (metis list.size(4) nth_list_update)
+              assume a3: "elem \<notin> set es'"
+              have elem: "elem = Entry x (PreRed xp (yp # xs @ ys))"
+                using A Cons.prems(2) a1 a3 by simp
+              have item: "item (?bs!l!pre) = item (bs!l!pre)" "item (?bs!l!(red-c)) = item (bs!l!(red-c))"
+                  using A Cons.prems(2,3) ee'(2,3) by (metis entry.sel(1) nth_Cons' nth_list_update_eq)+
+              show ?thesis
+              proof cases
+                assume a4: "(k', pre, red) \<in> set (xp#xs)"
+                have "k' < l" "pre < length (bs!k')" "red < length (bs!l) + c"
+                  "c \<le> red \<longrightarrow> completes l (item (bs!k'!pre)) (item elem) (item (bs!l!(red-c)))"
+                  using Cons.prems(4,5) A a4 ee'(1) elem unfolding bounded_prered_ptr_def sound_prered_ptr_def
+                  by (metis entry.sel)+
+                thus ?thesis
+                  using A len(1) item by auto
+              next
+                assume a4: "(k', pre, red) \<notin> set (xp#xs)"
+                have "(k', pre, red) \<in> set (yp#ys)"
+                  using \<open>elem = Entry x (PreRed xp (yp # xs @ ys))\<close> a2 a4 by auto
+                hence "k' < l" "pre < length (bs!k')" "red < length (bs!l) + c"
+                  "c \<le> red \<longrightarrow> completes l (item (bs!k'!pre)) (item elem) (item (bs!l!(red-c)))"
+                  using A Cons.prems(1,2,3) ee' elem unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def
+                  by (metis entry.sel list.set_intros(1))+
+                thus ?thesis
+                  using A len(1) item by auto
+              qed
             qed
+          next
+            case B
+            have "l \<noteq> k"
+            proof (rule ccontr)
+              assume A: "\<not> l \<noteq> k"
+              hence "k' < l"
+              proof cases
+                assume a3: "elem \<in> set es'"
+                hence "elem \<in> set (bs!l)"
+                  using A Cons.prems(3) by (metis list.set_intros(2))
+                thus ?thesis
+                  using A Cons.prems(1,2) a0 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def by metis
+              next
+                assume a3: "elem \<notin> set es'"
+                have elem: "elem = Entry x (PreRed xp (yp # xs @ ys))"
+                  using A Cons.prems(2) a1 a3 by simp
+                have item: "item (?bs!l!pre) = item (bs!l!pre)" "item (?bs!l!(red-c)) = item (bs!l!(red-c))"
+                  using A Cons.prems(2,3) ee'(2,3) by (metis entry.sel(1) nth_Cons' nth_list_update_eq)+
+                show ?thesis
+                proof cases
+                  assume a4: "(k', pre, red) \<in> set (xp#xs)"
+                  show ?thesis
+                    using Cons.prems(4,5) A a4 ee'(1) unfolding bounded_prered_ptr_def by (metis entry.sel)
+                next
+                  assume a4: "(k', pre, red) \<notin> set (xp#xs)"
+                  have "(k', pre, red) \<in> set (yp#ys)"
+                    using \<open>elem = Entry x (PreRed xp (yp # xs @ ys))\<close> a2 a4 by auto
+                  thus ?thesis
+                    using A Cons.prems(1,2,3) ee' unfolding sound_prered_ptrs_def bounded_prered_ptr_def
+                    by (metis entry.sel list.set_intros(1))+
+                qed
+              qed
+              thus False
+                using B \<open>\<not> l \<noteq> k\<close> by fastforce
+            qed
+            hence "k' < l" "pre < length (bs!k') + c" "red < length (bs!l)"
+              "c \<le> pre \<longrightarrow> completes l (item (bs!k'!(pre-c))) (item elem) (item (bs!l!red))"
+              using B Cons.prems(1) a0 a1 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def
+              by (metis length_list_update nth_list_update_neq)+
+            moreover have "item (?bs!k'!(pre-c)) = item (bs!k'!(pre-c))" "item (?bs!k'!red) = item (bs!k'!red)"
+              using B Cons.prems(2,3) ee'(2,3) by (metis entry.sel(1) nth_Cons' nth_list_update_eq)+
+            ultimately show ?thesis
+              using B len(2) by auto
+          next
+            case C
+            have "k' < l" "pre < length (bs!k')" "red < length (bs!l)"
+              "completes l (item (bs!k'!pre)) (item elem) (item (bs!l!red))"
+              using C Cons.prems(1) a0 a1 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def
+              by (metis length_list_update nth_list_update_neq)+
+            moreover have "item (?bs!k'!(pre-c)) = item (bs!k'!(pre-c))" "item (?bs!l!red) = item (bs!l!red)"
+              using C by force+
+            ultimately show ?thesis
+              using len C by auto
           qed
-        next
-          assume a3: "l\<noteq>k"
-          hence "elem \<in> set (bs!l)"
-            using a1 by force
-          hence "k' < l \<and>
-            (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
-            (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-            using a0 a2 Cons.prems(1) unfolding bounded_prered_ptrs_def by (metis length_list_update)
-          thus ?thesis
-            using Cons.prems(2,3) by (metis list.size(4) nth_list_update)
-        qed
+        }
+        hence "bounded_prered_ptr ?bs k l elem c \<and> sound_prered_ptr ?bs k l elem c"
+          unfolding bounded_prered_ptr_def sound_prered_ptr_def by blast
       }
-      hence "bounded_prered_ptrs ?bs c k"
-        unfolding bounded_prered_ptrs_def by blast
-      moreover have "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
-        using ee' * by simp
-      ultimately show ?thesis
-        by simp
-*)
+      hence "sound_prered_ptrs ?bs k c"
+        unfolding sound_prered_ptrs_def by blast
+      thus ?thesis
+        using simp by force
     next
       case False
       hence "bin_upd e (e' # es') = e' # es'"
@@ -3000,47 +3072,109 @@ next
     have simp: "bin_upd e (e' # es') = e' # bin_upd e es'"
       using * by (auto split: pointer.splits entry.splits)
     let ?bs = "bs[k := es']"
-    show ?thesis
-      sorry
-(*
     {
-      fix l elem p ps k' pre red
+      fix l elem
       assume a0: "l < length ?bs"
       assume a1: "elem \<in> set (?bs!l)"
-      assume a2: "PreRed p ps = pointer elem" "(k', pre, red) \<in> set (p#ps)"
-      hence "k' < l \<and>
-        (k'=k \<longrightarrow> pre < length (?bs!k') + (c+1)) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs!k')) \<and>
-        (l=k \<longrightarrow> red < length (?bs!l) + (c+1)) \<and> (l\<noteq>k \<longrightarrow> red < length (?bs!l))"
-      proof cases
-        assume "l=k"
+      {
+        fix p ps k' pre red
+        assume a2: "PreRed p ps = pointer elem" "(k', pre, red) \<in> set (p#ps)"
+        consider (A) "l=k" | (B) "k'=k" | (C) "l\<noteq>k \<and> k'\<noteq>k"
+          by blast
         hence "k' < l \<and>
-          (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
-          (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-          using Cons.prems(1,2,3) a0 a1 a2 unfolding bounded_prered_ptrs_def
-          by (smt (verit, ccfv_SIG) nth_list_update_eq set_subset_Cons subset_code(1))
-        thus ?thesis
-          using Cons.prems(2,3)
-          by (metis Suc_eq_plus1 add_Suc add_Suc_right length_Cons nth_list_update_eq nth_list_update_neq)
-      next
-        assume "l\<noteq>k"
-        hence "k' < l \<and>
-          (k'=k \<longrightarrow> pre < length (bs!k') + c) \<and> (k'\<noteq>k \<longrightarrow> pre < length (bs!k')) \<and>
-          (l=k \<longrightarrow> red < length (bs!l) + c) \<and> (l\<noteq>k \<longrightarrow> red < length (bs!l))"
-          using Cons.prems(1) a0 a1 a2 unfolding bounded_prered_ptrs_def
-          by (metis length_list_update nth_list_update_neq)
-        thus ?thesis
-          using Cons.prems(2,3)
-          by (metis Suc_eq_plus1 add_Suc add_Suc_right length_Cons nth_list_update_eq nth_list_update_neq)
-      qed
+            (l = k \<longrightarrow> pre < length (?bs!k') \<and> red < length (?bs!l) + (c+1) \<and> 
+              (c+1 \<le> red \<longrightarrow> completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!(red-(c+1)))))) \<and> 
+            (k' = k \<longrightarrow> pre < length (?bs!k') + (c+1) \<and> red < length (?bs!l) \<and>
+              (c+1 \<le> pre \<longrightarrow> completes l (item (?bs!k'!(pre-(c+1)))) (item elem) (item (?bs!l!red)))) \<and>
+            (l \<noteq> k \<and> k' \<noteq> k \<longrightarrow> pre < length (?bs!k') \<and> red < length (?bs!l) \<and>
+              completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!red)))"
+        proof cases
+          case A
+          have bs: "k' < l" "pre < length (bs!k')" "red < length (bs!l) + c"
+            "c \<le> red \<longrightarrow> completes l (item (bs!k'!pre)) (item elem) (item (bs!l!(red-c)))"
+            using A Cons.prems(1,2,3) a0 a1 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def
+            by (metis list.set_intros(2) nth_list_update_eq)+
+          have "k' < l" "pre < length (?bs!k')" "red < length (?bs!l) + (c+1)"
+            using A Cons.prems(2,3) bs by (auto, metis add_Suc length_Cons)
+          moreover have "c+1 \<le> red \<longrightarrow> completes l (item (?bs!k'!pre)) (item elem) (item (?bs!l!(red-(c+1))))"
+            using bs A Cons.prems(2,3) by (auto, metis Suc_diff_Suc Suc_le_lessD nth_Cons_Suc)
+          ultimately show ?thesis
+            using A by blast
+        next
+          case B
+          have bs: "k' < l" "pre < length (bs!k') + c" "red < length (bs!l)"
+            "c \<le> pre \<longrightarrow> completes l (item (bs!k'!(pre-c))) (item elem) (item (bs!l!red))"
+            using B Cons.prems(1,2,3) a0 a1 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def
+            by (metis insert_iff length_list_update list.set(2) nth_list_update)+
+          have "k' < l" "pre < length (?bs!k') + (c+1)" "red < length (?bs!l)"
+            using bs B Cons.prems(2,3) by (auto, metis add_Suc length_Cons)
+          moreover have "c+1 \<le> pre \<longrightarrow> completes l (item (?bs!k'!(pre-(c+1)))) (item elem) (item (?bs!l!red))"
+            using B Cons.prems(2,3) bs by (auto, metis Suc_diff_Suc Suc_le_lessD nth_Cons_Suc)
+          ultimately show ?thesis
+            using B by blast
+        next
+          case C
+          have "k' < l" "pre < length (bs!k')" "red < length (bs!l)"
+            "completes l (item (bs!k'!pre)) (item elem) (item (bs!l!red))"
+            using C Cons.prems(1) a0 a1 a2 unfolding sound_prered_ptrs_def bounded_prered_ptr_def sound_prered_ptr_def
+            by (metis length_list_update nth_list_update_neq)+
+          thus ?thesis
+            using C by fastforce
+        qed
+      }
+      hence "bounded_prered_ptr ?bs k l elem (c+1) \<and> sound_prered_ptr ?bs k l elem (c+1)"
+        unfolding bounded_prered_ptr_def sound_prered_ptr_def by blast
     }
-    hence "bounded_prered_ptrs ?bs (c+1) k"
-      unfolding bounded_prered_ptrs_def by blast
-    moreover have "\<forall>p ps k' pre red. PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
-       k' < k \<and> (k'=k \<longrightarrow> pre < length (?bs!k') + (c+1)) \<and> (k'\<noteq>k \<longrightarrow> pre < length (?bs!k')) \<and> red < length (?bs!k) + (c+1)"
-      using Cons.prems(2,3,4)
-      by (metis (no_types, opaque_lifting) Suc_eq_plus1 add_Suc add_Suc_right length_Cons nth_list_update_eq nth_list_update_neq)
-    ultimately have "bounded_prered_ptrs (?bs[k := bin_upd e es']) (c+1) k"
+    hence "sound_prered_ptrs ?bs k (c+1)"
+      unfolding sound_prered_ptrs_def by blast
+    moreover have "bounded_prered_ptr ?bs k k e (c+1)"
+      using Cons.prems(2,3,4) unfolding bounded_prered_ptr_def
+      by (smt (verit, ccfv_SIG) Suc_eq_plus1 add.commute add.left_commute length_Cons less_irrefl_nat nth_list_update_eq nth_list_update_neq)
+    moreover have "sound_prered_ptr ?bs k k e (c+1)"
+      using Cons.prems(2,3,4,5) unfolding bounded_prered_ptr_def sound_prered_ptr_def
+      by (smt (verit, best) Nat.add_diff_assoc2 add_diff_cancel_left' add_leD1 le_add1 le_add_diff_inverse less_irrefl_nat nth_Cons_Suc nth_list_update_eq nth_list_update_neq plus_1_eq_Suc)
+    ultimately have "sound_prered_ptrs (?bs[k := bin_upd e es']) k (c+1)"
       using Cons.IH Cons.prems(2) by (metis length_list_update nth_list_update_eq)
+    hence IH: "sound_prered_ptrs (bs[k := bin_upd e es']) k (c+1)"
+      by simp
+    let ?bs' = "bs[k := e' # bin_upd e es']"
+    {
+      fix l elem
+      assume a0: "l < length ?bs'"
+      assume a1: "elem \<in> set (?bs'!l)"
+      {
+        fix p ps k' pre red
+        assume a2: "PreRed p ps = pointer elem" "(k', pre, red) \<in> set (p#ps)"
+        consider (A) "l=k" | (B) "k'=k" | (C) "l\<noteq>k \<and> k'\<noteq>k"
+          by blast
+        hence "k' < l \<and>
+            (l = k \<longrightarrow> pre < length (?bs'!k') \<and> red < length (?bs'!l) + c \<and> 
+              (c \<le> red \<longrightarrow> completes l (item (?bs'!k'!pre)) (item elem) (item (?bs'!l!(red-c))))) \<and> 
+            (k' = k \<longrightarrow> pre < length (?bs'!k') + c \<and> red < length (?bs'!l) \<and>
+              (c \<le> pre \<longrightarrow> completes l (item (?bs'!k'!(pre-c))) (item elem) (item (?bs'!l!red)))) \<and>
+            (l \<noteq> k \<and> k' \<noteq> k \<longrightarrow> pre < length (?bs'!k') \<and> red < length (?bs'!l) \<and>
+              completes l (item (?bs'!k'!pre)) (item elem) (item (?bs'!l!red)))"
+        proof cases
+          case A
+          show ?thesis sorry
+        next
+          case B
+          show ?thesis sorry
+        next
+          case C
+          show ?thesis sorry
+        qed
+      }
+      hence "bounded_prered_ptr ?bs' k l elem c \<and> sound_prered_ptr ?bs' k l elem c"
+        unfolding bounded_prered_ptr_def sound_prered_ptr_def by blast
+    }
+    hence "sound_prered_ptrs ?bs' k c"
+      unfolding sound_prered_ptrs_def by blast
+    thus ?thesis
+      using simp by presburger
+  qed
+qed
+(*
     hence IH: "bounded_prered_ptrs (bs[k := bin_upd e es']) (c+1) k"
       by simp
     let ?bs' = "bs[k := e' # bin_upd e es']"
@@ -3099,8 +3233,6 @@ next
     thus ?thesis
       using simp by simp
 *)
-  qed
-qed
 
 lemma sound_ptrs_bin_upd:
   assumes "sound_ptrs inp bs" "k < length bs" "es = bs!k"
