@@ -2436,6 +2436,88 @@ definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bin
     | (_,i)#_ \<Rightarrow> Some (build_dtree' bs inp k i)
   )"
 
+
+
+
+
+
+
+
+subsection \<open>Try 2\<close>
+
+lemma nth_item_bin_upd:
+  "n < length es \<Longrightarrow> item (bin_upd e es ! n) = item (es!n)"
+  by (induction es arbitrary: e n) (auto simp: less_Suc_eq_0_disj split: entry.splits pointer.splits)
+
+lemma A0:
+  "item e \<notin> set (items es) \<Longrightarrow> bin_upd e es = es @ [e]"
+  by (induction es arbitrary: e) (auto simp: items_def split: entry.splits pointer.splits)
+
+lemma A1:
+  "item e \<in> set (items es) \<Longrightarrow> pointer e = Null \<or> pointer e = Pre pre \<Longrightarrow> bin_upd e es = es"
+  by (induction es arbitrary: e) (auto simp: items_def split: entry.splits)
+
+lemma A21:
+  assumes "distinct (items es)" "i < length es"
+  assumes "item e = item (es!i)" "pointer e = PreRed p ps" "\<nexists>p ps. pointer (es!i) = PreRed p ps"
+  shows "bin_upd e es = es"
+  using assms
+  by (induction es arbitrary: e i) (auto simp: less_Suc_eq_0_disj items_def split: entry.splits pointer.splits)
+
+lemma A23:
+  assumes "distinct (items es)" "i < length es"
+  assumes "item e = item (es!i)" "pointer e = PreRed p ps" "pointer (es!i) = PreRed p' ps'" "bin_upd e es = es'"
+  shows "pointer (es'!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length es'. i\<noteq>j \<longrightarrow> es'!j = es!j)"
+  using assms
+proof (induction es arbitrary: e i es')
+  case (Cons e' es)
+  show ?case
+  proof cases
+    assume *: "item e = item e'"
+    show ?thesis
+    proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> e' = Entry y (PreRed yp ys)")
+      case True
+      then obtain x xp xs y yp ys where ee': "e = Entry x (PreRed xp xs)" "e' = Entry y (PreRed yp ys)" "x = y"
+        using * by auto
+      have simp: "bin_upd e (e' # es') = Entry x (PreRed xp (yp # xs @ ys)) # es'"
+        using True ee' by simp
+      show ?thesis
+        using Cons simp ee' apply (auto simp: items_def)
+        using less_Suc_eq_0_disj by fastforce+
+    next
+      case False
+      hence "bin_upd e (e' # es') = e' # es'"
+        using * by (auto split: pointer.splits entry.splits)
+      thus ?thesis
+        using False * Cons.prems(1,2,3,4,5) by (auto simp: less_Suc_eq_0_disj items_def split: entry.splits)
+    qed
+  next
+    assume *: "item e \<noteq> item e'"
+    have simp: "bin_upd e (e' # es) = e' # bin_upd e es"
+      using * by (auto split: pointer.splits entry.splits)
+    have 0: "distinct (items es)"
+      using Cons.prems(1) unfolding items_def by simp
+    have 1: "i-1 < length es"
+      using Cons.prems(2,3) * by (metis One_nat_def leI less_diff_conv2 less_one list.size(4) nth_Cons_0)
+    have 2: "item e = item (es!(i-1))"
+      using Cons.prems(3) * by (metis nth_Cons')
+    have 3: "pointer e = PreRed p ps"
+      using Cons.prems(4) by simp
+    have 4: "pointer (es!(i-1)) = PreRed p' ps' "
+      using Cons.prems(3,5) * by (metis nth_Cons')
+    have "pointer (bin_upd e es!(i-1)) = PreRed p (p' # ps @ ps') \<and>
+      (\<forall>j < length (bin_upd e es). i-1 \<noteq> j \<longrightarrow> (bin_upd e es) ! j = es ! j)"
+      using Cons.IH[OF 0 1 2 3 4] by blast
+    hence "pointer ((e' # bin_upd e es) ! i) = PreRed p (p' # ps @ ps') \<and>
+      (\<forall>j < length (e' # bin_upd e es). i \<noteq> j \<longrightarrow> (e' # bin_upd e es) ! j = (e' # es) ! j)"
+      using * Cons.prems(2,3) less_Suc_eq_0_disj by auto
+    moreover have "e' # bin_upd e es = es'"
+      using Cons.prems(6) simp by auto
+    ultimately show ?thesis
+      by blast
+  qed
+qed simp
+
 definition predicts :: "'a item \<Rightarrow> bool" where
   "predicts x \<longleftrightarrow> item_origin x = item_end x \<and> item_dot x = 0"
 
@@ -2444,6 +2526,99 @@ definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
 
 definition sound_null_ptrs :: "'a bins \<Rightarrow> bool" where
   "sound_null_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_null_ptr e)"
+
+definition scans :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "scans inp k x y \<longleftrightarrow> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
+
+definition sound_pre_ptr :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
+  "sound_pre_ptr inp bs k e = (\<forall>pre. pointer e = Pre pre \<longrightarrow> k > 0 \<longrightarrow>
+    pre < length (bs!(k-1)) \<and> scans inp k (item (bs!(k-1)!pre)) (item e))"
+
+definition sound_pre_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> bool" where
+  "sound_pre_ptrs inp bs k = (\<forall>l < length bs. \<forall>e \<in> set (bs!l). sound_pre_ptr inp bs k e)"
+
+lemma sound_null_ptrs_bin_upd:
+  assumes "sound_null_ptrs bs" "k < length bs" "es = bs!k" "sound_null_ptr e" "distinct (items es)"
+  shows "sound_null_ptrs (bs[k := bin_upd e es])"
+  unfolding sound_null_ptrs_def
+proof (standard, standard, standard)
+  fix idx elem
+  assume a0: "idx < length (bs[k := bin_upd e es])"
+  assume a1: "elem \<in> set (bs[k := bin_upd e es] ! idx)"
+  show "sound_null_ptr elem"
+  proof cases
+    assume a2: "idx = k"
+    consider (A) "item e \<notin> set (items es)" |
+      (B) "item e \<in> set (items es) \<and> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)" |
+      (C) "item e \<in> set (items es) \<and> \<not> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)"
+      by blast
+    thus ?thesis
+    proof cases
+      case A
+      hence "elem \<in> set (es @ [e])"
+        using a1 a2 A0 assms(2) by force
+      thus ?thesis
+        using assms(1-4) sound_null_ptrs_def by auto
+    next
+      case B
+      hence "elem \<in> set es"
+        using a1 a2 A1 assms(2) by force
+      thus ?thesis
+        using assms(1-3) sound_null_ptrs_def by blast
+    next
+      case C
+      then obtain i p ps where C: "i < length es \<and> item e = item (es!i) \<and> pointer e = PreRed p ps"
+        by (metis in_set_conv_nth items_def length_map nth_map pointer.exhaust)
+      show ?thesis
+      proof cases
+        assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
+        hence "elem \<in> set es"
+          using a1 a2 C A21 assms(2,5) by (metis nth_list_update)
+        thus ?thesis
+          using assms(1-3) sound_null_ptrs_def by blast
+      next
+        assume "\<not> (\<nexists>p ps. pointer (es!i) = PreRed p ps)"
+        then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
+          by blast
+        hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
+          using A23 C assms(5) by blast
+        obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
+          using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
+        show ?thesis
+        proof cases
+          assume a3: "i=j"
+          hence "pointer elem = PreRed p (p'#ps@ps')"
+            using 0 1 by blast
+          thus ?thesis
+            unfolding sound_null_ptr_def by simp
+        next
+          assume a3: "i\<noteq>j"
+          hence "elem \<in> set es"
+            using 0 1 by (metis length_bin_upd nth_mem order_less_le_trans)
+          thus ?thesis
+            using assms(1-3) sound_null_ptrs_def by blast
+        qed
+      qed
+    qed
+  next
+    assume a2: "idx \<noteq> k"
+    show ?thesis
+      using a0 a1 a2 assms(1) sound_null_ptrs_def by auto
+  qed
+qed
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 definition scans :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "scans inp k x y \<longleftrightarrow> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
@@ -2496,6 +2671,7 @@ definition sound_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" 
       completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))))"
 
 
+
 subsection \<open>Lemmas\<close>
 
 lemma build_tree'_simps[simp]:
@@ -2517,9 +2693,10 @@ lemma nex_Leaf_build_tree':
   "\<nexists>a. build_dtree' bs inp k i = Leaf a"
   using ex_Node_build_tree' by (metis dtree.distinct(1))
 
-lemma nth_item_bin_upd:
-  "n < length es \<Longrightarrow> item (bin_upd e es ! n) = item (es!n)"
-  by (induction es arbitrary: e n) (auto simp: less_Suc_eq_0_disj split: entry.splits pointer.splits)
+
+
+
+
 
 lemma sound_null_ptrs_bin_upd:
   assumes "sound_null_ptrs bs" "k < length bs" "es = bs!k" "sound_null_ptr e"
@@ -3546,6 +3723,7 @@ lemma bounded_ptrs_\<II>_it:
   shows "sound_ptrs inp (\<II>_it cfg inp)"
   using assms bounded_ptrs_\<I>_it \<II>_it_def by (metis dual_order.refl)
 
+\<comment>\<open>TODO bs!0 does not contain pre or reduction pointer\<close>
 lemma wf_item_dtree_build_dtree':
   assumes "wf_bins cfg inp bs"
   assumes "sound_ptrs inp bs"

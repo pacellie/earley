@@ -44,11 +44,11 @@ lemma nonempty_derives:
   by (auto simp: \<epsilon>_free_def cfg_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness:
-  "earley_recognized_it cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using correctness_list wf_cfg is_word_inp nonempty_derives by blast
 
 value "\<II>_it cfg inp"
-value "earley_recognized_it cfg inp"
+value "earley_recognized_it (\<II>_it cfg inp) cfg inp"
 value "build_dtree cfg inp (\<II>_it cfg inp)"
 
 export_code earley_recognized_it in SML
