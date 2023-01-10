@@ -2482,22 +2482,22 @@ lemma nth_item_bin_upd:
   "n < length es \<Longrightarrow> item (bin_upd e es ! n) = item (es!n)"
   by (induction es arbitrary: e n) (auto simp: less_Suc_eq_0_disj split: entry.splits pointer.splits)
 
-lemma bin_upd_notin:
+lemma bin_upd_append:
   "item e \<notin> set (items es) \<Longrightarrow> bin_upd e es = es @ [e]"
   by (induction es arbitrary: e) (auto simp: items_def split: entry.splits pointer.splits)
 
-lemma A1:
+lemma bin_upd_null_pre:
   "item e \<in> set (items es) \<Longrightarrow> pointer e = Null \<or> pointer e = Pre pre \<Longrightarrow> bin_upd e es = es"
   by (induction es arbitrary: e) (auto simp: items_def split: entry.splits)
 
-lemma A21:
+lemma bin_upd_prered_nop:
   assumes "distinct (items es)" "i < length es"
   assumes "item e = item (es!i)" "pointer e = PreRed p ps" "\<nexists>p ps. pointer (es!i) = PreRed p ps"
   shows "bin_upd e es = es"
   using assms
   by (induction es arbitrary: e i) (auto simp: less_Suc_eq_0_disj items_def split: entry.splits pointer.splits)
 
-lemma A23:
+lemma bin_upd_prered_upd:
   assumes "distinct (items es)" "i < length es"
   assumes "item e = item (es!i)" "pointer e = PreRed p ps" "pointer (es!i) = PreRed p' ps'" "bin_upd e es = es'"
   shows "pointer (es'!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length es'. i\<noteq>j \<longrightarrow> es'!j = es!j)"
@@ -2570,13 +2570,13 @@ proof (standard, standard, standard)
     proof cases
       case A
       hence "elem \<in> set (es @ [e])"
-        using a1 a2 bin_upd_notin assms(2) by force
+        using a1 a2 bin_upd_append assms(2) by force
       thus ?thesis
         using assms(1-4) sound_null_ptrs_def by auto
     next
       case B
       hence "elem \<in> set es"
-        using a1 a2 A1 assms(2) by force
+        using a1 a2 bin_upd_null_pre assms(2) by force
       thus ?thesis
         using assms(1-3) sound_null_ptrs_def by blast
     next
@@ -2587,7 +2587,7 @@ proof (standard, standard, standard)
       proof cases
         assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
         hence "elem \<in> set es"
-          using a1 a2 C A21 assms(2,5) by (metis nth_list_update)
+          using a1 a2 C bin_upd_prered_nop assms(2,5) by (metis nth_list_update)
         thus ?thesis
           using assms(1-3) sound_null_ptrs_def by blast
       next
@@ -2595,7 +2595,7 @@ proof (standard, standard, standard)
         then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
           by blast
         hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
-          using A23 C assms(5) by blast
+          using bin_upd_prered_upd C assms(5) by blast
         obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
           using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
         show ?thesis
@@ -2652,13 +2652,13 @@ proof (standard, standard, standard)
     proof cases
       case A
       hence "elem \<in> set (es @ [e])"
-        using a1 a2 bin_upd_notin assms(2) by force
+        using a1 a2 bin_upd_append assms(2) by force
       show ?thesis
         using X0 X1 \<open>elem \<in> set (es @ [e])\<close> by fastforce
     next
       case B
       hence "elem \<in> set es"
-        using a1 a2 A1 assms(2) by force
+        using a1 a2 bin_upd_null_pre assms(2) by force
       show ?thesis
         by (simp add: X0 \<open>elem \<in> set es\<close>)
     next
@@ -2669,7 +2669,7 @@ proof (standard, standard, standard)
       proof cases
         assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
         hence "elem \<in> set es"
-          using a1 a2 C A21 assms(2,5) by (metis nth_list_update)
+          using a1 a2 C bin_upd_prered_nop assms(2,5) by (metis nth_list_update)
         show ?thesis
           using X0 \<open>elem \<in> set es\<close> by blast
       next
@@ -2677,7 +2677,7 @@ proof (standard, standard, standard)
         then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
           by blast
         hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
-          using A23 C assms(5) by blast
+          using bin_upd_prered_upd C assms(5) by blast
         obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
           using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
         show ?thesis
@@ -2737,13 +2737,13 @@ proof (standard, standard, standard)
     proof cases
       case A
       hence "elem \<in> set (es @ [e])"
-        using a1 a2 bin_upd_notin assms(2) by force
+        using a1 a2 bin_upd_append assms(2) by force
       show ?thesis
         using X0 X1 \<open>elem \<in> set (es @ [e])\<close> by fastforce
     next
       case B
       hence "elem \<in> set es"
-        using a1 a2 A1 assms(2) by force
+        using a1 a2 bin_upd_null_pre assms(2) by force
       show ?thesis
         by (simp add: X0 \<open>elem \<in> set es\<close>)
     next
@@ -2754,7 +2754,7 @@ proof (standard, standard, standard)
       proof cases
         assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
         hence "elem \<in> set es"
-          using a1 a2 C A21 assms(2,5) by (metis nth_list_update)
+          using a1 a2 C bin_upd_prered_nop assms(2,5) by (metis nth_list_update)
         show ?thesis
           using X0 \<open>elem \<in> set es\<close> by blast
       next
@@ -2762,7 +2762,7 @@ proof (standard, standard, standard)
         then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
           by blast
         hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
-          using A23 C assms(5) by blast
+          using bin_upd_prered_upd C assms(5) by blast
         obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
           using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
         show ?thesis
