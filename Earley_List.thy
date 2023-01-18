@@ -2378,96 +2378,105 @@ corollary correctness_list:
   using assms correctness_set earley_recognized_it_iff_earley_recognized by blast
 
 
-section \<open>Earley parse trees TODO: clean\<close>
+section \<open>Earley parse trees\<close>
 
 subsection \<open>Main definitions\<close>
 
-datatype 'a dtree =
+datatype 'a tree =
   Leaf 'a
-  | Node 'a "'a dtree list"
+| Node 'a "'a tree list"
 
-fun yield_dtree :: "'a dtree \<Rightarrow> 'a sentence" where
-  "yield_dtree (Leaf a) = [a]"
-| "yield_dtree (Node _ ts) = concat (map yield_dtree ts)"
+fun yield_tree :: "'a tree \<Rightarrow> 'a sentence" where
+  "yield_tree (Leaf a) = [a]"
+| "yield_tree (Node _ ts) = concat (map yield_tree ts)"
 
-fun root_dtree :: "'a dtree \<Rightarrow> 'a" where
-  "root_dtree (Leaf a) = a"
-| "root_dtree (Node N _) = N"
+fun root_tree :: "'a tree \<Rightarrow> 'a" where
+  "root_tree (Leaf a) = a"
+| "root_tree (Node N _) = N"
 
-fun wf_rule_dtree :: "'a cfg \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "wf_rule_dtree _ (Leaf a) \<longleftrightarrow> True"
-| "wf_rule_dtree cfg (Node N ts) \<longleftrightarrow> (
-    (\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_dtree ts = rule_body r) \<and>
-    (\<forall>t \<in> set ts. wf_rule_dtree cfg t))"
+fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
+  "wf_rule_tree _ (Leaf a) \<longleftrightarrow> True"
+| "wf_rule_tree cfg (Node N ts) \<longleftrightarrow> (
+    (\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_tree ts = rule_body r) \<and>
+    (\<forall>t \<in> set ts. wf_rule_tree cfg t))"
 
-fun wf_item_dtree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "wf_item_dtree cfg _ (Leaf a) \<longleftrightarrow> True"
-| "wf_item_dtree cfg x (Node N ts) \<longleftrightarrow> (
-    N = item_rule_head x \<and> map root_dtree ts = take (item_dot x) (item_rule_body x) \<and>
-    (\<forall>t \<in> set ts. wf_rule_dtree cfg t))"
+fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
+  "wf_item_tree cfg _ (Leaf a) \<longleftrightarrow> True"
+| "wf_item_tree cfg x (Node N ts) \<longleftrightarrow> (
+    N = item_rule_head x \<and> map root_tree ts = take (item_dot x) (item_rule_body x) \<and>
+    (\<forall>t \<in> set ts. wf_rule_tree cfg t))"
 
-definition wf_yield_dtree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a dtree \<Rightarrow> bool" where
-  "wf_yield_dtree inp x t \<longleftrightarrow> yield_dtree t = slice (item_origin x) (item_end x) inp"
+definition wf_yield_tree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
+  "wf_yield_tree inp x t \<longleftrightarrow> yield_tree t = slice (item_origin x) (item_end x) inp"
 
-function build_dtree' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a dtree" where
-  "build_dtree' bs inp k i = (
+datatype 'a forest =
+  FLeaf 'a
+| FNode 'a "'a forest list list"
+
+fun combinations :: "'a set list \<Rightarrow> 'a list set" where
+  "combinations [] = {[]}"
+| "combinations (xs#xss) = \<Union> ((\<lambda>x. (\<lambda>c. x # c) ` (combinations xss))` xs)"
+
+value "combinations [{1,2},{3},{4,5::nat}]"
+
+fun trees :: "'a forest \<Rightarrow> 'a tree set" where
+  "trees (FLeaf a) = {Leaf a}"
+| "trees (FNode N fss) = (
+    let tss = map (\<lambda>fs. \<Union>((\<lambda>f. trees f) ` (set fs))) fss in
+    (\<lambda>ts. Node N ts) ` (combinations tss)
+  )"
+
+value "trees (FNode (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FNode 5 [[FLeaf 6, FLeaf 7]]]])"
+
+function build_tree' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree" where
+  "build_tree' bs inp k i = (
     let e = bs!k!i in (
     case pointer e of
       Null \<Rightarrow> Node (item_rule_head (item e)) [] \<comment>\<open>start building sub-tree\<close>
     | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-tree starting from terminal\<close>
-      case build_dtree' bs inp (k-1) pre of
+      case build_tree' bs inp (k-1) pre of
         Node N ts \<Rightarrow> Node N (ts @ [Leaf (inp!(k-1))])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>add sub-tree starting from non-terminal\<close>
-      case build_dtree' bs inp k' pre of
-        Node N ts \<Rightarrow> Node N (ts @ [build_dtree' bs inp k red])
+      case build_tree' bs inp k' pre of
+        Node N ts \<Rightarrow> Node N (ts @ [build_tree' bs inp k red])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     ))"
   by pat_completeness auto
 termination sorry
 
-declare build_dtree'.simps [simp del]
+declare build_tree'.simps [simp del]
 
-definition build_dtree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a dtree option" where
-  "build_dtree cfg inp bs = (
+definition build_tree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a tree option" where
+  "build_tree cfg inp bs = (
     let k = length bs - 1 in
     case filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
       [] \<Rightarrow> None
-    | (_,i)#_ \<Rightarrow> Some (build_dtree' bs inp k i)
+    | (_,i)#_ \<Rightarrow> Some (build_tree' bs inp k i)
   )"
 
 definition predicts :: "'a item \<Rightarrow> bool" where
   "predicts x \<longleftrightarrow> item_origin x = item_end x \<and> item_dot x = 0"
 
-definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
-  "sound_null_ptr e = (pointer e = Null \<longrightarrow> predicts (item e))"
-
-definition sound_null_ptrs :: "'a bins \<Rightarrow> bool" where
-  "sound_null_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_null_ptr e)"
-
 definition scans :: "'a sentence \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "scans inp k x y \<longleftrightarrow> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
-
-definition sound_pre_ptr :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
-  "sound_pre_ptr inp bs k e = (\<forall>pre. pointer e = Pre pre \<longrightarrow>
-    k > 0 \<and> pre < length (bs!(k-1)) \<and> scans inp k (item (bs!(k-1)!pre)) (item e))"
-
-definition sound_pre_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "sound_pre_ptrs inp bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_pre_ptr inp bs k e)"
 
 definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "completes k x y z \<longleftrightarrow> y = inc_item x k \<and> is_complete z \<and> item_origin z = item_end x \<and>
     (\<exists>N. next_symbol x = Some N \<and> N = item_rule_head z)"
 
-\<comment>\<open>TODO: red < i\<close>
+definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
+  "sound_null_ptr e = (pointer e = Null \<longrightarrow> predicts (item e))"
+
+definition sound_pre_ptr :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
+  "sound_pre_ptr inp bs k e = (\<forall>pre. pointer e = Pre pre \<longrightarrow>
+    k > 0 \<and> pre < length (bs!(k-1)) \<and> scans inp k (item (bs!(k-1)!pre)) (item e))"
+
 definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_prered_ptr bs k e = (\<forall>p ps k' pre red.
     PreRed p ps = pointer e \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
       k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k) \<and>
       completes k (item (bs!k'!pre)) (item e) (item (bs!k!red)))"
-
-definition sound_prered_ptrs :: "'a bins \<Rightarrow> bool" where
-  "sound_prered_ptrs bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k). sound_prered_ptr bs k e)"
 
 definition sound_ptrs :: "'a sentence \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "sound_ptrs inp bs = (\<forall>k < length bs. \<forall>e \<in> set (bs!k).
@@ -2551,184 +2560,37 @@ proof (induction es arbitrary: e i es')
   qed
 qed simp
 
-lemma sound_null_ptrs_bin_upd:
-  assumes "sound_null_ptrs bs" "k < length bs" "es = bs!k" "sound_null_ptr e" "distinct (items es)"
-  shows "sound_null_ptrs (bs[k := bin_upd e es])"
-  unfolding sound_null_ptrs_def
+lemma sound_ptrs_bin_upd:
+  assumes "sound_ptrs inp bs" "k < length bs" "es = bs!k" "distinct (items es)"
+  assumes "sound_null_ptr e" "sound_pre_ptr inp bs k e" "sound_prered_ptr bs k e"
+  shows "sound_ptrs inp (bs[k := bin_upd e es])"
+  unfolding sound_ptrs_def
 proof (standard, standard, standard)
   fix idx elem
-  assume a0: "idx < length (bs[k := bin_upd e es])"
-  assume a1: "elem \<in> set (bs[k := bin_upd e es] ! idx)"
-  show "sound_null_ptr elem"
+  let ?bs = "bs[k := bin_upd e es]"
+  assume a0: "idx < length ?bs"
+  assume a1: "elem \<in> set (?bs ! idx)"
+  show "sound_null_ptr elem \<and> sound_pre_ptr inp ?bs idx elem \<and> sound_prered_ptr ?bs idx elem"
   proof cases
     assume a2: "idx = k"
-    consider (A) "item e \<notin> set (items es)" |
-      (B) "item e \<in> set (items es) \<and> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)" |
-      (C) "item e \<in> set (items es) \<and> \<not> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)"
-      by blast
-    thus ?thesis
-    proof cases
-      case A
-      hence "elem \<in> set (es @ [e])"
-        using a1 a2 bin_upd_append assms(2) by force
-      thus ?thesis
-        using assms(1-4) sound_null_ptrs_def by auto
-    next
-      case B
-      hence "elem \<in> set es"
-        using a1 a2 bin_upd_null_pre assms(2) by force
-      thus ?thesis
-        using assms(1-3) sound_null_ptrs_def by blast
-    next
-      case C
-      then obtain i p ps where C: "i < length es \<and> item e = item (es!i) \<and> pointer e = PreRed p ps"
-        by (metis in_set_conv_nth items_def length_map nth_map pointer.exhaust)
-      show ?thesis
-      proof cases
-        assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
-        hence "elem \<in> set es"
-          using a1 a2 C bin_upd_prered_nop assms(2,5) by (metis nth_list_update)
-        thus ?thesis
-          using assms(1-3) sound_null_ptrs_def by blast
-      next
-        assume "\<not> (\<nexists>p ps. pointer (es!i) = PreRed p ps)"
-        then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
-          by blast
-        hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
-          using bin_upd_prered_upd C assms(5) by blast
-        obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
-          using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
-        show ?thesis
-        proof cases
-          assume a3: "i=j"
-          hence "pointer elem = PreRed p (p'#ps@ps')"
-            using 0 1 by blast
-          thus ?thesis
-            unfolding sound_null_ptr_def by simp
-        next
-          assume a3: "i\<noteq>j"
-          hence "elem \<in> set es"
-            using 0 1 by (metis length_bin_upd nth_mem order_less_le_trans)
-          thus ?thesis
-            using assms(1-3) sound_null_ptrs_def by blast
-        qed
-      qed
-    qed
-  next
-    assume a2: "idx \<noteq> k"
-    show ?thesis
-      using a0 a1 a2 assms(1) sound_null_ptrs_def by auto
-  qed
-qed
-
-lemma sound_pre_ptrs_bin_upd:
-  assumes "sound_pre_ptrs inp bs" "k < length bs" "es = bs!k" "sound_pre_ptr inp bs k e" "distinct (items es)"
-  shows "sound_pre_ptrs inp (bs[k := bin_upd e es])"
-  unfolding sound_pre_ptrs_def
-proof (standard, standard, standard)
-  fix idx elem
-  assume a0: "idx < length (bs[k := bin_upd e es])"
-  assume a1: "elem \<in> set (bs[k := bin_upd e es] ! idx)"
-  show "sound_pre_ptr inp (bs[k := bin_upd e es]) idx elem"
-  proof cases
-    assume a2: "idx = k"
-
-
     have "elem \<in> set es \<Longrightarrow> sound_pre_ptr inp bs idx elem"
-      using a0 a2 assms(1-3) sound_pre_ptrs_def by blast
-    hence X0: "elem \<in> set es \<Longrightarrow> sound_pre_ptr inp (bs[k := bin_upd e es]) idx elem"
+      using a0 a2 assms(1-3) sound_ptrs_def by blast
+    hence pre_es: "elem \<in> set es \<Longrightarrow> sound_pre_ptr inp ?bs idx elem"
       using a2 unfolding sound_pre_ptr_def by force
-
     have "elem = e \<Longrightarrow> sound_pre_ptr inp bs idx elem"
-      using a2 assms(4) by auto
-    hence X1: "elem = e \<Longrightarrow> sound_pre_ptr inp (bs[k := bin_upd e es]) idx elem"
+      using a2 assms(6) by auto
+    hence pre_e: "elem = e \<Longrightarrow> sound_pre_ptr inp ?bs idx elem"
       using a2 unfolding sound_pre_ptr_def by force
-
-    consider (A) "item e \<notin> set (items es)" |
-      (B) "item e \<in> set (items es) \<and> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)" |
-      (C) "item e \<in> set (items es) \<and> \<not> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)"
-      by blast
-    thus ?thesis
-    proof cases
-      case A
-      hence "elem \<in> set (es @ [e])"
-        using a1 a2 bin_upd_append assms(2) by force
-      show ?thesis
-        using X0 X1 \<open>elem \<in> set (es @ [e])\<close> by fastforce
-    next
-      case B
-      hence "elem \<in> set es"
-        using a1 a2 bin_upd_null_pre assms(2) by force
-      show ?thesis
-        by (simp add: X0 \<open>elem \<in> set es\<close>)
-    next
-      case C
-      then obtain i p ps where C: "i < length es \<and> item e = item (es!i) \<and> pointer e = PreRed p ps"
-        by (metis in_set_conv_nth items_def length_map nth_map pointer.exhaust)
-      show ?thesis
-      proof cases
-        assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
-        hence "elem \<in> set es"
-          using a1 a2 C bin_upd_prered_nop assms(2,5) by (metis nth_list_update)
-        show ?thesis
-          using X0 \<open>elem \<in> set es\<close> by blast
-      next
-        assume "\<not> (\<nexists>p ps. pointer (es!i) = PreRed p ps)"
-        then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
-          by blast
-        hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
-          using bin_upd_prered_upd C assms(5) by blast
-        obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
-          using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
-        show ?thesis
-        proof cases
-          assume a3: "i=j"
-          hence "pointer elem = PreRed p (p'#ps@ps')"
-            using 0 1 by blast
-          show ?thesis
-            by (simp add: \<open>pointer elem = PreRed p (p' # ps @ ps')\<close> sound_pre_ptr_def)
-        next
-          assume a3: "i\<noteq>j"
-          hence "elem \<in> set es"
-            using 0 1 by (metis length_bin_upd nth_mem order_less_le_trans)
-          show ?thesis
-            using X0 \<open>elem \<in> set es\<close> by auto
-        qed
-      qed
-    qed
-  next
-    assume a2: "idx \<noteq> k"
-    show ?thesis
-      using a0 a1 a2 assms(1) unfolding sound_pre_ptrs_def sound_pre_ptr_def
-      by (smt (verit, best) assms(2) assms(3) le_add_diff_inverse length_bin_upd length_list_update nth_item_bin_upd nth_list_update_eq nth_list_update_neq trans_less_add1)
-  qed
-qed
-
-lemma sound_prered_ptrs_bin_upd:
-  assumes "sound_prered_ptrs bs" "k < length bs" "es = bs!k" "sound_prered_ptr bs k e" "distinct (items es)"
-  shows "sound_prered_ptrs (bs[k := bin_upd e es])"
-  unfolding sound_prered_ptrs_def
-proof (standard, standard, standard)
-  fix idx elem
-  assume a0: "idx < length (bs[k := bin_upd e es])"
-  assume a1: "elem \<in> set (bs[k := bin_upd e es] ! idx)"
-  show "sound_prered_ptr (bs[k := bin_upd e es]) idx elem"
-  proof cases
-    assume a2: "idx = k"
-
-
     have "elem \<in> set es \<Longrightarrow> sound_prered_ptr bs idx elem"
-      using a0 a2 assms(1-3) sound_prered_ptrs_def by blast
-    hence X0: "elem \<in> set es \<Longrightarrow> sound_prered_ptr (bs[k := bin_upd e es]) idx elem"
-      using a2 unfolding sound_prered_ptr_def
-      by (smt (verit, best) assms(2) assms(3) leD le_eq_less_or_eq length_bin_upd nth_item_bin_upd nth_list_update_eq nth_list_update_neq order.trans)
-
+      using a0 a2 assms(1-3) sound_ptrs_def by blast
+    hence prered_es: "elem \<in> set es \<Longrightarrow> sound_prered_ptr (bs[k := bin_upd e es]) idx elem"
+      using a2 assms(2,3) length_bin_upd nth_item_bin_upd unfolding sound_prered_ptr_def
+      by (smt (verit, ccfv_SIG) dual_order.strict_trans1 nth_list_update)
     have "elem = e \<Longrightarrow> sound_prered_ptr bs idx elem"
-      using a2 assms(4) by auto
-    hence X1: "elem = e \<Longrightarrow> sound_prered_ptr (bs[k := bin_upd e es]) idx elem"
-      using a2 unfolding sound_prered_ptr_def
-      by (smt (verit, best) assms(2) assms(3) dual_order.strict_trans1 length_bin_upd nth_item_bin_upd nth_list_update)
-
+      using a2 assms(7) by auto
+    hence prered_e: "elem = e \<Longrightarrow> sound_prered_ptr ?bs idx elem"
+      using a2 assms(2,3) length_bin_upd nth_item_bin_upd unfolding sound_prered_ptr_def
+      by (smt (verit, best) dual_order.strict_trans1 nth_list_update)
     consider (A) "item e \<notin> set (items es)" |
       (B) "item e \<in> set (items es) \<and> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)" |
       (C) "item e \<in> set (items es) \<and> \<not> (\<exists>pre. pointer e = Null \<or> pointer e = Pre pre)"
@@ -2738,14 +2600,14 @@ proof (standard, standard, standard)
       case A
       hence "elem \<in> set (es @ [e])"
         using a1 a2 bin_upd_append assms(2) by force
-      show ?thesis
-        using X0 X1 \<open>elem \<in> set (es @ [e])\<close> by fastforce
+      thus ?thesis
+        using assms(1-3,5) pre_e pre_es prered_e prered_es sound_ptrs_def by auto
     next
       case B
       hence "elem \<in> set es"
         using a1 a2 bin_upd_null_pre assms(2) by force
-      show ?thesis
-        by (simp add: X0 \<open>elem \<in> set es\<close>)
+      thus ?thesis
+        using assms(1-3) pre_es prered_es sound_ptrs_def by blast
     next
       case C
       then obtain i p ps where C: "i < length es \<and> item e = item (es!i) \<and> pointer e = PreRed p ps"
@@ -2753,100 +2615,104 @@ proof (standard, standard, standard)
       show ?thesis
       proof cases
         assume "\<nexists>p ps. pointer (es!i) = PreRed p ps"
-        hence "elem \<in> set es"
-          using a1 a2 C bin_upd_prered_nop assms(2,5) by (metis nth_list_update)
-        show ?thesis
-          using X0 \<open>elem \<in> set es\<close> by blast
+        hence C: "elem \<in> set es"
+          using a1 a2 C bin_upd_prered_nop assms(2,4) by (metis nth_list_update)
+        thus ?thesis
+          using assms(1-3) sound_ptrs_def pre_es prered_es by blast
       next
         assume "\<not> (\<nexists>p ps. pointer (es!i) = PreRed p ps)"
         then obtain p' ps' where D: "pointer (es!i) = PreRed p' ps'"
           by blast
         hence 0: "pointer (bin_upd e es!i) = PreRed p (p'#ps@ps') \<and> (\<forall>j < length (bin_upd e es). i \<noteq> j \<longrightarrow> bin_upd e es!j = es!j)"
-          using bin_upd_prered_upd C assms(5) by blast
+          using bin_upd_prered_upd C  assms(4) by blast
         obtain j where 1: "j < length es \<and> elem = bin_upd e es!j"
           using a1 a2 assms(2) C items_def bin_eq_items_bin_upd by (metis in_set_conv_nth length_map nth_list_update_eq nth_map)
         show ?thesis
         proof cases
           assume a3: "i=j"
-          hence "pointer elem = PreRed p (p'#ps@ps')"
+          hence a3: "pointer elem = PreRed p (p'#ps@ps')"
             using 0 1 by blast
-          show ?thesis
+          have "sound_null_ptr elem"
+            using a3 unfolding sound_null_ptr_def by simp
+          moreover have "sound_pre_ptr inp ?bs idx elem"
+            using a3 unfolding sound_pre_ptr_def by simp
+          moreover have "sound_prered_ptr ?bs idx elem"
             unfolding sound_prered_ptr_def
           proof (standard, standard, standard, standard, standard, standard)
             fix q qs k' pre red
             assume a4: "PreRed q qs = pointer elem \<and> (k',pre,red) \<in> set (q#qs)"
-
             hence "q = p" "qs = p'#ps@ps'"
               by (simp_all add: \<open>pointer elem = PreRed p (p' # ps @ ps')\<close>)
             hence 2: "(k',pre,red) \<in> set (p#p'#ps@ps')"
               using a4 by blast
-
             show "k' < idx \<and> pre < length (bs[k := bin_upd e es] ! k') \<and> red < length (bs[k := bin_upd e es] ! idx) \<and>
               completes idx (item (bs[k := bin_upd e es] ! k' ! pre)) (item elem) (item (bs[k := bin_upd e es] ! idx ! red))"
             proof cases
               assume a5: "(k',pre,red) \<in> set (p#ps)"
               show ?thesis
-                by (smt (verit, best) "1" C a2 a3 a5 assms(2) assms(3) assms(4) dual_order.strict_trans1 length_bin_upd nth_item_bin_upd nth_list_update sound_prered_ptr_def)
+                using a2 a3 a5 assms(2,3,7) 1 C length_bin_upd nth_item_bin_upd unfolding sound_prered_ptr_def
+                by (smt (verit, del_insts) 0 2 nth_list_update nth_mem order_less_le_trans prered_es sound_prered_ptr_def)
             next
               assume a5: "(k',pre,red) \<notin> set (p#ps)"
               hence "(k',pre,red) \<in> set (p'#ps')"
                 using 2 by simp
-              hence "k' < idx \<and> pre < length (bs ! k') \<and> red < length (bs ! idx) \<and> completes idx (item (bs ! k' ! pre)) (item elem) (item (bs ! idx ! red))"
-                using assms(1) unfolding sound_prered_ptrs_def sound_prered_ptr_def
-                by (metis "1" D a2 a3 assms(2) assms(3) nth_item_bin_upd nth_mem)
-              show ?thesis
-                by (smt (verit, ccfv_SIG) \<open>k' < idx \<and> pre < length (bs ! k') \<and> red < length (bs ! idx) \<and> completes idx (item (bs ! k' ! pre)) (item elem) (item (bs ! idx ! red))\<close> assms(2) assms(3) dual_order.strict_trans1 length_bin_upd nth_item_bin_upd nth_list_update_eq nth_list_update_neq)
+              hence "k' < idx \<and> pre < length (bs!k') \<and> red < length (bs!idx) \<and> completes idx (item (bs!k'!pre)) (item elem) (item (bs!idx!red))"
+                using a2 a3 a4 assms(1-3) 0 1 D unfolding sound_ptrs_def sound_prered_ptr_def
+                by (smt (verit, ccfv_SIG) length_bin_upd nth_item_bin_upd nth_mem order_less_le_trans)
+              thus ?thesis
+                using assms(2,3) length_bin_upd nth_item_bin_upd
+                by (smt (verit, best) nth_list_update order_less_le_trans)
             qed
           qed
+          ultimately show ?thesis
+            by blast
         next
           assume a3: "i\<noteq>j"
           hence "elem \<in> set es"
             using 0 1 by (metis length_bin_upd nth_mem order_less_le_trans)
-          show ?thesis
-            using X0 \<open>elem \<in> set es\<close> by auto
+          thus ?thesis
+            using assms(1-3) pre_es prered_es sound_ptrs_def by blast
         qed
       qed
     qed
   next
     assume a2: "idx \<noteq> k"
+    have null: "sound_null_ptr elem"
+      using a0 a1 a2 assms(1) sound_ptrs_def by auto
+    have "sound_pre_ptr inp bs idx elem"
+      using a0 a1 a2 assms(1,2) unfolding sound_ptrs_def by simp
+    hence pre: "sound_pre_ptr inp ?bs idx elem"
+      using assms(2,3) length_bin_upd nth_item_bin_upd unfolding sound_pre_ptr_def
+      using dual_order.strict_trans1 nth_list_update by fastforce
+    have "sound_prered_ptr bs idx elem"
+      using a0 a1 a2 assms(1,2) unfolding sound_ptrs_def by simp
+    hence prered: "sound_prered_ptr ?bs idx elem"
+      using assms(2,3) length_bin_upd nth_item_bin_upd unfolding sound_prered_ptr_def
+      by (smt (verit, best) dual_order.strict_trans1 nth_list_update)
     show ?thesis
-      using a0 a1 a2 assms(1) unfolding sound_prered_ptrs_def sound_prered_ptr_def
-      by (smt (verit, best) assms(2) assms(3) le_add_diff_inverse length_bin_upd length_list_update nth_item_bin_upd nth_list_update_eq nth_list_update_neq trans_less_add1)
+      using null pre prered by blast
   qed
 qed
 
-lemma sound_ptrs_bin_upd:
-  assumes "sound_ptrs inp bs" "k < length bs" "es = bs!k"
-  assumes "sound_null_ptr e" "sound_pre_ptr inp bs k e" "sound_prered_ptr bs k e" "distinct (items es)"
-  shows "sound_ptrs inp (bs[k := bin_upd e es])"
-  using assms sound_null_ptrs_bin_upd sound_pre_ptrs_bin_upd sound_prered_ptrs_bin_upd
-  unfolding sound_ptrs_def sound_null_ptrs_def sound_pre_ptrs_def sound_prered_ptrs_def by metis
-
 lemma sound_ptrs_bin_upds:
   assumes "sound_ptrs inp bs" "k < length bs" "b = bs!k" "distinct (items b)"
-  assumes "\<forall>e \<in> set es. sound_null_ptr e"
-  assumes "\<forall>e \<in> set es. sound_pre_ptr inp bs k e"
-  assumes "\<forall>e \<in> set es. sound_prered_ptr bs k e"
+  assumes "\<forall>e \<in> set es. sound_null_ptr e \<and> sound_pre_ptr inp bs k e \<and> sound_prered_ptr bs k e"
   shows "sound_ptrs inp (bs[k := bin_upds es b])"
   using assms
 proof (induction es arbitrary: b bs)
   case (Cons e es)
   let ?bs = "bs[k := bin_upd e b]"
   have 0: "sound_ptrs inp ?bs"
-    using sound_ptrs_bin_upd[OF Cons.prems(1-3)] Cons.prems(4,5,6,7) by (meson list.set_intros(1))
+    using sound_ptrs_bin_upd[OF Cons.prems(1-3)] Cons.prems(4,5) by (meson list.set_intros(1))
   have 1: "k < length ?bs"
     using Cons.prems(2) by simp
   have 2: "bin_upd e b = ?bs!k"
     using Cons.prems(2) by simp
-  have 3: "\<forall>e' \<in> set es. sound_null_ptr e'"
-    by (simp add: Cons.prems(5))
-  have 4: "\<forall>e' \<in> set es. sound_pre_ptr inp (bs[k := bin_upd e b]) k e'"
-    using Cons.prems(6) unfolding sound_pre_ptr_def by force
-  have 5: "\<forall>e' \<in> set es. sound_prered_ptr (bs[k := bin_upd e b]) k e'"
-    using 2 Cons.prems(3,7) length_bin_upd nth_item_bin_upd unfolding sound_prered_ptr_def
-    by (smt (verit, best) dual_order.strict_trans1 list.set_intros(2) nth_list_update_neq)
+  have 3: "\<forall>e' \<in> set es. sound_null_ptr e' \<and> sound_pre_ptr inp (bs[k := bin_upd e b]) k e' \<and> sound_prered_ptr (bs[k := bin_upd e b]) k e'"
+    using Cons.prems(2,3,5) length_bin_upd nth_item_bin_upd sound_pre_ptr_def sound_prered_ptr_def
+    by (smt (verit, ccfv_threshold) list.set_intros(2) nth_list_update order_less_le_trans)
   have "sound_ptrs inp ((bs[k := bin_upd e b])[k := bin_upds es (bin_upd e b)])"
-    using Cons.IH[OF 0 1 2 _ 3 4 5] Cons.prems(4) distinct_bin_upd by blast
+    using Cons.IH[OF 0 1 2 _ 3] Cons.prems(4) distinct_bin_upd by blast
   thus ?case
     by simp
 qed simp
@@ -2915,7 +2781,7 @@ proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete 
   hence 3: "\<forall>e \<in> set (Complete_it k x bs i). sound_prered_ptr bs k e"
     unfolding sound_prered_ptr_def using Complete.hyps(1) items_def by (smt (verit) discrete dual_order.strict_trans1 leI length_map)
   have "sound_ptrs inp ?bs'"
-    using sound_ptrs_bin_upds[OF Complete.prems(2) 0 _ _ 1 2 3] Complete.hyps(1)
+    using sound_ptrs_bin_upds[OF Complete.prems(2) 0] 1 2 3 Complete.hyps(1)
     by (metis Complete.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
@@ -2942,7 +2808,7 @@ next
   have 3: "\<forall>e \<in> set (Scan_it k inp a x i). sound_prered_ptr bs (k+1) e"
     unfolding Scan_it_def sound_prered_ptr_def by simp
   have "sound_ptrs inp ?bs'"
-    using sound_ptrs_bin_upds[OF Scan.prems(2) 0 _ _ 1 2 3] 2 Scan.hyps(1)
+    using sound_ptrs_bin_upds[OF Scan.prems(2) 0] 1 2 3 Scan.hyps(1)
     by (metis 0 Scan.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
@@ -2969,7 +2835,7 @@ next
   have 3: "\<forall>e \<in> set (Predict_it k cfg a). sound_prered_ptr bs k e"
     unfolding sound_prered_ptr_def Predict_it_def by simp
   have "sound_ptrs inp ?bs'"
-    using sound_ptrs_bin_upds[OF Predict.prems(2) 0 _ _ 1 2 3] Predict.hyps(1)
+    using sound_ptrs_bin_upds[OF Predict.prems(2) 0] 1 2 3 Predict.hyps(1)
     by (metis Predict.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def)
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
     using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
@@ -3024,31 +2890,31 @@ lemma sound_ptrs_\<II>_it:
 subsection \<open>Parse tree lemmas\<close>
 
 lemma build_tree'_simps[simp]:
-  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_dtree' bs inp k i = Node (item_rule_head (item e)) []"
-  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_dtree' bs inp (k-1) pre = Node N ts \<Longrightarrow> 
-    build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> build_dtree' bs inp k' pre = Node N ts \<Longrightarrow>
-    build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
-  by (auto simp: build_dtree'.simps Let_def)
+  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_tree' bs inp k i = Node (item_rule_head (item e)) []"
+  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_tree' bs inp (k-1) pre = Node N ts \<Longrightarrow> 
+    build_tree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> build_tree' bs inp k' pre = Node N ts \<Longrightarrow>
+    build_tree' bs inp k i = Node N (ts @ [build_tree' bs inp k red])"
+  by (auto simp: build_tree'.simps Let_def)
 
 lemma ex_Node_build_tree':
-  "\<exists>N ts. build_dtree' bs inp k i = Node N ts"
-  apply (induction bs inp k i rule: build_dtree'.induct)
-  apply (subst build_dtree'.simps)
-  apply (auto simp: Let_def split: list.splits dtree.splits pointer.splits)
-  by (metis dtree.distinct(1))+
+  "\<exists>N ts. build_tree' bs inp k i = Node N ts"
+  apply (induction bs inp k i rule: build_tree'.induct)
+  apply (subst build_tree'.simps)
+  apply (auto simp: Let_def split: list.splits tree.splits pointer.splits)
+  by (metis tree.distinct(1))+
 
 lemma nex_Leaf_build_tree':
-  "\<nexists>a. build_dtree' bs inp k i = Leaf a"
-  using ex_Node_build_tree' by (metis dtree.distinct(1))
+  "\<nexists>a. build_tree' bs inp k i = Leaf a"
+  using ex_Node_build_tree' by (metis tree.distinct(1))
   
-lemma wf_item_dtree_build_dtree':
+lemma wf_item_tree_build_tree':
   assumes "wf_bins cfg inp bs"
   assumes "sound_ptrs inp bs"
   assumes "k < length bs" "i < length (bs!k)"
-  shows "wf_item_dtree cfg (item (bs!k!i)) (build_dtree' bs inp k i)"
+  shows "wf_item_tree cfg (item (bs!k!i)) (build_tree' bs inp k i)"
   using assms
-proof (induction bs inp k i rule: build_dtree'.induct)
+proof (induction bs inp k i rule: build_tree'.induct)
   case (1 bs inp k i)
   let ?e = "bs!k!i"
   consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
@@ -3056,7 +2922,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
   thus ?case
   proof cases
     case Null
-    hence 0: "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
+    hence 0: "build_tree' bs inp k i = Node (item_rule_head (item ?e)) []"
       by simp
     have "predicts (item ?e)"
       using Null "1.prems"(2,3,4) nth_mem unfolding sound_ptrs_def sound_null_ptr_def by blast
@@ -3068,15 +2934,15 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     case Pre
     then obtain pre where pre: "pointer ?e = Pre pre"
       by blast
-    obtain N ts where node: "build_dtree' bs inp (k-1) pre = Node N ts"
+    obtain N ts where node: "build_tree' bs inp (k-1) pre = Node N ts"
       by (meson ex_Node_build_tree')
-    hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+    hence simp: "build_tree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "pre < length (bs!(k-1))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
     have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
-    have IH: "wf_item_dtree cfg (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
+    have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (build_tree' bs inp (k-1) pre)"
       using "1.IH"(1) pre "1.prems"(1,2,3,4) bounds by simp
     hence *: 
       "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item (bs!k!i))"
@@ -3084,7 +2950,7 @@ proof (induction bs inp k i rule: build_dtree'.induct)
       "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item (bs!k!i))"
       "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
       using scans unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
-    have "map root_dtree (ts @ [Leaf (inp!(k-1))]) = map root_dtree ts @ [inp!(k-1)]"
+    have "map root_tree (ts @ [Leaf (inp!(k-1))]) = map root_tree ts @ [inp!(k-1)]"
       by simp
     also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
       using IH node by simp
@@ -3098,17 +2964,17 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     case PreRed
     then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
       by auto
-    obtain N ts where node: "build_dtree' bs inp k' pre = Node N ts"
+    obtain N ts where node: "build_tree' bs inp k' pre = Node N ts"
       by (meson ex_Node_build_tree')
-    hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
+    hence simp: "build_tree' bs inp k i = Node N (ts @ [build_tree' bs inp k red])"
       using prered by simp
-    have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)" \<comment>\<open>TODO: red < i\<close>
+    have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)"
       using "1.prems" prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)+
     have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
       using "1.prems" prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)
-    have IH_pre: "wf_item_dtree cfg (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
+    have IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (build_tree' bs inp k' pre)"
       using "1.IH"(2) "1.prems"(1-4) bounds prered by simp
-    have IH_red: "wf_item_dtree cfg (item (bs!k!red)) (build_dtree' bs inp k red)"
+    have IH_red: "wf_item_tree cfg (item (bs!k!red)) (build_tree' bs inp k red)"
       using "1.IH"(3) "1.prems" bounds prered node by simp
     have *: 
       "item_rule_head (item (bs!k'!pre)) = item_rule_head (item (bs!k!i))"
@@ -3118,38 +2984,38 @@ proof (induction bs inp k i rule: build_dtree'.induct)
       "is_complete (item (bs!k!red))"
       using completes unfolding completes_def inc_item_def
       by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
-    have "map root_dtree (ts @ [build_dtree' bs inp k red]) = map root_dtree ts @ [root_dtree (build_dtree' bs inp k red)]"
+    have "map root_tree (ts @ [build_tree' bs inp k red]) = map root_tree ts @ [root_tree (build_tree' bs inp k red)]"
       by simp
-    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_dtree (build_dtree' bs inp k red)]"
+    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (build_tree' bs inp k red)]"
       using IH_pre node by force
     also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!red))]"
-      using IH_red ex_Node_build_tree' by (metis root_dtree.simps(2) wf_item_dtree.simps(2))
+      using IH_red ex_Node_build_tree' by (metis root_tree.simps(2) wf_item_tree.simps(2))
     also have "... = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))"
       using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
-    finally have 0: "map root_dtree (ts @ [build_dtree' bs inp k red]) = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))" .
+    finally have 0: "map root_tree (ts @ [build_tree' bs inp k red]) = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))" .
     have wf: "wf_item cfg inp (item (bs!k!red))"
       using "1.prems" bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-    obtain N' ts' where node': "build_dtree' bs inp k red = Node N' ts'"
+    obtain N' ts' where node': "build_tree' bs inp k red = Node N' ts'"
       by (meson ex_Node_build_tree')
     hence "N' = item_rule_head (item (bs!k!red))"
-          "map root_dtree ts' = item_rule_body (item (bs!k!red))"
+          "map root_tree ts' = item_rule_body (item (bs!k!red))"
       using IH_red *(5) by (auto simp: is_complete_def)
-    hence "\<exists>r \<in> set (\<RR> cfg). N' = rule_head r \<and> map root_dtree ts' = rule_body r"
+    hence "\<exists>r \<in> set (\<RR> cfg). N' = rule_head r \<and> map root_tree ts' = rule_body r"
       using wf unfolding wf_item_def item_rule_body_def item_rule_head_def by auto
-    hence 1: "wf_rule_dtree cfg (build_dtree' bs inp k red)"
+    hence 1: "wf_rule_tree cfg (build_tree' bs inp k red)"
       using IH_red node' by simp
     show ?thesis
       using *(1) 0 1 IH_pre node simp by simp
   qed
 qed
 
-lemma wf_yield_dtree_build_dtree':
+lemma wf_yield_tree_build_tree':
   assumes "wf_bins cfg inp bs"
   assumes "sound_ptrs inp bs"
   assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
-  shows "wf_yield_dtree inp (item (bs!k!i)) (build_dtree' bs inp k i)"
+  shows "wf_yield_tree inp (item (bs!k!i)) (build_tree' bs inp k i)"
   using assms
-proof (induction bs inp k i rule: build_dtree'.induct)
+proof (induction bs inp k i rule: build_tree'.induct)
   case (1 bs inp k i)
   let ?e = "bs!k!i"
   consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
@@ -3157,27 +3023,27 @@ proof (induction bs inp k i rule: build_dtree'.induct)
   thus ?case
   proof cases
     case Null
-    hence simp: "build_dtree' bs inp k i = Node (item_rule_head (item ?e)) []"
+    hence simp: "build_tree' bs inp k i = Node (item_rule_head (item ?e)) []"
       by simp
     have "predicts (item ?e)"
       using Null "1.prems"(2,3,4) unfolding sound_ptrs_def sound_null_ptr_def by simp
     hence "item_origin (item ?e) = item_end (item ?e)"
       unfolding predicts_def by blast
     thus ?thesis
-      unfolding wf_yield_dtree_def using simp by (simp add: slice_empty)
+      unfolding wf_yield_tree_def using simp by (simp add: slice_empty)
   next
     case Pre
     then obtain pre where pre: "pointer ?e = Pre pre"
       by blast
-    obtain N ts where node: "build_dtree' bs inp (k-1) pre = Node N ts"
+    obtain N ts where node: "build_tree' bs inp (k-1) pre = Node N ts"
       by (meson ex_Node_build_tree')
-    hence simp: "build_dtree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+    hence simp: "build_tree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "k > 0" "pre < length (bs!(k-1))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)+
     have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
-    have IH: "wf_yield_dtree inp (item (bs!(k-1)!pre)) (build_dtree' bs inp (k-1) pre)"
+    have IH: "wf_yield_tree inp (item (bs!(k-1)!pre)) (build_tree' bs inp (k-1) pre)"
       using "1.IH"(1) pre "1.prems"(1,2,3,5) bounds by simp
     have wf: 
       "item_origin (item (bs!(k-1)!pre)) \<le> item_end (item (bs!(k-1)!pre))"
@@ -3185,12 +3051,12 @@ proof (induction bs inp k i rule: build_dtree'.induct)
       "item_end (item (bs!k!i)) = k"
       using "1.prems"(1,3,4) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
       by (auto, meson less_imp_diff_less nth_mem)
-    have "yield_dtree (build_dtree' bs inp k i) = concat (map yield_dtree (ts @ [Leaf (inp!(k-1))]))"
+    have "yield_tree (build_tree' bs inp k i) = concat (map yield_tree (ts @ [Leaf (inp!(k-1))]))"
       using simp by simp
-    also have "... = concat (map yield_dtree ts) @ [inp!(k-1)]"
+    also have "... = concat (map yield_tree ts) @ [inp!(k-1)]"
       by simp
     also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre))) inp @ [inp!(k-1)]"
-      using node IH by (simp add: wf_yield_dtree_def)
+      using node IH by (simp add: wf_yield_tree_def)
     also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre)) + 1) inp"
       using slice_append_nth wf "1.prems"(5) \<open>k > 0\<close> by (metis Suc_diff_1 linorder_not_le not_less_eq)
     also have "... = slice (item_origin (item ?e)) (item_end (item (bs!(k-1)!pre)) + 1) inp"
@@ -3200,22 +3066,22 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     also have "... = slice (item_origin (item ?e)) (item_end (item ?e)) inp"
       using wf by auto
     finally show ?thesis
-      using wf_yield_dtree_def by blast
+      using wf_yield_tree_def by blast
   next
     case PreRed
     then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
       by auto
-    obtain N ts where node: "build_dtree' bs inp k' pre = Node N ts"
+    obtain N ts where node: "build_tree' bs inp k' pre = Node N ts"
       by (meson ex_Node_build_tree')
-    hence simp: "build_dtree' bs inp k i = Node N (ts @ [build_dtree' bs inp k red])"
+    hence simp: "build_tree' bs inp k i = Node N (ts @ [build_tree' bs inp k red])"
       using prered by simp
-    have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)" \<comment>\<open>TODO: red < i\<close>
+    have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)"
       using "1.prems"(2,3,4) prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)+
     have completes: "completes k (item (bs!k'!pre)) (item (bs!k!i)) (item (bs!k!red))"
       using "1.prems"(2,3,4) prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)
-    have IH_pre: "wf_yield_dtree inp (item (bs!k'!pre)) (build_dtree' bs inp k' pre)"
+    have IH_pre: "wf_yield_tree inp (item (bs!k'!pre)) (build_tree' bs inp k' pre)"
       using "1.IH"(2) "1.prems"(1-3,5) bounds prered by simp
-    have IH_red: "wf_yield_dtree inp (item (bs!k!red)) (build_dtree' bs inp k red)"
+    have IH_red: "wf_yield_tree inp (item (bs!k!red)) (build_tree' bs inp k red)"
       using "1.IH"(3) "1.prems"(1-5) bounds prered node by simp
     have wf1: 
       "item_origin (item (bs!k'!pre)) \<le> item_end (item (bs!k'!pre))"
@@ -3226,13 +3092,13 @@ proof (induction bs inp k i rule: build_dtree'.induct)
       "item_end (item (bs!k!red)) = k"
       "item_end (item (bs!k!i)) = k"
       using "1.prems"(1,3,4) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def by simp_all
-    have "yield_dtree (build_dtree' bs inp k i) = concat (map yield_dtree (ts @ [build_dtree' bs inp k red]))"
+    have "yield_tree (build_tree' bs inp k i) = concat (map yield_tree (ts @ [build_tree' bs inp k red]))"
       using simp by simp
-    also have "... = concat (map yield_dtree ts) @ yield_dtree (build_dtree' bs inp k red)"
+    also have "... = concat (map yield_tree ts) @ yield_tree (build_tree' bs inp k red)"
       by simp
     also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k'!pre))) inp @ 
       slice (item_origin (item (bs!k!red))) (item_end (item (bs!k!red))) inp"
-      using IH_pre IH_red by (simp add: node wf_yield_dtree_def)
+      using IH_pre IH_red by (simp add: node wf_yield_tree_def)
     also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k!red))) inp"
       using slice_concat wf1 completes_def completes by (metis (no_types, lifting))
     also have "... = slice (item_origin (item ?e)) (item_end (item (bs!k!red))) inp"
@@ -3240,18 +3106,18 @@ proof (induction bs inp k i rule: build_dtree'.induct)
     also have "... = slice (item_origin (item ?e)) (item_end (item ?e)) inp"
       using wf2 by simp
     finally show ?thesis
-      using wf_yield_dtree_def by blast
+      using wf_yield_tree_def by blast
   qed
 qed
 
-theorem build_dtree_Some_wf_rule_dtree:
+theorem build_tree_Some_wf_rule_tree:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
-  assumes "Some t = build_dtree cfg inp bs"
-  shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
+  assumes "Some t = build_tree cfg inp bs"
+  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
 proof -
   let ?k = "length bs - 1"
   obtain x i xs where *: "filter_with_index (is_finished cfg inp) (items (bs!?k)) = (x,i)#xs"
-    using assms(4) unfolding build_dtree_def by (auto simp: Let_def split: list.splits)
+    using assms(4) unfolding build_tree_def by (auto simp: Let_def split: list.splits)
   have k: "?k < length bs" "?k \<le> length inp"
     using assms(3) by simp_all
   have i: "i < length (bs ! ?k)"
@@ -3260,45 +3126,45 @@ proof -
     using * i filter_with_index_nth items_def nth_map by (metis list.set_intros(1))
   have finished: "is_finished cfg inp x"
     using * filter_with_index_P by (metis list.set_intros(1))
-  hence wf_item_rule: "wf_item_dtree cfg x (build_dtree' bs inp ?k i)"
-    using wf_item_dtree_build_dtree' assms(1,2) i k(1) x by blast
+  hence wf_item_rule: "wf_item_tree cfg x (build_tree' bs inp ?k i)"
+    using wf_item_tree_build_tree' assms(1,2) i k(1) x by blast
   have wf_item: "wf_item cfg inp (item (bs!?k!i))"
     using k(1) i assms(1) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-  obtain N ts where node: "build_dtree' bs inp ?k i = Node N ts"
+  obtain N ts where node: "build_tree' bs inp ?k i = Node N ts"
     by (meson ex_Node_build_tree')
   hence "N = item_rule_head x"
-    "map root_dtree ts = item_rule_body x"
+    "map root_tree ts = item_rule_body x"
     using finished wf_item_rule by (auto simp: is_finished_def is_complete_def)
-  hence "\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_dtree ts = rule_body r"
+  hence "\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_tree ts = rule_body r"
     using wf_item x unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
-  hence wf_rule: "wf_rule_dtree cfg (build_dtree' bs inp ?k i)"
+  hence wf_rule: "wf_rule_tree cfg (build_tree' bs inp ?k i)"
     using wf_item_rule node by simp
-  have root: "root_dtree (build_dtree' bs inp ?k i) = \<SS> cfg"
+  have root: "root_tree (build_tree' bs inp ?k i) = \<SS> cfg"
     using finished node \<open>N = item_rule_head x\<close> by (auto simp: is_finished_def)
-  have "yield_dtree (build_dtree' bs inp ?k i) = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) inp"
-    using k i assms(1,2,3) wf_yield_dtree_build_dtree' wf_yield_dtree_def by blast
-  hence yield: "yield_dtree (build_dtree' bs inp ?k i) = inp"
+  have "yield_tree (build_tree' bs inp ?k i) = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) inp"
+    using k i assms(1,2,3) wf_yield_tree_build_tree' wf_yield_tree_def by blast
+  hence yield: "yield_tree (build_tree' bs inp ?k i) = inp"
     using finished x unfolding is_finished_def by simp
   show ?thesis
-    using * wf_rule root yield assms(4) unfolding build_dtree_def by simp
+    using * wf_rule root yield assms(4) unfolding build_tree_def by simp
 qed
 
-corollary build_dtree_Some_wf_rule_dtree_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg" "Some t = build_dtree cfg inp (\<II>_it cfg inp)"
-  shows "wf_rule_dtree cfg t \<and> root_dtree t = \<SS> cfg \<and> yield_dtree t = inp"
-  using assms build_dtree_Some_wf_rule_dtree wf_bins_\<II>_it sound_ptrs_\<II>_it \<II>_it_def
+corollary build_tree_Some_wf_rule_tree_\<II>_it:
+  assumes "wf_cfg cfg" "nonempty_derives cfg" "Some t = build_tree cfg inp (\<II>_it cfg inp)"
+  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
+  using assms build_tree_Some_wf_rule_tree wf_bins_\<II>_it sound_ptrs_\<II>_it \<II>_it_def
     length_\<I>_it length_bins_Init_it by (metis nle_le)
 
-theorem build_dtree_Some_\<II>_it:
+theorem build_tree_Some_\<II>_it:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "(\<exists>t. Some t = build_dtree cfg inp (\<II>_it cfg inp)) \<longleftrightarrow> derives cfg [\<SS> cfg] inp" (is "?L \<longleftrightarrow> ?R")
+  shows "(\<exists>t. Some t = build_tree cfg inp (\<II>_it cfg inp)) \<longleftrightarrow> derives cfg [\<SS> cfg] inp" (is "?L \<longleftrightarrow> ?R")
 proof standard
   assume *: ?L
   let ?k = "length (\<II>_it cfg inp) - 1"
-  obtain t where "Some t = build_dtree cfg inp (\<II>_it cfg inp)"
+  obtain t where "Some t = build_tree cfg inp (\<II>_it cfg inp)"
     using * by blast
   then obtain x i xs where *: "filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k)) = (x,i)#xs"
-    unfolding build_dtree_def by (auto simp: Let_def split: list.splits)
+    unfolding build_tree_def by (auto simp: Let_def split: list.splits)
   have k: "?k < length (\<II>_it cfg inp)" "?k \<le> length inp"
     by (simp_all add: \<II>_it_def assms(1))
   have i: "i < length ((\<II>_it cfg inp) ! ?k)"
@@ -3326,7 +3192,7 @@ next
   hence "\<exists>x i xs. filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)! (length (\<II>_it cfg inp) - 1))) = (x,i)#xs"
     using filter_with_index_cong_filter list.exhaust list.simps(8) prod.collapse by (metis empty_filter_conv)
   thus ?L
-    by (auto simp: build_dtree_def)
+    by (auto simp: build_tree_def)
 qed
 
 end
