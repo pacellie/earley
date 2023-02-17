@@ -2384,25 +2384,25 @@ subsection \<open>Main definitions\<close>
 
 datatype 'a tree =
   Leaf 'a
-| Node 'a "'a tree list"
+| Branch 'a "'a tree list"
 
 fun yield_tree :: "'a tree \<Rightarrow> 'a sentence" where
   "yield_tree (Leaf a) = [a]"
-| "yield_tree (Node _ ts) = concat (map yield_tree ts)"
+| "yield_tree (Branch _ ts) = concat (map yield_tree ts)"
 
 fun root_tree :: "'a tree \<Rightarrow> 'a" where
   "root_tree (Leaf a) = a"
-| "root_tree (Node N _) = N"
+| "root_tree (Branch N _) = N"
 
 fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
   "wf_rule_tree _ (Leaf a) \<longleftrightarrow> True"
-| "wf_rule_tree cfg (Node N ts) \<longleftrightarrow> (
+| "wf_rule_tree cfg (Branch N ts) \<longleftrightarrow> (
     (\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_tree ts = rule_body r) \<and>
     (\<forall>t \<in> set ts. wf_rule_tree cfg t))"
 
 fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
   "wf_item_tree cfg _ (Leaf a) \<longleftrightarrow> True"
-| "wf_item_tree cfg x (Node N ts) \<longleftrightarrow> (
+| "wf_item_tree cfg x (Branch N ts) \<longleftrightarrow> (
     N = item_rule_head x \<and> map root_tree ts = take (item_dot x) (item_rule_body x) \<and>
     (\<forall>t \<in> set ts. wf_rule_tree cfg t))"
 
@@ -2411,7 +2411,7 @@ definition wf_yield_tree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a 
 
 datatype 'a forest =
   FLeaf 'a
-| FNode 'a "'a forest list list"
+| FBranch 'a "'a forest list list"
 
 fun combinations :: "'a set list \<Rightarrow> 'a list set" where
   "combinations [] = {[]}"
@@ -2421,25 +2421,25 @@ value "combinations [{1,2},{3},{4,5::nat}]"
 
 fun trees :: "'a forest \<Rightarrow> 'a tree set" where
   "trees (FLeaf a) = {Leaf a}"
-| "trees (FNode N fss) = (
+| "trees (FBranch N fss) = (
     let tss = map (\<lambda>fs. \<Union>((\<lambda>f. trees f) ` (set fs))) fss in
-    (\<lambda>ts. Node N ts) ` (combinations tss)
+    (\<lambda>ts. Branch N ts) ` (combinations tss)
   )"
 
-value "trees (FNode (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FNode 5 [[FLeaf 6, FLeaf 7]]]])"
+value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
 
 function build_tree' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree" where
   "build_tree' bs inp k i = (
     let e = bs!k!i in (
     case pointer e of
-      Null \<Rightarrow> Node (item_rule_head (item e)) [] \<comment>\<open>start building sub-tree\<close>
+      Null \<Rightarrow> Branch (item_rule_head (item e)) [] \<comment>\<open>start building sub-tree\<close>
     | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-tree starting from terminal\<close>
       case build_tree' bs inp (k-1) pre of
-        Node N ts \<Rightarrow> Node N (ts @ [Leaf (inp!(k-1))])
+        Branch N ts \<Rightarrow> Branch N (ts @ [Leaf (inp!(k-1))])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>add sub-tree starting from non-terminal\<close>
       case build_tree' bs inp k' pre of
-        Node N ts \<Rightarrow> Node N (ts @ [build_tree' bs inp k red])
+        Branch N ts \<Rightarrow> Branch N (ts @ [build_tree' bs inp k red])
       | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
     ))"
   by pat_completeness auto
@@ -2890,15 +2890,15 @@ lemma sound_ptrs_\<II>_it:
 subsection \<open>Parse tree lemmas\<close>
 
 lemma build_tree'_simps[simp]:
-  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_tree' bs inp k i = Node (item_rule_head (item e)) []"
-  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_tree' bs inp (k-1) pre = Node N ts \<Longrightarrow> 
-    build_tree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> build_tree' bs inp k' pre = Node N ts \<Longrightarrow>
-    build_tree' bs inp k i = Node N (ts @ [build_tree' bs inp k red])"
+  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_tree' bs inp k i = Branch (item_rule_head (item e)) []"
+  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_tree' bs inp (k-1) pre = Branch N ts \<Longrightarrow> 
+    build_tree' bs inp k i = Branch N (ts @ [Leaf (inp!(k-1))])"
+  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> build_tree' bs inp k' pre = Branch N ts \<Longrightarrow>
+    build_tree' bs inp k i = Branch N (ts @ [build_tree' bs inp k red])"
   by (auto simp: build_tree'.simps Let_def)
 
-lemma ex_Node_build_tree':
-  "\<exists>N ts. build_tree' bs inp k i = Node N ts"
+lemma ex_Branch_build_tree':
+  "\<exists>N ts. build_tree' bs inp k i = Branch N ts"
   apply (induction bs inp k i rule: build_tree'.induct)
   apply (subst build_tree'.simps)
   apply (auto simp: Let_def split: list.splits tree.splits pointer.splits)
@@ -2906,7 +2906,7 @@ lemma ex_Node_build_tree':
 
 lemma nex_Leaf_build_tree':
   "\<nexists>a. build_tree' bs inp k i = Leaf a"
-  using ex_Node_build_tree' by (metis tree.distinct(1))
+  using ex_Branch_build_tree' by (metis tree.distinct(1))
   
 lemma wf_item_tree_build_tree':
   assumes "wf_bins cfg inp bs"
@@ -2922,7 +2922,7 @@ proof (induction bs inp k i rule: build_tree'.induct)
   thus ?case
   proof cases
     case Null
-    hence 0: "build_tree' bs inp k i = Node (item_rule_head (item ?e)) []"
+    hence 0: "build_tree' bs inp k i = Branch (item_rule_head (item ?e)) []"
       by simp
     have "predicts (item ?e)"
       using Null "1.prems"(2,3,4) nth_mem unfolding sound_ptrs_def sound_null_ptr_def by blast
@@ -2934,9 +2934,9 @@ proof (induction bs inp k i rule: build_tree'.induct)
     case Pre
     then obtain pre where pre: "pointer ?e = Pre pre"
       by blast
-    obtain N ts where node: "build_tree' bs inp (k-1) pre = Node N ts"
-      by (meson ex_Node_build_tree')
-    hence simp: "build_tree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+    obtain N ts where node: "build_tree' bs inp (k-1) pre = Branch N ts"
+      by (meson ex_Branch_build_tree')
+    hence simp: "build_tree' bs inp k i = Branch N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "pre < length (bs!(k-1))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
@@ -2964,9 +2964,9 @@ proof (induction bs inp k i rule: build_tree'.induct)
     case PreRed
     then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
       by auto
-    obtain N ts where node: "build_tree' bs inp k' pre = Node N ts"
-      by (meson ex_Node_build_tree')
-    hence simp: "build_tree' bs inp k i = Node N (ts @ [build_tree' bs inp k red])"
+    obtain N ts where node: "build_tree' bs inp k' pre = Branch N ts"
+      by (meson ex_Branch_build_tree')
+    hence simp: "build_tree' bs inp k i = Branch N (ts @ [build_tree' bs inp k red])"
       using prered by simp
     have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)"
       using "1.prems" prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)+
@@ -2989,14 +2989,14 @@ proof (induction bs inp k i rule: build_tree'.induct)
     also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (build_tree' bs inp k red)]"
       using IH_pre node by force
     also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!red))]"
-      using IH_red ex_Node_build_tree' by (metis root_tree.simps(2) wf_item_tree.simps(2))
+      using IH_red ex_Branch_build_tree' by (metis root_tree.simps(2) wf_item_tree.simps(2))
     also have "... = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))"
       using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
     finally have 0: "map root_tree (ts @ [build_tree' bs inp k red]) = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))" .
     have wf: "wf_item cfg inp (item (bs!k!red))"
       using "1.prems" bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-    obtain N' ts' where node': "build_tree' bs inp k red = Node N' ts'"
-      by (meson ex_Node_build_tree')
+    obtain N' ts' where node': "build_tree' bs inp k red = Branch N' ts'"
+      by (meson ex_Branch_build_tree')
     hence "N' = item_rule_head (item (bs!k!red))"
           "map root_tree ts' = item_rule_body (item (bs!k!red))"
       using IH_red *(5) by (auto simp: is_complete_def)
@@ -3023,7 +3023,7 @@ proof (induction bs inp k i rule: build_tree'.induct)
   thus ?case
   proof cases
     case Null
-    hence simp: "build_tree' bs inp k i = Node (item_rule_head (item ?e)) []"
+    hence simp: "build_tree' bs inp k i = Branch (item_rule_head (item ?e)) []"
       by simp
     have "predicts (item ?e)"
       using Null "1.prems"(2,3,4) unfolding sound_ptrs_def sound_null_ptr_def by simp
@@ -3035,9 +3035,9 @@ proof (induction bs inp k i rule: build_tree'.induct)
     case Pre
     then obtain pre where pre: "pointer ?e = Pre pre"
       by blast
-    obtain N ts where node: "build_tree' bs inp (k-1) pre = Node N ts"
-      by (meson ex_Node_build_tree')
-    hence simp: "build_tree' bs inp k i = Node N (ts @ [Leaf (inp!(k-1))])"
+    obtain N ts where node: "build_tree' bs inp (k-1) pre = Branch N ts"
+      by (meson ex_Branch_build_tree')
+    hence simp: "build_tree' bs inp k i = Branch N (ts @ [Leaf (inp!(k-1))])"
       using pre by simp
     have bounds: "k > 0" "pre < length (bs!(k-1))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)+
@@ -3071,9 +3071,9 @@ proof (induction bs inp k i rule: build_tree'.induct)
     case PreRed
     then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
       by auto
-    obtain N ts where node: "build_tree' bs inp k' pre = Node N ts"
-      by (meson ex_Node_build_tree')
-    hence simp: "build_tree' bs inp k i = Node N (ts @ [build_tree' bs inp k red])"
+    obtain N ts where node: "build_tree' bs inp k' pre = Branch N ts"
+      by (meson ex_Branch_build_tree')
+    hence simp: "build_tree' bs inp k i = Branch N (ts @ [build_tree' bs inp k red])"
       using prered by simp
     have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)"
       using "1.prems"(2,3,4) prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)+
@@ -3130,8 +3130,8 @@ proof -
     using wf_item_tree_build_tree' assms(1,2) i k(1) x by blast
   have wf_item: "wf_item cfg inp (item (bs!?k!i))"
     using k(1) i assms(1) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-  obtain N ts where node: "build_tree' bs inp ?k i = Node N ts"
-    by (meson ex_Node_build_tree')
+  obtain N ts where node: "build_tree' bs inp ?k i = Branch N ts"
+    by (meson ex_Branch_build_tree')
   hence "N = item_rule_head x"
     "map root_tree ts = item_rule_body x"
     using finished wf_item_rule by (auto simp: is_finished_def is_complete_def)
