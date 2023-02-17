@@ -74,7 +74,7 @@ subsection \<open>Definitions\<close>
 datatype pointer =
   Null
   | Pre nat
-  | PreRed "(nat \<times> nat \<times> nat)" "(nat \<times> nat \<times> nat) list"
+  | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list"
 
 datatype 'a entry =
   Entry
