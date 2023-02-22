@@ -3295,7 +3295,7 @@ lemma wf_item_tree_build_forest':
   assumes "t \<in> trees (build_forest' bs inp k i)"
   shows "wf_item_tree cfg (item (bs!k!i)) t"
   using assms
-proof (induction bs inp k i rule: build_forest'.induct)
+proof (induction bs inp k i arbitrary: t rule: build_forest'.induct)
   case (1 bs inp k i)
   let ?e = "bs!k!i"
   consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
@@ -3317,6 +3317,31 @@ proof (induction bs inp k i rule: build_forest'.induct)
     case Pre
     then obtain pre where pre: "pointer ?e = Pre pre"
       by blast
+    obtain N fss where node: "build_forest' bs inp (k-1) pre = FBranch N fss"
+      by (meson ex_Branch_build_forest')
+    have simp: "build_forest' bs inp k i = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
+      by (meson build_forest'_simps(2) node pre)
+
+    define tss where tss: "tss = map (\<lambda>fs. \<Union>((\<lambda>f. trees f) ` (set fs))) fss"
+
+    have trees: "trees (build_forest' bs inp k i) =
+      (\<lambda>ts. Branch N ts) ` { xs @ ys | xs ys. xs \<in> combinations tss \<and> ys \<in> { [t] | t. t \<in> { Leaf (inp!(k-1)) } } }"
+      by (subst simp, subst tss, subst trees_append_single_singleton, simp)
+
+    have bounds: "pre < length (bs!(k-1))"
+      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
+    have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
+      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
+
+
+    have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (build_tree' bs inp (k-1) pre)"
+      using "1.IH"(1) pre "1.prems"(1,2,3,4) bounds by simp
+
+    thm "1.IH"(1)
+
+    thm "1"(8)
+
+
     obtain N ts where node: "build_tree' bs inp (k-1) pre = Branch N ts"
       by (meson ex_Branch_build_tree')
     hence simp: "build_tree' bs inp k i = Branch N (ts @ [Leaf (inp!(k-1))])"
