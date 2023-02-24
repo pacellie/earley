@@ -3287,7 +3287,9 @@ lemma trees_append_single_singleton:
     let xtss = map (\<lambda>xs. \<Union>((\<lambda>x. trees x) ` (set xs))) xss in
     (\<lambda>ts. Branch N ts) ` { xs @ ys | xs ys. xs \<in> combinations xtss \<and> ys \<in> { [t] | t. t \<in> trees y } })"
   by (subst trees_append_singleton, auto)
-  
+
+value "combinations [{1::nat,2}]"
+
 lemma wf_item_tree_build_forest':
   assumes "wf_bins cfg inp bs"
   assumes "sound_ptrs inp bs"
@@ -3319,59 +3321,76 @@ proof (induction bs inp k i arbitrary: t rule: build_forest'.induct)
       by blast
     obtain N fss where node: "build_forest' bs inp (k-1) pre = FBranch N fss"
       by (meson ex_Branch_build_forest')
+    define tss where tss: "tss = map (\<lambda>fs. \<Union>((\<lambda>f. trees f) ` (set fs))) fss"
     have simp: "build_forest' bs inp k i = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
       by (meson build_forest'_simps(2) node pre)
-
-    define tss where tss: "tss = map (\<lambda>fs. \<Union>((\<lambda>f. trees f) ` (set fs))) fss"
-
-    have trees: "trees (build_forest' bs inp k i) =
-      (\<lambda>ts. Branch N ts) ` { xs @ ys | xs ys. xs \<in> combinations tss \<and> ys \<in> { [t] | t. t \<in> { Leaf (inp!(k-1)) } } }"
+    have "trees (build_forest' bs inp k i) =
+      (\<lambda>ts. Branch N ts) ` { ts @ [Leaf (inp!(k-1))] | ts. ts \<in> combinations tss }"
       by (subst simp, subst tss, subst trees_append_single_singleton, simp)
-
-    have bounds: "pre < length (bs!(k-1))"
+    then obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> combinations tss"
+      using "1"(8) by blast
+    have "pre < length (bs!(k-1))"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
-    have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
+    moreover have "Branch N ts \<in> trees (build_forest' bs inp (k-1) pre)"
+      using node ts tss by simp
+    ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
+      using "1.IH"(1) "1.prems"(1-3) less_imp_diff_less pre by presburger
+    have scans: "scans inp k (item (bs!(k-1)!pre)) (item ?e)"
       using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
-
-
-    have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (build_tree' bs inp (k-1) pre)"
-      using "1.IH"(1) pre "1.prems"(1,2,3,4) bounds by simp
-
-    thm "1.IH"(1)
-
-    thm "1"(8)
-
-
-    obtain N ts where node: "build_tree' bs inp (k-1) pre = Branch N ts"
-      by (meson ex_Branch_build_tree')
-    hence simp: "build_tree' bs inp k i = Branch N (ts @ [Leaf (inp!(k-1))])"
-      using pre by simp
-    have bounds: "pre < length (bs!(k-1))"
-      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
-    have scans: "scans inp k (item (bs!(k-1)!pre)) (item (bs!k!i))"
-      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
-    have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (build_tree' bs inp (k-1) pre)"
-      using "1.IH"(1) pre "1.prems"(1,2,3,4) bounds by simp
     hence *: 
-      "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item (bs!k!i))"
-      "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item (bs!k!i))"
-      "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item (bs!k!i))"
+      "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item ?e)"
+      "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item ?e)"
+      "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item ?e)"
       "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
-      using scans unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
+      unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
     have "map root_tree (ts @ [Leaf (inp!(k-1))]) = map root_tree ts @ [inp!(k-1)]"
       by simp
     also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
       using IH node by simp
-    also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!k!i))) @ [inp!(k-1)]"
+    also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item ?e)) @ [inp!(k-1)]"
       using *(2) by simp
-    also have "... = take (item_dot (item (bs!k!i))) (item_rule_body (item (bs!k!i)))"
+    also have "... = take (item_dot (item ?e)) (item_rule_body (item ?e))"
       using *(2-4) by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
-    finally show ?thesis
-      using *(1) IH node simp by simp
+    finally have "map root_tree (ts @ [Leaf (inp!(k-1))]) = take (item_dot (item ?e)) (item_rule_body (item ?e))" .
+    hence "wf_item_tree cfg (item ?e) (Branch N (ts @ [Leaf (inp!(k-1))]))"
+      using IH *(1) by simp
+    thus ?thesis
+      using ts by blast
   next
     case PreRed
-    then obtain k' pre red ps where prered: "pointer ?e = PreRed (k', pre, red) ps"
+    then obtain k' pre red reds where prered: "pointer ?e = PreRed (k', pre, red) reds"
       by auto
+    obtain N fss where node: "build_forest' bs inp k' pre = FBranch N fss"
+      by (meson ex_Branch_build_forest')
+    define tss where tss: "tss = map (\<lambda>fs. \<Union>((\<lambda>f. trees f) ` (set fs))) fss"
+    have simp: "build_forest' bs inp k i = FBranch N (fss @ [map (build_forest' bs inp k) (red#reds)])"
+      using build_forest'_simps(3) node prered by simp
+    have "trees (build_forest' bs inp k i) =
+      (\<lambda>ts. Branch N ts) ` { ts0 @ ts1 | ts0 ts1. ts0 \<in> combinations tss \<and>
+        ts1 \<in> combinations ([\<Union>(set (map (\<lambda>r. trees (build_forest' bs inp k r)) (red#reds)))]) }"
+      by (subst simp, subst tss, subst trees_append_singleton, simp)
+    then obtain ts0 ts1 where tsx: "t = Branch N (ts0 @ ts1)" "ts0 \<in> combinations tss"
+      "ts1 \<in> combinations ([\<Union>(set (map (\<lambda>r. trees (build_forest' bs inp k r)) (red#reds)))])"
+      using "1.prems"(5) by blast
+
+    then obtain r where "r \<in> set (red#reds)" "ts1 \<in> combinations ([trees (build_forest' bs inp k r)])"
+      sledgehammer
+
+    have bounds: "k' < k" "pre < length (bs!k')" "red < length (bs!k)"
+      using "1.prems" prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis list.set_intros(1) nth_mem)+
+    have completes: "\<forall>r \<in> set (red#reds). completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!r))"
+      using "1.prems" prered unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
+
+    have "Branch N ts0 \<in> trees (build_forest' bs inp k' pre)"
+      using node tss tsx(2) by force
+    hence IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (Branch N ts0)"
+      using "1.IH"(2) "1.prems"(1-3) bounds(1,2) prered by fastforce
+
+    obtain r where "Branch N ts1 \<in> trees (build_forest' bs inp k r)"
+      sledgehammer
+
+
+
     obtain N ts where node: "build_tree' bs inp k' pre = Branch N ts"
       by (meson ex_Branch_build_tree')
     hence simp: "build_tree' bs inp k i = Branch N (ts @ [build_tree' bs inp k red])"
