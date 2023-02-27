@@ -3216,12 +3216,12 @@ qed
 
 theorem wf_rule_root_yield_tree_build_forest:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
-  assumes "fs \<in> set (build_forest cfg inp bs)" "t \<in> trees fs"
+  assumes "f \<in> set (build_forest cfg inp bs)" "t \<in> trees f"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
 proof -
   let ?k = "length bs - 1"
   obtain x i where *: "(x,i) \<in> set (filter_with_index (is_finished cfg inp) (items (bs!?k)))"
-    "fs = build_forest' bs inp ?k i {i}" "t \<in> trees fs"
+    "f = build_forest' bs inp ?k i {i}" "t \<in> trees f"
     using assms(4,5) unfolding build_forest_def by (auto simp: Let_def)
   have k: "?k < length bs" "?k \<le> length inp"
     using assms(3) by simp_all
@@ -3256,14 +3256,14 @@ qed
 
 corollary wf_rule_root_yield_tree_build_forest_\<II>_it:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
-  assumes "fs \<in> set (build_forest cfg inp (\<II>_it cfg inp))" "t \<in> trees fs"
+  assumes "f \<in> set (build_forest cfg inp (\<II>_it cfg inp))" "t \<in> trees f"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
   using assms wf_rule_root_yield_tree_build_forest wf_bins_\<II>_it sound_ptrs_\<II>_it \<II>_it_def
     length_\<I>_it length_bins_Init_it by (metis nle_le)
 
 theorem soundness_build_forest_\<II>_it:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  assumes "fs \<in> set (build_forest cfg inp (\<II>_it cfg inp))" "t \<in> trees fs"
+  assumes "f \<in> set (build_forest cfg inp (\<II>_it cfg inp))" "t \<in> trees f"
   shows "derives cfg [\<SS> cfg] inp"
 proof -
   let ?k = "length (\<II>_it cfg inp) - 1"

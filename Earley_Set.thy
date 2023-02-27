@@ -1060,8 +1060,8 @@ lemma finiteness_empty:
   "set (\<RR> cfg) = {} \<Longrightarrow> finite { x | x. wf_item cfg inp x }"
   unfolding wf_item_def by simp
 
-fun f :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" where
-  "f (rule, dot, origin, ends) = Item rule dot origin ends" 
+fun item_intro :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" where
+  "item_intro (rule, dot, origin, ends) = Item rule dot origin ends" 
 
 lemma finiteness_nonempty:
   assumes "set (\<RR> cfg) \<noteq> {}"
@@ -1071,11 +1071,11 @@ proof -
   define Top where "Top = (set (\<RR> cfg) \<times> {0..M} \<times> {0..length inp} \<times> {0..length inp})"
   hence "finite Top"
     using finite_cartesian_product finite by blast
-  have "inj_on f Top"
+  have "inj_on item_intro Top"
     unfolding Top_def inj_on_def by simp
-  hence "finite (f ` Top)"
+  hence "finite (item_intro ` Top)"
     using finite_image_iff \<open>finite Top\<close> by auto
-  have "{ x | x. wf_item cfg inp x } \<subseteq> f ` Top"
+  have "{ x | x. wf_item cfg inp x } \<subseteq> item_intro ` Top"
   proof standard
     fix x
     assume "x \<in> { x | x. wf_item cfg inp x }"
@@ -1092,11 +1092,11 @@ proof -
       using *(1,3) item_rule_body_def by (metis item.sel(1) le_trans)
     hence "(rule, dot, origin, endp) \<in> Top"
       using *(2,4,5) unfolding Top_def by simp
-    thus "x \<in> f ` Top"
+    thus "x \<in> item_intro ` Top"
       using *(1) by force
   qed
   thus ?thesis
-    using \<open>finite (f ` Top)\<close> rev_finite_subset by auto
+    using \<open>finite (item_intro ` Top)\<close> rev_finite_subset by auto
 qed
 
 lemma finiteness_UNIV_wf_item:
