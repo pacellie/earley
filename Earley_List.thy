@@ -114,9 +114,6 @@ definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Righ
 definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
   "nonempty_derives cfg = (\<forall>N. N \<in> set (\<NN> cfg) \<longrightarrow> \<not> derives cfg [N] [])"
 
-
-subsection \<open>Main algorithm\<close>
-
 definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
   "Init_it cfg inp = (
     let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
@@ -2417,8 +2414,10 @@ fun combinations :: "'a set list \<Rightarrow> 'a list set" where
   "combinations [] = {[]}"
 | "combinations (xs#xss) = \<Union> ((\<lambda>x. (\<lambda>c. x # c) ` (combinations xss))` xs)"
 
-value "combinations [{1,2},{3},{4,5::nat}]"
+value "combinations [{1,2},{3},{4,5::nat},{6,7}]"
 value "combinations ([{1,2},{3}] @ [{4::nat,5}])"
+
+
 
 fun trees :: "'a forest \<Rightarrow> 'a tree set" where
   "trees (FLeaf a) = {Leaf a}"
@@ -3286,6 +3285,100 @@ proof -
   thus ?thesis
     using correctness_list assms by blast
 qed
+
+
+section \<open>Experiment\<close>
+
+(*
+definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+  "Init_it cfg inp = (
+    let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
+    let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
+    let bs = replicate (length inp + 1) ([]) in
+    bs[0 := b0])"
+
+definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+  "Scan_it k inp a x pre = (
+    if inp!k = a then
+      let x' = inc_item x (k+1) in
+      [Entry x' (Pre pre)]
+    else [])"
+
+definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
+  "Predict_it k cfg X = (
+    let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
+    map (\<lambda>r. (Entry (init_item r k) Null)) rs)"
+
+definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+  "Complete_it k y bs red = (
+    let orig = bs ! (item_origin y) in
+    let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
+    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is)"
+
+fun bin_upd :: "'a entry \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
+  "bin_upd e' [] = [e']"
+| "bin_upd e' (e#es) = (
+    case (e', e) of
+      (Entry x (PreRed px xs), Entry y (PreRed py ys)) \<Rightarrow> 
+        if x = y then Entry x (PreRed px (snd (snd py)#xs@ys)) # es
+        else e # bin_upd e' es
+      | _ \<Rightarrow> 
+        if item e' = item e then e # es
+        else e # bin_upd e' es)"
+
+fun bin_upds :: "'a entry list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
+  "bin_upds [] b = b"
+| "bin_upds (e#es) b = bin_upds es (bin_upd e b)"
+
+definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<Rightarrow> 'a bins" where
+  "bins_upd bs k es = bs[k := bin_upds es (bs!k)]"
+
+partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
+  "\<pi>_it' k cfg inp bs i = (
+    if i \<ge> length (items (bs ! k)) then bs
+    else
+      let x = items (bs!k) ! i in
+      let bs' =
+        case next_symbol x of
+          Some a \<Rightarrow>
+            if is_terminal cfg a then
+              if k < length inp then bins_upd bs (k+1) (Scan_it k inp a x i)
+              else bs
+            else bins_upd bs k (Predict_it k cfg a)
+        | None \<Rightarrow> bins_upd bs k (Complete_it k x bs i)
+      in \<pi>_it' k cfg inp bs' (i+1))"
+
+function build_forest' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest" where
+  "build_forest' bs inp k i I = (
+    let e = bs!k!i in (
+    case pointer e of
+      Null \<Rightarrow> FBranch (item_rule_head (item e)) [] \<comment>\<open>start building sub-forest\<close>
+    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-forest starting from terminal\<close>
+      case build_forest' bs inp (k-1) pre {pre} of
+        FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]])
+      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
+    | PreRed (k', pre, red) reds \<Rightarrow> ( \<comment>\<open>add sub-forest starting from non-terminal\<close>
+      case build_forest' bs inp k' pre {pre} of
+        FBranch N fss \<Rightarrow>
+          let reds' = filter (\<lambda>r. r \<notin> I) (red#reds) in
+          FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])
+      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
+    ))"
+  by pat_completeness auto
+termination sorry
+
+declare \<pi>_it'.simps[code]
+
+definition \<pi>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
+  "\<pi>_it k cfg inp bs = \<pi>_it' k cfg inp bs 0"
+
+fun \<I>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+  "\<I>_it 0 cfg inp = \<pi>_it 0 cfg inp (Init_it cfg inp)"
+| "\<I>_it (Suc n) cfg inp = \<pi>_it (Suc n) cfg inp (\<I>_it n cfg inp)"
+
+definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+  "\<II>_it cfg inp = \<I>_it (length inp) cfg inp"
+*)
 
 (*
 

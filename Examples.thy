@@ -51,9 +51,9 @@ lemma correctness1:
 
 value "\<II>_it cfg1 inp1"
 value "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1"
-value "build_tree cfg1 inp1 (\<II>_it cfg1 inp1)"
+value "build_forest cfg1 inp1 (\<II>_it cfg1 inp1)"
 
-export_code earley_recognized_it in SML
+export_code earley_recognized_it in Scala
 
 subsection \<open>Example 2: Addition performance sanity check\<close>
 
@@ -62,20 +62,8 @@ fun size_bins :: "'a bins \<Rightarrow> nat" where
 
 definition inp1' :: "s1 list" where
   "inp1' = [
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
+    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x,
+    Terminal plus, Terminal x
   ]"
 
 lemma is_word_inp1':
@@ -89,7 +77,8 @@ lemma correctness1':
 value "\<II>_it cfg1 inp1'"
 value "size_bins (\<II>_it cfg1 inp1')"
 value "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1'"
-value "build_tree cfg1 inp1' (\<II>_it cfg1 inp1')"
+value "build_forest cfg1 inp1' (\<II>_it cfg1 inp1')"
+value "map trees (build_forest cfg1 inp1' (\<II>_it cfg1 inp1'))"
 
 subsection \<open>Example 3: Cyclic reduction pointers\<close>
 
@@ -139,6 +128,6 @@ lemma correctness2:
 
 value "\<II>_it cfg2 inp2"
 value "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2"
-value "build_tree cfg2 inp2 (\<II>_it cfg2 inp2)" \<comment>\<open>TODO: this should not terminate in case of a forest\<close>
+value "build_forest cfg2 inp2 (\<II>_it cfg2 inp2)"
 
 end
