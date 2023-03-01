@@ -3403,11 +3403,67 @@ fun \<I>_itT :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow
 definition \<II>_itT :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a binsT" where
   "\<II>_itT cfg inp = \<I>_itT (length inp) cfg inp"
 
-definition fss :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a forest list" where
-  "fss cfg inp = (
+definition fss' :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a forest list" where
+  "fss' cfg inp = (
     let bs = \<II>_itT cfg inp in
     let x = filter (\<lambda>e. is_finished cfg inp (itemT e)) (bs!(length bs - 1)) in
     map (\<lambda>e. forestT e) x
+  )"
+
+
+
+section \<open>Memoization???\<close>
+
+function build_forest'_memo :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a forest option list list \<Rightarrow> ('a forest option) list list" where
+  "build_forest'_memo bs inp k i out = (
+    let e = bs!k!i in
+    let f = (
+      case pointer e of
+        Null \<Rightarrow> FBranch (item_rule_head (item e)) []
+      | Pre pre \<Rightarrow> (
+        let out' =
+          case (out!(k-1)!pre) of
+            Some _ \<Rightarrow> out
+          | None \<Rightarrow> build_forest'_memo bs inp (k-1) pre out
+        in
+        case out'!(k-1)!pre of
+          Some (FBranch N fss) \<Rightarrow> FBranch N ([FLeaf (inp!(k-1))] # fss)
+        | _ \<Rightarrow> undefined
+      )
+      | PreRed (k', pre, red) reds \<Rightarrow> (
+        let out' =  
+          case (out!k'!pre) of
+            Some _ \<Rightarrow> out
+          | None \<Rightarrow> build_forest'_memo bs inp k' pre out
+        in
+        case out'!k'!pre of
+          Some (FBranch N fss) \<Rightarrow>
+            let reds' = filter (\<lambda>r. r
+        | _ \<Rightarrow> undefined
+      )
+    ) in
+    out[k := (out!k)[i := Some f]]
+  )"
+
+(*
+    | PreRed (k', pre, red) reds \<Rightarrow> ( \<comment>\<open>add sub-forest starting from non-terminal\<close>
+      case build_forest' bs inp k' pre {pre} of
+        FBranch N fss \<Rightarrow>
+          let reds' = filter (\<lambda>r. r \<notin> I) (red#reds) in
+          FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])
+      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
+    ))"
+  by pat_completeness auto
+termination sorry
+*)
+
+declare build_forest'.simps [simp del]
+
+definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a forest list" where
+  "build_forest cfg inp bs = (
+    let k = length bs - 1 in
+    let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
+    map (\<lambda>(_, i). build_forest' bs inp k i {i}) finished
   )"
 
 end
