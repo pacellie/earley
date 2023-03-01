@@ -2414,10 +2414,12 @@ fun combinations :: "'a set list \<Rightarrow> 'a list set" where
   "combinations [] = {[]}"
 | "combinations (xs#xss) = \<Union> ((\<lambda>x. (\<lambda>c. x # c) ` (combinations xss))` xs)"
 
-value "combinations [{1,2},{3},{4,5::nat},{6,7}]"
-value "combinations ([{1,2},{3}] @ [{4::nat,5}])"
+fun combinations' :: "'a list list \<Rightarrow> 'a list list" where
+  "combinations' [] = [[]]"
+| "combinations' (xs#xss) = concat (map (\<lambda>x. map (\<lambda>cs. x # cs) (combinations' xss)) xs)"
 
-
+value "combinations [{1,2},{3},{4,5::nat}]"
+value "combinations' [[1,2],[3],[4,5::nat]]"
 
 fun trees :: "'a forest \<Rightarrow> 'a tree set" where
   "trees (FLeaf a) = {Leaf a}"
@@ -2426,7 +2428,15 @@ fun trees :: "'a forest \<Rightarrow> 'a tree set" where
     (\<lambda>ts. Branch N ts) ` (combinations tss)
   )"
 
+fun trees' :: "'a forest \<Rightarrow> 'a tree list" where
+  "trees' (FLeaf a) = [Leaf a]"
+| "trees' (FBranch N fss) = (
+    let tss = (map (\<lambda>fs. concat (map (\<lambda>f. trees' f) fs)) fss) in
+    map (\<lambda>ts. Branch N ts) (combinations' tss)
+  )"
+
 value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
+value "trees' (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
 
 function build_forest' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest" where
   "build_forest' bs inp k i I = (
@@ -3289,119 +3299,115 @@ qed
 
 section \<open>Experiment\<close>
 
-(*
-definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
-  "Init_it cfg inp = (
+datatype 'a entryT =
+  EntryT
+    (itemT : "'a item")
+    (forestT : "'a forest")
+
+type_synonym 'a binT = "'a entryT list"
+type_synonym 'a binsT = "'a binT list"
+
+definition itemsT :: "'a binT \<Rightarrow> 'a item list" where
+  "itemsT b = map itemT b"
+
+definition forests :: "'a binT \<Rightarrow> 'a forest list" where
+  "forests b = map forestT b"
+
+definition Init_itT :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a binsT" where
+  "Init_itT cfg inp = (
     let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
-    let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
+    let b0 = map (\<lambda>r. (EntryT (init_item r 0) (FBranch (\<SS> cfg) []))) rs in
     let bs = replicate (length inp + 1) ([]) in
     bs[0 := b0])"
 
-definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry list" where
-  "Scan_it k inp a x pre = (
+fun bin_updT :: "'a entryT \<Rightarrow> 'a binT \<Rightarrow> 'a binT" where
+  "bin_updT e' [] = [e']"
+| "bin_updT e' (e#es) = (
+    case (e', e) of
+      (EntryT x (FBranch N fss), EntryT y (FBranch N' fss')) \<Rightarrow>
+        if x = y then
+          EntryT x (FBranch N (fss[0 := fss!0 @ fss'!0])) # es
+        else e # bin_updT e' es
+    | _ \<Rightarrow>
+      if itemT e' = itemT e then e # es
+      else e # bin_updT e' es
+  )"
+
+fun bin_updsT :: "'a entryT list \<Rightarrow> 'a binT \<Rightarrow> 'a binT" where
+  "bin_updsT [] b = b"
+| "bin_updsT (e#es) b = bin_updsT es (bin_updT e b)"
+
+definition bins_updT :: "'a binsT \<Rightarrow> nat \<Rightarrow> 'a entryT list \<Rightarrow> 'a binsT" where
+  "bins_updT bs k es = bs[k := bin_updsT es (bs!k)]"
+
+definition Scan_itT :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> 'a forest \<Rightarrow> nat \<Rightarrow> 'a entryT list" where
+  "Scan_itT k inp a x f pre = (
     if inp!k = a then
       let x' = inc_item x (k+1) in
-      [Entry x' (Pre pre)]
+      case f of
+        FBranch N fss \<Rightarrow> let f' = FBranch N ([FLeaf a] # fss) in [EntryT x' f']
+      | _ \<Rightarrow> []
     else [])"
 
-definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
-  "Predict_it k cfg X = (
+definition Predict_itT :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entryT list" where
+  "Predict_itT k cfg X = (
     let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
-    map (\<lambda>r. (Entry (init_item r k) Null)) rs)"
+    map (\<lambda>r. (EntryT (init_item r k) (FBranch X []))) rs)"
 
-definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
-  "Complete_it k y bs red = (
+definition Complete_itT :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a forest \<Rightarrow> 'a binsT \<Rightarrow> nat \<Rightarrow> 'a entryT list" where
+  "Complete_itT k y f bs red = (
     let orig = bs ! (item_origin y) in
-    let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
-    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is)"
+    let pres = filter (\<lambda>e. next_symbol (itemT e) = Some (item_rule_head y)) orig in
+    let es = map (\<lambda>e.
+      case forestT e of
+        FBranch N fss \<Rightarrow> [EntryT (inc_item (itemT e) k) (FBranch N ([f] # fss))]
+      | _ \<Rightarrow> []
+    ) pres in
+    concat es
+  )"
 
-fun bin_upd :: "'a entry \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
-  "bin_upd e' [] = [e']"
-| "bin_upd e' (e#es) = (
-    case (e', e) of
-      (Entry x (PreRed px xs), Entry y (PreRed py ys)) \<Rightarrow> 
-        if x = y then Entry x (PreRed px (snd (snd py)#xs@ys)) # es
-        else e # bin_upd e' es
-      | _ \<Rightarrow> 
-        if item e' = item e then e # es
-        else e # bin_upd e' es)"
-
-fun bin_upds :: "'a entry list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
-  "bin_upds [] b = b"
-| "bin_upds (e#es) b = bin_upds es (bin_upd e b)"
-
-definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<Rightarrow> 'a bins" where
-  "bins_upd bs k es = bs[k := bin_upds es (bs!k)]"
-
-partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
-  "\<pi>_it' k cfg inp bs i = (
-    if i \<ge> length (items (bs ! k)) then bs
+partial_function (tailrec) \<pi>_it'T :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a binsT \<Rightarrow> nat \<Rightarrow> 'a binsT" where
+  "\<pi>_it'T k cfg inp bs i = (
+    if i \<ge> length (itemsT (bs ! k)) then bs
     else
-      let x = items (bs!k) ! i in
+      let e = bs!k!i in
       let bs' =
-        case next_symbol x of
+        case next_symbol (itemT e) of
           Some a \<Rightarrow>
             if is_terminal cfg a then
-              if k < length inp then bins_upd bs (k+1) (Scan_it k inp a x i)
+              if k < length inp \<and> inp!k = a then
+                let e' = case (forestT e) of
+                  FBranch N fss \<Rightarrow>
+                    EntryT (inc_item (itemT e) (k+1)) (FBranch N ([FLeaf a] # fss))
+                | _ \<Rightarrow> undefined in
+                bs[k+1 := bs!(k+1) @ [e']]
               else bs
-            else bins_upd bs k (Predict_it k cfg a)
-        | None \<Rightarrow> bins_upd bs k (Complete_it k x bs i)
-      in \<pi>_it' k cfg inp bs' (i+1))"
+            else
+              let rs = filter (\<lambda>r. rule_head r = a) (\<RR> cfg) in
+              let is = map (\<lambda>r. init_item r k) rs in
+              let is' = filter (\<lambda>i. i \<notin> set (itemsT (bs!k))) is in
+              let es = map (\<lambda>i. EntryT i (FBranch a [])) is' in
+              bs[k := bs!k @ es]
+        | None \<Rightarrow> bins_updT bs k (Complete_itT k (itemT e) (forestT e) bs i)
+      in \<pi>_it'T k cfg inp bs' (i+1))"
 
-function build_forest' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest" where
-  "build_forest' bs inp k i I = (
-    let e = bs!k!i in (
-    case pointer e of
-      Null \<Rightarrow> FBranch (item_rule_head (item e)) [] \<comment>\<open>start building sub-forest\<close>
-    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-forest starting from terminal\<close>
-      case build_forest' bs inp (k-1) pre {pre} of
-        FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]])
-      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
-    | PreRed (k', pre, red) reds \<Rightarrow> ( \<comment>\<open>add sub-forest starting from non-terminal\<close>
-      case build_forest' bs inp k' pre {pre} of
-        FBranch N fss \<Rightarrow>
-          let reds' = filter (\<lambda>r. r \<notin> I) (red#reds) in
-          FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])
-      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
-    ))"
-  by pat_completeness auto
-termination sorry
+declare \<pi>_it'T.simps[code]
 
-declare \<pi>_it'.simps[code]
+definition \<pi>_itT :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a binsT \<Rightarrow> 'a binsT" where
+  "\<pi>_itT k cfg inp bs = \<pi>_it'T k cfg inp bs 0"
 
-definition \<pi>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
-  "\<pi>_it k cfg inp bs = \<pi>_it' k cfg inp bs 0"
+fun \<I>_itT :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a binsT" where
+  "\<I>_itT 0 cfg inp = \<pi>_itT 0 cfg inp (Init_itT cfg inp)"
+| "\<I>_itT (Suc n) cfg inp = \<pi>_itT (Suc n) cfg inp (\<I>_itT n cfg inp)"
 
-fun \<I>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
-  "\<I>_it 0 cfg inp = \<pi>_it 0 cfg inp (Init_it cfg inp)"
-| "\<I>_it (Suc n) cfg inp = \<pi>_it (Suc n) cfg inp (\<I>_it n cfg inp)"
+definition \<II>_itT :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a binsT" where
+  "\<II>_itT cfg inp = \<I>_itT (length inp) cfg inp"
 
-definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
-  "\<II>_it cfg inp = \<I>_it (length inp) cfg inp"
-*)
-
-(*
-
-fun Derivation :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a derivation \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "Derivation _ a [] b = (a = b)"
-| "Derivation cfg a (d#D) b = (\<exists> x. Derives1 cfg a (fst d) (snd d) x \<and> Derivation cfg x D b)"
-*)
-
-find_theorems Derivation "(@)"
-
-lemma A:
-  "t = Branch N ts \<Longrightarrow> wf_rule_tree cfg t \<Longrightarrow> \<exists>D. Derivation cfg [N] D (yield_tree t)"
-proof (induction t arbitrary: N ts)
-  case (Branch N' ts')
-
-  thm wf_rule_tree.simps
-
-  show ?case
-    sorry
-qed simp
-
-lemma B:
-  "t = Branch N ts ==> wf_rule_tree cfg t \<Longrightarrow> derives cfg [N] (yield_tree t)"
-  using A by (metis Derivation_implies_derives)
+definition fss :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a forest list" where
+  "fss cfg inp = (
+    let bs = \<II>_itT cfg inp in
+    let x = filter (\<lambda>e. is_finished cfg inp (itemT e)) (bs!(length bs - 1)) in
+    map (\<lambda>e. forestT e) x
+  )"
 
 end

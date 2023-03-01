@@ -53,7 +53,8 @@ value "\<II>_it cfg1 inp1"
 value "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1"
 value "build_forest cfg1 inp1 (\<II>_it cfg1 inp1)"
 
-export_code earley_recognized_it in Scala
+value "map trees' (fss cfg1 inp1)"
+value "map trees' (build_forest cfg1 inp1 (\<II>_it cfg1 inp1))"
 
 subsection \<open>Example 2: Addition performance sanity check\<close>
 
@@ -63,7 +64,9 @@ fun size_bins :: "'a bins \<Rightarrow> nat" where
 definition inp1' :: "s1 list" where
   "inp1' = [
     Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x,
-    Terminal plus, Terminal x
+    Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x,
+    Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x,
+    Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
   ]"
 
 lemma is_word_inp1':
@@ -74,11 +77,21 @@ lemma correctness1':
   "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1' \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1'"
   using correctness_list wf_cfg1 is_word_inp1' nonempty_derives1 by blast
 
+value "fss cfg1 inp1'"
+value "build_forest cfg1 inp1' (\<II>_it cfg1 inp1')"
+
 value "\<II>_it cfg1 inp1'"
 value "size_bins (\<II>_it cfg1 inp1')"
 value "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1'"
 value "build_forest cfg1 inp1' (\<II>_it cfg1 inp1')"
+
 value "map trees (build_forest cfg1 inp1' (\<II>_it cfg1 inp1'))"
+value "map trees' (build_forest cfg1 inp1' (\<II>_it cfg1 inp1'))"
+
+value "(fss cfg1 inp1')"
+
+value "map length (map trees' (fss cfg1 inp1'))"
+value "map length (map trees' (build_forest cfg1 inp1' (\<II>_it cfg1 inp1')))"
 
 subsection \<open>Example 3: Cyclic reduction pointers\<close>
 
@@ -94,9 +107,9 @@ definition terminals2 :: "s2 list" where
 
 definition rules2 :: "s2 rule list" where
   "rules2 = [
-    (Nonterminal A, [Terminal x]),
+    (Nonterminal B, [Nonterminal A]),
     (Nonterminal A, [Nonterminal B]),
-    (Nonterminal B, [Nonterminal A])
+    (Nonterminal A, [Terminal x])
   ]"
 
 definition start_symbol2 :: s2 where
@@ -129,5 +142,10 @@ lemma correctness2:
 value "\<II>_it cfg2 inp2"
 value "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2"
 value "build_forest cfg2 inp2 (\<II>_it cfg2 inp2)"
+
+value "map trees' (fss cfg2 inp2)"
+value "map trees' (build_forest cfg2 inp2 (\<II>_it cfg2 inp2))"
+
+export_code \<II>_itT in SML
 
 end
