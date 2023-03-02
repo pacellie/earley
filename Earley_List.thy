@@ -3414,6 +3414,7 @@ definition fss' :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a forest lis
 
 section \<open>Memoization???\<close>
 
+(*
 function build_forest'_memo :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a forest option list list \<Rightarrow> ('a forest option) list list" where
   "build_forest'_memo bs inp k i out = (
     let e = bs!k!i in
@@ -3465,5 +3466,6 @@ definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bi
     let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
     map (\<lambda>(_, i). build_forest' bs inp k i {i}) finished
   )"
+*)
 
 end
