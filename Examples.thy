@@ -88,9 +88,6 @@ value "build_forest cfg1 inp1' (\<II>_it cfg1 inp1')"
 value "map trees (build_forest cfg1 inp1' (\<II>_it cfg1 inp1'))"
 value "map trees' (build_forest cfg1 inp1' (\<II>_it cfg1 inp1'))"
 
-value "(fss cfg1 inp1')"
-
-value "map length (map trees' (fss cfg1 inp1'))"
 value "map length (map trees' (build_forest cfg1 inp1' (\<II>_it cfg1 inp1')))"
 
 subsection \<open>Example 3: Cyclic reduction pointers\<close>
@@ -145,7 +142,5 @@ value "build_forest cfg2 inp2 (\<II>_it cfg2 inp2)"
 
 value "map trees' (fss cfg2 inp2)"
 value "map trees' (build_forest cfg2 inp2 (\<II>_it cfg2 inp2))"
-
-export_code \<II>_itT in SML
 
 end
