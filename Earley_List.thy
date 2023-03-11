@@ -2412,7 +2412,7 @@ datatype 'a forest =
 
 fun combinations :: "'a list list \<Rightarrow> 'a list list" where
   "combinations [] = [[]]"
-| "combinations (xs#xss) = concat (map (\<lambda>x. map (\<lambda>cs. x # cs) (combinations xss)) xs)"
+| "combinations (xs#xss) = [ x#cs . x <- xs, cs <- combinations xss ]"
 
 value "combinations [[1,2],[3],[4,5::nat]]"
 
@@ -2915,17 +2915,27 @@ lemma combinations_singleton:
   "combinations ([xs]) = [ [x] . x <- xs ]"
   by auto
 
+lemma list_comp_flatten:
+  "[ f xs . xs <- [ g xs ys . xs <- as, ys <- bs ] ] = [ f (g xs ys) . xs <- as, ys <- bs ]"
+  by (induction as) auto
+
+lemma list_comp_flatten_Cons:
+  "[ x#xs . x <- as, xs <- [ xs @ ys. xs <- bs, ys <- cs ] ] = [ x#xs@ys. x <- as, xs <- bs, ys <- cs ]"
+  by (induction as) (auto simp: list_comp_flatten)
+
+lemma list_comp_flatten_append:
+  "[ xs@ys . xs <- [ x#xs . x <- as, xs <- bs ], ys <- cs ] = [ x#xs@ys . x <- as, xs <- bs, ys <- cs ]"
+  by (induction as) (auto simp: o_def, meson append_Cons map_eq_conv)
+
 lemma combinations_append:
   "combinations (xss @ yss) = [ xs @ ys . xs <- combinations xss, ys <- combinations yss ]"
-  apply (induction xss)
-  apply (auto simp add: map_idI)
-  sorry
+  by (induction xss) (auto simp: list_comp_flatten_Cons list_comp_flatten_append map_idI)
 
 lemma combinations_append_singleton:
   "combinations (xss @ [ys]) = [ xs @ [y] . xs <- combinations xss, y <- ys ]"
   apply (subst combinations_append)
   apply (subst combinations_singleton)
-  sorry
+  by (simp add: o_def)
 
 lemma combinations_append_single_singleton:
   "combinations (xss @ [[y]]) = [ xs @ [y] . xs <- combinations xss ]"
