@@ -2875,7 +2875,7 @@ partial_function (option) build_forest' :: "'a bins \<Rightarrow> 'a sentence \<
           f \<leftarrow> build_forest' bs inp (k-1) pre {pre};
           case f of
             FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))
-          | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
+          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
         })
     | PreRed (k', pre, red) reds \<Rightarrow> ( \<comment>\<open>add sub-forest starting from non-terminal\<close>
         do {
@@ -2887,7 +2887,7 @@ partial_function (option) build_forest' :: "'a bins \<Rightarrow> 'a sentence \<
                 fs \<leftarrow> those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds');
                 Some (FBranch N (fss @ [fs]))
               }
-          | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
+          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
         })
   ))"
 
@@ -2904,10 +2904,14 @@ lemma build_forest'_simps[simp]:
    build_forest' bs inp k i I = None"
   "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_forest' bs inp (k-1) pre {pre} = Some (FBranch N fss) \<Longrightarrow>
    build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
+  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_forest' bs inp (k-1) pre {pre} = Some (FLeaf a) \<Longrightarrow>
+   build_forest' bs inp k i I = None"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = None \<Longrightarrow>
    build_forest' bs inp k i I = None"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = Some (FBranch N fss) \<Longrightarrow>
    those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) (filter (\<lambda>r. r \<notin> I) (red#reds))) = None \<Longrightarrow>
+   build_forest' bs inp k i I = None"
+  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = Some (FLeaf a) \<Longrightarrow>
    build_forest' bs inp k i I = None"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = Some (FBranch N fss) \<Longrightarrow>
    those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) (filter (\<lambda>r. r \<notin> I) (red#reds))) = Some fs \<Longrightarrow>
@@ -3083,10 +3087,34 @@ proof -
     apply (induction arbitrary: f rule: build_forest'_induct[OF assms(1)])
     subgoal premises IH for bs inp k i I f
     proof -
-      thm IH
-
-      show ?thesis
-        sorry
+      define e where entry: "e = bs!k!i"
+      consider (Null) "pointer e = Null"
+        | (Pre) "\<exists>pre. pointer e = Pre pre"
+        | (PreRed) "\<exists>k' pre red reds. pointer e = PreRed (k', pre, red) reds"
+        by (metis pointer.exhaust surj_pair)
+      thus ?thesis
+      proof cases
+        case Null
+        have "f = FBranch (item_rule_head (item e)) []"
+          using build_forest'_simps(1) Null IH(4) entry by simp
+        thus ?thesis
+          by simp
+      next
+        case Pre
+        then obtain pre where pre: "pointer e = Pre pre"
+          by blast
+        obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
+          using IH(4) build_forest'_simps(2) entry pre by (metis not_Some_eq)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          using IH(1) entry pre by blast
+        have "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
+          using build_forest'_simps(3) entry pre f Nfss by simp         
+        thus ?thesis
+          using IH(4) by simp
+      next
+        case PreRed
+        then show ?thesis sorry
+      qed
     qed
     done
   thus ?thesis
