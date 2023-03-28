@@ -2939,11 +2939,77 @@ typedef 'a wf_ptrs = "wellformed_ptrs::('a bins \<times> 'a sentence \<times> na
 fun build_forest'_measure :: "('a bins \<times> 'a sentence \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
   "build_forest'_measure (bs, inp, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
-lemma A:
+lemma foldl_add_nth:
   "k < length xs \<Longrightarrow> foldl (+) z (map length (take k xs)) + length (xs!k) = foldl (+) z (map length (take (k+1) xs))"
 proof (induction xs arbitrary: k z)
   case (Cons x xs)
-  then show ?case sorry
+  then show ?case
+  proof (cases "k = 0")
+    case False
+    thus ?thesis
+      using Cons by (auto simp add: take_Cons')
+  qed simp
+qed simp
+
+lemma foldl_acc_mono:
+  "a \<le> b \<Longrightarrow> foldl (+) a xs \<le> foldl (+) b xs" for a :: nat
+  by (induction xs arbitrary: a b) auto
+
+lemma foldl_ge_z_nth:
+  "j < length xs \<Longrightarrow> z + length (xs!j) \<le> foldl (+) z (map length (take (j+1) xs))"
+proof (induction xs arbitrary: j z)
+  case (Cons x xs)
+  show ?case
+  proof (cases "j = 0")
+    case False
+    have "z + length ((x # xs) ! j) = z + length (xs!(j-1))"
+      using False by simp
+    also have "... \<le> foldl (+) z (map length (take (j-1+1) xs))"
+      using Cons False by (metis add_diff_inverse_nat length_Cons less_one nat_add_left_cancel_less plus_1_eq_Suc)
+    also have "... = foldl (+) z (map length (take j xs))"
+      using False by simp
+    also have "... \<le> foldl (+) (z + length x) (map length (take j xs))"
+      using foldl_acc_mono by force
+    also have "... = foldl (+) z (map length (take (j+1) (x#xs)))"
+      by simp
+    finally show ?thesis
+      by blast
+  qed simp
+qed simp
+
+lemma foldl_add_nth_ge:
+  "i \<le> j \<Longrightarrow> j < length xs \<Longrightarrow> foldl (+) z (map length (take i xs)) + length (xs!j) \<le> foldl (+) z (map length (take (j+1) xs))"
+proof (induction xs arbitrary: i j z)
+  case (Cons x xs)
+  show ?case
+  proof (cases "i = 0")
+    case True
+    have "foldl (+) z (map length (take i (x # xs))) + length ((x # xs) ! j) = z + length ((x # xs) ! j)"
+      using True by simp
+    also have "... \<le> foldl (+) z (map length (take (j+1) (x#xs)))"
+      using foldl_ge_z_nth Cons.prems(2) by blast
+    finally show ?thesis
+      by blast
+  next
+    case False
+    have "i-1 \<le> j-1"
+      by (simp add: Cons.prems(1) diff_le_mono)
+    have "j-1 < length xs"
+      using Cons.prems(1,2) False by fastforce
+    have "foldl (+) z (map length (take i (x # xs))) + length ((x # xs) ! j) =
+      foldl (+) (z + length x) (map length (take (i-1) xs)) + length ((x#xs)!j)"
+      using False by (simp add: take_Cons')
+    also have "... = foldl (+) (z + length x) (map length (take (i-1) xs)) + length (xs!(j-1))"
+      using Cons.prems(1) False by auto
+    also have "... \<le> foldl (+) (z + length x) (map length (take (j-1+1) xs))"
+      using Cons.IH \<open>i - 1 \<le> j - 1\<close> \<open>j - 1 < length xs\<close> by blast
+    also have "... = foldl (+) (z + length x) (map length (take j xs))"
+      using Cons.prems(1) False by fastforce
+    also have "... = foldl (+) z (map length (take (j+1) (x#xs)))"
+      by fastforce
+    finally show ?thesis
+      by blast
+  qed
 qed simp
 
 lemma build_forest'_induct:
@@ -2987,7 +3053,7 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     have "length (bs!(k-1)) > 0"
       using \<open>pre < length (bs!(k-1))\<close> by force
     hence "foldl (+) 0 (map length (take k bs)) > 0"
-      by (smt (verit, del_insts) A \<open>0 < k\<close> \<open>k < length bs\<close> add.commute add_diff_inverse_nat less_imp_diff_less less_one zero_eq_add_iff_both_eq_0)
+      by (smt (verit, del_insts) foldl_add_nth \<open>0 < k\<close> \<open>k < length bs\<close> add.commute add_diff_inverse_nat less_imp_diff_less less_one zero_eq_add_iff_both_eq_0)
     have "card I \<le> length (bs!k)"
       by (simp add: \<open>I \<subseteq> {0..<length (bs ! k)}\<close> subset_eq_atLeast0_lessThan_card)
     have "card I + (foldl (+) 0 (map length (take (Suc (k - Suc 0)) bs)) - Suc 0) =
@@ -3000,7 +3066,7 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     also have "... \<le> foldl (+) 0 (map length (take k bs)) + length (bs!k)"
       by (simp add: \<open>card I \<le> length (bs ! k)\<close>)
     also have "... = foldl (+) 0 (map length (take (k+1) bs))"
-      using A \<open>k < length bs\<close> by blast
+      using foldl_add_nth \<open>k < length bs\<close> by blast
     finally have b: "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, (k-1), pre, {pre}) > 0"
       by simp
     have "P bs inp (k-1) pre {pre}"
@@ -3026,7 +3092,7 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     have "length (bs!k') > 0"
       using \<open>pre < length (bs!k')\<close> by force
     hence "foldl (+) 0 (map length (take (k'+1) bs)) > 0"
-      by (smt (verit, del_insts) A \<open>k < length bs\<close> \<open>k' < k\<close> add_gr_0 order.strict_trans)
+      by (smt (verit, del_insts) foldl_add_nth \<open>k < length bs\<close> \<open>k' < k\<close> add_gr_0 order.strict_trans)
     have "card I \<le> length (bs!k)"
       by (simp add: \<open>I \<subseteq> {0..<length (bs ! k)}\<close> subset_eq_atLeast0_lessThan_card)
     have "card I + (foldl (+) 0 (map length (take (Suc k') bs)) - Suc 0) =
@@ -3037,7 +3103,7 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     also have "... \<le> foldl (+) 0 (map length (take (Suc k') bs)) + length (bs!k)"
       by (simp add: \<open>card I \<le> length (bs ! k)\<close>)
     also have "... \<le> foldl (+) 0 (map length (take (k+1) bs))"
-      sorry
+      using foldl_add_nth_ge Suc_leI \<open>k < length bs\<close> \<open>k' < k\<close> by blast
     finally have b_pre: "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k', pre, {pre}) > 0"
       by simp
     have x: "P bs inp k' pre {pre}"
@@ -3081,7 +3147,6 @@ lemma ex_Branch_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
   assumes "build_forest' bs inp k i I = Some f"
   shows "\<exists>N fss. f = FBranch N fss"
-  using assms(2)
 proof -
   have "build_forest' bs inp k i I = Some f \<Longrightarrow> \<exists>N fss. f = FBranch N fss"
     apply (induction arbitrary: f rule: build_forest'_induct[OF assms(1)])
@@ -3113,7 +3178,19 @@ proof -
           using IH(4) by simp
       next
         case PreRed
-        then show ?thesis sorry
+        then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
+          by blast
+        obtain f where f: "build_forest' bs inp k' pre {pre} = Some f"
+          by (metis IH(4) build_forest'_simps(5) entry not_Some_eq prered)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          using IH(2) entry prered by blast
+        define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
+        obtain fs where fs: "those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds') = Some fs"
+          using IH(4) build_forest'_simps(6)[OF entry prered] f Nfss reds' by fastforce
+        have "build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
+          using build_forest'_simps(8) entry prered f Nfss reds' fs by auto
+        thus ?thesis
+          using IH(4) by simp
       qed
     qed
     done
@@ -3181,18 +3258,112 @@ lemma trees_append_single_singleton:
 lemma wf_item_tree_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
   assumes "wf_bins cfg inp bs"
+  assumes "sound_ptrs inp bs"
   assumes "k < length bs" "i < length (bs!k)"
   assumes "build_forest' bs inp k i I = Some f"
   assumes "t \<in> set (trees f)"
   shows "wf_item_tree cfg (item (bs!k!i)) t"
-proof (induction rule: build_forest'_induct[OF assms(1)])
-  case (1 bs inp k i I)
-  then show ?case sorry
+proof -
+  have "wf_item_tree cfg (item (bs!k!i)) t"
+    using assms(2,3,4,5,6,7)
+    apply (induction arbitrary: f t rule: build_forest'_induct[OF assms(1)])
+    subgoal premises prems for bs inp k i I f t
+    proof -
+      define e where entry: "e = bs!k!i"
+      consider (Null) "pointer e = Null"
+        | (Pre) "\<exists>pre. pointer e = Pre pre"
+        | (PreRed) "\<exists>k' pre red reds. pointer e = PreRed (k', pre, red) reds"
+        by (metis pointer.exhaust surj_pair)
+      thus ?thesis
+      proof cases
+        case Null
+        hence "build_forest' bs inp k i I = Some (FBranch (item_rule_head (item e)) [])"
+          using entry by simp
+        moreover have "f = FBranch (item_rule_head (item e)) []"
+          using build_forest'_simps(1) Null prems(8) entry by simp
+        ultimately have simp: "t = Branch (item_rule_head (item e)) []"
+          using prems(9) by simp
+        have "predicts (item e)"
+          using Null prems(5-7) nth_mem entry unfolding sound_ptrs_def sound_null_ptr_def by blast
+        hence "item_dot (item e) = 0"
+          unfolding predicts_def by blast
+        thus ?thesis
+          using simp entry by simp
+      next
+        case Pre
+        then obtain pre where pre: "pointer e = Pre pre"
+          by blast
+        obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
+          using prems(8) build_forest'_simps(2) entry pre by (metis not_Some_eq)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          by (metis prems(8) build_forest'_simps(4) entry forest.exhaust option.simps(3) pre)
+        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
+          using build_forest'_simps(3) entry pre f Nfss by simp
+        define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
+        have "trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) = 
+          map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
+          by (subst tss, subst trees_append_single_singleton, simp)
+        moreover have "t \<in> set (trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])))"
+          using prems(8,9) simp by simp
+        ultimately obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
+          by auto
+        have "pre < length (bs!(k-1))"
+          using entry pre prems(5-7) unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
+        moreover have "k - 1 < length bs"
+          by (simp add: prems(6) less_imp_diff_less)
+        moreover have "Branch N ts \<in> set (trees (FBranch N fss))"
+          using ts tss by simp
+        ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
+          using prems(1,4,5) entry pre f Nfss by blast
+        have scans: "scans inp k (item (bs!(k-1)!pre)) (item e)"
+          using entry pre prems(5-7) unfolding sound_ptrs_def sound_pre_ptr_def by simp
+        hence *: 
+          "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item e)"
+          "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item e)"
+          "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item e)"
+          "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
+          unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
+        have "map root_tree (ts @ [Leaf (inp!(k-1))]) = map root_tree ts @ [inp!(k-1)]"
+          by simp
+        also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
+          using IH by simp
+        also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item e)) @ [inp!(k-1)]"
+          using *(2) by simp
+        also have "... = take (item_dot (item e)) (item_rule_body (item e))"
+          using *(2-4) by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
+        finally have "map root_tree (ts @ [Leaf (inp!(k-1))]) = take (item_dot (item e)) (item_rule_body (item e))" .
+        hence "wf_item_tree cfg (item e) (Branch N (ts @ [Leaf (inp!(k-1))]))"
+          using IH *(1) by simp
+        thus ?thesis
+          using ts entry by fastforce
+      next
+        case PreRed
+        then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
+          by blast
+        obtain f where f: "build_forest' bs inp k' pre {pre} = Some f"
+          by (metis prems(8) build_forest'_simps(5) entry not_Some_eq prered)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          by (metis prems(8) build_forest'_simps(7) entry forest.exhaust option.simps(3) prered)
+        define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
+        obtain fs where fs: "those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds') = Some fs"
+          using prems(8) build_forest'_simps(6)[OF entry prered] f Nfss reds' by fastforce
+        have "build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
+          using build_forest'_simps(8) entry prered f Nfss reds' fs by auto
+
+
+        show ?thesis
+          sorry
+      qed
+    qed
+    done
+  thus ?thesis
+    using assms(2) by blast
 qed
 
 lemma wf_yield_tree_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
   assumes "wf_bins cfg inp bs"
+  assumes "sound_ptrs inp bs"
   assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
   assumes "build_forest' bs inp k i I = Some f"
   assumes "t \<in> set (trees f)"
@@ -3233,20 +3404,6 @@ theorem soundness_build_forest_\<II>_it:
 
 subsection \<open>OLD\<close>
 
-(*
-(\<And>bs inp k i I.
-    (\<And>x x2. x = bs ! k ! i \<Longrightarrow> pointer x = Pre x2 \<Longrightarrow> ?P bs inp (k - 1) x2 {x2}) \<Longrightarrow>
-    (\<And>x x31 x32 xa y xb ya. x = bs ! k ! i \<Longrightarrow> pointer x = PreRed x31 x32 \<Longrightarrow> (xa, y) = x31 \<Longrightarrow> (xb, ya) = y \<Longrightarrow> ?P bs inp xa xb {xb}) \<Longrightarrow>
-    (\<And>x x31 x32 xa y xb ya x21 x22 xc xd.
-        x = bs ! k ! i \<Longrightarrow>
-        pointer x = PreRed x31 x32 \<Longrightarrow>
-        (xa, y) = x31 \<Longrightarrow>
-        (xb, ya) = y \<Longrightarrow>
-        build_forest'' bs inp xa xb {xb} = FBranch x21 x22 \<Longrightarrow> xc = filter (\<lambda>r. r \<notin> I) (ya # x32) \<Longrightarrow> xd \<in> set xc \<Longrightarrow> ?P bs inp k xd (I \<union> {i})) \<Longrightarrow>
-    ?P bs inp k i I) \<Longrightarrow>
-?P ?a0.0 ?a1.0 ?a2.0 ?a3.0 ?a4.0
-*)
-
 function build_forest'' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest" where
   "build_forest'' bs inp k i I = (
     let e = bs!k!i in (
@@ -3265,8 +3422,6 @@ function build_forest'' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat 
     ))"
   by pat_completeness auto
 termination sorry
-
-thm build_forest''.induct
 
 declare build_forest'.simps [simp del]
 
