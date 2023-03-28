@@ -2862,8 +2862,18 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
 
 value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
 
-lemma [partial_function_mono]: "monotone option.le_fun option_ord (\<lambda>f. those (map (\<lambda>r. f ((((a, b), c), r), d \<union> {r})) e))"
-  sorry
+lemma [partial_function_mono]: "monotone option.le_fun option_ord (\<lambda>f. those (map (\<lambda>r. f ((((a, b), c), r), d \<union> {r})) xs))"
+proof (induction xs)
+  case Nil
+  thus ?case
+    by (auto simp: monotone_def option.leq_refl)
+next
+  case (Cons x xs)
+  then show ?case
+    apply (auto simp: monotone_def option.leq_refl flat_ord_def fun_ord_def split: option.splits)
+    apply (metis (mono_tags, lifting) option.distinct(1))
+    by (smt (verit) option.inject option.simps(3))
+qed
 
 partial_function (option) build_forest' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest option" where
   "build_forest' bs inp k i I = (
@@ -3344,11 +3354,96 @@ proof -
           by (metis prems(8) build_forest'_simps(5) entry not_Some_eq prered)
         then obtain N fss where Nfss: "f = FBranch N fss"
           by (metis prems(8) build_forest'_simps(7) entry forest.exhaust option.simps(3) prered)
+        define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
         define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
         obtain fs where fs: "those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds') = Some fs"
           using prems(8) build_forest'_simps(6)[OF entry prered] f Nfss reds' by fastforce
-        have "build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
+        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
           using build_forest'_simps(8) entry prered f Nfss reds' fs by auto
+        have "trees (FBranch N (fss @ [fs])) =
+          map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
+            ts1 <- combinations [concat (map (\<lambda>f. trees f) fs) ] ]"
+          by (subst tss, subst trees_append_singleton, simp)
+        moreover have "t \<in> set (trees (FBranch N (fss @ [fs])))"
+          using prems(8,9) simp by simp
+        ultimately obtain ts0 ts1 f_red where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
+          "ts1 \<in> set (trees f_red)" "f_red \<in> set fs"
+          using fs reds' by auto
+        then obtain r where r: "r \<in> set reds'" "build_forest' bs inp k r (I \<union> {r}) = Some f_red"
+          using fs sorry
+        have "r \<in> set (red#reds)"
+          using reds' by (metis filter_is_subset r(1) subsetD)
+        obtain N_red fss_red where "FBranch N_red fss_red = f_red"
+          using tsx(3,4) r(2) ex_Branch_build_forest'
+        
+        obtain N' ts where red: "Branch N' ts = ts1"
+          using tsx(3,4) r(2) sledgehammer
+
+ by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
+
+(*
+   then obtain k' pre red reds where prered: "pointer ?e = PreRed (k', pre, red) reds"
+      by auto
+    obtain N fss where pre: "build_forest' bs inp k' pre {pre} = FBranch N fss"
+      by (meson ex_Branch_build_forest')
+    define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
+    define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
+    have simp: "build_forest' bs inp k i I = FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])"
+      using build_forest'_simps(3) pre prered reds' by simp
+    have "trees (build_forest' bs inp k i I) =
+      map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
+        ts1 <- combinations [concat (map (\<lambda>r. trees (build_forest' bs inp k r (I \<union> {i}))) reds') ] ]"
+      by (subst simp, subst tss, subst trees_append_singleton, auto simp: o_def)
+    then obtain ts0 ts1 r where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
+      "ts1 \<in> set (trees (build_forest' bs inp k r (I \<union> {i})))" "r \<in> set reds'"
+      using "1.prems"(5) reds' by auto
+    have "r \<in> set (red#reds)"
+      using reds' tsx(4) by (metis filter_set member_filter)
+
+    obtain N' ts where red: "Branch N' ts = ts1"
+      using tsx by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
+    have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
+      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
+    have completes: "completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!r))"
+      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
+    have *: 
+      "item_rule_head (item (bs!k'!pre)) = item_rule_head (item ?e)"
+      "item_rule_body (item (bs!k'!pre)) = item_rule_body (item ?e)"
+      "item_dot (item (bs!k'!pre)) + 1 = item_dot (item ?e)"
+      "next_symbol (item (bs!k'!pre)) = Some (item_rule_head (item (bs!k!r)))"
+      "is_complete (item (bs!k!r))"
+      using completes unfolding completes_def inc_item_def
+      by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
+    have "Branch N ts0 \<in> set (trees (build_forest' bs inp k' pre {pre}))"
+      using pre tss tsx(2) by force
+    hence IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (Branch N ts0)"
+      using "1.IH"(2) "1.prems"(1-3) bounds(1,2) prered by fastforce
+    have IH_r: "wf_item_tree cfg (item (bs!k!r)) (Branch N' ts)"
+      using "1.IH"(3) "1.prems"(1-3) bounds(3) pre prered tsx red reds' by blast
+    have "map root_tree (ts0 @ [Branch N' ts]) = map root_tree ts0 @ [root_tree (Branch N' ts)]"
+      by simp
+    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (Branch N' ts)]"
+      using IH_pre pre by force
+    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!r))]"
+      using IH_r by simp
+    also have "... = take (item_dot (item ?e)) (item_rule_body (item ?e))"
+      using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
+    finally have roots: "map root_tree (ts0 @ [Branch N' ts]) = take (item_dot (item ?e)) (item_rule_body (item ?e))" .
+    have "wf_item cfg inp (item (bs!k!r))"
+      using "1.prems" bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
+    moreover have "N' = item_rule_head (item (bs!k!r))"
+      using IH_r by fastforce
+    moreover have "map root_tree ts = item_rule_body (item (bs!k!r))"
+      using IH_r *(5) by (auto simp: is_complete_def)
+    ultimately have "\<exists>r \<in> set (\<RR> cfg). N' = rule_head r \<and> map root_tree ts = rule_body r"
+      unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
+    hence "wf_rule_tree cfg (Branch N' ts)"
+      using IH_r by simp
+    hence "wf_item_tree cfg (item (bs!k!i)) (Branch N (ts0 @ [Branch N' ts]))"
+      using "*"(1) roots IH_pre by simp
+    thus ?thesis
+      using tsx(1) red by blast
+*)
 
 
         show ?thesis
