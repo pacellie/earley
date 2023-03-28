@@ -2901,6 +2901,8 @@ partial_function (option) build_forest' :: "'a bins \<Rightarrow> 'a sentence \<
         })
   ))"
 
+declare build_forest'.simps [code]
+
 definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
   "build_forest cfg inp bs = (
     let k = length bs - 1 in
