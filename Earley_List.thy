@@ -3022,6 +3022,35 @@ proof (induction xs arbitrary: i j z)
   qed
 qed simp
 
+lemma wellformed_ptrs_pre:
+  assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
+  assumes "e = bs!k!i" "pointer e = Pre pre"
+  shows "(bs, inp, (k-1), pre, {pre}) \<in> wellformed_ptrs"
+  using assms unfolding wellformed_ptrs_def
+  apply (auto simp: sound_ptrs_def sound_pre_ptr_def)
+  apply (metis nth_mem)
+  done
+
+lemma wellformed_ptrs_prered_pre:
+  assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
+  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) reds"
+  shows "(bs, inp, k', pre, {pre}) \<in> wellformed_ptrs"
+  using assms unfolding wellformed_ptrs_def
+  apply (auto simp: sound_ptrs_def sound_prered_ptr_def)
+  apply (metis dual_order.strict_trans nth_mem)
+  apply (metis nth_mem)
+  done
+
+lemma wellformed_ptrs_prered_red:
+  assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
+  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) reds"
+  assumes "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)" "r \<in> set reds'"
+  shows "(bs, inp, k, r, I \<union> {r}) \<in> wellformed_ptrs"
+  using assms unfolding wellformed_ptrs_def
+  apply (auto simp add: sound_ptrs_def sound_prered_ptr_def simp del: filter.simps)
+  apply (metis nth_mem)+
+  done
+
 lemma build_forest'_induct:
   assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
   assumes "\<And>bs inp k i I.
@@ -3050,11 +3079,6 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     then obtain pre where pre: "pointer e = Pre pre"
       by blast
     define n where n: "n = build_forest'_measure (bs, inp, (k-1), pre, {pre})"
-    have a: "(bs, inp, (k-1), pre, {pre}) \<in> wellformed_ptrs"
-      using 1(2) entry pre unfolding wellformed_ptrs_def
-      apply (auto simp: pre sound_ptrs_def sound_pre_ptr_def)
-      apply (metis entry nth_mem pre)
-      done
     have "0 < k" "pre < length (bs!(k-1))"
       using 1(2) entry pre unfolding wellformed_ptrs_def sound_ptrs_def sound_pre_ptr_def
       by (smt (verit) mem_Collect_eq nth_mem prod.inject)+
@@ -3077,10 +3101,10 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       by (simp add: \<open>card I \<le> length (bs ! k)\<close>)
     also have "... = foldl (+) 0 (map length (take (k+1) bs))"
       using foldl_add_nth \<open>k < length bs\<close> by blast
-    finally have b: "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, (k-1), pre, {pre}) > 0"
+    finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, (k-1), pre, {pre}) > 0"
       by simp
-    have "P bs inp (k-1) pre {pre}"
-      using 1 n a b zero_less_diff by blast
+    hence "P bs inp (k-1) pre {pre}"
+      using 1 n wellformed_ptrs_pre entry pre zero_less_diff by blast
     thus ?thesis
       using assms(2) entry pre pointer.distinct(5) pointer.inject(1) by presburger
   next
@@ -3096,28 +3120,25 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     have "k < length bs" "i < length (bs!k)" "I \<subseteq> {0..<length (bs!k)}" "i \<in> I"
       using 1(2) unfolding wellformed_ptrs_def by blast+
     define n_pre where n_pre: "n_pre = build_forest'_measure (bs, inp, k', pre, {pre})"
-    have a_pre: "(bs, inp, k', pre, {pre}) \<in> wellformed_ptrs"
-      using 1(2) \<open>k' < k\<close> \<open>pre < length (bs!k')\<close> entry prered unfolding wellformed_ptrs_def
-      by (auto simp: sound_ptrs_def sound_prered_ptr_def)
     have "length (bs!k') > 0"
       using \<open>pre < length (bs!k')\<close> by force
-    hence "foldl (+) 0 (map length (take (k'+1) bs)) > 0"
+    hence gt0: "foldl (+) 0 (map length (take (k'+1) bs)) > 0"
       by (smt (verit, del_insts) foldl_add_nth \<open>k < length bs\<close> \<open>k' < k\<close> add_gr_0 order.strict_trans)
-    have "card I \<le> length (bs!k)"
+    have card_bound: "card I \<le> length (bs!k)"
       by (simp add: \<open>I \<subseteq> {0..<length (bs ! k)}\<close> subset_eq_atLeast0_lessThan_card)
     have "card I + (foldl (+) 0 (map length (take (Suc k') bs)) - Suc 0) =
       card I + foldl (+) 0 (map length (take (Suc k') bs)) - 1"
       by (metis Nat.add_diff_assoc One_nat_def Suc_eq_plus1 Suc_leI \<open>0 < foldl (+) 0 (map length (take (k' + 1) bs))\<close>)
     also have "... < card I + foldl (+) 0 (map length (take (Suc k') bs))"
-      using \<open>0 < foldl (+) 0 (map length (take (k' + 1) bs))\<close> by auto
+      using gt0 by auto
     also have "... \<le> foldl (+) 0 (map length (take (Suc k') bs)) + length (bs!k)"
-      by (simp add: \<open>card I \<le> length (bs ! k)\<close>)
+      using card_bound by simp
     also have "... \<le> foldl (+) 0 (map length (take (k+1) bs))"
       using foldl_add_nth_ge Suc_leI \<open>k < length bs\<close> \<open>k' < k\<close> by blast
-    finally have b_pre: "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k', pre, {pre}) > 0"
+    finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k', pre, {pre}) > 0"
       by simp
-    have x: "P bs inp k' pre {pre}"
-      using 1(1) a_pre b_pre zero_less_diff by blast
+    hence x: "P bs inp k' pre {pre}"
+      using 1(1) zero_less_diff by (metis "1.prems" entry prered wellformed_ptrs_prered_pre)
     have y: "\<And>r. r \<in> set reds' \<Longrightarrow> P bs inp k r (I \<union> {r})"
     proof -
       fix r
@@ -3127,23 +3148,21 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       hence "r < length (bs!k)"
         using \<open>\<forall>r. r \<in> set (red#reds) \<longrightarrow> r < length (bs!k)\<close> by blast
       define n_red where n_red: "n_red = build_forest'_measure (bs, inp, k, r, I \<union> {r})"
-      have a_red: "(bs, inp, k, r, I \<union> {r}) \<in> wellformed_ptrs"
-        using 1(2) \<open>k' < k\<close> \<open>pre < length (bs!k')\<close> entry prered unfolding wellformed_ptrs_def
-        apply (auto simp add: sound_ptrs_def sound_prered_ptr_def simp del: filter.simps)
-        using \<open>r < length (bs ! k)\<close> by blast+
       have "r \<notin> I"
         by (metis (full_types) filter_id_conv r reds' removeAll_filter_not removeAll_filter_not_eq)
       have "card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card (insert r I)) =
         card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card I - 1)"
         using \<open>I \<subseteq> {0..<length (bs ! k)}\<close> \<open>r \<notin> I\<close> finite_subset by fastforce
       also have "... = foldl (+) 0 (map length (take (Suc k) bs)) - 1"
-        by (metis Nat.add_diff_assoc One_nat_def Suc_eq_plus1 Suc_leI add_diff_inverse_nat add_gr_0 b_pre build_forest'_measure.simps less_numeral_extra(3) nat_diff_split)
+        using gt0 card_bound \<open>foldl (+) 0 (map length (take (Suc k') bs)) + length (bs ! k) \<le> foldl (+) 0 (map length (take (k + 1) bs))\<close> by force
       also have "... < foldl (+) 0 (map length (take (Suc k) bs))"
-        by (metis One_nat_def Suc_eq_plus1 b_pre build_forest'_measure.simps diff_Suc_less not_gr_zero zero_diff)
-      finally have b_red: "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k, r, I \<union> {r}) > 0"
+        using gt0 \<open>foldl (+) 0 (map length (take (Suc k') bs)) + length (bs ! k) \<le> foldl (+) 0 (map length (take (k + 1) bs))\<close> by auto
+      finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k, r, I \<union> {r}) > 0"
         by simp
-      show "P bs inp k r (I \<union> {r})"
-        using 1(1) a_red b_red zero_less_diff by blast
+      moreover have "(bs, inp, k, r, I \<union> {r}) \<in> wellformed_ptrs"
+        using wellformed_ptrs_prered_red[OF "1"(2) entry prered reds' r] by blast
+      ultimately show "P bs inp k r (I \<union> {r})"
+        using 1(1) zero_less_diff by blast
     qed
     show ?thesis
       using assms(2) x y entry prered reds'
@@ -3268,14 +3287,13 @@ lemma trees_append_single_singleton:
 lemma wf_item_tree_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
   assumes "wf_bins cfg inp bs"
-  assumes "sound_ptrs inp bs"
   assumes "k < length bs" "i < length (bs!k)"
   assumes "build_forest' bs inp k i I = Some f"
   assumes "t \<in> set (trees f)"
   shows "wf_item_tree cfg (item (bs!k!i)) t"
 proof -
   have "wf_item_tree cfg (item (bs!k!i)) t"
-    using assms(2,3,4,5,6,7)
+    using assms
     apply (induction arbitrary: f t rule: build_forest'_induct[OF assms(1)])
     subgoal premises prems for bs inp k i I f t
     proof -
@@ -3293,8 +3311,10 @@ proof -
           using build_forest'_simps(1) Null prems(8) entry by simp
         ultimately have simp: "t = Branch (item_rule_head (item e)) []"
           using prems(9) by simp
-        have "predicts (item e)"
-          using Null prems(5-7) nth_mem entry unfolding sound_ptrs_def sound_null_ptr_def by blast
+        have "sound_ptrs inp bs"
+          using prems(4) unfolding wellformed_ptrs_def by blast
+        hence "predicts (item e)"
+          using Null prems(6,7) nth_mem entry unfolding sound_ptrs_def sound_null_ptr_def by blast
         hence "item_dot (item e) = 0"
           unfolding predicts_def by blast
         thus ?thesis
@@ -3306,7 +3326,7 @@ proof -
         obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
           using prems(8) build_forest'_simps(2) entry pre by (metis not_Some_eq)
         then obtain N fss where Nfss: "f = FBranch N fss"
-          by (metis prems(8) build_forest'_simps(4) entry forest.exhaust option.simps(3) pre)
+          using entry ex_Branch_build_forest' pre prems(4) wellformed_ptrs_pre by blast
         have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
           using build_forest'_simps(3) entry pre f Nfss by simp
         define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
@@ -3317,16 +3337,18 @@ proof -
           using prems(8,9) simp by simp
         ultimately obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
           by auto
-        have "pre < length (bs!(k-1))"
-          using entry pre prems(5-7) unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
+        have "sound_ptrs inp bs"
+          using prems(4) unfolding wellformed_ptrs_def by blast
+        hence "pre < length (bs!(k-1))"
+          using entry pre prems(6,7) unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
         moreover have "k - 1 < length bs"
           by (simp add: prems(6) less_imp_diff_less)
         moreover have "Branch N ts \<in> set (trees (FBranch N fss))"
           using ts tss by simp
         ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
-          using prems(1,4,5) entry pre f Nfss by blast
+          using prems(1,2,4,5) entry pre f Nfss by (meson wellformed_ptrs_pre)
         have scans: "scans inp k (item (bs!(k-1)!pre)) (item e)"
-          using entry pre prems(5-7) unfolding sound_ptrs_def sound_pre_ptr_def by simp
+          using entry pre prems(6-7) \<open>sound_ptrs inp bs\<close> unfolding sound_ptrs_def sound_pre_ptr_def by simp
         hence *: 
           "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item e)"
           "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item e)"
@@ -3353,7 +3375,7 @@ proof -
         obtain f where f: "build_forest' bs inp k' pre {pre} = Some f"
           by (metis prems(8) build_forest'_simps(5) entry not_Some_eq prered)
         then obtain N fss where Nfss: "f = FBranch N fss"
-          by (metis prems(8) build_forest'_simps(7) entry forest.exhaust option.simps(3) prered)
+          using entry ex_Branch_build_forest' prems(4) prered wellformed_ptrs_prered_pre by blast
         define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
         define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
         obtain fs where fs: "those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds') = Some fs"
@@ -3370,84 +3392,62 @@ proof -
           "ts1 \<in> set (trees f_red)" "f_red \<in> set fs"
           using fs reds' by auto
         then obtain r where r: "r \<in> set reds'" "build_forest' bs inp k r (I \<union> {r}) = Some f_red"
-          using fs sorry
+          using fs by (induction reds' arbitrary: fs) (auto split: option.splits, blast+)
         have "r \<in> set (red#reds)"
           using reds' by (metis filter_is_subset r(1) subsetD)
-        obtain N_red fss_red where "FBranch N_red fss_red = f_red"
-          using tsx(3,4) r(2) ex_Branch_build_forest'
-        
-        obtain N' ts where red: "Branch N' ts = ts1"
-          using tsx(3,4) r(2) sledgehammer
-
- by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
-
-(*
-   then obtain k' pre red reds where prered: "pointer ?e = PreRed (k', pre, red) reds"
-      by auto
-    obtain N fss where pre: "build_forest' bs inp k' pre {pre} = FBranch N fss"
-      by (meson ex_Branch_build_forest')
-    define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-    define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
-    have simp: "build_forest' bs inp k i I = FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])"
-      using build_forest'_simps(3) pre prered reds' by simp
-    have "trees (build_forest' bs inp k i I) =
-      map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
-        ts1 <- combinations [concat (map (\<lambda>r. trees (build_forest' bs inp k r (I \<union> {i}))) reds') ] ]"
-      by (subst simp, subst tss, subst trees_append_singleton, auto simp: o_def)
-    then obtain ts0 ts1 r where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
-      "ts1 \<in> set (trees (build_forest' bs inp k r (I \<union> {i})))" "r \<in> set reds'"
-      using "1.prems"(5) reds' by auto
-    have "r \<in> set (red#reds)"
-      using reds' tsx(4) by (metis filter_set member_filter)
-
-    obtain N' ts where red: "Branch N' ts = ts1"
-      using tsx by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
-    have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
-      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
-    have completes: "completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!r))"
-      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
-    have *: 
-      "item_rule_head (item (bs!k'!pre)) = item_rule_head (item ?e)"
-      "item_rule_body (item (bs!k'!pre)) = item_rule_body (item ?e)"
-      "item_dot (item (bs!k'!pre)) + 1 = item_dot (item ?e)"
-      "next_symbol (item (bs!k'!pre)) = Some (item_rule_head (item (bs!k!r)))"
-      "is_complete (item (bs!k!r))"
-      using completes unfolding completes_def inc_item_def
-      by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
-    have "Branch N ts0 \<in> set (trees (build_forest' bs inp k' pre {pre}))"
-      using pre tss tsx(2) by force
-    hence IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (Branch N ts0)"
-      using "1.IH"(2) "1.prems"(1-3) bounds(1,2) prered by fastforce
-    have IH_r: "wf_item_tree cfg (item (bs!k!r)) (Branch N' ts)"
-      using "1.IH"(3) "1.prems"(1-3) bounds(3) pre prered tsx red reds' by blast
-    have "map root_tree (ts0 @ [Branch N' ts]) = map root_tree ts0 @ [root_tree (Branch N' ts)]"
-      by simp
-    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (Branch N' ts)]"
-      using IH_pre pre by force
-    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!r))]"
-      using IH_r by simp
-    also have "... = take (item_dot (item ?e)) (item_rule_body (item ?e))"
-      using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
-    finally have roots: "map root_tree (ts0 @ [Branch N' ts]) = take (item_dot (item ?e)) (item_rule_body (item ?e))" .
-    have "wf_item cfg inp (item (bs!k!r))"
-      using "1.prems" bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-    moreover have "N' = item_rule_head (item (bs!k!r))"
-      using IH_r by fastforce
-    moreover have "map root_tree ts = item_rule_body (item (bs!k!r))"
-      using IH_r *(5) by (auto simp: is_complete_def)
-    ultimately have "\<exists>r \<in> set (\<RR> cfg). N' = rule_head r \<and> map root_tree ts = rule_body r"
-      unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
-    hence "wf_rule_tree cfg (Branch N' ts)"
-      using IH_r by simp
-    hence "wf_item_tree cfg (item (bs!k!i)) (Branch N (ts0 @ [Branch N' ts]))"
-      using "*"(1) roots IH_pre by simp
-    thus ?thesis
-      using tsx(1) red by blast
-*)
-
-
-        show ?thesis
-          sorry
+        have "(bs, inp, k, r, (I \<union> {r})) \<in> wellformed_ptrs"
+          using wellformed_ptrs_prered_red[OF prems(4) entry prered reds'] r(1) by blast
+        then obtain N_red fss_red where "FBranch N_red fss_red = f_red"
+          by (metis ex_Branch_build_forest' r(2))
+        then obtain ts where red: "Branch N_red ts = ts1"
+          using tsx(3) by auto
+        have "sound_ptrs inp bs"
+          using prems(4) wellformed_ptrs_def by fastforce
+        have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
+          using prered entry prems(6,7) \<open>sound_ptrs inp bs\<close> \<open>r \<in> set (red#reds)\<close>
+          unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
+        have completes: "completes k (item (bs!k'!pre)) (item e) (item (bs!k!r))"
+          using prered entry prems(6,7) \<open>sound_ptrs inp bs\<close> \<open>r \<in> set (red#reds)\<close>
+          unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
+        have *: 
+          "item_rule_head (item (bs!k'!pre)) = item_rule_head (item e)"
+          "item_rule_body (item (bs!k'!pre)) = item_rule_body (item e)"
+          "item_dot (item (bs!k'!pre)) + 1 = item_dot (item e)"
+          "next_symbol (item (bs!k'!pre)) = Some (item_rule_head (item (bs!k!r)))"
+          "is_complete (item (bs!k!r))"
+          using completes unfolding completes_def inc_item_def
+          by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
+        have "Branch N ts0 \<in> set (trees (FBranch N fss))"
+          using tss tsx(2) by simp
+        moreover have "(bs, inp, k', pre, {pre}) \<in> wellformed_ptrs"
+          using wellformed_ptrs_prered_pre[OF prems(4) entry prered] by blast
+        ultimately have IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (Branch N ts0)"
+          using prems(2)[OF entry prered _ prems(5)] Nfss bounds(1,2) f order_less_trans prems(6) by blast
+        have IH_r: "wf_item_tree cfg (item (bs!k!r)) (Branch N_red ts)"
+          using \<open>(bs, inp, k, r, I \<union> {r}) \<in> wellformed_ptrs\<close> bounds(3) entry prems(3,5,6) prered r red reds' tsx(3) by blast
+        have "map root_tree (ts0 @ [Branch N_red ts]) = map root_tree ts0 @ [root_tree (Branch N_red ts)]"
+          by simp
+        also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (Branch N_red ts)]"
+          using IH_pre by simp
+        also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!r))]"
+          using IH_r by simp
+        also have "... = take (item_dot (item e)) (item_rule_body (item e))"
+          using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
+        finally have roots: "map root_tree (ts0 @ [Branch N_red ts]) = take (item_dot (item e)) (item_rule_body (item e))" .
+        have "wf_item cfg inp (item (bs!k!r))"
+          using prems(5,6) bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (auto simp: items_def) 
+        moreover have "N_red = item_rule_head (item (bs!k!r))"
+          using IH_r by fastforce
+        moreover have "map root_tree ts = item_rule_body (item (bs!k!r))"
+          using IH_r *(5) by (auto simp: is_complete_def)
+        ultimately have "\<exists>r \<in> set (\<RR> cfg). N_red = rule_head r \<and> map root_tree ts = rule_body r"
+          unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
+        hence "wf_rule_tree cfg (Branch N_red ts)"
+          using IH_r by simp
+        hence "wf_item_tree cfg (item (bs!k!i)) (Branch N (ts0 @ [Branch N_red ts]))"
+          using "*"(1) roots IH_pre entry by simp
+        thus ?thesis
+          using tsx(1) red by blast
       qed
     qed
     done
@@ -3458,12 +3458,169 @@ qed
 lemma wf_yield_tree_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_ptrs"
   assumes "wf_bins cfg inp bs"
-  assumes "sound_ptrs inp bs"
   assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
   assumes "build_forest' bs inp k i I = Some f"
   assumes "t \<in> set (trees f)"
   shows "wf_yield_tree inp (item (bs!k!i)) t"
-  sorry
+proof -
+  have "wf_yield_tree inp (item (bs!k!i)) t"
+    using assms
+    apply (induction arbitrary: f t rule: build_forest'_induct[OF assms(1)])
+    subgoal premises prems for bs inp k i I f t
+    proof -
+      define e where entry: "e = bs!k!i"
+      consider (Null) "pointer e = Null"
+        | (Pre) "\<exists>pre. pointer e = Pre pre"
+        | (PreRed) "\<exists>k' pre red reds. pointer e = PreRed (k', pre, red) reds"
+        by (metis pointer.exhaust surj_pair)
+      thus ?thesis
+      proof cases
+        case Null
+        hence "build_forest' bs inp k i I = Some (FBranch (item_rule_head (item e)) [])"
+          using entry by simp
+        moreover have "f = FBranch (item_rule_head (item e)) []"
+          using build_forest'_simps(1) Null prems(9) entry by simp
+        ultimately have simp: "t = Branch (item_rule_head (item e)) []"
+          using prems(10) by simp
+        have "sound_ptrs inp bs"
+          using prems(4) unfolding wellformed_ptrs_def by blast
+        hence "predicts (item e)"
+          using Null prems(6,7) nth_mem entry unfolding sound_ptrs_def sound_null_ptr_def by blast
+        thus ?thesis
+          unfolding wf_yield_tree_def predicts_def using simp entry by (auto simp: slice_empty)
+      next
+        case Pre
+        then obtain pre where pre: "pointer e = Pre pre"
+          by blast
+        obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
+          using prems(9) build_forest'_simps(2) entry pre by (metis not_Some_eq)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          using entry ex_Branch_build_forest' pre prems(4) wellformed_ptrs_pre by blast
+        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
+          using build_forest'_simps(3) entry pre f Nfss by simp
+        define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
+        have "trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) = 
+          map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
+          by (subst tss, subst trees_append_single_singleton, simp)
+        moreover have "t \<in> set (trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])))"
+          using prems(9,10) simp by simp
+        ultimately obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
+          by auto
+        have "sound_ptrs inp bs"
+          using prems(4) unfolding wellformed_ptrs_def by blast
+        hence bounds:  "k > 0" "pre < length (bs!(k-1))"
+          using entry pre prems(6,7) unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)+
+        moreover have "k-1 < length bs"
+          by (simp add: prems(6) less_imp_diff_less)
+        moreover have "Branch N ts \<in> set (trees (FBranch N fss))"
+          using ts tss by simp
+        ultimately have IH: "wf_yield_tree inp (item (bs!(k-1)!pre)) (Branch N ts)"
+          using prems(1) entry pre f Nfss wellformed_ptrs_pre prems(4,5,8) by fastforce
+        have scans: "scans inp k (item (bs!(k-1)!pre)) (item e)"
+          using entry pre prems(6-7) \<open>sound_ptrs inp bs\<close> unfolding sound_ptrs_def sound_pre_ptr_def by simp
+        have wf: 
+          "item_origin (item (bs!(k-1)!pre)) \<le> item_end (item (bs!(k-1)!pre))"
+          "item_end (item (bs!(k-1)!pre)) = k-1"
+          "item_end (item e) = k"
+          using entry prems(5,6,7) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
+          by (auto, meson less_imp_diff_less nth_mem)
+        have "yield_tree t = concat (map yield_tree (ts @ [Leaf (inp!(k-1))]))"
+          by (simp add: ts)
+        also have "... = concat (map yield_tree ts) @ [inp!(k-1)]"
+          by simp
+        also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre))) inp @ [inp!(k-1)]"
+          using IH by (simp add: wf_yield_tree_def)
+        also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre)) + 1) inp"
+          using slice_append_nth wf \<open>k > 0\<close> prems(8)
+          by (metis diff_less le_eq_less_or_eq less_imp_diff_less less_numeral_extra(1))
+        also have "... = slice (item_origin (item e)) (item_end (item (bs!(k-1)!pre)) + 1) inp"
+          using scans unfolding scans_def inc_item_def by simp
+        also have "... = slice (item_origin (item e)) k inp"
+          using scans wf unfolding scans_def by (metis Suc_diff_1 Suc_eq_plus1 bounds(1))
+        also have "... = slice (item_origin (item e)) (item_end (item e)) inp"
+          using wf by auto
+        finally show ?thesis
+          using wf_yield_tree_def entry by blast
+      next
+        case PreRed
+        then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
+          by blast
+        obtain f where f: "build_forest' bs inp k' pre {pre} = Some f"
+          by (metis prems(9) build_forest'_simps(5) entry not_Some_eq prered)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          using entry ex_Branch_build_forest' prems(4) prered wellformed_ptrs_prered_pre by blast
+        define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
+        define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
+        obtain fs where fs: "those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds') = Some fs"
+          using prems(9) build_forest'_simps(6)[OF entry prered] f Nfss reds' by fastforce
+        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
+          using build_forest'_simps(8) entry prered f Nfss reds' fs by auto
+        have "trees (FBranch N (fss @ [fs])) =
+          map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
+            ts1 <- combinations [concat (map (\<lambda>f. trees f) fs) ] ]"
+          by (subst tss, subst trees_append_singleton, simp)
+        moreover have "t \<in> set (trees (FBranch N (fss @ [fs])))"
+          using prems(9,10) simp by simp
+        ultimately obtain ts0 ts1 f_red where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
+          "ts1 \<in> set (trees f_red)" "f_red \<in> set fs"
+          using fs reds' by auto
+        then obtain r where r: "r \<in> set reds'" "build_forest' bs inp k r (I \<union> {r}) = Some f_red"
+          using fs by (induction reds' arbitrary: fs) (auto split: option.splits, blast+)
+        have "r \<in> set (red#reds)"
+          using reds' by (metis filter_is_subset r(1) subsetD)
+        have "(bs, inp, k, r, (I \<union> {r})) \<in> wellformed_ptrs"
+          using wellformed_ptrs_prered_red[OF prems(4) entry prered reds'] r(1) by blast
+        then obtain N_red fss_red where "FBranch N_red fss_red = f_red"
+          by (metis ex_Branch_build_forest' r(2))
+        then obtain ts where red: "Branch N_red ts = ts1"
+          using tsx(3) by auto
+        have "sound_ptrs inp bs"
+          using prems(4) wellformed_ptrs_def by fastforce
+        have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
+          using prered entry prems(6,7) \<open>sound_ptrs inp bs\<close> \<open>r \<in> set (red#reds)\<close>
+          unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
+        have completes: "completes k (item (bs!k'!pre)) (item e) (item (bs!k!r))"
+          using prered entry prems(6,7) \<open>sound_ptrs inp bs\<close> \<open>r \<in> set (red#reds)\<close>
+          unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
+        have "Branch N ts0 \<in> set (trees (FBranch N fss))"
+          using tss tsx(2) by simp
+        moreover have "(bs, inp, k', pre, {pre}) \<in> wellformed_ptrs"
+          using wellformed_ptrs_prered_pre[OF prems(4) entry prered] by blast
+        ultimately have IH_pre: "wf_yield_tree inp (item (bs!k'!pre)) (Branch N ts0)"
+          using prems(2)[OF entry prered _ prems(5)] Nfss bounds(1,2) f prems(6-8)
+          by (meson dual_order.strict_trans1 nat_less_le)
+        have IH_r: "wf_yield_tree inp (item (bs!k!r)) (Branch N_red ts)"
+          using \<open>(bs, inp, k, r, I \<union> {r}) \<in> wellformed_ptrs\<close> bounds(3) entry prems(3,5,6,8) prered r red reds' tsx(3) by blast
+        have wf1: 
+          "item_origin (item (bs!k'!pre)) \<le> item_end (item (bs!k'!pre))"
+          "item_origin (item (bs!k!r)) \<le> item_end (item (bs!k!r))"
+          using prems(5-7) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
+          by (metis length_map nth_map nth_mem order_less_trans)+
+        have wf2:
+          "item_end (item (bs!k!r)) = k"
+          "item_end (item (bs!k!i)) = k"
+          using prems(5-7) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def by simp_all
+        have "yield_tree t = concat (map yield_tree (ts0 @ [Branch N_red ts]))"
+          by (simp add: red tsx(1))
+        also have "... = concat (map yield_tree ts0) @ yield_tree (Branch N_red ts)"
+          by simp
+        also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k'!pre))) inp @ 
+          slice (item_origin (item (bs!k!r))) (item_end (item (bs!k!r))) inp"
+          using IH_pre IH_r by (simp add: wf_yield_tree_def)
+        also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k!r))) inp"
+          using slice_concat wf1 completes_def completes by (metis (no_types, lifting))
+        also have "... = slice (item_origin (item e)) (item_end (item (bs!k!r))) inp"
+          using completes unfolding completes_def inc_item_def by simp
+        also have "... = slice (item_origin (item e)) (item_end (item e)) inp"
+          using wf2 entry by presburger
+        finally show ?thesis
+          using wf_yield_tree_def entry by blast
+      qed
+    qed
+    done
+  thus ?thesis
+    using assms(2) by blast
+qed
 
 theorem wf_rule_root_yield_tree_build_forest:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
@@ -3518,295 +3675,12 @@ function build_forest'' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat 
   by pat_completeness auto
 termination sorry
 
-declare build_forest'.simps [simp del]
-
 definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a forest list" where
   "build_forest cfg inp bs = (
     let k = length bs - 1 in
     let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
     map (\<lambda>(_, i). build_forest' bs inp k i {i}) finished
   )"
-
-
-subsection \<open>Parse forest lemmas\<close>
-
-lemma build_forest'_simps[simp]:
-  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_forest' bs inp k i I = FBranch (item_rule_head (item e)) []"
-  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_forest' bs inp (k-1) pre {pre} = FBranch N fss \<Longrightarrow> 
-    build_forest' bs inp k i I = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = FBranch N fss \<Longrightarrow>
-    reds' = filter (\<lambda>r. r \<notin> I) (red#reds) \<Longrightarrow>
-    build_forest' bs inp k i I = FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])"
-  by (auto simp: build_forest'.simps Let_def)
-
-lemma ex_Branch_build_forest':
-  "\<exists>N fss. build_forest' bs inp k i I = FBranch N fss"
-  apply (induction bs inp k i I rule: build_forest'.induct)
-  apply (subst build_forest'.simps)
-  apply (auto simp: Let_def split: list.splits forest.splits pointer.splits)
-  by (metis forest.distinct(1))+
-
-lemma nex_Leaf_build_forest':
-  "\<nexists>a. build_forest' bs inp k i I = FLeaf a"
-  using ex_Branch_build_forest' by (metis forest.distinct(1))
-
-lemma wf_item_tree_build_forest':
-  assumes "wf_bins cfg inp bs"
-  assumes "sound_ptrs inp bs"
-  assumes "k < length bs" "i < length (bs!k)"
-  assumes "t \<in> set (trees (build_forest' bs inp k i I))"
-  shows "wf_item_tree cfg (item (bs!k!i)) t"
-  using assms
-proof (induction bs inp k i I arbitrary: t rule: build_forest'.induct)
-  case (1 bs inp k i I)
-  let ?e = "bs!k!i"
-  consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
-    by (meson PreRed pointer.exhaust)
-  thus ?case
-  proof cases
-    case Null
-    hence "build_forest' bs inp k i I = FBranch (item_rule_head (item ?e)) []"
-      by simp
-    hence simp: "t = Branch (item_rule_head (item ?e)) []"
-      using "1.prems"(5) by force
-    have "predicts (item ?e)"
-      using Null "1.prems"(2,3,4) nth_mem unfolding sound_ptrs_def sound_null_ptr_def by blast
-    hence "item_dot (item ?e) = 0"
-      unfolding predicts_def by blast
-    thus ?thesis
-      using simp by simp
-  next
-    case Pre
-    then obtain pre where pre: "pointer ?e = Pre pre"
-      by blast
-    obtain N fss where node: "build_forest' bs inp (k-1) pre {pre} = FBranch N fss"
-      by (meson ex_Branch_build_forest')
-    define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-    have simp: "build_forest' bs inp k i I = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
-      by (meson build_forest'_simps(2) node pre)
-    have "trees (build_forest' bs inp k i I) = 
-      map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
-      by (subst simp, subst tss, subst trees_append_single_singleton, simp)
-    then obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
-      using "1"(8) by auto
-    have "pre < length (bs!(k-1))"
-      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
-    moreover have "Branch N ts \<in> set (trees (build_forest' bs inp (k-1) pre {pre}))"
-      using node ts tss by simp
-    ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
-      using "1.IH"(1) "1.prems"(1-3) less_imp_diff_less pre by presburger
-    have scans: "scans inp k (item (bs!(k-1)!pre)) (item ?e)"
-      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
-    hence *: 
-      "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item ?e)"
-      "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item ?e)"
-      "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item ?e)"
-      "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
-      unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
-    have "map root_tree (ts @ [Leaf (inp!(k-1))]) = map root_tree ts @ [inp!(k-1)]"
-      by simp
-    also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
-      using IH node by simp
-    also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item ?e)) @ [inp!(k-1)]"
-      using *(2) by simp
-    also have "... = take (item_dot (item ?e)) (item_rule_body (item ?e))"
-      using *(2-4) by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
-    finally have "map root_tree (ts @ [Leaf (inp!(k-1))]) = take (item_dot (item ?e)) (item_rule_body (item ?e))" .
-    hence "wf_item_tree cfg (item ?e) (Branch N (ts @ [Leaf (inp!(k-1))]))"
-      using IH *(1) by simp
-    thus ?thesis
-      using ts by blast
-  next
-    case PreRed
-    then obtain k' pre red reds where prered: "pointer ?e = PreRed (k', pre, red) reds"
-      by auto
-    obtain N fss where pre: "build_forest' bs inp k' pre {pre} = FBranch N fss"
-      by (meson ex_Branch_build_forest')
-    define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-    define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
-    have simp: "build_forest' bs inp k i I = FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])"
-      using build_forest'_simps(3) pre prered reds' by simp
-    have "trees (build_forest' bs inp k i I) =
-      map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
-        ts1 <- combinations [concat (map (\<lambda>r. trees (build_forest' bs inp k r (I \<union> {i}))) reds') ] ]"
-      by (subst simp, subst tss, subst trees_append_singleton, auto simp: o_def)
-    then obtain ts0 ts1 r where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
-      "ts1 \<in> set (trees (build_forest' bs inp k r (I \<union> {i})))" "r \<in> set reds'"
-      using "1.prems"(5) reds' by auto
-    have "r \<in> set (red#reds)"
-      using reds' tsx(4) by (metis filter_set member_filter)
-    obtain N' ts where red: "Branch N' ts = ts1"
-      using tsx by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
-    have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
-      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
-    have completes: "completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!r))"
-      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
-    have *: 
-      "item_rule_head (item (bs!k'!pre)) = item_rule_head (item ?e)"
-      "item_rule_body (item (bs!k'!pre)) = item_rule_body (item ?e)"
-      "item_dot (item (bs!k'!pre)) + 1 = item_dot (item ?e)"
-      "next_symbol (item (bs!k'!pre)) = Some (item_rule_head (item (bs!k!r)))"
-      "is_complete (item (bs!k!r))"
-      using completes unfolding completes_def inc_item_def
-      by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
-    have "Branch N ts0 \<in> set (trees (build_forest' bs inp k' pre {pre}))"
-      using pre tss tsx(2) by force
-    hence IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (Branch N ts0)"
-      using "1.IH"(2) "1.prems"(1-3) bounds(1,2) prered by fastforce
-    have IH_r: "wf_item_tree cfg (item (bs!k!r)) (Branch N' ts)"
-      using "1.IH"(3) "1.prems"(1-3) bounds(3) pre prered tsx red reds' by blast
-    have "map root_tree (ts0 @ [Branch N' ts]) = map root_tree ts0 @ [root_tree (Branch N' ts)]"
-      by simp
-    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (Branch N' ts)]"
-      using IH_pre pre by force
-    also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!r))]"
-      using IH_r by simp
-    also have "... = take (item_dot (item ?e)) (item_rule_body (item ?e))"
-      using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
-    finally have roots: "map root_tree (ts0 @ [Branch N' ts]) = take (item_dot (item ?e)) (item_rule_body (item ?e))" .
-    have "wf_item cfg inp (item (bs!k!r))"
-      using "1.prems" bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-    moreover have "N' = item_rule_head (item (bs!k!r))"
-      using IH_r by fastforce
-    moreover have "map root_tree ts = item_rule_body (item (bs!k!r))"
-      using IH_r *(5) by (auto simp: is_complete_def)
-    ultimately have "\<exists>r \<in> set (\<RR> cfg). N' = rule_head r \<and> map root_tree ts = rule_body r"
-      unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
-    hence "wf_rule_tree cfg (Branch N' ts)"
-      using IH_r by simp
-    hence "wf_item_tree cfg (item (bs!k!i)) (Branch N (ts0 @ [Branch N' ts]))"
-      using "*"(1) roots IH_pre by simp
-    thus ?thesis
-      using tsx(1) red by blast
-  qed
-qed
-
-lemma wf_yield_tree_build_forest':
-  assumes "wf_bins cfg inp bs"
-  assumes "sound_ptrs inp bs"
-  assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
-  assumes "t \<in> set (trees (build_forest' bs inp k i I))"
-  shows "wf_yield_tree inp (item (bs!k!i)) t"
-  using assms
-proof (induction bs inp k i I arbitrary: t rule: build_forest'.induct)
-  case (1 bs inp k i I)
-  let ?e = "bs!k!i"
-  consider (Null) "pointer ?e = Null" | (Pre) "\<exists>pre. pointer ?e = Pre pre" | (PreRed) "\<exists>p ps. pointer ?e = PreRed p ps"
-    by (meson PreRed pointer.exhaust)
-  thus ?case
-  proof cases
-    case Null
-    hence "build_forest' bs inp k i I = FBranch (item_rule_head (item ?e)) []"
-      by simp
-    hence simp: "t = Branch (item_rule_head (item ?e)) []"
-      using "1.prems"(6) by force
-    have "predicts (item ?e)"
-      using Null "1.prems"(2,3,4) nth_mem unfolding sound_ptrs_def sound_null_ptr_def by blast
-    hence "item_origin (item ?e) = item_end (item ?e)"
-      unfolding predicts_def by blast
-    thus ?thesis
-      unfolding wf_yield_tree_def using simp by (auto simp: slice_empty)
-  next
-    case Pre
-    then obtain pre where pre: "pointer ?e = Pre pre"
-      by blast
-    obtain N fss where node: "build_forest' bs inp (k-1) pre {pre} = FBranch N fss"
-      by (meson ex_Branch_build_forest')
-    define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-    have simp: "build_forest' bs inp k i I = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
-      by (meson build_forest'_simps(2) node pre)
-    have "trees (build_forest' bs inp k i I) = 
-      map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
-      by (subst simp, subst tss, subst trees_append_single_singleton, simp)
-    then obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
-      using "1"(9) by auto
-    have bounds: "k > 0" "pre < length (bs!(k-1))"
-      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)+
-    moreover have "Branch N ts \<in> set (trees (build_forest' bs inp (k-1) pre {pre}))"
-      using node ts tss by simp
-    ultimately have IH: "wf_yield_tree inp (item (bs!(k-1)!pre)) (Branch N ts)"
-      using "1.IH"(1) "1.prems"(1-3,5) pre by (meson diff_le_self less_imp_diff_less order_trans)
-    have scans: "scans inp k (item (bs!(k-1)!pre)) (item ?e)"
-      using "1.prems"(2,3,4) pre unfolding sound_ptrs_def sound_pre_ptr_def by simp
-    have wf: 
-      "item_origin (item (bs!(k-1)!pre)) \<le> item_end (item (bs!(k-1)!pre))"
-      "item_end (item (bs!(k-1)!pre)) = k-1"
-      "item_end (item ?e) = k"
-      using "1.prems"(1,3,4) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
-      by (auto, meson less_imp_diff_less nth_mem)
-    have "yield_tree t = concat (map yield_tree (ts @ [Leaf (inp!(k-1))]))"
-      by (simp add: ts)
-    also have "... = concat (map yield_tree ts) @ [inp!(k-1)]"
-      by simp
-    also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre))) inp @ [inp!(k-1)]"
-      using node IH by (simp add: wf_yield_tree_def)
-    also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre)) + 1) inp"
-      using slice_append_nth wf "1.prems"(5) \<open>k > 0\<close> by (metis Suc_diff_1 linorder_not_le not_less_eq)
-    also have "... = slice (item_origin (item ?e)) (item_end (item (bs!(k-1)!pre)) + 1) inp"
-      using scans unfolding scans_def inc_item_def by simp
-    also have "... = slice (item_origin (item ?e)) k inp"
-      using scans wf unfolding scans_def by (metis Suc_diff_1 Suc_eq_plus1 bounds(1))
-    also have "... = slice (item_origin (item ?e)) (item_end (item ?e)) inp"
-      using wf by auto
-    finally show ?thesis
-      using wf_yield_tree_def by blast
-  next
-    case PreRed
-    then obtain k' pre red reds where prered: "pointer ?e = PreRed (k', pre, red) reds"
-      by auto
-    obtain N fss where pre: "build_forest' bs inp k' pre {pre} = FBranch N fss"
-      by (meson ex_Branch_build_forest')
-    define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-    define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
-    have simp: "build_forest' bs inp k i I = FBranch N (fss @ [map (\<lambda>r. build_forest' bs inp k r (I \<union> {i})) reds'])"
-      using build_forest'_simps(3) pre prered reds' by simp
-    have "trees (build_forest' bs inp k i I) =
-      map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
-        ts1 <- combinations [concat (map (\<lambda>r. trees (build_forest' bs inp k r (I \<union> {i}))) reds') ] ]"
-      by (subst simp, subst tss, subst trees_append_singleton, auto simp: o_def)
-    then obtain ts0 ts1 r where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
-      "ts1 \<in> set (trees (build_forest' bs inp k r (I \<union> {i})))" "r \<in> set reds'"
-      using "1.prems"(6) reds' by auto
-    have "r \<in> set (red#reds)"
-      using reds' tsx(4) by (metis filter_set member_filter)
-    obtain N' ts where red: "Branch N' ts = ts1"
-      using tsx by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
-    have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
-      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
-    have completes: "completes k (item (bs!k'!pre)) (item ?e) (item (bs!k!r))"
-      using "1.prems" prered \<open>r \<in> set (red#reds)\<close> unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
-    have "Branch N ts0 \<in> set (trees (build_forest' bs inp k' pre {pre}))"
-      using pre tss tsx(2) by force
-    hence IH_pre: "wf_yield_tree inp (item (bs!k'!pre)) (Branch N ts0)"
-      using "1.IH"(2) "1.prems"(1-3,5) bounds prered by simp
-    have IH_r: "wf_yield_tree inp (item (bs!k!r)) (Branch N' ts)"
-      using "1.IH"(3) "1.prems"(1-3,5) bounds(3) pre prered red tsx(3,4) reds' by blast
-    have wf1: 
-      "item_origin (item (bs!k'!pre)) \<le> item_end (item (bs!k'!pre))"
-      "item_origin (item (bs!k!r)) \<le> item_end (item (bs!k!r))"
-      using "1.prems"(1,3,4) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def wf_item_def
-      by (metis length_map nth_map nth_mem order_less_trans)+
-    have wf2:
-      "item_end (item (bs!k!r)) = k"
-      "item_end (item (bs!k!i)) = k"
-      using "1.prems"(1,3,4) bounds unfolding wf_bins_def wf_bin_def wf_bin_items_def items_def by simp_all
-    have "yield_tree t = concat (map yield_tree (ts0 @ [Branch N' ts]))"
-      by (simp add: red tsx(1))
-    also have "... = concat (map yield_tree ts0) @ yield_tree (Branch N' ts)"
-      by simp
-    also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k'!pre))) inp @ 
-      slice (item_origin (item (bs!k!r))) (item_end (item (bs!k!r))) inp"
-      using IH_pre IH_r by (simp add: pre wf_yield_tree_def)
-    also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k!r))) inp"
-      using slice_concat wf1 completes_def completes by (metis (no_types, lifting))
-    also have "... = slice (item_origin (item ?e)) (item_end (item (bs!k!r))) inp"
-      using completes unfolding completes_def inc_item_def by simp
-    also have "... = slice (item_origin (item ?e)) (item_end (item ?e)) inp"
-      using wf2 by simp
-    finally show ?thesis
-      using wf_yield_tree_def by blast
-  qed
-qed
 
 theorem wf_rule_root_yield_tree_build_forest:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
@@ -3847,13 +3721,6 @@ proof -
   show ?thesis
     using * wf_rule root yield assms(4) unfolding build_forest_def by simp
 qed
-
-corollary wf_rule_root_yield_tree_build_forest_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
-  assumes "f \<in> set (build_forest cfg inp (\<II>_it cfg inp))" "t \<in> set (trees f)"
-  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
-  using assms wf_rule_root_yield_tree_build_forest wf_bins_\<II>_it sound_ptrs_\<II>_it \<II>_it_def
-    length_\<I>_it length_bins_Init_it by (metis nle_le)
 
 theorem soundness_build_forest_\<II>_it:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
