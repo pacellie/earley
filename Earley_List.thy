@@ -3617,11 +3617,57 @@ proof -
     using assms(2) by blast
 qed
 
+lemma those_map_exists:
+  "Some ys = those (map f xs) \<Longrightarrow> y \<in> set ys \<Longrightarrow> \<exists>x. x \<in> set xs \<and> Some y \<in> set (map f xs)"
+  apply (induction xs arbitrary: ys)
+  apply (auto split: option.splits)
+  by (smt (verit, best) map_option_eq_Some set_ConsD)
+
 theorem wf_rule_root_yield_tree_build_forest:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
   assumes "build_forest cfg inp bs = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
-  sorry
+proof -
+  let ?k = "length bs - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items (bs!?k))"
+  have #: "Some fs = those (map (\<lambda>(_, i). build_forest' bs inp ?k i {i}) finished)"
+    using assms(4) build_forest_def finished_def by (metis (full_types))
+  then obtain x i where *: "(x,i) \<in> set finished" "Some f = build_forest' bs inp ?k i {i}"
+    using those_map_exists[OF # assms(5)] by auto
+  have k: "?k < length bs" "?k \<le> length inp"
+    using assms(3) by simp_all
+  have i: "i < length (bs!?k)"
+    using index_filter_with_index_lt_length * items_def finished_def by (metis length_map)
+  have x: "x = item (bs!?k!i)"
+    using * i filter_with_index_nth items_def nth_map finished_def by metis
+  have finished: "is_finished cfg inp x"
+    using * filter_with_index_P finished_def by metis
+  have "{i} \<subseteq> {0..<length (bs!?k)}"
+    using atLeastLessThan_iff i by blast
+  hence wellformed_ptrs: "(bs, inp, ?k, i, {i}) \<in> wellformed_ptrs"
+    unfolding wellformed_ptrs_def using assms(2) i k(1) by simp
+  hence wf_item_tree: "wf_item_tree cfg x t"
+    using wf_item_tree_build_forest' assms(1,2,5,6) i k(1) x *(2) by metis
+  have wf_item: "wf_item cfg inp (item (bs!?k!i))"
+    using k(1) i assms(1) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
+  obtain N ts where t: "t = Branch N ts"
+    using ex_Branch_build_forest'[OF wellformed_ptrs *(2)[symmetric]] assms(6) by auto
+  hence "N = item_rule_head x"
+    "map root_tree ts = item_rule_body x"
+    using finished wf_item_tree by (auto simp: is_finished_def is_complete_def)
+  hence "\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_tree ts = rule_body r"
+    using wf_item x unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
+  hence wf_rule: "wf_rule_tree cfg t"
+    using wf_item_tree t by simp
+  have root: "root_tree t = \<SS> cfg"
+    using finished t \<open>N = item_rule_head x\<close> by (auto simp: is_finished_def)
+  have "yield_tree t = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) inp"
+    using k i assms(1,6) wellformed_ptrs wf_yield_tree_build_forest' wf_yield_tree_def *(2) by (metis (no_types, lifting))
+  hence yield: "yield_tree t = inp"
+    using finished x unfolding is_finished_def by simp
+  show ?thesis
+    using * wf_rule root yield assms(4) unfolding build_forest_def by simp
+qed
 
 corollary wf_rule_root_yield_tree_build_forest_\<II>_it:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
@@ -3636,7 +3682,30 @@ theorem soundness_build_forest_\<II>_it:
   assumes "build_forest cfg inp (\<II>_it cfg inp) = Some fs"
   assumes "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg [\<SS> cfg] inp"
-  sorry
+proof -
+  let ?k = "length (\<II>_it cfg inp) - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
+  have #: "Some fs = those (map (\<lambda>(_, i). build_forest' (\<II>_it cfg inp) inp ?k i {i}) finished)"
+    using assms(4) build_forest_def finished_def by (metis (full_types))
+  then obtain x i where *: "(x,i) \<in> set finished" "Some f = build_forest' (\<II>_it cfg inp) inp ?k i {i}"
+    using those_map_exists[OF # assms(5)] by auto
+  have k: "?k < length (\<II>_it cfg inp)" "?k \<le> length inp"
+    by (simp_all add: \<II>_it_def assms(1))
+  have i: "i < length ((\<II>_it cfg inp) ! ?k)"
+    using index_filter_with_index_lt_length * items_def finished_def by (metis length_map)
+  have x: "x = item ((\<II>_it cfg inp)!?k!i)"
+    using * i filter_with_index_nth items_def nth_map finished_def by metis
+  have finished: "is_finished cfg inp x"
+    using * filter_with_index_P finished_def by metis
+  moreover have "x \<in> set (items ((\<II>_it cfg inp) ! ?k))"
+    using x by (auto simp: items_def; metis One_nat_def i imageI nth_mem)
+  ultimately have "(\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
+    by (metis assms(1) is_finished_def k(1) wf_bins_\<II>_it wf_bins_kth_bin)    
+  hence "earley_recognized_it (\<II>_it cfg inp) cfg inp"
+    using earley_recognized_it_def by blast
+  thus ?thesis
+    using correctness_list assms by blast
+qed
 
 
 
@@ -3676,46 +3745,6 @@ definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bi
     let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
     map (\<lambda>(_, i). build_forest' bs inp k i {i}) finished
   )"
-
-theorem wf_rule_root_yield_tree_build_forest:
-  assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
-  assumes "f \<in> set (build_forest cfg inp bs)" "t \<in> set (trees f)"
-  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
-proof -
-  let ?k = "length bs - 1"
-  obtain x i where *: "(x,i) \<in> set (filter_with_index (is_finished cfg inp) (items (bs!?k)))"
-    "f = build_forest' bs inp ?k i {i}" "t \<in> set (trees f)"
-    using assms(4,5) unfolding build_forest_def by (auto simp: Let_def)
-  have k: "?k < length bs" "?k \<le> length inp"
-    using assms(3) by simp_all
-  have i: "i < length (bs!?k)"
-    using index_filter_with_index_lt_length * items_def by (metis length_map)
-  have x: "x = item (bs!?k!i)"
-    using * i filter_with_index_nth items_def nth_map by metis
-  have finished: "is_finished cfg inp x"
-    using * filter_with_index_P by metis
-  hence wf_item_tree: "wf_item_tree cfg x t"
-    using wf_item_tree_build_forest' assms(1,2,5) i k(1) x "*"(2) by blast
-  have wf_item: "wf_item cfg inp (item (bs!?k!i))"
-    using k(1) i assms(1) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (simp add: items_def)
-  obtain N ts where t: "t = Branch N ts"
-    using * by (metis (no_types, lifting) ex_Branch_build_forest' in_set_conv_nth length_map nth_map trees.simps(2))
-  hence "N = item_rule_head x"
-    "map root_tree ts = item_rule_body x"
-    using finished wf_item_tree by (auto simp: is_finished_def is_complete_def)
-  hence "\<exists>r \<in> set (\<RR> cfg). N = rule_head r \<and> map root_tree ts = rule_body r"
-    using wf_item x unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
-  hence wf_rule: "wf_rule_tree cfg t"
-    using wf_item_tree t by simp
-  have root: "root_tree t = \<SS> cfg"
-    using finished t \<open>N = item_rule_head x\<close> by (auto simp: is_finished_def)
-  have "yield_tree t = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) inp"
-    using k i assms(1,2,3,5) wf_yield_tree_build_forest' wf_yield_tree_def "*"(2) assms(5) by blast
-  hence yield: "yield_tree t = inp"
-    using finished x unfolding is_finished_def by simp
-  show ?thesis
-    using * wf_rule root yield assms(4) unfolding build_forest_def by simp
-qed
 
 theorem soundness_build_forest_\<II>_it:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
