@@ -2862,6 +2862,41 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
 
 value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
 
+partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree option" where
+  "build_tree' bs inp k i = (
+    let e = bs!k!i in (
+    case pointer e of
+      Null \<Rightarrow> Some (Branch (item_rule_head (item e)) []) \<comment>\<open>start building sub-tree\<close>
+    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-tree starting from terminal\<close>
+        do {
+          t \<leftarrow> build_tree' bs inp (k-1) pre;
+          case t of
+            Branch N ts \<Rightarrow> Some (Branch N (ts @ [Leaf (inp!(k-1))]))
+          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+        })
+    | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>add sub-tree starting from non-terminal\<close>
+        do {
+          t \<leftarrow> build_tree' bs inp k' pre;
+          case t of
+            Branch N ts \<Rightarrow>
+              do {
+                t \<leftarrow> build_tree' bs inp k red;
+                Some (Branch N (ts @ [t]))
+              }
+          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+        })
+  ))"
+
+declare build_tree'.simps [code]
+
+definition build_tree :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a tree option" where
+  "build_tree cfg inp bs = (
+    let k = length bs - 1 in (
+    case filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
+      [] \<Rightarrow> None
+    | (_, i)#_ \<Rightarrow> build_tree' bs inp k i
+  ))"
+
 lemma [partial_function_mono]: "monotone option.le_fun option_ord (\<lambda>f. those (map (\<lambda>r. f ((((a, b), c), r), d \<union> {r})) xs))"
 proof (induction xs)
   case Nil
@@ -3164,6 +3199,8 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       by (smt (verit, best) Pair_inject filter_cong pointer.distinct(5) pointer.inject(2))
   qed
 qed
+
+subsection \<open>Parse tree lemmas\<close>
 
 subsection \<open>Parse forest lemmas\<close>
 
@@ -3697,71 +3734,6 @@ proof -
     using * i filter_with_index_nth items_def nth_map finished_def by metis
   have finished: "is_finished cfg inp x"
     using * filter_with_index_P finished_def by metis
-  moreover have "x \<in> set (items ((\<II>_it cfg inp) ! ?k))"
-    using x by (auto simp: items_def; metis One_nat_def i imageI nth_mem)
-  ultimately have "(\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
-    by (metis assms(1) is_finished_def k(1) wf_bins_\<II>_it wf_bins_kth_bin)    
-  hence "earley_recognized_it (\<II>_it cfg inp) cfg inp"
-    using earley_recognized_it_def by blast
-  thus ?thesis
-    using correctness_list assms by blast
-qed
-
-
-
-
-
-
-
-
-
-
-
-
-subsection \<open>OLD\<close>
-
-function build_forest'' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest" where
-  "build_forest'' bs inp k i I = (
-    let e = bs!k!i in (
-    case pointer e of
-      Null \<Rightarrow> FBranch (item_rule_head (item e)) [] \<comment>\<open>start building sub-forest\<close>
-    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-forest starting from terminal\<close>
-      case build_forest'' bs inp (k-1) pre {pre} of
-        FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]])
-      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
-    | PreRed (k', pre, red) reds \<Rightarrow> ( \<comment>\<open>add sub-forest starting from non-terminal\<close>
-      case build_forest'' bs inp k' pre {pre} of
-        FBranch N fss \<Rightarrow>
-          let reds' = filter (\<lambda>r. r \<notin> I) (red#reds) in
-          FBranch N (fss @ [map (\<lambda>r. build_forest'' bs inp k r (I \<union> {i})) reds'])
-      | _ \<Rightarrow> undefined) \<comment>\<open>impossible case\<close>
-    ))"
-  by pat_completeness auto
-termination sorry
-
-definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a forest list" where
-  "build_forest cfg inp bs = (
-    let k = length bs - 1 in
-    let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
-    map (\<lambda>(_, i). build_forest' bs inp k i {i}) finished
-  )"
-
-theorem soundness_build_forest_\<II>_it:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  assumes "f \<in> set (build_forest cfg inp (\<II>_it cfg inp))" "t \<in> set (trees f)"
-  shows "derives cfg [\<SS> cfg] inp"
-proof -
-  let ?k = "length (\<II>_it cfg inp) - 1"
-  obtain x i where *: "(x,i) \<in> set (filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k)))"
-    using assms(3,4) unfolding build_forest_def by (auto simp: Let_def split: list.splits)
-  have k: "?k < length (\<II>_it cfg inp)" "?k \<le> length inp"
-    by (simp_all add: \<II>_it_def assms(1))
-  have i: "i < length ((\<II>_it cfg inp) ! ?k)"
-    using index_filter_with_index_lt_length * items_def by (metis length_map)
-  have x: "x = item ((\<II>_it cfg inp)!?k!i)"
-    using * i filter_with_index_nth items_def nth_map by metis
-  have finished: "is_finished cfg inp x"
-    using * filter_with_index_P by metis
   moreover have "x \<in> set (items ((\<II>_it cfg inp) ! ?k))"
     using x by (auto simp: items_def; metis One_nat_def i imageI nth_mem)
   ultimately have "(\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
