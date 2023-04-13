@@ -2956,7 +2956,7 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
 value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
 
 
-subsection \<open>foldl lemmas\<close>
+subsection \<open>Random foldl lemmas\<close>
 
 lemma foldl_add_nth:
   "k < length xs \<Longrightarrow> foldl (+) z (map length (take k xs)) + length (xs!k) = foldl (+) z (map length (take (k+1) xs))"
@@ -3031,6 +3031,30 @@ proof (induction xs arbitrary: i j z)
   qed
 qed simp
 
+lemma foldl_ge_acc:
+  "foldl (+) z (map length xs) \<ge> z"
+  by (induction xs arbitrary: z) (auto elim: add_leE)
+
+lemma foldl_take_mono:
+  "i \<le> j \<Longrightarrow> foldl (+) z (map length (take i xs)) \<le> foldl (+) z (map length (take j xs))"
+proof (induction xs arbitrary: z i j)
+  case (Cons x xs)
+  show ?case
+  proof (cases "i = 0")
+    case True
+    have "foldl (+) z (map length (take i (x # xs))) = z"
+      using True by simp
+    also have "... \<le> foldl (+) z (map length (take j (x # xs)))"
+      by (simp add: foldl_ge_acc)
+    ultimately show ?thesis
+      by simp
+  next
+    case False
+    then show ?thesis
+      using Cons by (simp add: take_Cons')
+  qed
+qed simp
+
 
 subsection \<open>Parse tree\<close>
 
@@ -3099,6 +3123,130 @@ definition wellformed_tree_ptrs :: "('a bins \<times> 'a sentence \<times> nat \
 
 fun build_tree'_measure :: "('a bins \<times> 'a sentence \<times> nat \<times> nat) \<Rightarrow> nat" where
   "build_tree'_measure (bs, inp, k, i) = foldl (+) 0 (map length (take k bs)) + i"
+
+lemma wellformed_tree_ptrs_pre:
+  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "e = bs!k!i" "pointer e = Pre pre"
+  shows "(bs, inp, (k-1), pre) \<in> wellformed_tree_ptrs"
+  using assms unfolding wellformed_tree_ptrs_def
+  apply (auto simp: sound_ptrs_def sound_pre_ptr_def)
+  apply (metis nth_mem)
+  done
+
+lemma wellformed_tree_ptrs_prered_pre:
+  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
+  shows "(bs, inp, k', pre) \<in> wellformed_tree_ptrs"
+  using assms unfolding wellformed_tree_ptrs_def
+  apply (auto simp: sound_ptrs_def sound_prered_ptr_def)
+  apply metis+
+  apply (metis dual_order.strict_trans nth_mem)
+  by (metis nth_mem)
+
+lemma wellformed_tree_ptrs_prered_red:
+  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
+  shows "(bs, inp, k, red) \<in> wellformed_tree_ptrs"
+  using assms unfolding wellformed_tree_ptrs_def
+  apply (auto simp add: sound_ptrs_def sound_prered_ptr_def)
+  apply (metis nth_mem)+
+  done
+
+lemma build_tree_induct:
+  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "\<And>bs inp k i.
+    (\<And>e pre. e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> P bs inp (k-1) pre) \<Longrightarrow>
+    (\<And>e k' pre red ps. e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> P bs inp k' pre) \<Longrightarrow>
+    (\<And>e k' pre red ps. e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) ps \<Longrightarrow> P bs inp k red) \<Longrightarrow>
+    P bs inp k i" 
+  shows "P bs inp k i"
+  using assms(1)
+proof (induction n\<equiv>"build_tree'_measure (bs, inp, k, i)" arbitrary: k i rule: nat_less_induct)
+  case 1
+  obtain e where entry: "e = bs!k!i"
+    by simp
+  consider (Null) "pointer e = Null"
+    | (Pre) "\<exists>pre. pointer e = Pre pre"
+    | (PreRed) "\<exists>k' pre red reds. pointer e = PreRed (k', pre, red) reds"
+    by (metis pointer.exhaust surj_pair)
+  thus ?case
+  proof cases
+    case Null
+    thus ?thesis
+      using assms(2) entry by fastforce
+  next
+    case Pre
+    then obtain pre where pre: "pointer e = Pre pre"
+      by blast
+    define n where n: "n = build_tree'_measure (bs, inp, (k-1), pre)"
+    have "0 < k" "pre < length (bs!(k-1))"
+      using 1(2) entry pre unfolding wellformed_tree_ptrs_def sound_ptrs_def sound_pre_ptr_def
+      by (smt (verit) mem_Collect_eq nth_mem prod.inject)+
+    have "k < length bs"
+      using 1(2) unfolding wellformed_tree_ptrs_def by blast+
+    have "foldl (+) 0 (map length (take k bs)) + i - (foldl (+) 0 (map length (take (k-1) bs)) + pre) =
+      foldl (+) 0 (map length (take (k-1) bs)) + length (bs!(k-1)) + i - (foldl (+) 0 (map length (take (k-1) bs)) + pre)"
+      using foldl_add_nth[of \<open>k-1\<close> bs 0] by (simp add: \<open>0 < k\<close> \<open>k < length bs\<close> less_imp_diff_less)
+    also have "... = length (bs!(k-1)) + i - pre"
+      by simp
+    also have "... > 0"
+      using \<open>pre < length (bs!(k-1))\<close> by auto
+    finally have "build_tree'_measure (bs, inp, k, i) - build_tree'_measure (bs, inp, (k-1), pre) > 0"
+      by simp
+    hence "P bs inp (k-1) pre"
+      using 1 n wellformed_tree_ptrs_pre entry pre zero_less_diff by blast
+    thus ?thesis
+      using assms(2) entry pre pointer.distinct(5) pointer.inject(1) by presburger
+  next
+    case PreRed
+    then obtain k' pre red ps where prered: "pointer e = PreRed (k', pre, red) ps"
+      by blast
+    have "k' < k" "pre < length (bs!k')"
+      using 1(2) entry prered unfolding wellformed_tree_ptrs_def sound_ptrs_def sound_prered_ptr_def
+      apply simp_all
+      apply (metis nth_mem)+
+      done
+    have "red < i"
+      using 1(2) entry prered unfolding wellformed_tree_ptrs_def mono_red_ptr_def by blast
+    have "k < length bs" "i < length (bs!k)"
+      using 1(2) unfolding wellformed_tree_ptrs_def by blast+
+    define n_pre where n_pre: "n_pre = build_tree'_measure (bs, inp, k', pre)"
+    have "0 < length (bs!k') + i - pre"
+      by (simp add: \<open>pre < length (bs!k')\<close> add.commute trans_less_add2)
+    also have "... = foldl (+) 0 (map length (take k' bs)) + length (bs!k') + i - (foldl (+) 0 (map length (take k' bs)) + pre)"
+      by simp
+    also have "... \<le> foldl (+) 0 (map length (take (k'+1) bs)) + i - (foldl (+) 0 (map length (take k' bs)) + pre)"
+      using foldl_add_nth_ge[of k' k' bs 0] \<open>k < length bs\<close> \<open>k' < k\<close> by simp
+    also have "... \<le> foldl (+) 0 (map length (take k bs)) + i - (foldl (+) 0 (map length (take k' bs)) + pre)"
+      using foldl_take_mono by (metis Suc_eq_plus1 Suc_leI \<open>k' < k\<close> add.commute add_le_cancel_left diff_le_mono)
+    finally have "build_tree'_measure (bs, inp, k, i) - build_tree'_measure (bs, inp, k', pre) > 0"
+      by simp
+    hence x: "P bs inp k' pre"
+      using 1(1) zero_less_diff by (metis "1.prems" entry prered wellformed_tree_ptrs_prered_pre)
+    define n_red where n_red: "n_red = build_tree'_measure (bs, inp, k, red)"
+    have "build_tree'_measure (bs, inp, k, i) - build_tree'_measure (bs, inp, k, red) > 0"
+      using \<open>red < i\<close> by simp
+    hence y: "P bs inp k red"
+      using "1.hyps" "1.prems" entry prered wellformed_tree_ptrs_prered_red zero_less_diff by blast
+    show ?thesis
+      using assms(2) x y entry prered 
+      by (smt (verit, best) Pair_inject filter_cong pointer.distinct(5) pointer.inject(2))
+  qed
+qed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 subsection \<open>Parse forest\<close>
