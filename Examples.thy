@@ -51,8 +51,8 @@ lemma correctness1:
 
 value "\<II>_it cfg1 inp1"
 value "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1"
-value "build_forest cfg1 inp1 (\<II>_it cfg1 inp1)"
-value "map_option (map trees) (build_forest cfg1 inp1 (\<II>_it cfg1 inp1))"
+value "build_trees cfg1 inp1 (\<II>_it cfg1 inp1)"
+value "map_option (map trees) (build_trees cfg1 inp1 (\<II>_it cfg1 inp1))"
 
 subsection \<open>Example 2: Addition performance sanity check\<close>
 
@@ -61,9 +61,9 @@ fun size_bins :: "'a bins \<Rightarrow> nat" where
 
 definition inp1' :: "s1 list" where
   "inp1' = [
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x,
-    Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x,
-    Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
+    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
+    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
+    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
   ]"
 
 lemma is_word_inp1':
@@ -77,9 +77,9 @@ lemma correctness1':
 value "\<II>_it cfg1 inp1'"
 value "size_bins (\<II>_it cfg1 inp1')"
 value "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1'"
-value "build_forest cfg1 inp1' (\<II>_it cfg1 inp1')"
-value "map_option (map trees) (build_forest cfg1 inp1' (\<II>_it cfg1 inp1'))"
-value "map_option (map length) (map_option (map trees) (build_forest cfg1 inp1' (\<II>_it cfg1 inp1')))"
+value "build_trees cfg1 inp1' (\<II>_it cfg1 inp1')"
+value "map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1'))"
+value "map_option (foldl (+) 0 \<circ> map length) (map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1')))"
 
 subsection \<open>Example 3: Cyclic reduction pointers\<close>
 
@@ -129,7 +129,7 @@ lemma correctness2:
 
 value "\<II>_it cfg2 inp2"
 value "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2"
-value "build_forest cfg2 inp2 (\<II>_it cfg2 inp2)"
-value "map_option (map trees) (build_forest cfg2 inp2 (\<II>_it cfg2 inp2))"
+value "build_trees cfg2 inp2 (\<II>_it cfg2 inp2)"
+value "map_option (map trees) (build_trees cfg2 inp2 (\<II>_it cfg2 inp2))"
 
 end

@@ -2940,7 +2940,6 @@ fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Righta
 definition wf_yield_tree :: "'a sentence \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
   "wf_yield_tree inp x t \<longleftrightarrow> yield_tree t = slice (item_origin x) (item_end x) inp"
 
-(*
 datatype 'a forest =
   FLeaf 'a
   | FBranch 'a "'a forest list list"
@@ -3010,7 +3009,6 @@ lemma trees_append_single_singleton:
     let xtss = (map (\<lambda>xs. concat (map (\<lambda>f. trees f) xs)) xss) in
     map (\<lambda>ts. Branch N ts) [ xs @ ys . xs <- combinations xtss,  ys <- [ [t] . t <- trees y ] ])"
   by (subst trees_append_singleton, auto)
-*)
 
 
 subsection \<open>Random foldl lemmas\<close>
@@ -3125,7 +3123,7 @@ partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentence \<Ri
           t \<leftarrow> build_tree' bs inp (k-1) pre;
           case t of
             Branch N ts \<Rightarrow> Some (Branch N (ts @ [Leaf (inp!(k-1))]))
-          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+          | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
         })
     | PreRed (k', pre, red) _ \<Rightarrow> ( \<comment>\<open>add sub-tree starting from non-terminal\<close>
         do {
@@ -3136,7 +3134,7 @@ partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentence \<Ri
                 t \<leftarrow> build_tree' bs inp k red;
                 Some (Branch N (ts @ [t]))
               }
-          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+          | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
         })
   ))"
 
@@ -3157,13 +3155,13 @@ lemma build_tree'_simps[simp]:
   "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_tree' bs inp (k-1) pre = Some (Branch N ts) \<Longrightarrow>
    build_tree' bs inp k i = Some (Branch N (ts @ [Leaf (inp!(k-1))]))"
   "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_tree' bs inp (k-1) pre = Some (Leaf a) \<Longrightarrow>
-   build_tree' bs inp k i = None"
+   build_tree' bs inp k i = undefined"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_tree' bs inp k' pre = None \<Longrightarrow>
    build_tree' bs inp k i = None"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_tree' bs inp k' pre = Some (Branch N ts) \<Longrightarrow>
    build_tree' bs inp k red = None \<Longrightarrow> build_tree' bs inp k i = None"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_tree' bs inp k' pre = Some (Leaf a) \<Longrightarrow>
-   build_tree' bs inp k i = None"
+   build_tree' bs inp k i = undefined"
   "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_tree' bs inp k' pre = Some (Branch N ts) \<Longrightarrow>
    build_tree' bs inp k red = Some t \<Longrightarrow>
    build_tree' bs inp k i = Some (Branch N (ts @ [t]))"
@@ -3701,7 +3699,25 @@ next
 qed
 
 
-subsection \<open>Parse forest\<close>
+subsection \<open>Parse trees\<close>
+
+lemma [partial_function_mono]:
+  "monotone option.le_fun option_ord (\<lambda>f.
+    map_option concat (those (map (\<lambda>((k', pre), reds).
+      f ((((x, y), k'), pre), {pre}) \<bind> (\<lambda>pres.
+        those (map (\<lambda>red. f ((((x, y), z), red), b \<union> {red})) reds) \<bind> (\<lambda>rss.
+          Some (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> FBranch N (fss @ [concat rss])) pres))))
+    xs)))"
+proof (induction xs)
+  case Nil
+  thus ?case
+    by (auto simp: monotone_def option.leq_refl)
+next
+  case (Cons x xs)
+  then show ?case
+    apply (auto simp: monotone_def option.leq_refl flat_ord_def fun_ord_def split: option.splits)
+    sorry
+qed
 
 lemma [partial_function_mono]: "monotone option.le_fun option_ord (\<lambda>f. those (map (\<lambda>r. f ((((a, b), c), r), d \<union> {r})) xs))"
 proof (induction xs)
@@ -3716,60 +3732,64 @@ next
     by (smt (verit) option.inject option.simps(3))
 qed
 
-partial_function (option) build_forest' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest option" where
-  "build_forest' bs inp k i I = (
+fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
+  "insert_group K V a [] = [(K a, [V a])]"
+| "insert_group K V a ((k, vs)#xs) = (
+    if K a = k then (k, V a # vs) # xs
+    else (k, vs) # insert_group K V a xs  
+  )"
+
+fun group_by :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a list \<Rightarrow> ('k \<times> 'v list) list" where
+  "group_by K V [] = []"
+| "group_by K V (x#xs) = insert_group K V x (group_by K V xs)"
+
+partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest list option" where
+  "build_trees' bs inp k i I = (
     let e = bs!k!i in (
     case pointer e of
-      Null \<Rightarrow> Some (FBranch (item_rule_head (item e)) []) \<comment>\<open>start building sub-forest\<close>
-    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-forest starting from terminal\<close>
+      Null \<Rightarrow> Some ([FBranch (item_rule_head (item e)) []]) \<comment>\<open>start building sub-trees\<close>
+    | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-trees starting from terminal\<close>
         do {
-          f \<leftarrow> build_forest' bs inp (k-1) pre {pre};
-          case f of
-            FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))
-          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+          pres \<leftarrow> build_trees' bs inp (k-1) pre {pre};
+          Some (map (\<lambda>f.
+            case f of
+              FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]])
+            | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
+          ) pres)
         })
-    | PreRed (k', pre, red) reds \<Rightarrow> ( \<comment>\<open>add sub-forest starting from non-terminal\<close>
-        do {
-          f \<leftarrow> build_forest' bs inp k' pre {pre};
-          case f of
-            FBranch N fss \<Rightarrow>
-              let reds' = filter (\<lambda>r. r \<notin> I) (red#reds) in
-              do {
-                fs \<leftarrow> those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds');
-                Some (FBranch N (fss @ [fs]))
-              }
-          | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
-        })
+    | PreRed p ps \<Rightarrow> ( \<comment>\<open>add sub-trees starting from non-terminal\<close>
+        let ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps) in
+        let gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps' in
+        map_option concat (those (map (\<lambda>((k', pre), reds).
+          do {
+            pres \<leftarrow> build_trees' bs inp k' pre {pre};
+            rss \<leftarrow> those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds);
+            Some (map (\<lambda>f.
+              case f of
+                FBranch N fss \<Rightarrow> FBranch N (fss @ [concat rss])
+              | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
+            ) pres)
+          }
+        ) gs))
+      )
   ))"
 
-declare build_forest'.simps [code]
+declare build_trees'.simps [code]
 
-definition build_forest :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
-  "build_forest cfg inp bs = (
+definition build_trees :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
+  "build_trees cfg inp bs = (
     let k = length bs - 1 in
     let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
-    those (map (\<lambda>(_, i). build_forest' bs inp k i {i}) finished)
+    map_option concat (those (map (\<lambda>(_, i). build_trees' bs inp k i {i}) finished))
   )"
 
 lemma build_forest'_simps[simp]:
-  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_forest' bs inp k i I = Some (FBranch (item_rule_head (item e)) [])"
-  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_forest' bs inp (k-1) pre {pre} = None \<Longrightarrow>
-   build_forest' bs inp k i I = None"
-  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_forest' bs inp (k-1) pre {pre} = Some (FBranch N fss) \<Longrightarrow>
-   build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
-  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_forest' bs inp (k-1) pre {pre} = Some (FLeaf a) \<Longrightarrow>
-   build_forest' bs inp k i I = None"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = None \<Longrightarrow>
-   build_forest' bs inp k i I = None"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = Some (FBranch N fss) \<Longrightarrow>
-   those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) (filter (\<lambda>r. r \<notin> I) (red#reds))) = None \<Longrightarrow>
-   build_forest' bs inp k i I = None"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = Some (FLeaf a) \<Longrightarrow>
-   build_forest' bs inp k i I = None"
-  "e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> build_forest' bs inp k' pre {pre} = Some (FBranch N fss) \<Longrightarrow>
-   those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) (filter (\<lambda>r. r \<notin> I) (red#reds))) = Some fs \<Longrightarrow>
-   build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
-  by (subst build_forest'.simps, simp)+
+  "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_trees' bs inp k i I = Some ([FBranch (item_rule_head (item e)) []])"
+  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_trees' bs inp (k-1) pre {pre} = None \<Longrightarrow> build_trees' bs inp k i I = None"
+  "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_trees' bs inp (k-1) pre {pre} = Some pres \<Longrightarrow>
+    build_trees' bs inp k i I = Some (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]]) | _ \<Rightarrow> undefined) pres)"
+    apply (subst build_trees'.simps, simp)+
+  done
 
 definition wellformed_forest_ptrs :: "('a bins \<times> 'a sentence \<times> nat \<times> nat \<times> nat set) set" where
   "wellformed_forest_ptrs = {
@@ -3795,31 +3815,54 @@ lemma wellformed_forest_ptrs_pre:
 
 lemma wellformed_forest_ptrs_prered_pre:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
-  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) reds"
+  assumes "e = bs!k!i" "pointer e = PreRed p ps"
+  assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
+  assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
+  assumes "((k', pre), reds) \<in> set gs"
   shows "(bs, inp, k', pre, {pre}) \<in> wellformed_forest_ptrs"
-  using assms unfolding wellformed_forest_ptrs_def
-  apply (auto simp: sound_ptrs_def sound_prered_ptr_def)
-  apply (metis dual_order.strict_trans nth_mem)
-  apply (metis nth_mem)
-  done
+proof -
+  have 0: "k' < length bs"
+    sorry
+  have 1: "pre < length (bs!k')"
+    sorry
+  have 2: "{pre} \<subseteq> {0..<length (bs!k')}"
+    sorry
+  show ?thesis
+    using 0 1 2 assms by (simp add: wellformed_forest_ptrs_def)
+qed
 
 lemma wellformed_forest_ptrs_prered_red:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
-  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) reds"
-  assumes "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)" "r \<in> set reds'"
-  shows "(bs, inp, k, r, I \<union> {r}) \<in> wellformed_forest_ptrs"
-  using assms unfolding wellformed_forest_ptrs_def
-  apply (auto simp add: sound_ptrs_def sound_prered_ptr_def simp del: filter.simps)
-  apply (metis nth_mem)+
-  done
+  assumes "e = bs!k!i" "pointer e = PreRed p ps"
+  assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
+  assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
+  assumes "((k', pre), reds) \<in> set gs"
+  shows "(bs, inp, k, red, I \<union> {red}) \<in> wellformed_forest_ptrs"
+proof -
+  have 0: "red < length (bs!k')"
+    sorry
+  have 1: "I \<union> {red} \<subseteq> {0..<length (bs!k)}"
+    sorry
+  show ?thesis
+    using 0 1 assms by (simp add: wellformed_forest_ptrs_def)
+qed
+
+lemma A:
+  "(k, vs) \<in> set (group_by K V xs) \<Longrightarrow> \<exists>x \<in> set xs. k = K x"
+  sorry
 
 lemma build_forest'_induct:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   assumes "\<And>bs inp k i I.
     (\<And>e pre. e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> P bs inp (k-1) pre {pre}) \<Longrightarrow>
-    (\<And>e k' pre red reds. e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow> P bs inp k' pre {pre}) \<Longrightarrow>
-    (\<And>e k' pre red reds N fss reds' r. e = bs!k!i \<Longrightarrow> pointer e = PreRed (k', pre, red) reds \<Longrightarrow>
-      reds' = filter (\<lambda>r. r \<notin> I) (red#reds) \<Longrightarrow> r \<in> set reds' \<Longrightarrow> P bs inp k r (I \<union> {r})) \<Longrightarrow>
+    (\<And>e p ps ps' gs k' pre reds. e = bs!k!i \<Longrightarrow> pointer e = PreRed p ps \<Longrightarrow>
+      ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps) \<Longrightarrow>
+      gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps' \<Longrightarrow>
+      ((k', pre), reds) \<in> set gs \<Longrightarrow> P bs inp k' pre {pre}) \<Longrightarrow>
+    (\<And>e p ps ps' gs k' pre red reds reds'. e = bs!k!i \<Longrightarrow> pointer e = PreRed p ps \<Longrightarrow>
+      ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps) \<Longrightarrow>
+      gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps' \<Longrightarrow>
+      ((k', pre), reds) \<in> set gs \<Longrightarrow> red \<in> set reds \<Longrightarrow> P bs inp k red (I \<union> {red})) \<Longrightarrow>
     P bs inp k i I" 
   shows "P bs inp k i I"
   using assms(1)
@@ -3829,8 +3872,8 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
     by simp
   consider (Null) "pointer e = Null"
     | (Pre) "\<exists>pre. pointer e = Pre pre"
-    | (PreRed) "\<exists>k' pre red reds. pointer e = PreRed (k', pre, red) reds"
-    by (metis pointer.exhaust surj_pair)
+    | (PreRed) "\<exists>p ps. pointer e = PreRed p ps"
+    by (metis pointer.exhaust)
   thus ?case
   proof cases
     case Null
@@ -3872,8 +3915,58 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       using assms(2) entry pre pointer.distinct(5) pointer.inject(1) by presburger
   next
     case PreRed
-    then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
+    then obtain p ps where pps: "pointer e = PreRed p ps"
       by blast
+    define ps' where ps': "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
+    define gs where gs: "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
+    have "\<forall>(k', pre, red) \<in> set ps'. k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k)"
+      using entry pps ps' 1(2) unfolding wellformed_forest_ptrs_def sound_ptrs_def sound_prered_ptr_def
+      apply (auto simp del: filter.simps)
+      apply (metis nth_mem prod_cases3)+
+      done
+    hence sound_gs: "\<forall>((k', pre), reds) \<in> set gs. k' < k \<and> pre < length (bs!k')"
+      using gs A by fast
+    {
+      fix k' pre reds red
+      assume a0: "((k', pre), reds) \<in> set gs"
+      define n_pre where n_pre: "n_pre = build_forest'_measure (bs, inp, k', pre, {pre})"
+      have "k < length bs" "i < length (bs!k)" "I \<subseteq> {0..<length (bs!k)}" "i \<in> I"
+        using 1(2) unfolding wellformed_forest_ptrs_def by blast+
+      have "k' < k" "pre < length (bs!k')"
+        using sound_gs a0 by fastforce+
+      have "length (bs!k') > 0"
+        using \<open>pre < length (bs!k')\<close> by force
+      hence gt0: "foldl (+) 0 (map length (take (k'+1) bs)) > 0"
+        by (smt (verit, del_insts) foldl_add_nth \<open>k < length bs\<close> \<open>k' < k\<close> add_gr_0 order.strict_trans)
+      have card_bound: "card I \<le> length (bs!k)"
+        by (simp add: \<open>I \<subseteq> {0..<length (bs ! k)}\<close> subset_eq_atLeast0_lessThan_card)
+      have "card I + (foldl (+) 0 (map length (take (Suc k') bs)) - Suc 0) =
+      card I + foldl (+) 0 (map length (take (Suc k') bs)) - 1"
+        by (metis Nat.add_diff_assoc One_nat_def Suc_eq_plus1 Suc_leI \<open>0 < foldl (+) 0 (map length (take (k' + 1) bs))\<close>)
+      also have "... < card I + foldl (+) 0 (map length (take (Suc k') bs))"
+        using gt0 by auto
+      also have "... \<le> foldl (+) 0 (map length (take (Suc k') bs)) + length (bs!k)"
+        using card_bound by simp
+      also have "... \<le> foldl (+) 0 (map length (take (k+1) bs))"
+        using foldl_add_nth_ge Suc_leI \<open>k < length bs\<close> \<open>k' < k\<close> by blast
+      finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k', pre, {pre}) > 0"
+        by simp
+      hence "P bs inp k' pre {pre}"
+        using 1(1) wellformed_forest_ptrs_prered_pre[OF "1.prems"(1) entry pps ps' gs a0] zero_less_diff by blast
+    }
+    {
+      fix k' pre reds red
+      assume a0: "((k', pre), reds) \<in> set gs"
+      assume a1: "red \<in> set reds"
+
+      have "P bs inp k red (I \<union> {red})"
+        sorry 
+    }
+    thus ?thesis
+      using assms(2) entry pps ps' gs sorry
+      
+
+
     define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
     have "k' < k" "pre < length (bs!k')" "\<forall>r. r \<in> set (red#reds) \<longrightarrow> r < length (bs!k)"
       using 1(2) entry prered unfolding wellformed_forest_ptrs_def sound_ptrs_def sound_prered_ptr_def
@@ -3932,7 +4025,9 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       by (smt (verit, best) Pair_inject filter_cong pointer.distinct(5) pointer.inject(2))
   qed
 qed
+*)
 
+(*
 lemma ex_Branch_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   assumes "build_forest' bs inp k i I = Some f"
@@ -3987,7 +4082,9 @@ proof -
   thus ?thesis
     using assms(2) by blast
 qed
+*)
 
+(*
 lemma wf_item_tree_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   assumes "wf_bins cfg inp bs"
@@ -4415,5 +4512,6 @@ proof -
   thus ?thesis
     using correctness_list assms by blast
 qed
+*)
 
 end
