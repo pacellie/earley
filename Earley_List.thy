@@ -3847,9 +3847,42 @@ proof -
     using 0 1 assms by (simp add: wellformed_forest_ptrs_def)
 qed
 
+lemma A1:
+  assumes "(k, vs) \<in> set (insert_group K V a xs)"
+  shows "(k = K a \<and> vs = [V a]) \<or> (k, vs) \<in> set xs \<or> (\<exists>(k', vs') \<in> set xs. k' = k \<and> k = K a \<and> vs = V a # vs')"
+  using assms by (induction xs) (auto split: if_splits)
+
 lemma A:
   "(k, vs) \<in> set (group_by K V xs) \<Longrightarrow> \<exists>x \<in> set xs. k = K x"
-  sorry
+  apply (induction xs)
+   apply (simp)
+  using A1 by fastforce
+
+lemma B1: 
+  assumes "(k, vs) \<in> set (insert_group K V a xs)" "v \<in> set vs"
+  shows "v = V a \<or> (\<exists>(k, vs') \<in> set xs. v \<in> set vs')"
+  using assms by (induction xs) (auto split: if_splits)
+
+lemma B:
+  "(k, vs) \<in> set (group_by K V xs) \<Longrightarrow> v \<in> set vs \<Longrightarrow> \<exists>x \<in> set xs. v = V x"
+proof (induction xs)
+  case (Cons x xs)
+  show ?case
+  proof (cases "(k, vs) \<in> set (group_by K V xs)")
+    case True
+    then show ?thesis
+      using Cons by simp
+  next
+    case False
+    hence "(k, vs) \<in> set (insert_group K V x (group_by K V xs))"
+      using Cons.prems(1) by auto
+    hence "v = V x \<or> (\<exists>(k, vs') \<in> set (group_by K V xs). v \<in> set vs')"
+      using B1 Cons.prems(2) by metis
+    then show ?thesis
+      using Cons sorry
+  qed
+qed simp
+
 
 lemma build_forest'_induct:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
@@ -3919,13 +3952,22 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       by blast
     define ps' where ps': "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
     define gs where gs: "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
-    have "\<forall>(k', pre, red) \<in> set ps'. k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k)"
+    have 0: "\<forall>(k', pre, red) \<in> set ps'. k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k)"
       using entry pps ps' 1(2) unfolding wellformed_forest_ptrs_def sound_ptrs_def sound_prered_ptr_def
       apply (auto simp del: filter.simps)
       apply (metis nth_mem prod_cases3)+
       done
     hence sound_gs: "\<forall>((k', pre), reds) \<in> set gs. k' < k \<and> pre < length (bs!k')"
       using gs A by fast
+    have sound_gs2: "\<forall>((k', pre), reds) \<in> set gs. \<forall>red \<in> set reds. red < length (bs!k)"
+    proof (standard, standard, standard, standard)
+      fix x a b k' pre red
+      assume "x \<in> set gs" "x = (a, b)" "(k', pre) = a" "red \<in> set b"
+      hence "\<exists>x \<in> set ps'. red = (\<lambda>(k', pre, red). red) x"
+        using B gs ps' by meson
+      thus "red < length (bs!k)"
+        using 0 by fast
+    qed
     {
       fix k' pre reds red
       assume a0: "((k', pre), reds) \<in> set gs"
@@ -3958,76 +4000,49 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
       fix k' pre reds red
       assume a0: "((k', pre), reds) \<in> set gs"
       assume a1: "red \<in> set reds"
-
-      have "P bs inp k red (I \<union> {red})"
-        sorry 
-    }
-    thus ?thesis
-      using assms(2) entry pps ps' gs sorry
-      
-
-
-    define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
-    have "k' < k" "pre < length (bs!k')" "\<forall>r. r \<in> set (red#reds) \<longrightarrow> r < length (bs!k)"
-      using 1(2) entry prered unfolding wellformed_forest_ptrs_def sound_ptrs_def sound_prered_ptr_def
-        apply simp_all
-        apply (metis nth_mem)+
-      done
-    have "k < length bs" "i < length (bs!k)" "I \<subseteq> {0..<length (bs!k)}" "i \<in> I"
-      using 1(2) unfolding wellformed_forest_ptrs_def by blast+
-    define n_pre where n_pre: "n_pre = build_forest'_measure (bs, inp, k', pre, {pre})"
-    have "length (bs!k') > 0"
-      using \<open>pre < length (bs!k')\<close> by force
-    hence gt0: "foldl (+) 0 (map length (take (k'+1) bs)) > 0"
-      by (smt (verit, del_insts) foldl_add_nth \<open>k < length bs\<close> \<open>k' < k\<close> add_gr_0 order.strict_trans)
-    have card_bound: "card I \<le> length (bs!k)"
-      by (simp add: \<open>I \<subseteq> {0..<length (bs ! k)}\<close> subset_eq_atLeast0_lessThan_card)
-    have "card I + (foldl (+) 0 (map length (take (Suc k') bs)) - Suc 0) =
+      define n_red where n_red: "n_red = build_forest'_measure (bs, inp, k, red, I \<union> {red})"
+      have "k < length bs" "i < length (bs!k)" "I \<subseteq> {0..<length (bs!k)}" "i \<in> I"
+        using 1(2) unfolding wellformed_forest_ptrs_def by blast+
+      have "k' < k" "pre < length (bs!k')" "red < length (bs!k)"
+        using a0 a1 sound_gs sound_gs2 by fastforce+
+      have "red \<notin> I"
+        using a0 a1 unfolding gs ps'
+        by (smt (verit, best) B case_prodE case_prod_conv mem_Collect_eq set_filter)
+      have card_bound: "card I \<le> length (bs!k)"
+        by (simp add: \<open>I \<subseteq> {0..<length (bs ! k)}\<close> subset_eq_atLeast0_lessThan_card)
+      have "length (bs!k') > 0"
+        using \<open>pre < length (bs!k')\<close> by force
+      hence gt0: "foldl (+) 0 (map length (take (k'+1) bs)) > 0"
+        by (smt (verit, del_insts) foldl_add_nth \<open>k < length bs\<close> \<open>k' < k\<close> add_gr_0 order.strict_trans)
+      have "card I + (foldl (+) 0 (map length (take (Suc k') bs)) - Suc 0) =
       card I + foldl (+) 0 (map length (take (Suc k') bs)) - 1"
-      by (metis Nat.add_diff_assoc One_nat_def Suc_eq_plus1 Suc_leI \<open>0 < foldl (+) 0 (map length (take (k' + 1) bs))\<close>)
-    also have "... < card I + foldl (+) 0 (map length (take (Suc k') bs))"
-      using gt0 by auto
-    also have "... \<le> foldl (+) 0 (map length (take (Suc k') bs)) + length (bs!k)"
-      using card_bound by simp
-    also have "... \<le> foldl (+) 0 (map length (take (k+1) bs))"
-      using foldl_add_nth_ge Suc_leI \<open>k < length bs\<close> \<open>k' < k\<close> by blast
-    finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k', pre, {pre}) > 0"
-      by simp
-    hence x: "P bs inp k' pre {pre}"
-      using 1(1) zero_less_diff by (metis "1.prems" entry prered wellformed_forest_ptrs_prered_pre)
-    have y: "\<And>r. r \<in> set reds' \<Longrightarrow> P bs inp k r (I \<union> {r})"
-    proof -
-      fix r
-      assume r: "r \<in> set reds'"
-      hence "r \<in> set (red#reds)"
-        by (metis filter_is_subset in_mono reds')
-      hence "r < length (bs!k)"
-        using \<open>\<forall>r. r \<in> set (red#reds) \<longrightarrow> r < length (bs!k)\<close> by blast
-      define n_red where n_red: "n_red = build_forest'_measure (bs, inp, k, r, I \<union> {r})"
-      have "r \<notin> I"
-        by (metis (full_types) filter_id_conv r reds' removeAll_filter_not removeAll_filter_not_eq)
-      have "card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card (insert r I)) =
+        by (metis Nat.add_diff_assoc One_nat_def Suc_eq_plus1 Suc_leI \<open>0 < foldl (+) 0 (map length (take (k' + 1) bs))\<close>)
+      also have "... < card I + foldl (+) 0 (map length (take (Suc k') bs))"
+        using gt0 by auto
+      also have "... \<le> foldl (+) 0 (map length (take (Suc k') bs)) + length (bs!k)"
+        using card_bound by simp
+      also have "... \<le> foldl (+) 0 (map length (take (k+1) bs))"
+        using foldl_add_nth_ge Suc_leI \<open>k < length bs\<close> \<open>k' < k\<close> by blast
+      have "card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card (insert red I)) =
         card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card I - 1)"
-        using \<open>I \<subseteq> {0..<length (bs ! k)}\<close> \<open>r \<notin> I\<close> finite_subset by fastforce
+        using \<open>I \<subseteq> {0..<length (bs ! k)}\<close> \<open>red \<notin> I\<close> finite_subset by fastforce
       also have "... = foldl (+) 0 (map length (take (Suc k) bs)) - 1"
         using gt0 card_bound \<open>foldl (+) 0 (map length (take (Suc k') bs)) + length (bs ! k) \<le> foldl (+) 0 (map length (take (k + 1) bs))\<close> by force
       also have "... < foldl (+) 0 (map length (take (Suc k) bs))"
         using gt0 \<open>foldl (+) 0 (map length (take (Suc k') bs)) + length (bs ! k) \<le> foldl (+) 0 (map length (take (k + 1) bs))\<close> by auto
-      finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k, r, I \<union> {r}) > 0"
-        by simp
-      moreover have "(bs, inp, k, r, I \<union> {r}) \<in> wellformed_forest_ptrs"
-        using wellformed_forest_ptrs_prered_red[OF "1"(2) entry prered reds' r] by blast
-      ultimately show "P bs inp k r (I \<union> {r})"
+      finally have "build_forest'_measure (bs, inp, k, i, I) - build_forest'_measure (bs, inp, k, red, I \<union> {red}) > 0"
+        by (metis (no_types, opaque_lifting) Suc_eq_plus1 Un_commute Un_empty_left Un_insert_right \<open>card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card (insert red I)) = card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card I - 1)\<close> \<open>card I + (foldl (+) 0 (map length (take (Suc k) bs)) - card I - 1) = foldl (+) 0 (map length (take (Suc k) bs)) - 1\<close> \<open>foldl (+) 0 (map length (take (Suc k) bs)) - 1 < foldl (+) 0 (map length (take (Suc k) bs))\<close> build_forest'_measure.simps diff_diff_eq zero_less_diff)
+      moreover have "(bs, inp, k, red, I \<union> {red}) \<in> wellformed_forest_ptrs"
+        using wellformed_forest_ptrs_prered_red[OF "1"(2) entry pps ps' gs] a0 by blast
+      ultimately have "P bs inp k red (I \<union> {red})"
         using 1(1) zero_less_diff by blast
-    qed
-    show ?thesis
-      using assms(2) x y entry prered reds'
-      by (smt (verit, best) Pair_inject filter_cong pointer.distinct(5) pointer.inject(2))
+    }
+    thus ?thesis
+      using assms(2) entry pps ps' gs sorry
   qed
 qed
-*)
 
-(*
+
 lemma ex_Branch_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   assumes "build_forest' bs inp k i I = Some f"
@@ -4082,7 +4097,6 @@ proof -
   thus ?thesis
     using assms(2) by blast
 qed
-*)
 
 (*
 lemma wf_item_tree_build_forest':
