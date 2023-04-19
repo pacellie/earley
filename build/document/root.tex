@@ -1,0 +1,332 @@
+\RequirePackage[l2tabu,orthodox]{nag}
+
+% TODO: decide if one-sided/two-sided
+%\documentclass[headsepline,footsepline,footinclude=false,fontsize=11pt,paper=a4,listof=totoc,bibliography=totoc,BCOR=12mm,DIV=12]{scrbook} % two-sided
+\documentclass[headsepline,footsepline,footinclude=false,oneside,fontsize=11pt,paper=a4,listof=totoc,bibliography=totoc]{scrbook} % one-sided
+
+\PassOptionsToPackage{table,svgnames,dvipsnames}{xcolor}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[sc]{mathpazo}
+\usepackage[ngerman,american]{babel}
+\usepackage[autostyle]{csquotes}
+\usepackage[%
+  backend=biber,
+  url=false,
+  style=alphabetic,
+  maxnames=4,
+  minnames=3,
+  maxbibnames=99,
+  giveninits,
+  uniquename=init]{biblatex} % TODO: adapt citation style
+\usepackage{graphicx}
+\usepackage{scrhack} % necessary for listings package
+\usepackage{listings}
+\usepackage{lstautogobble}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usepackage[final]{microtype}
+\usepackage{caption}
+% \usepackage[hidelinks]{hyperref} % hidelinks removes colored boxes around references and links
+
+\bibliography{bibliography}
+
+\setkomafont{disposition}{\normalfont\bfseries} % use serif font for headings
+\linespread{1.05} % adjust line spread for mathpazo font
+
+% Add table of contents to PDF bookmarks
+\BeforeTOCHead[toc]{{\cleardoublepage\pdfbookmark[0]{\contentsname}{toc}}}
+
+% Define TUM corporate design colors
+% Taken from http://portal.mytum.de/corporatedesign/index_print/vorlagen/index_farben
+\definecolor{TUMBlue}{HTML}{0065BD}
+\definecolor{TUMSecondaryBlue}{HTML}{005293}
+\definecolor{TUMSecondaryBlue2}{HTML}{003359}
+\definecolor{TUMBlack}{HTML}{000000}
+\definecolor{TUMWhite}{HTML}{FFFFFF}
+\definecolor{TUMDarkGray}{HTML}{333333}
+\definecolor{TUMGray}{HTML}{808080}
+\definecolor{TUMLightGray}{HTML}{CCCCC6}
+\definecolor{TUMAccentGray}{HTML}{DAD7CB}
+\definecolor{TUMAccentOrange}{HTML}{E37222}
+\definecolor{TUMAccentGreen}{HTML}{A2AD00}
+\definecolor{TUMAccentLightBlue}{HTML}{98C6EA}
+\definecolor{TUMAccentBlue}{HTML}{64A0C8}
+
+% Settings for pgfplots
+\pgfplotsset{compat=newest}
+\pgfplotsset{
+  % For available color names, see http://www.latextemplates.com/svgnames-colors
+  cycle list={TUMBlue\\TUMAccentOrange\\TUMAccentGreen\\TUMSecondaryBlue2\\TUMDarkGray\\},
+}
+
+% Settings for lstlistings
+\lstset{%
+  basicstyle=\ttfamily,
+  columns=fullflexible,
+  autogobble,
+  keywordstyle=\bfseries\color{TUMBlue},
+  stringstyle=\color{TUMAccentGreen}
+}
+
+% TODO: change thesis information
+\newcommand*{\getUniversity}{Technische Universität München}
+\newcommand*{\getFaculty}{Department of Informatics}
+\newcommand*{\getTitle}{Thesis title}
+\newcommand*{\getTitleGer}{Titel der Abschlussarbeit}
+\newcommand*{\getAuthor}{Author}
+\newcommand*{\getDoctype}{Thesis type (Bachelor's Thesis in Informatics, Master's Thesis in Robotics, \ldots)}
+\newcommand*{\getSupervisor}{Supervisor}
+\newcommand*{\getAdvisor}{Advisor}
+\newcommand*{\getSubmissionDate}{Submission date}
+\newcommand*{\getSubmissionLocation}{Munich}
+
+% Debug
+\usepackage[abspath]{currfile}
+
+% Isabelle specifics
+\usepackage{isabelle,isabellesym}
+\usepackage{amssymb}
+
+% this should be the last package used
+\usepackage{pdfsetup}
+
+\urlstyle{rm}
+\isabellestyle{it}
+
+\begin{document}
+
+% Set page numbering to avoid "destination with the same identifier has been already used" warning for cover page.
+% (see https://en.wikibooks.org/wiki/LaTeX/Hyperlinks#Problems_with_Links_and_Pages).
+\pagenumbering{alph}
+
+%\input{pages/cover}
+\begin{titlepage}
+  % HACK for two-sided documents: ignore binding correction for cover page.
+  % Adapted from Markus Kohm's KOMA-Script titlepage=firstiscover handling.
+  % See http://mirrors.ctan.org/macros/latex/contrib/koma-script/scrkernel-title.dtx,
+  % \maketitle macro.
+  \oddsidemargin=\evensidemargin\relax
+  \textwidth=\dimexpr\paperwidth-2\evensidemargin-2in\relax
+  \hsize=\textwidth\relax
+
+  \centering
+
+  \IfFileExists{tum.pdf}{%
+    \includegraphics[height=20mm]{tum.pdf}
+  }{%
+    \vspace*{20mm}
+  }
+
+  \vspace{5mm}
+  {\huge\MakeUppercase{\getFaculty{}}}\\
+
+  \vspace{5mm}
+  {\large\MakeUppercase{\getUniversity{}}}\\
+
+  \vspace{20mm}
+  {\Large \getDoctype{}}
+
+  \vspace{15mm}
+  {\huge\bfseries \getTitle{}}
+
+  \vspace{15mm}
+  {\LARGE \getAuthor{}}
+
+  \IfFileExists{faculty.pdf}{%
+    \vfill{}
+    \includegraphics[height=20mm]{faculty.pdf}
+  }{}
+\end{titlepage}
+
+\frontmatter{}
+
+%\input{pages/title}
+\begin{titlepage}
+  \centering
+
+  \IfFileExists{tum.pdf}{%
+    \includegraphics[height=20mm]{tum.pdf}
+  }{%
+    \vspace*{20mm}
+  }
+
+  \vspace{5mm}
+  {\huge\MakeUppercase{\getFaculty{}}}\\
+
+  \vspace{5mm}
+  {\large\MakeUppercase{\getUniversity{}}}\\
+
+  \vspace{20mm}
+  {\Large \getDoctype{}}
+
+  \vspace{15mm}
+  {\huge\bfseries \getTitle{} \par}
+
+  \vspace{10mm}
+  {\huge\bfseries \foreignlanguage{ngerman}{\getTitleGer{}} \par}
+
+  \vspace{15mm}
+  \begin{tabular}{l l}
+    Author:          & \getAuthor{} \\
+    Supervisor:      & \getSupervisor{} \\
+    Advisor:         & \getAdvisor{} \\
+    Submission Date: & \getSubmissionDate{} \\
+  \end{tabular}
+
+  \IfFileExists{faculty.pdf}{%
+    \vfill{}
+    \includegraphics[height=20mm]{faculty.pdf}
+  }{}
+\end{titlepage}
+
+%\input{pages/disclaimer}
+\thispagestyle{empty}
+\vspace*{0.8\textheight}
+\noindent
+I confirm that this \MakeLowercase{\getDoctype{}} is my own work and I have documented all sources and material used.
+
+\vspace{15mm}
+\noindent
+\getSubmissionLocation{}, \getSubmissionDate{} \hspace{50mm} \getAuthor{}
+
+\cleardoublepage{}
+
+%\input{pages/acknowledgments}
+\addcontentsline{toc}{chapter}{Acknowledgments}
+\thispagestyle{empty}
+
+\vspace*{20mm}
+
+\begin{center}
+{\usekomafont{section} Acknowledgments}
+\end{center}
+
+\vspace{10mm}
+
+%TODO: Acknowledgments
+
+\cleardoublepage{}
+
+%\input{pages/abstract}
+\chapter{\abstractname}
+
+%TODO: Abstract
+
+\microtypesetup{protrusion=false}
+\tableofcontents{}
+\microtypesetup{protrusion=true}
+
+\mainmatter{}
+
+\section{DEBUG}
+
+\getpwd
+
+Filename: \currfilename
+
+Path: \thepwd
+
+\input{session}
+
+%\input{chapters/01_introduction}
+\chapter{Introduction}\label{chapter:introduction}
+
+\section{Section}
+Citation test~\parencite{latex}.
+
+\subsection{Subsection}
+
+See~\autoref{tab:sample}, \autoref{fig:sample-drawing}, \autoref{fig:sample-plot}, \autoref{fig:sample-listing}.
+
+\begin{table}[htpb]
+  \caption[Example table]{An example for a simple table.}\label{tab:sample}
+  \centering
+  \begin{tabular}{l l l l}
+    \toprule
+      A & B & C & D \\
+    \midrule
+      1 & 2 & 1 & 2 \\
+      2 & 3 & 2 & 3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htpb]
+  \centering
+  % This should probably go into a file in figures/
+  \begin{tikzpicture}[node distance=3cm]
+    \node (R0) {$R_1$};
+    \node (R1) [right of=R0] {$R_2$};
+    \node (R2) [below of=R1] {$R_4$};
+    \node (R3) [below of=R0] {$R_3$};
+    \node (R4) [right of=R1] {$R_5$};
+
+    \path[every node]
+      (R0) edge (R1)
+      (R0) edge (R3)
+      (R3) edge (R2)
+      (R2) edge (R1)
+      (R1) edge (R4);
+  \end{tikzpicture}
+  \caption[Example drawing]{An example for a simple drawing.}\label{fig:sample-drawing}
+\end{figure}
+
+\begin{figure}[htpb]
+  \centering
+
+  \pgfplotstableset{col sep=&, row sep=\\}
+  % This should probably go into a file in data/
+  \pgfplotstableread{
+    a & b    \\
+    1 & 1000 \\
+    2 & 1500 \\
+    3 & 1600 \\
+  }\exampleA
+  \pgfplotstableread{
+    a & b    \\
+    1 & 1200 \\
+    2 & 800 \\
+    3 & 1400 \\
+  }\exampleB
+  % This should probably go into a file in figures/
+  \begin{tikzpicture}
+    \begin{axis}[
+        ymin=0,
+        legend style={legend pos=south east},
+        grid,
+        thick,
+        ylabel=Y,
+        xlabel=X
+      ]
+      \addplot table[x=a, y=b]{\exampleA};
+      \addlegendentry{Example A};
+      \addplot table[x=a, y=b]{\exampleB};
+      \addlegendentry{Example B};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Example plot]{An example for a simple plot.}\label{fig:sample-plot}
+\end{figure}
+
+\begin{figure}[htpb]
+  \centering
+  \begin{tabular}{c}
+  \begin{lstlisting}[language=SQL]
+    SELECT * FROM tbl WHERE tbl.str = "str"
+  \end{lstlisting}
+  \end{tabular}
+  \caption[Example listing]{An example for a source code listing.}\label{fig:sample-listing}
+\end{figure}
+
+\appendix{}
+
+\microtypesetup{protrusion=false}
+\listoffigures{}
+\listoftables{}
+\microtypesetup{protrusion=true}
+\printbibliography{}
+
+\end{document}

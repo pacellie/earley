@@ -3813,6 +3813,7 @@ lemma wellformed_forest_ptrs_pre:
   apply (metis nth_mem)
   done
 
+(*
 lemma wellformed_forest_ptrs_prered_pre:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   assumes "e = bs!k!i" "pointer e = PreRed p ps"
@@ -4097,6 +4098,7 @@ proof -
   thus ?thesis
     using assms(2) by blast
 qed
+*)
 
 (*
 lemma wf_item_tree_build_forest':

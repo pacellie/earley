@@ -61,8 +61,6 @@ fun size_bins :: "'a bins \<Rightarrow> nat" where
 
 definition inp1' :: "s1 list" where
   "inp1' = [
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus,
     Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
   ]"
 
