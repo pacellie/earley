@@ -3702,13 +3702,17 @@ qed
 subsection \<open>Parse trees\<close>
 
 lemma [partial_function_mono]:
-  "monotone option.le_fun option_ord (\<lambda>f.
-    map_option concat (those (map (\<lambda>((k', pre), reds).
-      f ((((x, y), k'), pre), {pre}) \<bind> (\<lambda>pres.
-        those (map (\<lambda>red. f ((((x, y), z), red), b \<union> {red})) reds) \<bind> (\<lambda>rss.
-          Some (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> FBranch N (fss @ [concat rss])) pres))))
-    xs)))"
-proof (induction xs)
+  "         monotone option.le_fun option_ord
+          (\<lambda>build_trees'.
+              map_option concat
+               (those
+                 (map (\<lambda>((k', pre), reds).
+                          build_trees' ((((ac, bc), k'), pre), {pre}) \<bind>
+                          (\<lambda>pres.
+                              those (map (\<lambda>red. build_trees' ((((ac, bc), bb), red), b \<union> {red})) reds) \<bind>
+                              (\<lambda>rss. those (map (\<lambda>f. case f of FLeaf x \<Rightarrow> Map.empty x | FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))) pres))))
+                   xc)))"
+proof (induction xc)
   case Nil
   thus ?case
     by (auto simp: monotone_def option.leq_refl)
@@ -3762,10 +3766,10 @@ partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentence \<R
     | Pre pre \<Rightarrow> ( \<comment>\<open>add sub-trees starting from terminal\<close>
         do {
           pres \<leftarrow> build_trees' bs inp (k-1) pre {pre};
-          Some (map (\<lambda>f.
+          those (map (\<lambda>f.
             case f of
-              FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]])
-            | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
+              FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))
+            | _ \<Rightarrow> None  \<comment>\<open>impossible case\<close>
           ) pres)
         })
     | PreRed p ps \<Rightarrow> ( \<comment>\<open>add sub-trees starting from non-terminal\<close>
@@ -3775,10 +3779,10 @@ partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentence \<R
           do {
             pres \<leftarrow> build_trees' bs inp k' pre {pre};
             rss \<leftarrow> those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds);
-            Some (map (\<lambda>f.
+            those (map (\<lambda>f.
               case f of
-                FBranch N fss \<Rightarrow> FBranch N (fss @ [concat rss])
-              | _ \<Rightarrow> undefined \<comment>\<open>impossible case\<close>
+                FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))
+              | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
             ) pres)
           }
         ) gs))
@@ -3798,7 +3802,7 @@ lemma build_forest'_simps[simp]:
   "e = bs!k!i \<Longrightarrow> pointer e = Null \<Longrightarrow> build_trees' bs inp k i I = Some ([FBranch (item_rule_head (item e)) []])"
   "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_trees' bs inp (k-1) pre {pre} = None \<Longrightarrow> build_trees' bs inp k i I = None"
   "e = bs!k!i \<Longrightarrow> pointer e = Pre pre \<Longrightarrow> build_trees' bs inp (k-1) pre {pre} = Some pres \<Longrightarrow>
-    build_trees' bs inp k i I = Some (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> FBranch N (fss @ [[FLeaf (inp!(k-1))]]) | _ \<Rightarrow> undefined) pres)"
+    build_trees' bs inp k i I = those (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) | _ \<Rightarrow> None) pres)"
     apply (subst build_trees'.simps, simp)+
   done
 
@@ -4064,15 +4068,27 @@ proof (induction n\<equiv>"build_forest'_measure (bs, inp, k, i, I)" arbitrary: 
   qed
 qed
 
-(*
-lemma ex_Branch_build_forest':
+lemma those_nonempty:
+  "those xs = Some ys \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> ys \<noteq> []"
+  by (induction xs arbitrary: ys) (auto split: option.splits)
+
+lemma those_map_exists:
+  "Some ys = those (map f xs) \<Longrightarrow> y \<in> set ys \<Longrightarrow> \<exists>x. x \<in> set xs \<and> Some y \<in> set (map f xs)"
+  apply (induction xs arbitrary: ys)
+  apply (auto split: option.splits)
+  by (smt (verit, best) map_option_eq_Some set_ConsD)
+
+lemma those_Some:
+  "\<forall>x \<in> set xs. \<exists>a. x = Some a \<Longrightarrow> \<exists>ys. those xs = Some ys"
+  by (induction xs) auto
+
+lemma build_trees'_termination: \<comment>\<open>TODO: fs ~= [] - need lemma first red pointer does not get filtered - need lemma no self reduction\<close>
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
-  assumes "build_forest' bs inp k i I = Some f"
-  shows "\<exists>N fss. f = FBranch N fss"
+  shows "\<exists>fs. build_trees' bs inp k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
 proof -
-  have "build_forest' bs inp k i I = Some f \<Longrightarrow> \<exists>N fss. f = FBranch N fss"
-    apply (induction arbitrary: f rule: build_forest'_induct[OF assms(1)])
-    subgoal premises IH for bs inp k i I f
+  have "\<exists>fs. build_trees' bs inp k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+    apply (induction rule: build_forest'_induct[OF assms(1)])
+    subgoal premises IH for bs inp k i I
     proof -
       define e where entry: "e = bs!k!i"
       consider (Null) "pointer e = Null"
@@ -4082,26 +4098,65 @@ proof -
       thus ?thesis
       proof cases
         case Null
-        have "f = FBranch (item_rule_head (item e)) []"
-          using build_forest'_simps(1) Null IH(4) entry by simp
+        have "build_trees' bs inp k i I = Some ([FBranch (item_rule_head (item e)) []])"
+          using build_forest'_simps(1) Null entry by simp
         thus ?thesis
           by simp
       next
         case Pre
         then obtain pre where pre: "pointer e = Pre pre"
           by blast
-        obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
-          using IH(4) build_forest'_simps(2) entry pre by (metis not_Some_eq)
-        then obtain N fss where Nfss: "f = FBranch N fss"
+        obtain fs where fs: "build_trees' bs inp (k-1) pre {pre} = Some fs"
+          "\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
           using IH(1) entry pre by blast
-        have "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
-          using build_forest'_simps(3) entry pre f Nfss by simp         
-        thus ?thesis
-          using IH(4) by simp
+        let ?g = "\<lambda>f. case f of FLeaf a \<Rightarrow> None
+          | FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
+        have simp: "build_trees' bs inp k i I = those (map ?g fs)"
+          using build_forest'_simps(3) entry pre fs by blast
+        moreover have "\<forall>f \<in> set (map ?g fs). \<exists>a. f = Some a"
+          using fs(2) by auto
+        ultimately obtain fs' where fs': "build_trees' bs inp k i I = Some fs'"
+          using those_Some by (smt (verit, best))
+        moreover have "\<forall>f \<in> set fs'. \<exists>N fss. f = FBranch N fss"
+        proof standard
+          fix f
+          assume "f \<in> set fs'"
+          then obtain x where "x \<in> set fs" "Some f \<in> set (map ?g fs)"
+            using those_map_exists by (metis (no_types, lifting) fs' simp)
+          thus "\<exists>N fss. f = FBranch N fss"
+            using fs(2) by auto
+        qed
+        ultimately show ?thesis
+          by blast
       next
         case PreRed
-        then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
+        then obtain p ps where pps: "pointer e = PreRed p ps"
           by blast
+        define ps' where ps': "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
+        define gs where gs: "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
+        have "build_trees' bs inp k i I = map_option concat (those (map (\<lambda>((k', pre), reds).
+            do {
+              pres \<leftarrow> build_trees' bs inp k' pre {pre};
+              rss \<leftarrow> those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds);
+              those (map (\<lambda>f.
+                case f of
+                  FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))
+                | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+              ) pres)
+            }
+          ) gs))"
+          using entry pps ps' gs by (subst build_trees'.simps) (auto simp del: filter.simps)
+        show ?thesis
+        proof cases
+          assume empty: "ps' = []"
+          show ?thesis
+            sorry
+        next
+          assume nonempty: "ps' \<noteq> []"
+          show ?thesis
+            sorry
+        qed
+(*
         obtain f where f: "build_forest' bs inp k' pre {pre} = Some f"
           by (metis IH(4) build_forest'_simps(5) entry not_Some_eq prered)
         then obtain N fss where Nfss: "f = FBranch N fss"
@@ -4113,13 +4168,13 @@ proof -
           using build_forest'_simps(8) entry prered f Nfss reds' fs by auto
         thus ?thesis
           using IH(4) by simp
+*)
       qed
     qed
     done
   thus ?thesis
-    using assms(2) by blast
+    by blast
 qed
-*)
 
 (*
 lemma wf_item_tree_build_forest':
@@ -4459,12 +4514,6 @@ proof -
   thus ?thesis
     using assms(2) by blast
 qed
-
-lemma those_map_exists:
-  "Some ys = those (map f xs) \<Longrightarrow> y \<in> set ys \<Longrightarrow> \<exists>x. x \<in> set xs \<and> Some y \<in> set (map f xs)"
-  apply (induction xs arbitrary: ys)
-  apply (auto split: option.splits)
-  by (smt (verit, best) map_option_eq_Some set_ConsD)
 
 theorem wf_rule_root_yield_tree_build_forest:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
