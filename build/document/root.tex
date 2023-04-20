@@ -75,13 +75,13 @@
 % TODO: change thesis information
 \newcommand*{\getUniversity}{Technische Universität München}
 \newcommand*{\getFaculty}{Department of Informatics}
-\newcommand*{\getTitle}{Thesis title}
-\newcommand*{\getTitleGer}{Titel der Abschlussarbeit}
-\newcommand*{\getAuthor}{Author}
-\newcommand*{\getDoctype}{Thesis type (Bachelor's Thesis in Informatics, Master's Thesis in Robotics, \ldots)}
-\newcommand*{\getSupervisor}{Supervisor}
-\newcommand*{\getAdvisor}{Advisor}
-\newcommand*{\getSubmissionDate}{Submission date}
+\newcommand*{\getTitle}{Formal Verification of an Earley Parser}
+\newcommand*{\getTitleGer}{Formale Verifikation eines Earley Parsers}
+\newcommand*{\getAuthor}{Martin Rau}
+\newcommand*{\getDoctype}{Master's Thesis in Informatics)}
+\newcommand*{\getSupervisor}{Tobias Nipkow}
+\newcommand*{\getAdvisor}{Tobias Nipkow}
+\newcommand*{\getSubmissionDate}{15.06.2023}
 \newcommand*{\getSubmissionLocation}{Munich}
 
 % Debug
@@ -102,6 +102,14 @@
 % Set page numbering to avoid "destination with the same identifier has been already used" warning for cover page.
 % (see https://en.wikibooks.org/wiki/LaTeX/Hyperlinks#Problems_with_Links_and_Pages).
 \pagenumbering{alph}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                            %
+%                                                            %
+%                         COVER                              %
+%                                                            %
+%                                                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %\input{pages/cover}
 \begin{titlepage}
@@ -144,6 +152,14 @@
 
 \frontmatter{}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                            %
+%                                                            %
+%                         TITLE                              %
+%                                                            %
+%                                                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %\input{pages/title}
 \begin{titlepage}
   \centering
@@ -183,6 +199,14 @@
   }{}
 \end{titlepage}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                            %
+%                                                            %
+%                       DISCLAIMER                           %
+%                                                            %
+%                                                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %\input{pages/disclaimer}
 \thispagestyle{empty}
 \vspace*{0.8\textheight}
@@ -194,6 +218,14 @@ I confirm that this \MakeLowercase{\getDoctype{}} is my own work and I have docu
 \getSubmissionLocation{}, \getSubmissionDate{} \hspace{50mm} \getAuthor{}
 
 \cleardoublepage{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                            %
+%                                                            %
+%                     ACKNOWLEDGMENTS                        %
+%                                                            %
+%                                                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %\input{pages/acknowledgments}
 \addcontentsline{toc}{chapter}{Acknowledgments}
@@ -207,14 +239,22 @@ I confirm that this \MakeLowercase{\getDoctype{}} is my own work and I have docu
 
 \vspace{10mm}
 
-%TODO: Acknowledgments
+TODO: Acknowledgments
 
 \cleardoublepage{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                            %
+%                                                            %
+%                         ABSTRACT                           %
+%                                                            %
+%                                                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %\input{pages/abstract}
 \chapter{\abstractname}
 
-%TODO: Abstract
+TODO: Abstract
 
 \microtypesetup{protrusion=false}
 \tableofcontents{}
@@ -222,18 +262,17 @@ I confirm that this \MakeLowercase{\getDoctype{}} is my own work and I have docu
 
 \mainmatter{}
 
-\section{DEBUG}
-
-\getpwd
-
-Filename: \currfilename
-
-Path: \thepwd
-
 \input{session}
 
-%\input{chapters/01_introduction}
-\chapter{Introduction}\label{chapter:introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                            %
+%                                                            %
+%                         TEMPLATES                          %
+%                                                            %
+%                                                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Templates}\label{chapter:templates}
 
 \section{Section}
 Citation test~\parencite{latex}.

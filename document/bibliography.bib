@@ -1,7 +1,317 @@
+% Main Sources
+
+@inproceedings{Earley_Recogniser_Jones_1972,
+author = {Jones, C B},
+title = {Formal Development of Correct Algorithms: An Example Based on Earley's Recogniser},
+year = {1972},
+isbn = {9781450378918},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/800235.807083},
+doi = {10.1145/800235.807083},
+abstract = {This paper contains the formal development of a correct algorithm from an implicit definition of the task to be performed. Each step of the development can be accompanied by a proof of its correctness. As well as ensuring the correctness of the final program, the structured development gives considerable insight into the algorithm and possible alternatives. The example used is a simplified form of the recognition algorithm due to Earley.},
+booktitle = {Proceedings of ACM Conference on Proving Assertions about Programs},
+pages = {150–169},
+numpages = {20},
+location = {Las Cruces, New Mexico, USA}
+}
+
+@article{Earley_Parsing_Earley_1970,
+author = {Earley, Jay},
+title = {An Efficient Context-Free Parsing Algorithm},
+year = {1970},
+issue_date = {Feb 1970},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {13},
+number = {2},
+issn = {0001-0782},
+url = {https://doi.org/10.1145/362007.362035},
+doi = {10.1145/362007.362035},
+abstract = {A parsing algorithm which seems to be the most efficient general context-free algorithm known is described. It is similar to both Knuth's LR(k) algorithm and the familiar top-down algorithm. It has a time bound proportional to n3 (where n is the length of the string being parsed) in general; it has an n2 bound for unambiguous grammars; and it runs in linear time on a large class of grammars, which seems to include most practical context-free programming language grammars. In an empirical comparison it appears to be superior to the top-down and bottom-up algorithms studied by Griffiths and Petrick.},
+journal = {Commun. ACM},
+month = {feb},
+pages = {94–102},
+numpages = {9},
+keywords = {computational complexity, parsing, syntax analysis, context-free grammar, compilers}
+}
+
+@article{SPPF_Scott_2008,
+title = {SPPF-Style Parsing From Earley Recognisers},
+journal = {Electronic Notes in Theoretical Computer Science},
+volume = {203},
+number = {2},
+pages = {53-67},
+year = {2008},
+note = {Proceedings of the Seventh Workshop on Language Descriptions, Tools, and Applications (LDTA 2007)},
+issn = {1571-0661},
+doi = {https://doi.org/10.1016/j.entcs.2008.03.044},
+url = {https://www.sciencedirect.com/science/article/pii/S1571066108001497},
+author = {Elizabeth Scott},
+keywords = {Earley parsing, cubic generalised parsing, context free languages},
+abstract = {In its recogniser form, Earley's algorithm for testing whether a string can be derived from a grammar is worst case cubic on general context free grammars (CFG). Earley gave an outline of a method for turning his recognisers into parsers, but it turns out that this method is incorrect. Tomita's GLR parser returns a shared packed parse forest (SPPF) representation of all derivations of a given string from a given CFG but is worst case unbounded polynomial order. We have given a modified worst-case cubic version, the BRNGLR algorithm, that, for any string and any CFG, returns a binarised SPPF representation of all possible derivations of a given string. In this paper we apply similar techniques to develop two versions of an Earley parsing algorithm that, in worst-case cubic time, return an SPPF representation of all derivations of a given string from a given CFG.}
+}
+
+@article{Practical_Earley_Aycock_2002,
+author = {Aycock, John and Horspool, R.},
+year = {2002},
+month = {06},
+pages = {620-630},
+title = {Practical Earley Parsing},
+volume = {45},
+journal = {Comput. J.},
+doi = {10.1093/comjnl/45.6.620}
+}
+
+% Related Work
+
+@article{Tomita_Parser_Tomita_1987,
+author = {Tomita, Masaru},
+title = {An Efficient Augmented-Context-Free Parsing Algorithm},
+year = {1987},
+issue_date = {January-June 1987},
+publisher = {MIT Press},
+address = {Cambridge, MA, USA},
+volume = {13},
+number = {1–2},
+issn = {0891-2017},
+abstract = {An efficient parsing algorithm for augmented context-free grammars is introduced, and its application to on-line natural language interfaces discussed. The algorithm is a generalized LR parsing algorithm, which precomputes an LR shift-reduce parsing table (possibly with multiple entries) from a given augmented context-free grammar. Unlike the standard LR parsing algorithm, it can handle arbitrary context-free grammars, including ambiguous grammars, while most of the LR efficiency is preserved by introducing the concept of a "graph-structured stack". The graph-structured stack allows an LR shift-reduce parser to maintain multiple parses without parsing any part of the input twice in the same way. We can also view our parsing algorithm as an extended chart parsing algorithm efficiently guided by LR parsing tables. The algorithm is fast, due to the LR table precomputation. In several experiments with different English grammars and sentences, timings indicate a five- to tenfold speed advantage over Earley's context-free parsing algorithm.The algorithm parses a sentence strictly from left to right on-line, that is, it starts parsing as soon as the user types in the first word of a sentence, without waiting for completion of the sentence. A practical on-line parser based on the algorithm has been implemented in Common Lisp, and running on Symbolics and HP AI workstations. The parser is used in the multi-lingual machine translation project at CMU. Also, a commercial on-line parser for Japanese language is being built by Intelligent Technology Incorporation, based on the technique developed at CMU.},
+journal = {Comput. Linguist.},
+month = {jan},
+pages = {31–46},
+numpages = {16}
+}
+
+@inproceedings{Practical_Parser_Combinators_Izmaylova_2016,
+author = {Izmaylova, Anastasia and Afroozeh, Ali and Storm, Tijs van der},
+title = {Practical, General Parser Combinators},
+year = {2016},
+isbn = {9781450340977},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2847538.2847539},
+doi = {10.1145/2847538.2847539},
+abstract = {Parser combinators are a popular approach to parsing where context-free grammars are represented as executable code. However, conventional parser combinators do not support left recursion, and can have worst-case exponential runtime. These limitations hinder the expressivity and performance predictability of parser combinators when constructing parsers for programming languages. In this paper we present general parser combinators that support all context-free grammars and construct a parse forest in cubic time and space in the worst case, while behaving nearly linearly on grammars of real programming languages. Our general parser combinators are based on earlier work on memoized Continuation-Passing Style (CPS) recognizers. First, we extend this work to achieve recognition in cubic time. Second, we extend the resulting cubic CPS recognizers to parsers that construct a binarized Shared Packed Parse Forest (SPPF). Our general parser combinators bring the best of both worlds: the flexibility and extensibility of conventional parser combinators and the expressivity and performance guarantees of general parsing algorithms. We used the approach presented in this paper as the basis for Meerkat, a general parser combinator library for Scala.},
+booktitle = {Proceedings of the 2016 ACM SIGPLAN Workshop on Partial Evaluation and Program Manipulation},
+pages = {1–12},
+numpages = {12},
+keywords = {higher-order functions, continuation-passing style, general parsing, Parser combinators, memoization, left recursion},
+location = {St. Petersburg, FL, USA},
+series = {PEPM '16}
+}
+
+@InProceedings{Verified_LL1_Parser_Generator_Lasser_2019,
+  author =	{Sam Lasser and Chris Casinghino and Kathleen Fisher and Cody Roux},
+  title =	{{A Verified LL(1) Parser Generator}},
+  booktitle =	{10th International Conference on Interactive Theorem Proving (ITP 2019)},
+  pages =	{24:1--24:18},
+  series =	{Leibniz International Proceedings in Informatics (LIPIcs)},
+  ISBN =	{978-3-95977-122-1},
+  ISSN =	{1868-8969},
+  year =	{2019},
+  volume =	{141},
+  editor =	{John Harrison and John O'Leary and Andrew Tolmach},
+  publisher =	{Schloss Dagstuhl--Leibniz-Zentrum fuer Informatik},
+  address =	{Dagstuhl, Germany},
+  URL =		{http://drops.dagstuhl.de/opus/volltexte/2019/11079},
+  URN =		{urn:nbn:de:0030-drops-110794},
+  doi =		{10.4230/LIPIcs.ITP.2019.24},
+  annote =	{Keywords: interactive theorem proving, top-down parsing}
+}
+
+@InProceedings{Verified_Executable_Parsing_Barthwal_2009,
+author="Barthwal, Aditi
+and Norrish, Michael",
+editor="Castagna, Giuseppe",
+title="Verified, Executable Parsing",
+booktitle="Programming Languages and Systems",
+year="2009",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="160--174",
+abstract="We describe the mechanisation of an SLR parser produced by a parser generator, covering background properties of context-free languages and grammars, as well as the construction of an SLR automaton. Among the various properties proved about the parser we show, in particular, soundness: if the parser results in a parse tree on a given input, then the parse tree is valid with respect to the grammar, and the leaves of the parse tree match the input; completeness: if the input is in the language of the grammar then the parser constructs the correct parse tree for the input with respect to the grammar; and non-ambiguity: grammars successfully converted to SLR automata are unambiguous.",
+isbn="978-3-642-00590-9"
+}
+
+@article{Verified_Packrat_Parser_Blaudeau_2020,
+  author       = {Clement Blaudeau and
+                  Natarajan Shankar},
+  title        = {A Verified Packrat Parser Interpreter for Parsing Expression Grammars},
+  journal      = {CoRR},
+  volume       = {abs/2001.04457},
+  year         = {2020},
+  url          = {https://arxiv.org/abs/2001.04457},
+  eprinttype    = {arXiv},
+  eprint       = {2001.04457},
+  timestamp    = {Fri, 17 Jan 2020 14:07:30 +0100},
+  biburl       = {https://dblp.org/rec/journals/corr/abs-2001-04457.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+@InProceedings{Validating_LR1_Parsers_Jourdan_2012,
+author="Jourdan, Jacques-Henri
+and Pottier, Fran{\c{c}}ois
+and Leroy, Xavier",
+editor="Seidl, Helmut",
+title="Validating LR(1) Parsers",
+booktitle="Programming Languages and Systems",
+year="2012",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="397--416",
+abstract="An LR(1) parser is a finite-state automaton, equipped with a stack, which uses a combination of its current state and one lookahead symbol in order to determine which action to perform next. We present a validator which, when applied to a context-free grammar {\$}{\backslash}mathcal G{\$}and an automaton {\$}{\backslash}mathcal A{\$}, checks that {\$}{\backslash}mathcal A{\$}and {\$}{\backslash}mathcal G{\$}agree. Validating the parser provides the correctness guarantees required by verified compilers and other high-assurance software that involves parsing. The validation process is independent of which technique was used to construct {\$}{\backslash}mathcal A{\$}. The validator is implemented and proved correct using the Coq proof assistant. As an application, we build a formally-verified parser for the C99 language.",
+isbn="978-3-642-28869-2"
+}
+
+@inproceedings{Verified_ALL_Parser_Lasser_2021,
+author = {Lasser, Sam and Casinghino, Chris and Fisher, Kathleen and Roux, Cody},
+title = {CoStar: A Verified ALL(*) Parser},
+year = {2021},
+isbn = {9781450383912},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3453483.3454053},
+doi = {10.1145/3453483.3454053},
+abstract = {Parsers are security-critical components of many software systems, and verified parsing therefore has a key role to play in secure software design. However, existing verified parsers for context-free grammars are limited in their expressiveness, termination properties, or performance characteristics. They are only compatible with a restricted class of grammars, they are not guaranteed to terminate on all inputs, or they are not designed to be performant on grammars for real-world programming languages and data formats. In this work, we present CoStar, a verified parser that addresses these limitations. The parser is implemented with the Coq Proof Assistant and is based on the ALL(*) parsing algorithm. CoStar is sound and complete for all non-left-recursive grammars; it produces a correct parse tree for its input whenever such a tree exists, and it correctly detects ambiguous inputs. CoStar also provides strong termination guarantees; it terminates without error on all inputs when applied to a non-left-recursive grammar. Finally, CoStar achieves linear-time performance on a range of unambiguous grammars for commonly used languages and data formats.},
+booktitle = {Proceedings of the 42nd ACM SIGPLAN International Conference on Programming Language Design and Implementation},
+pages = {420–434},
+numpages = {15},
+keywords = {interactive theorem proving, parsing},
+location = {Virtual, Canada},
+series = {PLDI 2021}
+}
+
+@article{Verified_Parser_Interpreter_Koprowski_2011,
+  author       = {Adam Koprowski and
+                  Henri Binsztok},
+  title        = {{TRX:} {A} Formally Verified Parser Interpreter},
+  journal      = {Log. Methods Comput. Sci.},
+  volume       = {7},
+  number       = {2},
+  year         = {2011},
+  url          = {https://doi.org/10.2168/LMCS-7(2:18)2011},
+  doi          = {10.2168/LMCS-7(2:18)2011},
+  timestamp    = {Thu, 25 Jun 2020 21:29:06 +0200},
+  biburl       = {https://dblp.org/rec/journals/corr/abs-1105-2576.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+% Future Work
+
+@article{Tree_Automata_Adams_2017,
+author = {Adams, Michael and Might, Matthew},
+year = {2017},
+month = {10},
+pages = {1-25},
+title = {Restricting grammars with tree automata},
+volume = {1},
+journal = {Proceedings of the ACM on Programming Languages},
+doi = {10.1145/3133906}
+}
+
+@InProceedings{Safe_Afroozeh_2013,
+author="Afroozeh, Ali
+and van den Brand, Mark
+and Johnstone, Adrian
+and Scott, Elizabeth
+and Vinju, Jurgen",
+editor="Erwig, Martin
+and Paige, Richard F.
+and Van Wyk, Eric",
+title="Safe Specification of Operator Precedence Rules",
+booktitle="Software Language Engineering",
+year="2013",
+publisher="Springer International Publishing",
+address="Cham",
+pages="137--156",
+abstract="In this paper we present an approach to specifying operator precedence based on declarative disambiguation constructs and an implementation mechanism based on grammar rewriting. We identify a problem with existing generalized context-free parsing and disambiguation technology: generating a correct parser for a language such as OCaml using declarative precedence specification is not possible without resorting to some manual grammar transformation. Our approach provides a fully declarative solution to operator precedence specification for context-free grammars, is independent of any parsing technology, and is safe in that it guarantees that the language of the resulting grammar will be the same as the language of the specification grammar. We evaluate our new approach by specifying the precedence rules from the OCaml reference manual against the highly ambiguous reference grammar and validate the output of our generated parser.",
+isbn="978-3-319-02654-1"
+}
+
+@inproceedings{Deterministic_Aho_1973,
+author = {Aho, A. V. and Johnson, S. C. and Ullman, J. D.},
+title = {Deterministic Parsing of Ambiguous Grammars},
+year = {1973},
+isbn = {9781450373494},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/512927.512928},
+doi = {10.1145/512927.512928},
+abstract = {We consider methods of describing the syntax of programming languages in ways that are more flexible and natural than conventional BNF descriptions. These methods involve the use of ambiguous context-free grammars together with rules to resolve syntactic ambiguities. We show how efficient LL and LR parsers can be constructed directly from certain classes of these specifications.},
+booktitle = {Proceedings of the 1st Annual ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages},
+pages = {1–21},
+numpages = {21},
+location = {Boston, Massachusetts},
+series = {POPL '73}
+}
+
+﻿@Article{Exclusion_Thorup_1996,
+author={Thorup, Mikkel},
+title={Disambiguating grammars by exclusion of sub-parse trees},
+journal={Acta Informatica},
+year={1996},
+month={Sep},
+day={01},
+volume={33},
+number={6},
+pages={511-522},
+abstract={A method is presented for disambiguation of grammars, based on the idea of excluding certain forbidden sub-parse trees. Combined with recent developments in the theory of parser generation for ambiguous grammars, the method disambiguates large classes of grammars guaranteeing that the generated language is unchanged.},
+issn={1432-0525},
+doi={10.1007/s002360050055},
+url={https://doi.org/10.1007/s002360050055}
+}
+
+@article{Ambiguity_Thorup_1994,
+author = {Thorup, Mikkel},
+title = {Controlled Grammatic Ambiguity},
+year = {1994},
+issue_date = {May 1994},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {16},
+number = {3},
+issn = {0164-0925},
+url = {https://doi.org/10.1145/177492.177759},
+doi = {10.1145/177492.177759},
+abstract = {A new approach to ambiguity of context-free grammars is presented, and within this approach the LL and LR techniques are generalized to solve the following problems for large classes of ambiguous grammars:The user may control the parser generation so as to get a parser which finds some specific parse trees for the sentences. The generalized LL and LR techniques will still guarantee that the resulting parser accepts all sentences and terminates in linear time on all input.},
+journal = {ACM Trans. Program. Lang. Syst.},
+month = {may},
+pages = {1024–1050},
+numpages = {27},
+keywords = {semantic unambiguity, grammatic ambiguity}
+}
+
+@article{Filters_Klint_1997,
+author = {Klint, Paul and Visser, Eelco},
+year = {1997},
+month = {04},
+pages = {},
+title = {Using Filters for the Disambiguation of Context-free Grammars}
+}
+
+@InProceedings{Analyzing_Ambiguity_Brabrand_2007,
+author="Brabrand, Claus
+and Giegerich, Robert
+and M{\o}ller, Anders",
+editor="Holub, Jan
+and {\v{Z}}{\v{d}}{\'a}rek, Jan",
+title="Analyzing Ambiguity of Context-Free Grammars",
+booktitle="Implementation and Application of Automata",
+year="2007",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="214--225",
+abstract="It has been known since 1962 that the ambiguity problem for context-free grammars is undecidable. Ambiguity in context-free grammars is a recurring problem in language design and parser generation, as well as in applications where grammars are used as models of real-world physical structures.",
+isbn="978-3-540-76336-9"
+}
+
+
+% Templates
+
 @book{latex,
-  title = {LaTeX : A Documentation Preparation System User's Guide and Reference Manual},
-  publisher = {Addison-Wesley Professional},
-  year = {1994},
-  author = {Leslie Lamport}
+title = {LaTeX : A Documentation Preparation System User's Guide and Reference Manual},
+publisher = {Addison-Wesley Professional},
+year = {1994},
+author = {Leslie Lamport}
 }
 

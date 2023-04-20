@@ -3732,6 +3732,17 @@ next
     by (smt (verit) option.inject option.simps(3))
 qed
 
+text\<open>
+
+            k''         ...                 k'           ...               k
+
+pre'    B -> .A\<beta> ,i                   pre    B -> .A\<beta> ,i               A -> \<alpha>. ,k'      red
+                                                                          ...
+                                                                       A -> \<alpha>'. ,k''    red'
+                                                                          ...
+                                                                       B -> A.\<beta>, i      (k', pre, red), (k'', pre', red')
+\<close>
+
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
   "insert_group K V a [] = [(K a, [V a])]"
 | "insert_group K V a ((k, vs)#xs) = (
