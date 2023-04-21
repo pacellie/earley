@@ -20,3 +20,7 @@ session Earley = LocalLexing +
   document_files
     "root.tex"
     "bibliography.bib"
+    "tum.jpg"
+    "tum.pdf"
+    "faculty.png"
+

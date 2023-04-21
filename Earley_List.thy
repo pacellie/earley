@@ -4082,7 +4082,7 @@ lemma those_Some:
   "\<forall>x \<in> set xs. \<exists>a. x = Some a \<Longrightarrow> \<exists>ys. those xs = Some ys"
   by (induction xs) auto
 
-lemma build_trees'_termination: \<comment>\<open>TODO: fs ~= [] - need lemma first red pointer does not get filtered - need lemma no self reduction\<close>
+lemma build_trees'_termination:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   shows "\<exists>fs. build_trees' bs inp k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
 proof -
@@ -4134,7 +4134,7 @@ proof -
           by blast
         define ps' where ps': "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
         define gs where gs: "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
-        have "build_trees' bs inp k i I = map_option concat (those (map (\<lambda>((k', pre), reds).
+        let ?g = "\<lambda>((k', pre), reds).
             do {
               pres \<leftarrow> build_trees' bs inp k' pre {pre};
               rss \<leftarrow> those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds);
@@ -4143,14 +4143,16 @@ proof -
                   FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))
                 | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
               ) pres)
-            }
-          ) gs))"
+            }"
+        have simp: "build_trees' bs inp k i I = map_option concat (those (map ?g gs))"
           using entry pps ps' gs by (subst build_trees'.simps) (auto simp del: filter.simps)
         show ?thesis
         proof cases
           assume empty: "ps' = []"
-          show ?thesis
-            sorry
+          hence "build_trees' bs inp k i I = Some []"
+            using gs simp by simp
+          thus ?thesis
+            by simp
         next
           assume nonempty: "ps' \<noteq> []"
           show ?thesis
