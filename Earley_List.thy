@@ -3736,17 +3736,6 @@ next
     by (smt (verit) option.inject option.simps(3))
 qed
 
-text\<open>
-
-            k''         ...                 k'           ...               k
-
-pre'    B -> .A\<beta> ,i                   pre    B -> .A\<beta> ,i               A -> \<alpha>. ,k'      red
-                                                                          ...
-                                                                       A -> \<alpha>'. ,k''    red'
-                                                                          ...
-                                                                       B -> A.\<beta>, i      (k', pre, red), (k'', pre', red')
-\<close>
-
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
   "insert_group K V a [] = [(K a, [V a])]"
 | "insert_group K V a ((k, vs)#xs) = (
@@ -4155,6 +4144,37 @@ proof -
             by simp
         next
           assume nonempty: "ps' \<noteq> []"
+
+          {
+            fix k' pre reds
+            assume *: "((k', pre), reds) \<in> set gs"
+            then obtain pres where pres: "build_trees' bs inp k' pre {pre} = Some pres"
+              "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
+              using IH(2) entry pps ps' gs by blast
+            have "\<forall>f \<in> set (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds). \<exists>a. f = Some a"
+              using IH(3)[OF entry pps ps' gs *] by auto
+            then obtain rss where rss: "Some rss = those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds)"
+              using those_Some by (metis (full_types))
+            let ?h = "\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss])) | _ \<Rightarrow> None"
+            have "\<forall>x \<in> set (map ?h pres). \<exists>a. x = Some a"
+              using pres(2) by auto
+            then obtain fs where fs: "Some fs = those (map ?h pres)"
+              using those_Some by (smt (verit, best))
+            have "\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
+            proof standard
+              fix f
+              assume *: "f \<in> set fs"
+              hence "\<exists>x. x \<in> set pres \<and> Some f \<in> set (map ?h pres)"
+                using those_map_exists[OF fs *] by blast
+              then obtain x where x: "x \<in> set pres \<and> Some f \<in> set (map ?h pres)"
+                by blast
+              thus "\<exists>N fss. f = FBranch N fss"
+                using pres(2) by auto
+            qed
+            hence "Some fs = those (map ?h pres)" "\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
+              using fs by blast+
+          }
+
           show ?thesis
             sorry
         qed
