@@ -4335,7 +4335,9 @@ proof -
             moreover have wf: "(bs, inp, k', pre, {pre}) \<in> wellformed_forest_ptrs"
               using wellformed_forest_ptrs_prered_pre[OF prems(4) entry prered ps' gs *(1)] by blast
             ultimately obtain pres where pres: "build_trees' bs inp k' pre {pre} = Some pres"
+              "\<forall>f_pre \<in> set pres. \<exists>N fss. f_pre = FBranch N fss"
               using build_trees'_termination by blast
+
 
             \<comment>\<open>TODO\<close>
 
