@@ -4210,6 +4210,16 @@ proof -
     by blast
 qed
 
+lemma A:
+  assumes "g = (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) | _ \<Rightarrow> None)"
+  assumes "Some fs = those (map g pres)" "f \<in> set fs"
+  assumes "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
+  shows "\<exists>f_pre N fss. f = FBranch N (fss @ [[FLeaf (inp!(k-1))]]) \<and> f_pre = FBranch N fss \<and> f_pre \<in> set pres"
+  using assms
+  apply (induction pres arbitrary: fs f)
+   apply (auto)
+  by (smt (verit, best) list.inject list.set_cases map_option_eq_Some)
+
 lemma wf_item_tree_build_forest':
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
   assumes "wf_bins cfg inp bs"
@@ -4250,67 +4260,34 @@ proof -
         case Pre
         then obtain pre where pre: "pointer e = Pre pre"
           by blast
+        have sound: "sound_ptrs inp bs"
+          using prems(4) unfolding wellformed_forest_ptrs_def by blast
+        have scans: "scans inp k (item (bs!(k-1)!pre)) (item e)"
+          using entry pre prems(6-7) \<open>sound_ptrs inp bs\<close> unfolding sound_ptrs_def sound_pre_ptr_def by simp
+        hence *: 
+          "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item e)"
+          "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item e)"
+          "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item e)"
+          "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
+          unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
         have wf: "(bs, inp, k-1, pre, {pre}) \<in> wellformed_forest_ptrs"
           using entry pre prems(4) wellformed_forest_ptrs_pre by blast
         then obtain pres where pres: "build_trees' bs inp (k-1) pre {pre} = Some pres"
           "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
-          using build_trees'_termination by blast
-
+          using build_trees'_termination wf by blast
         let ?g = "\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) | _ \<Rightarrow> None"
         have "build_trees' bs inp k i I = those (map ?g pres)"
           using entry pre pres by simp
         hence fs: "Some fs = those (map ?g pres)"
           using prems(8) by simp
-
-        {
-          fix f t
-          assume *: "f \<in> set fs" "t \<in> set (trees f)"
-          obtain N fss where Nfss: "f = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
-            sorry
-          define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-          have "trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) = 
-            map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
-            by (subst tss, subst trees_append_single_singleton, simp)
-          moreover have "t \<in> set (trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])))"
-            using Nfss *(2) by blast
-          ultimately obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
-            by auto
-
-          have "sound_ptrs inp bs"
-            using prems(4) unfolding wellformed_forest_ptrs_def by blast
-          hence "pre < length (bs!(k-1))"
-            using entry pre prems(6,7) unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
-          moreover have "k - 1 < length bs"
-            by (simp add: prems(6) less_imp_diff_less)
-          moreover have "Branch N ts \<in> set (trees (FBranch N fss))"
-            using ts tss by simp
-          ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
-            using prems(1)[OF entry pre wf prems(5) _ _]
-            using prems(1,2,4,5) entry pre Nfss sledgehammer
-
-          have "wf_item_tree cfg (item (bs ! k ! i)) t"
-            sorry
-        }
-        thus ?thesis
-          using prems(10) prems(9) by blast
-
-
-
-
-
-
-        obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
-          using prems(8) build_forest'_simps(2) entry pre by (metis not_Some_eq)
-        then obtain N fss where Nfss: "f = FBranch N fss"
-          using entry ex_Branch_build_forest' pre prems(4) wellformed_forest_ptrs_pre by blast
-        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
-          using build_forest'_simps(3) entry pre f Nfss by simp
+        then obtain f_pre N fss where Nfss: "f = FBranch N (fss @ [[FLeaf (inp!(k-1))]])" "f_pre = FBranch N fss" "f_pre \<in> set pres"
+          using A fs pres(2) prems(9) by blast
         define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
         have "trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) = 
           map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
           by (subst tss, subst trees_append_single_singleton, simp)
         moreover have "t \<in> set (trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])))"
-          using prems(8,9) simp by simp
+          using Nfss(1) prems(10) by blast
         ultimately obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
           by auto
         have "sound_ptrs inp bs"
@@ -4322,15 +4299,7 @@ proof -
         moreover have "Branch N ts \<in> set (trees (FBranch N fss))"
           using ts tss by simp
         ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
-          using prems(1,2,4,5) entry pre f Nfss by (meson wellformed_forest_ptrs_pre)
-        have scans: "scans inp k (item (bs!(k-1)!pre)) (item e)"
-          using entry pre prems(6-7) \<open>sound_ptrs inp bs\<close> unfolding sound_ptrs_def sound_pre_ptr_def by simp
-        hence *: 
-          "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item e)"
-          "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item e)"
-          "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item e)"
-          "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
-          unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
+          using prems(1,2,4,5) entry pre Nfss(2,3) wf pres(1) by blast
         have "map root_tree (ts @ [Leaf (inp!(k-1))]) = map root_tree ts @ [inp!(k-1)]"
           by simp
         also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
@@ -4344,9 +4313,6 @@ proof -
           using IH *(1) by simp
         thus ?thesis
           using ts entry by fastforce
-
-        show ?thesis
-          sorry
       next
         case PreRed
         then show ?thesis sorry
@@ -4378,55 +4344,6 @@ proof -
         by (metis pointer.exhaust surj_pair)
       thus ?thesis
       proof cases
-        case Pre
-        then obtain pre where pre: "pointer e = Pre pre"
-          by blast
-        obtain f where f: "build_forest' bs inp (k-1) pre {pre} = Some f"
-          using prems(8) build_forest'_simps(2) entry pre by (metis not_Some_eq)
-        then obtain N fss where Nfss: "f = FBranch N fss"
-          using entry ex_Branch_build_forest' pre prems(4) wellformed_forest_ptrs_pre by blast
-        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))"
-          using build_forest'_simps(3) entry pre f Nfss by simp
-        define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
-        have "trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) = 
-          map (\<lambda>ts. Branch N ts) [ ts @ [Leaf (inp!(k-1))] . ts <- combinations tss ]"
-          by (subst tss, subst trees_append_single_singleton, simp)
-        moreover have "t \<in> set (trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])))"
-          using prems(8,9) simp by simp
-        ultimately obtain ts where ts: "t = Branch N (ts @ [Leaf (inp!(k-1))]) \<and> ts \<in> set (combinations tss)"
-          by auto
-        have "sound_ptrs inp bs"
-          using prems(4) unfolding wellformed_forest_ptrs_def by blast
-        hence "pre < length (bs!(k-1))"
-          using entry pre prems(6,7) unfolding sound_ptrs_def sound_pre_ptr_def by (metis nth_mem)
-        moreover have "k - 1 < length bs"
-          by (simp add: prems(6) less_imp_diff_less)
-        moreover have "Branch N ts \<in> set (trees (FBranch N fss))"
-          using ts tss by simp
-        ultimately have IH: "wf_item_tree cfg (item (bs!(k-1)!pre)) (Branch N ts)"
-          using prems(1,2,4,5) entry pre f Nfss by (meson wellformed_forest_ptrs_pre)
-        have scans: "scans inp k (item (bs!(k-1)!pre)) (item e)"
-          using entry pre prems(6-7) \<open>sound_ptrs inp bs\<close> unfolding sound_ptrs_def sound_pre_ptr_def by simp
-        hence *: 
-          "item_rule_head (item (bs!(k-1)!pre)) = item_rule_head (item e)"
-          "item_rule_body (item (bs!(k-1)!pre)) = item_rule_body (item e)"
-          "item_dot (item (bs!(k-1)!pre)) + 1 = item_dot (item e)"
-          "next_symbol (item (bs!(k-1)!pre)) = Some (inp!(k-1))"
-          unfolding scans_def inc_item_def by (simp_all add: item_rule_head_def item_rule_body_def)
-        have "map root_tree (ts @ [Leaf (inp!(k-1))]) = map root_tree ts @ [inp!(k-1)]"
-          by simp
-        also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item (bs!(k-1)!pre))) @ [inp!(k-1)]"
-          using IH by simp
-        also have "... = take (item_dot (item (bs!(k-1)!pre))) (item_rule_body (item e)) @ [inp!(k-1)]"
-          using *(2) by simp
-        also have "... = take (item_dot (item e)) (item_rule_body (item e))"
-          using *(2-4) by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
-        finally have "map root_tree (ts @ [Leaf (inp!(k-1))]) = take (item_dot (item e)) (item_rule_body (item e))" .
-        hence "wf_item_tree cfg (item e) (Branch N (ts @ [Leaf (inp!(k-1))]))"
-          using IH *(1) by simp
-        thus ?thesis
-          using ts entry by fastforce
-      next
         case PreRed
         then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
           by blast
