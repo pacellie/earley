@@ -4146,63 +4146,53 @@ proof -
             }"
         have simp: "build_trees' bs inp k i I = map_option concat (those (map ?g gs))"
           using entry pps ps' gs by (subst build_trees'.simps) (auto simp del: filter.simps)
-        show ?thesis
-        proof cases
-          assume empty: "ps' = []"
-          hence "build_trees' bs inp k i I = Some []"
-            using gs simp by simp
-          thus ?thesis
-            by simp
-        next
-          assume nonempty: "ps' \<noteq> []"
-          have "\<forall>fso \<in> set (map ?g gs). \<exists>fs. fso = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+        have "\<forall>fso \<in> set (map ?g gs). \<exists>fs. fso = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+        proof standard
+          fix fso
+          assume "fso \<in> set (map ?g gs)"
+          moreover have "\<forall>ps \<in> set gs. \<exists>fs. ?g ps = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
           proof standard
-            fix fso
-            assume "fso \<in> set (map ?g gs)"
-            moreover have "\<forall>ps \<in> set gs. \<exists>fs. ?g ps = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+            fix ps
+            assume "ps \<in> set gs"
+            then obtain k' pre reds where *: "((k', pre), reds) \<in> set gs" "((k', pre), reds) = ps"
+              by (metis surj_pair)
+            then obtain pres where pres: "build_trees' bs inp k' pre {pre} = Some pres"
+              "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
+              using IH(2) entry pps ps' gs by blast
+            have "\<forall>f \<in> set (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds). \<exists>a. f = Some a"
+              using IH(3)[OF entry pps ps' gs *(1)] by auto
+            then obtain rss where rss: "Some rss = those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds)"
+              using those_Some by (metis (full_types))
+            let ?h = "\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss])) | _ \<Rightarrow> None"
+            have "\<forall>x \<in> set (map ?h pres). \<exists>a. x = Some a"
+              using pres(2) by auto
+            then obtain fs where fs: "Some fs = those (map ?h pres)"
+              using those_Some by (smt (verit, best))
+            have "\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
             proof standard
-              fix ps
-              assume "ps \<in> set gs"
-              then obtain k' pre reds where *: "((k', pre), reds) \<in> set gs" "((k', pre), reds) = ps"
-                by (metis surj_pair)
-              then obtain pres where pres: "build_trees' bs inp k' pre {pre} = Some pres"
-                "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
-                using IH(2) entry pps ps' gs by blast
-              have "\<forall>f \<in> set (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds). \<exists>a. f = Some a"
-                using IH(3)[OF entry pps ps' gs *(1)] by auto
-              then obtain rss where rss: "Some rss = those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds)"
-                using those_Some by (metis (full_types))
-              let ?h = "\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss])) | _ \<Rightarrow> None"
-              have "\<forall>x \<in> set (map ?h pres). \<exists>a. x = Some a"
-                using pres(2) by auto
-              then obtain fs where fs: "Some fs = those (map ?h pres)"
-                using those_Some by (smt (verit, best))
-              have "\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
-              proof standard
-                fix f
-                assume *: "f \<in> set fs"
-                hence "\<exists>x. x \<in> set pres \<and> Some f \<in> set (map ?h pres)"
-                  using those_map_exists[OF fs *] by blast
-                then obtain x where x: "x \<in> set pres \<and> Some f \<in> set (map ?h pres)"
-                  by blast
-                thus "\<exists>N fss. f = FBranch N fss"
-                  using pres(2) by auto
-              qed
-              moreover have "?g ps = Some fs"
-                using fs pres rss * by (auto, metis bind.bind_lunit)
-              ultimately show "\<exists>fs. ?g ps = Some fs \<and> (\<forall>f\<in>set fs. \<exists>N fss. f = FBranch N fss)"
+              fix f
+              assume *: "f \<in> set fs"
+              hence "\<exists>x. x \<in> set pres \<and> Some f \<in> set (map ?h pres)"
+                using those_map_exists[OF fs *] by blast
+              then obtain x where x: "x \<in> set pres \<and> Some f \<in> set (map ?h pres)"
                 by blast
+              thus "\<exists>N fss. f = FBranch N fss"
+                using pres(2) by auto
             qed
-            ultimately show "\<exists>fs. fso = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
-              using map_Some_P by auto
+            moreover have "?g ps = Some fs"
+              using fs pres rss * by (auto, metis bind.bind_lunit)
+            ultimately show "\<exists>fs. ?g ps = Some fs \<and> (\<forall>f\<in>set fs. \<exists>N fss. f = FBranch N fss)"
+              by blast
           qed
-          then obtain fss where "those (map ?g gs) = Some fss" "\<forall>fs \<in> set fss. \<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
-            using those_Some_P by blast
-          hence "build_trees' bs inp k i I = Some (concat fss)" "\<forall>f \<in> set (concat fss). \<exists>N fss. f = FBranch N fss"
-            using simp by auto
-          thus ?thesis
-            by blast
+          ultimately show "\<exists>fs. fso = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+            using map_Some_P by auto
         qed
+        then obtain fss where "those (map ?g gs) = Some fss" "\<forall>fs \<in> set fss. \<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss"
+          using those_Some_P by blast
+        hence "build_trees' bs inp k i I = Some (concat fss)" "\<forall>f \<in> set (concat fss). \<exists>N fss. f = FBranch N fss"
+          using simp by auto
+        thus ?thesis
+          by blast
       qed
     qed
     done
@@ -4280,7 +4270,8 @@ proof -
           using entry pre pres by simp
         hence fs: "Some fs = those (map ?g pres)"
           using prems(8) by simp
-        then obtain f_pre N fss where Nfss: "f = FBranch N (fss @ [[FLeaf (inp!(k-1))]])" "f_pre = FBranch N fss" "f_pre \<in> set pres"
+        then obtain f_pre N fss where Nfss: "f = FBranch N (fss @ [[FLeaf (inp!(k-1))]])"
+          "f_pre = FBranch N fss" "f_pre \<in> set pres"
           using A fs pres(2) prems(9) by blast
         define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
         have "trees (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) = 
@@ -4315,6 +4306,137 @@ proof -
           using ts entry by fastforce
       next
         case PreRed
+        then obtain p ps where prered: "pointer e = PreRed p ps"
+          by blast
+        define ps' where ps': "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
+        define gs where gs: "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
+        let ?g = "\<lambda>((k', pre), reds).
+            do {
+              pres \<leftarrow> build_trees' bs inp k' pre {pre};
+              rss \<leftarrow> those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds);
+              those (map (\<lambda>f.
+                case f of
+                  FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))
+                | _ \<Rightarrow> None \<comment>\<open>impossible case\<close>
+              ) pres)
+            }"
+        have simp: "build_trees' bs inp k i I = map_option concat (those (map ?g gs))"
+          using entry prered ps' gs by (subst build_trees'.simps) (auto simp del: filter.simps)
+        have "\<forall>fso \<in> set (map ?g gs). \<exists>fs. fso = Some fs \<and> (\<forall>f \<in> set fs. \<forall>t \<in> set (trees f). wf_item_tree cfg (item (bs!k!i)) t)"
+        proof standard
+          fix fso
+          assume "fso \<in> set (map ?g gs)"
+          moreover have "\<forall>ps \<in> set gs. \<exists>fs. ?g ps = Some fs \<and> (\<forall>f \<in> set fs. \<forall>t \<in> set (trees f). wf_item_tree cfg (item (bs!k!i)) t)"
+          proof standard
+            fix g
+            assume "g \<in> set gs"
+            then obtain k' pre reds where *: "((k', pre), reds) \<in> set gs" "((k', pre), reds) = g"
+              by (metis surj_pair)
+            moreover have wf: "(bs, inp, k', pre, {pre}) \<in> wellformed_forest_ptrs"
+              using wellformed_forest_ptrs_prered_pre[OF prems(4) entry prered ps' gs *(1)] by blast
+            ultimately obtain pres where pres: "build_trees' bs inp k' pre {pre} = Some pres"
+              using build_trees'_termination by blast
+
+            \<comment>\<open>TODO\<close>
+
+
+            show "\<exists>fs. ?g g = Some fs \<and> (\<forall>f \<in> set fs. \<forall>t \<in> set (trees f). wf_item_tree cfg (item (bs!k!i)) t)"
+              sorry
+          qed
+          ultimately show "\<exists>fs. fso = Some fs \<and> (\<forall>f \<in> set fs. \<forall>t \<in> set (trees f). wf_item_tree cfg (item (bs!k!i)) t)"
+            using map_Some_P by auto
+        qed
+        then obtain fss where "those (map ?g gs) = Some fss" "\<forall>fs \<in> set fss. \<forall>f \<in> set fs. \<forall>t \<in> set (trees f). wf_item_tree cfg (item (bs!k!i)) t"
+          using those_Some_P by blast
+        hence "build_trees' bs inp k i I = Some (concat fss)" "\<forall>f \<in> set (concat fss). \<forall>t \<in> set (trees f). wf_item_tree cfg (item (bs!k!i)) t"
+          using simp by auto
+        thus ?thesis
+          using prems(8-10) prems(8) prems(9) by auto
+
+
+       
+
+
+
+
+        then obtain k' pre red reds where prered: "pointer e = PreRed (k', pre, red) reds"
+          by blast
+        obtain f where f: "build_forest' bs inp k' pre {pre} = Some f"
+          by (metis prems(8) build_forest'_simps(5) entry not_Some_eq prered)
+        then obtain N fss where Nfss: "f = FBranch N fss"
+          using entry ex_Branch_build_forest' prems(4) prered wellformed_forest_ptrs_prered_pre by blast
+        define tss where tss: "tss = map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss"
+        define reds' where reds': "reds' = filter (\<lambda>r. r \<notin> I) (red#reds)"
+        obtain fs where fs: "those (map (\<lambda>r. build_forest' bs inp k r (I \<union> {r})) reds') = Some fs"
+          using prems(8) build_forest'_simps(6)[OF entry prered] f Nfss reds' by fastforce
+        have simp: "build_forest' bs inp k i I = Some (FBranch N (fss @ [fs]))"
+          using build_forest'_simps(8) entry prered f Nfss reds' fs by auto
+        have "trees (FBranch N (fss @ [fs])) =
+          map (\<lambda>ts. Branch N ts) [ ts0 @ ts1 . ts0 <- combinations tss,
+            ts1 <- combinations [concat (map (\<lambda>f. trees f) fs) ] ]"
+          by (subst tss, subst trees_append_singleton, simp)
+        moreover have "t \<in> set (trees (FBranch N (fss @ [fs])))"
+          using prems(8,9) simp by simp
+        ultimately obtain ts0 ts1 f_red where tsx: "t = Branch N (ts0 @ [ts1])" "ts0 \<in> set (combinations tss)"
+          "ts1 \<in> set (trees f_red)" "f_red \<in> set fs"
+          using fs reds' by auto
+        then obtain r where r: "r \<in> set reds'" "build_forest' bs inp k r (I \<union> {r}) = Some f_red"
+          using fs by (induction reds' arbitrary: fs) (auto split: option.splits, blast+)
+        have "r \<in> set (red#reds)"
+          using reds' by (metis filter_is_subset r(1) subsetD)
+        have "(bs, inp, k, r, (I \<union> {r})) \<in> wellformed_forest_ptrs"
+          using wellformed_forest_ptrs_prered_red[OF prems(4) entry prered reds'] r(1) by blast
+        then obtain N_red fss_red where "FBranch N_red fss_red = f_red"
+          by (metis ex_Branch_build_forest' r(2))
+        then obtain ts where red: "Branch N_red ts = ts1"
+          using tsx(3) by auto
+        have "sound_ptrs inp bs"
+          using prems(4) wellformed_forest_ptrs_def by fastforce
+        have bounds: "k' < k" "pre < length (bs!k')" "r < length (bs!k)"
+          using prered entry prems(6,7) \<open>sound_ptrs inp bs\<close> \<open>r \<in> set (red#reds)\<close>
+          unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)+
+        have completes: "completes k (item (bs!k'!pre)) (item e) (item (bs!k!r))"
+          using prered entry prems(6,7) \<open>sound_ptrs inp bs\<close> \<open>r \<in> set (red#reds)\<close>
+          unfolding sound_ptrs_def sound_prered_ptr_def by (metis nth_mem)
+        have *: 
+          "item_rule_head (item (bs!k'!pre)) = item_rule_head (item e)"
+          "item_rule_body (item (bs!k'!pre)) = item_rule_body (item e)"
+          "item_dot (item (bs!k'!pre)) + 1 = item_dot (item e)"
+          "next_symbol (item (bs!k'!pre)) = Some (item_rule_head (item (bs!k!r)))"
+          "is_complete (item (bs!k!r))"
+          using completes unfolding completes_def inc_item_def
+          by (auto simp: item_rule_head_def item_rule_body_def is_complete_def)
+        have "Branch N ts0 \<in> set (trees (FBranch N fss))"
+          using tss tsx(2) by simp
+        moreover have "(bs, inp, k', pre, {pre}) \<in> wellformed_forest_ptrs"
+          using wellformed_forest_ptrs_prered_pre[OF prems(4) entry prered] by blast
+        ultimately have IH_pre: "wf_item_tree cfg (item (bs!k'!pre)) (Branch N ts0)"
+          using prems(2)[OF entry prered _ prems(5)] Nfss bounds(1,2) f order_less_trans prems(6) by blast
+        have IH_r: "wf_item_tree cfg (item (bs!k!r)) (Branch N_red ts)"
+          using \<open>(bs, inp, k, r, I \<union> {r}) \<in> wellformed_forest_ptrs\<close> bounds(3) entry prems(3,5,6) prered r red reds' tsx(3) by blast
+        have "map root_tree (ts0 @ [Branch N_red ts]) = map root_tree ts0 @ [root_tree (Branch N_red ts)]"
+          by simp
+        also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [root_tree (Branch N_red ts)]"
+          using IH_pre by simp
+        also have "... = take (item_dot (item (bs!k'!pre))) (item_rule_body (item (bs!k'!pre))) @ [item_rule_head (item (bs!k!r))]"
+          using IH_r by simp
+        also have "... = take (item_dot (item e)) (item_rule_body (item e))"
+          using * by (auto simp: next_symbol_def is_complete_def split: if_splits; metis leI take_Suc_conv_app_nth)
+        finally have roots: "map root_tree (ts0 @ [Branch N_red ts]) = take (item_dot (item e)) (item_rule_body (item e))" .
+        have "wf_item cfg inp (item (bs!k!r))"
+          using prems(5,6) bounds(3) unfolding wf_bins_def wf_bin_def wf_bin_items_def by (auto simp: items_def) 
+        moreover have "N_red = item_rule_head (item (bs!k!r))"
+          using IH_r by fastforce
+        moreover have "map root_tree ts = item_rule_body (item (bs!k!r))"
+          using IH_r *(5) by (auto simp: is_complete_def)
+        ultimately have "\<exists>r \<in> set (\<RR> cfg). N_red = rule_head r \<and> map root_tree ts = rule_body r"
+          unfolding wf_item_def item_rule_body_def item_rule_head_def by blast
+        hence "wf_rule_tree cfg (Branch N_red ts)"
+          using IH_r by simp
+        hence "wf_item_tree cfg (item (bs!k!i)) (Branch N (ts0 @ [Branch N_red ts]))"
+          using "*"(1) roots IH_pre entry by simp
+        thus ?thesis
+          using tsx(1) red by blast
         then show ?thesis sorry
       qed
     qed
