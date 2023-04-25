@@ -3702,25 +3702,24 @@ qed
 subsection \<open>Parse trees\<close>
 
 lemma [partial_function_mono]: \<comment>\<open>TODO\<close>
-  "         monotone option.le_fun option_ord
-          (\<lambda>build_trees'.
-              map_option concat
-               (those
-                 (map (\<lambda>((k', pre), reds).
-                          build_trees' ((((ac, bc), k'), pre), {pre}) \<bind>
-                          (\<lambda>pres.
-                              those (map (\<lambda>red. build_trees' ((((ac, bc), bb), red), b \<union> {red})) reds) \<bind>
-                              (\<lambda>rss. those (map (\<lambda>f. case f of FLeaf x \<Rightarrow> Map.empty x | FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))) pres))))
-                   xc)))"
-proof (induction xc)
+  "monotone option.le_fun option_ord
+    (\<lambda>f. map_option concat (those (map (\<lambda>((k', pre), reds).
+      f ((((x, y), k'), pre), {pre}) \<bind>
+        (\<lambda>pres. those (map (\<lambda>red. f ((((x, y), z), red), b \<union> {red})) reds) \<bind>
+          (\<lambda>rss. those (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss])) | _ \<Rightarrow> None) pres))))
+    xs)))"
+proof (induction xs)
   case Nil
   thus ?case
     by (auto simp: monotone_def option.leq_refl)
 next
   case (Cons x xs)
-  then show ?case
-    apply (auto simp: monotone_def option.leq_refl flat_ord_def fun_ord_def split: option.splits)
-    sorry
+
+  thm Cons
+
+  show ?case
+    apply (auto simp: monotone_def option.leq_refl flat_ord_def fun_ord_def split: option.splits prod.splits)
+    sledgehammer
 qed
 
 lemma [partial_function_mono]: "monotone option.le_fun option_ord (\<lambda>f. those (map (\<lambda>r. f ((((a, b), c), r), d \<union> {r})) xs))"
@@ -4763,8 +4762,7 @@ qed
 
 corollary wf_rule_root_yield_tree_build_trees_\<II>_it:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
-  assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs"
-  assumes "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
   using assms wf_rule_root_yield_tree_build_trees wf_bins_\<II>_it \<II>_it_def
     length_\<I>_it length_bins_Init_it sound_mono_ptrs_\<II>_it
@@ -4772,8 +4770,7 @@ corollary wf_rule_root_yield_tree_build_trees_\<II>_it:
 
 theorem soundness_build_trees_\<II>_it:
   assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs"
-  assumes "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg [\<SS> cfg] inp"
 proof -
   let ?k = "length (\<II>_it cfg inp) - 1"
@@ -4804,8 +4801,7 @@ proof -
 qed
 
 theorem termination_build_tree_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
-  assumes "derives cfg [\<SS> cfg] inp"
+  assumes "wf_cfg cfg" "nonempty_derives cfg" "derives cfg [\<SS> cfg] inp"
   shows "\<exists>fs. build_trees cfg inp (\<II>_it cfg inp) = Some fs"
 proof -
   let ?k = "length (\<II>_it cfg inp) - 1"
