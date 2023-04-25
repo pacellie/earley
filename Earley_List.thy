@@ -4803,4 +4803,37 @@ proof -
     using correctness_list assms by blast
 qed
 
+theorem termination_build_tree_\<II>_it:
+  assumes "wf_cfg cfg" "nonempty_derives cfg"
+  assumes "derives cfg [\<SS> cfg] inp"
+  shows "\<exists>fs. build_trees cfg inp (\<II>_it cfg inp) = Some fs"
+proof -
+  let ?k = "length (\<II>_it cfg inp) - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
+  thm build_trees'_termination
+  have "\<forall>f \<in> set finished. (\<II>_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
+  proof standard
+    fix f
+    assume a: "f \<in> set finished"
+    then obtain x i where *: "(x,i) = f"
+      by (metis surj_pair)
+    have "sound_ptrs inp (\<II>_it cfg inp)"
+      using sound_mono_ptrs_\<II>_it assms by blast
+    moreover have "?k < length (\<II>_it cfg inp)"
+      by (simp add: \<II>_it_def assms(1))
+    moreover have "i < length ((\<II>_it cfg inp)!?k)"
+      using index_filter_with_index_lt_length a * items_def finished_def by (metis length_map)
+    ultimately show "(\<II>_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
+      using * unfolding wellformed_forest_ptrs_def by auto
+  qed
+  hence "\<forall>fso \<in> set (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished). \<exists>fs. fso = Some fs"
+    using build_trees'_termination by fastforce
+  then obtain fss where fss: "Some fss = those (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished)"
+    by (smt (verit, best) those_Some)
+  then obtain fs where fs: "Some fs = map_option concat (those (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished))"
+    by (metis map_option_eq_Some)
+  show ?thesis
+    using finished_def fss fs build_trees_def by (metis (full_types))
+qed
+
 end
