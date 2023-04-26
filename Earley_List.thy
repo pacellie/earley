@@ -3701,38 +3701,175 @@ qed
 
 subsection \<open>Parse trees\<close>
 
-lemma [partial_function_mono]: \<comment>\<open>TODO\<close>
+lemma those_nonempty:
+  "those xs = Some ys \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> ys \<noteq> []"
+  by (induction xs arbitrary: ys) (auto split: option.splits)
+
+lemma those_map_exists:
+  "Some ys = those (map f xs) \<Longrightarrow> y \<in> set ys \<Longrightarrow> \<exists>x. x \<in> set xs \<and> Some y \<in> set (map f xs)"
+  apply (induction xs arbitrary: ys)
+  apply (auto split: option.splits)
+  by (smt (verit, best) map_option_eq_Some set_ConsD)
+
+lemma those_Some:
+  "(\<forall>x \<in> set xs. \<exists>a. x = Some a) \<longleftrightarrow> (\<exists>ys. those xs = Some ys)"
+  by (induction xs) (auto split: option.splits)
+
+lemma those_Some_P:
+  assumes "\<forall>x \<in> set xs. \<exists>ys. x = Some ys \<and> (\<forall>y \<in> set ys. P y)"
+  shows "\<exists>yss. those xs = Some yss \<and> (\<forall>ys \<in> set yss. \<forall>y \<in> set ys. P y)"
+  using assms by (induction xs) auto
+
+lemma map_Some_P:
+  assumes "z \<in> set (map f xs)"
+  assumes "\<forall>x \<in> set xs. \<exists>ys. f x = Some ys \<and> (\<forall>y \<in> set ys. P y)"
+  shows "\<exists>ys. z = Some ys \<and> (\<forall>y \<in> set ys. P y)"
+  using assms by (induction xs) auto
+
+lemma those_map_FBranch_only:
+  assumes "g = (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) | _ \<Rightarrow> None)"
+  assumes "Some fs = those (map g pres)" "f \<in> set fs"
+  assumes "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
+  shows "\<exists>f_pre N fss. f = FBranch N (fss @ [[FLeaf (inp!(k-1))]]) \<and> f_pre = FBranch N fss \<and> f_pre \<in> set pres"
+  using assms
+  apply (induction pres arbitrary: fs f)
+  apply (auto)
+  by (smt (verit, best) list.inject list.set_cases map_option_eq_Some)
+
+lemma those_map_Some_concat_exists:
+  assumes "y \<in> set (concat ys)"
+  assumes "Some ys = those (map f xs)"
+  shows "\<exists>ys x. Some ys = f x \<and> y \<in> set ys \<and> x \<in> set xs"
+  using assms
+  apply (induction xs arbitrary: ys y) 
+  apply (auto split: option.splits)
+  by (smt (verit, ccfv_threshold) list.inject list.set_cases map_option_eq_Some)
+
+lemma map_option_concat_those_map_exists:
+  assumes "Some fs = map_option concat (those (map F xs))"
+  assumes "f \<in> set fs"
+  shows "\<exists>fss fs'. Some fss = those (map F xs) \<and> fs' \<in> set fss \<and> f \<in> set fs'"
+  using assms
+  apply (induction xs arbitrary: fs f)
+  apply (auto split: option.splits)
+  by (smt (verit, best) UN_E map_option_eq_Some set_concat)
+
+lemma [partial_function_mono]: \<comment>\<open>Close your eyes, pls don't look at this disaster\<close>
   "monotone option.le_fun option_ord
     (\<lambda>f. map_option concat (those (map (\<lambda>((k', pre), reds).
-      f ((((x, y), k'), pre), {pre}) \<bind>
-        (\<lambda>pres. those (map (\<lambda>red. f ((((x, y), z), red), b \<union> {red})) reds) \<bind>
+      f ((((r, s), k'), pre), {pre}) \<bind>
+        (\<lambda>pres. those (map (\<lambda>red. f ((((r, s), t), red), b \<union> {red})) reds) \<bind>
           (\<lambda>rss. those (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss])) | _ \<Rightarrow> None) pres))))
     xs)))"
-proof (induction xs)
-  case Nil
-  thus ?case
-    by (auto simp: monotone_def option.leq_refl)
-next
-  case (Cons x xs)
-
-  thm Cons
-
-  show ?case
-    apply (auto simp: monotone_def option.leq_refl flat_ord_def fun_ord_def split: option.splits prod.splits)
-    sledgehammer
-qed
-
-lemma [partial_function_mono]: "monotone option.le_fun option_ord (\<lambda>f. those (map (\<lambda>r. f ((((a, b), c), r), d \<union> {r})) xs))"
-proof (induction xs)
-  case Nil
-  thus ?case
-    by (auto simp: monotone_def option.leq_refl)
-next
-  case (Cons x xs)
-  then show ?case
-    apply (auto simp: monotone_def option.leq_refl flat_ord_def fun_ord_def split: option.splits)
-     apply (metis (mono_tags, lifting) option.distinct(1))
-    by (smt (verit) option.inject option.simps(3))
+proof -
+  let ?f = "
+    (\<lambda>f. map_option concat (those (map (\<lambda>((k', pre), reds).
+      f ((((r, s), k'), pre), {pre}) \<bind>
+        (\<lambda>pres. those (map (\<lambda>red. f ((((r, s), t), red), b \<union> {red})) reds) \<bind>
+          (\<lambda>rss. those (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss])) | _ \<Rightarrow> None) pres))))
+    xs)))"
+  have 0: "\<And>x y. option.le_fun x y \<Longrightarrow> option_ord (?f x) (?f y)"
+    apply (auto simp: flat_ord_def fun_ord_def option.leq_refl split: option.splits forest.splits)
+    subgoal premises prems for x y
+    proof -
+      let ?t = "those (map (\<lambda>((k', pre), reds).
+        x ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))))
+        xs) = None"
+      show ?t
+      proof (rule ccontr)
+        assume a: "\<not>?t"
+        obtain fss where fss: "those (map (\<lambda>((k', pre), reds).
+        x ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))))
+        xs) = Some fss"
+          using a by blast
+        {
+          fix k' pre reds
+          assume *: "((k', pre), reds) \<in> set xs"
+          obtain pres where pres: "x ((((r, s), k'), pre), {pre}) = Some pres"
+            using fss * those_Some by force
+          have "\<exists>fs. Some fs = those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))"
+          proof (rule ccontr)
+            assume "\<nexists>fs. Some fs =
+              those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+                (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))"
+            hence "None =
+              those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+                (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))"
+              by (smt (verit) not_None_eq)
+            hence "None = x ((((r, s), k'), pre), {pre}) \<bind>
+              (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+                (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres)))"
+              by (simp add: pres)
+            hence "\<exists>((k', pre), reds) \<in> set xs. None = x ((((r, s), k'), pre), {pre}) \<bind>
+              (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+                (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres)))"
+              using * by blast
+            thus False
+              using fss those_Some by force
+          qed
+          then obtain fs where fs: "Some fs = those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))"
+            by blast
+          obtain rss where rss: "those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) = Some rss"
+            using fs by force
+          have "x ((((r, s), k'), pre), {pre}) = y ((((r, s), k'), pre), {pre})"
+            using pres prems(1) by (metis option.distinct(1))
+          moreover have "those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))
+          = those (map (\<lambda>red. y ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))"
+          proof -
+            have "\<forall>red \<in> set reds. x ((((r, s), t), red), insert red b) = y ((((r, s), t), red), insert red b)"
+            proof standard
+              fix red
+              assume "red \<in> set reds"
+              have "\<forall>x\<in>set (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) . \<exists>a. x = Some a"
+                using rss those_Some by blast
+              then obtain f where "x ((((r, s), t), red), insert red b) = Some f"
+                using \<open>red \<in> set reds\<close> by auto
+              thus "x ((((r, s), t), red), insert red b) = y ((((r, s), t), red), insert red b)"
+                using prems(1) by (metis option.distinct(1))
+            qed
+            thus ?thesis
+              by (smt (verit, best) map_eq_conv)
+          qed
+          ultimately have " x ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres)))
+        = y ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. y ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres)))"
+            by (metis bind.bind_lunit pres)
+        }
+        hence "\<forall>((k', pre), reds) \<in> set xs. x ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres)))
+        = y ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. y ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres)))"
+          by blast
+        hence "those (map (\<lambda>((k', pre), reds).
+        x ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. x ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))))
+        xs) = those (map (\<lambda>((k', pre), reds).
+        y ((((r, s), k'), pre), {pre}) \<bind>
+          (\<lambda>pres. those (map (\<lambda>red. y ((((r, s), t), red), insert red b)) reds) \<bind>
+            (\<lambda>rss. those (map (case_forest Map.empty (\<lambda>N fss. Some (FBranch N (fss @ [concat rss])))) pres))))
+        xs)"
+          using prems(1) by (smt (verit, best) case_prod_conv map_eq_conv split_cong)
+        thus False
+          using prems(2) by simp
+      qed
+    qed
+    done
+  show ?thesis
+    using monotoneI[of option.le_fun option_ord ?f, OF 0] by blast
 qed
 
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
@@ -3848,59 +3985,6 @@ proof (induction xs arbitrary: vs)
     qed
   qed
 qed simp
-
-lemma those_nonempty:
-  "those xs = Some ys \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> ys \<noteq> []"
-  by (induction xs arbitrary: ys) (auto split: option.splits)
-
-lemma those_map_exists:
-  "Some ys = those (map f xs) \<Longrightarrow> y \<in> set ys \<Longrightarrow> \<exists>x. x \<in> set xs \<and> Some y \<in> set (map f xs)"
-  apply (induction xs arbitrary: ys)
-  apply (auto split: option.splits)
-  by (smt (verit, best) map_option_eq_Some set_ConsD)
-
-lemma those_Some:
-  "\<forall>x \<in> set xs. \<exists>a. x = Some a \<Longrightarrow> \<exists>ys. those xs = Some ys"
-  by (induction xs) auto
-
-lemma those_Some_P:
-  assumes "\<forall>x \<in> set xs. \<exists>ys. x = Some ys \<and> (\<forall>y \<in> set ys. P y)"
-  shows "\<exists>yss. those xs = Some yss \<and> (\<forall>ys \<in> set yss. \<forall>y \<in> set ys. P y)"
-  using assms by (induction xs) auto
-
-lemma map_Some_P:
-  assumes "z \<in> set (map f xs)"
-  assumes "\<forall>x \<in> set xs. \<exists>ys. f x = Some ys \<and> (\<forall>y \<in> set ys. P y)"
-  shows "\<exists>ys. z = Some ys \<and> (\<forall>y \<in> set ys. P y)"
-  using assms by (induction xs) auto
-
-lemma those_map_FBranch_only:
-  assumes "g = (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]])) | _ \<Rightarrow> None)"
-  assumes "Some fs = those (map g pres)" "f \<in> set fs"
-  assumes "\<forall>f \<in> set pres. \<exists>N fss. f = FBranch N fss"
-  shows "\<exists>f_pre N fss. f = FBranch N (fss @ [[FLeaf (inp!(k-1))]]) \<and> f_pre = FBranch N fss \<and> f_pre \<in> set pres"
-  using assms
-  apply (induction pres arbitrary: fs f)
-  apply (auto)
-  by (smt (verit, best) list.inject list.set_cases map_option_eq_Some)
-
-lemma those_map_Some_concat_exists:
-  assumes "y \<in> set (concat ys)"
-  assumes "Some ys = those (map f xs)"
-  shows "\<exists>ys x. Some ys = f x \<and> y \<in> set ys \<and> x \<in> set xs"
-  using assms
-  apply (induction xs arbitrary: ys y) 
-  apply (auto split: option.splits)
-  by (smt (verit, ccfv_threshold) list.inject list.set_cases map_option_eq_Some)
-
-lemma map_option_concat_those_map_exists:
-  assumes "Some fs = map_option concat (those (map F xs))"
-  assumes "f \<in> set fs"
-  shows "\<exists>fss fs'. Some fss = those (map F xs) \<and> fs' \<in> set fss \<and> f \<in> set fs'"
-  using assms
-  apply (induction xs arbitrary: fs f)
-  apply (auto split: option.splits)
-  by (smt (verit, best) UN_E map_option_eq_Some set_concat)
 
 lemma wellformed_forest_ptrs_pre:
   assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
