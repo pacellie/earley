@@ -1,5 +1,5 @@
 theory Examples
-  imports Earley_List
+  imports Earley_Parser_Executable
 begin
 
 declare [[names_short]]

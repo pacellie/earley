@@ -6,14 +6,15 @@ session Earley = LocalLexing +
     Limit
     CFG
     Derivations
-    Earley_Set
-    Earley_List
+    Earley
+    Earley_Recognizer_Executable
+    Earley_Parser_Executable
     Examples
   theories
     "01_Introduction"
     "02_Earleys_Algorithm"
-    "03_Fixpoint_Earley_Recogniser"
-    "04_Earley_Recogniser"
+    "03_Fixpoint_Earley_Recognizer"
+    "04_Earley_Recognizer"
     "05_Earley_Parser"
     "06_Examples"
     "07_Conclusion"

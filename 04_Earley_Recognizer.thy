@@ -1,5 +1,5 @@
 (*<*)
-theory "04_Earley_Recogniser"
+theory "04_Earley_Recognizer"
   imports
     "../Examples"
     "HOL-Library.LaTeXsugar"

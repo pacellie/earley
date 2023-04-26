@@ -1,9 +1,8 @@
-theory Earley_Set
+theory Earley
   imports
     Derivations
     Limit
 begin
-
 
 section \<open>Slices\<close>
 
@@ -49,7 +48,7 @@ proof (induction a c xs arbitrary: ys zs rule: slice.induct)
 next
   case (4 a b x xs)
   thus ?case
-    by (auto, metis Earley_Set.slice.simps(4) Suc_le_mono)
+    by (auto, metis slice.simps(4) Suc_le_mono)
 qed auto
 
 lemma slice_nth:
