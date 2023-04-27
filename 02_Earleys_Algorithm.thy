@@ -5,9 +5,9 @@ theory "02_Earleys_Algorithm"
 begin
 (*>*)
 
-chapter\<open>Earley's Algorithm\<close>
+chapter \<open>Earley's Algorithm\<close>
 
-text\<open>TODO: Add nicer syntax for derives\<close>
+section \<open>Draft\<close>
 
 text\<open>
   \begin{itemize}
@@ -21,6 +21,8 @@ text\<open>
     \item Define goal: A -> alpha.beta,i,j iff A =>* s[i..j)beta which implies S -> alpha.,0,n+1 iff S =>* s \\
   \end{itemize}
 \<close>
+
+text\<open>TODO: Add nicer syntax for derives\<close>
 
 section\<open>Background Theory\<close>
 
@@ -85,11 +87,8 @@ definition derivations :: "'a cfg \<Rightarrow> ('a sentence \<times> 'a sentenc
 definition derives :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
   "derives cfg u v = ((u, v) \<in> derivations cfg)"
 
-definition \<L> :: "'a cfg \<Rightarrow> 'a sentence set" where
-  "\<L> cfg = { v | v. is_word cfg v \<and> derives cfg [\<SS> cfg] v}"
 
-
-section\<open>Earley Recognizer\<close>
+section \<open>Earley Recognizer\<close>
 
 (*<*)
 end

@@ -6,6 +6,17 @@ theory "01_Introduction"
 begin
 (*>*)
 
+chapter \<open>QUESTIONS\<close>
+
+text\<open>
+  \begin{itemize}
+    \item How much explain the proofs? \\
+    \item How reference thm names? \\
+    \item How to get rid of where? \\
+    \item How to tum blau assumes shows fun ... keywords? \\
+  \end{itemize}
+\<close>
+
 chapter\<open>Snippets\<close>
 
 section\<open>Earley\<close>

@@ -6,7 +6,32 @@ theory "04_Earley_Recognizer"
 begin
 (*>*)
 
-chapter\<open>Earley Recogniser Implementation\<close>
+chapter \<open>Draft\<close>
+
+text\<open>
+  \begin{itemize}
+    \item introduce auxiliary definitions: filter\_with\_index, pointer, entry in more detail
+      most everything else in text \\
+    \item overview over earley implementation with linked list and pointers and the mapping into a
+      functional setting \\
+    \item introduce Init\_it, Scan\_it, Predict\_it and Complete\_it, compare them with the set notation
+      and discuss performance improvements (Grammar in more specific form) Why do they all return a list?! \\
+    \item discus bin(s)\_upd(s) functions. Why bin\_upds like this -> easier than fold for proofs! \\
+    \item discuss pi\_it and why it is a partial function -> only terminates for valid input and foreshadow
+      how this is done in isabelle \\
+    \item introduce remaining definitions (analog to sets) \\
+    \item discuss wf proofs quickly and go into detail about isabelle specifics about termination and
+      the custom induction scheme using finiteness \\
+    \item outline the approach to proof correctness aka subsumption in both directions \\
+    \item discuss list to set proofs
+    \item discuss soundness proofs (maybe omit since obvious)
+    \item discuss completeness proof focusing on the complete case shortly explaining scan and predict
+      which don't change via iteration and order does not matter \\
+    \item highlight main theorems
+  \end{itemize}
+\<close>
+
+chapter\<open>Earley Recognizer Implementation\<close>
 
 section\<open>Definitions\<close>
 
@@ -466,13 +491,6 @@ lemma Complete_Un_eq_nonterminal:
   assumes "next_symbol z = Some a" "is_nonterminal cfg a" "sound_items cfg inp I" "item_end z = k"
   assumes "wf_items cfg inp I" "wf_item cfg inp z" "wf_cfg cfg" "nonempty_derives cfg"
   shows "Complete k (I \<union> {z}) = Complete k I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Complete_bins_upto_eq_bins:
-  assumes "wf_bins cfg inp bs" "k < length bs" "i \<ge> length (items (bs ! k))"
-  shows "Complete k (bins_items_upto bs k i) = Complete k (bins_items bs)"
 (*<*)
   sorry
 (*>*)

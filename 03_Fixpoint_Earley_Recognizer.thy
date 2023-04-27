@@ -6,9 +6,26 @@ theory "03_Fixpoint_Earley_Recognizer"
 begin
 (*>*)
 
-chapter\<open>Earley Formalization\<close>
+chapter \<open>Earley Formalization\<close>
 
-section\<open>Auxiliary Definitions\<close>
+section \<open>Draft\<close>
+
+text\<open>
+  \begin{itemize}
+    \item explain the auxiliary definitions until earley\_recognized, the small ones incorporated into
+      text, the big ones as definitions \\
+    \item explain Init, Scan, Predict, Complete REFERENCE and relate them back to the previous chapter \\
+    \item explain fixpoint iteration REFERENCE and iteration over all bins \\
+    \item illustrate the running example in this algorithm \\
+    \item explain wellformedness proof
+    \item explain soundness definitions and proof \\
+    \item explain monotonicity and absorption proofs \\
+    \item explain completeness proof, this one in great detail! \\
+    \item explain finiteness proof
+  \end{itemize}
+\<close>
+
+section \<open>Definitions\<close>
 
 fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
   "slice _ _ [] = []"
@@ -78,18 +95,6 @@ definition is_finished :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a ite
 definition earley_recognized :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
   "earley_recognized I cfg inp = (\<exists>x \<in> I. is_finished cfg inp x)"
 
-section \<open>Main Definitions\<close>
-
-fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'a)" where
-  "funpower f 0 x = x"
-| "funpower f (Suc n) x = f (funpower f n x)"
-
-definition natUnion :: "(nat \<Rightarrow> 'a set) \<Rightarrow> 'a set" where
-  "natUnion f = \<Union> { f n | n. True }"
-
-definition limit  :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
-  "limit f x = natUnion (\<lambda> n. funpower f n x)"
-
 definition Init :: "'a cfg \<Rightarrow> 'a items" where
   "Init cfg = { init_item r 0 | r. r \<in> set (\<RR> cfg) \<and> fst r = (\<SS> cfg) }"
 
@@ -116,6 +121,16 @@ definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
+fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'a)" where
+  "funpower f 0 x = x"
+| "funpower f (Suc n) x = f (funpower f n x)"
+
+definition natUnion :: "(nat \<Rightarrow> 'a set) \<Rightarrow> 'a set" where
+  "natUnion f = \<Union> { f n | n. True }"
+
+definition limit  :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
+  "limit f x = natUnion (\<lambda> n. funpower f n x)"
+
 definition \<pi>_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
   "\<pi>_step k cfg inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k cfg I"
 
@@ -132,64 +147,65 @@ definition \<II> :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items" wh
 section \<open>Wellformedness\<close>
 
 lemma wf_Init:
-  "x \<in> Init cfg \<Longrightarrow> wf_item cfg inp x"
+  assumes "x \<in> Init cfg"
+  shows "wf_item cfg inp x"
 (*<*)
   sorry
 (*>*)
+text\<open>by definition\<close>
 
-lemma wf_Scan:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (Scan k inp I)"
+lemma wf_Scan_Predict_Complete:
+  assumes "wf_items cfg inp I" 
+  shows "wf_items cfg inp (Scan k inp I \<union> Predict k cfg I \<union> Complete k I)"
 (*<*)
   sorry
 (*>*)
-
-lemma wf_Predict:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (Predict k cfg I)"
-(*<*)
-  sorry
-(*>*)
-
-lemma wf_Complete:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (Complete k I)"
-(*<*)
-  sorry
-(*>*)
+text\<open>by definition\<close>
 
 lemma wf_\<pi>_step:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (\<pi>_step k cfg inp I)"
+  assumes "wf_items cfg inp I"
+  shows "wf_items cfg inp (\<pi>_step k cfg inp I)"
 (*<*)
   sorry
 (*>*)
+text\<open>@{term wf_Scan_Predict_Complete} by definition\<close>
 
 lemma wf_funpower:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
+  assumes "wf_items cfg inp I"
+  shows " wf_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
 (*<*)
   sorry
 (*>*)
+text\<open>@{term wf_\<pi>_step}, by induction on n\<close>
 
 lemma wf_\<pi>:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (\<pi> k cfg inp I)"
+  assumes "wf_items cfg inp I"
+  shows "wf_items cfg inp (\<pi> k cfg inp I)"
 (*<*)
   sorry
 (*>*)
+text\<open>@{term wf_funpower} by definition\<close>
 
 lemma wf_\<pi>0:
   "wf_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
+text\<open>@{term wf_Init} @{term wf_\<pi>} by definition\<close>
 
 lemma wf_\<I>:
   "wf_items cfg inp (\<I> n cfg inp)"
 (*<*)
   sorry
 (*>*)
+text\<open>@{term wf_\<pi>0} @{term wf_\<pi>} by induction on n\<close>
 
 lemma wf_\<II>:
   "wf_items cfg inp (\<II> cfg inp)"
 (*<*)
   sorry
 (*>*)
+text\<open>@{term wf_\<I>} by definition\<close>
 
 section \<open>Soundness\<close>
 
@@ -207,21 +223,22 @@ lemma sound_Init:
 
 lemma sound_item_inc_item:
   assumes "wf_item cfg inp x" "sound_item cfg inp x"
-  assumes "next_symbol x = Some a"
-  assumes "k < length inp" "inp!k = a" "item_end x = k"
+  assumes "next_symbol x = Some a" "k < length inp" "inp!k = a" "item_end x = k"
   shows "sound_item cfg inp (inc_item x (k+1))"
 (*<*)
   sorry
 (*>*)
 
 lemma sound_Scan:
-  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (Scan k inp I)"
+  assumes "wf_items cfg inp I" "sound_items cfg inp I"
+  shows "sound_items cfg inp (Scan k inp I)"
 (*<*)
   sorry
 (*>*)
 
 lemma sound_Predict:
-  "sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (Predict k cfg I)"
+  assumes "sound_items cfg inp I"
+  shows "sound_items cfg inp (Predict k cfg I)"
 (*<*)
   sorry
 (*>*)
@@ -234,13 +251,15 @@ lemma sound_Complete:
 (*>*)
 
 lemma sound_\<pi>_step:
-  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (\<pi>_step k cfg inp I)"
+  assumes "wf_items cfg inp I" "sound_items cfg inp I" 
+  shows "sound_items cfg inp (\<pi>_step k cfg inp I)"
 (*<*)
   sorry
 (*>*)
 
 lemma sound_funpower:
-  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
+  assumes "wf_items cfg inp I" "sound_items cfg inp I"
+  shows "sound_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
 (*<*)
   sorry
 (*>*)
@@ -284,7 +303,6 @@ lemma \<pi>_idem:
   sorry
 (*>*)
 
-
 lemma Scan_bin_absorb:
   "Scan k inp (bin I k) = Scan k inp I"
 (*<*)
@@ -303,56 +321,36 @@ lemma Complete_bin_absorb:
   sorry
 (*>*)
 
-lemma Scan_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> Scan k inp I \<subseteq> Scan k inp J"
-(*<*)
-  sorry
-(*>*)
-
-lemma Predict_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> Predict k cfg I \<subseteq> Predict k cfg J"
-(*<*)
-  sorry
-(*>*)
-
-lemma Complete_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> Complete k I \<subseteq> Complete k J"
+lemma Scan_Predict_Complete_sub_mono:
+  assumes "I \<subseteq> J"
+  shows "Scan k inp I \<subseteq> Scan k inp J" "Predict k cfg I \<subseteq> Predict k cfg J" "Complete k I \<subseteq> Complete k J"
 (*<*)
   sorry
 (*>*)
 
 lemma \<pi>_step_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> \<pi>_step k cfg inp I \<subseteq> \<pi>_step k cfg inp J"
+  assumes "I \<subseteq> J"
+  shows "\<pi>_step k cfg inp I \<subseteq> \<pi>_step k cfg inp J"
 (*<*)
   sorry
 (*>*)
 
 lemma funpower_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> funpower (\<pi>_step k cfg inp) n I \<subseteq> funpower (\<pi>_step k cfg inp) n J"
+  assumes "I \<subseteq> J"
+  shows "funpower (\<pi>_step k cfg inp) n I \<subseteq> funpower (\<pi>_step k cfg inp) n J"
 (*<*)
   sorry
 (*>*)
 
 lemma \<pi>_sub_mono:
-  "I \<subseteq> J \<Longrightarrow> \<pi> k cfg inp I \<subseteq> \<pi> k cfg inp J"
+  assumes "I \<subseteq> J"
+  shows "\<pi> k cfg inp I \<subseteq> \<pi> k cfg inp J"
 (*<*)
   sorry
 (*>*)
 
-lemma Scan_\<pi>_step_mono:
-  "Scan k inp I \<subseteq> \<pi>_step k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Predict_\<pi>_step_mono:
-  "Predict k cfg I \<subseteq> \<pi>_step k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Complete_\<pi>_step_mono:
-  "Complete k I \<subseteq> \<pi>_step k cfg inp I"
+lemma Scan_Predict_Complete_\<pi>_step_mono:
+  "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi>_step k cfg inp I"
 (*<*)
   sorry
 (*>*)
@@ -363,20 +361,8 @@ lemma \<pi>_step_\<pi>_mono:
   sorry
 (*>*)
 
-lemma Scan_\<pi>_mono:
-  "Scan k inp I \<subseteq> \<pi> k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Predict_\<pi>_mono:
-  "Predict k cfg I \<subseteq> \<pi> k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Complete_\<pi>_mono:
-  "Complete k I \<subseteq> \<pi> k cfg inp I"
+lemma Scan_Predict_Complete_\<pi>_mono:
+  "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi> k cfg inp I"
 (*<*)
   sorry
 (*>*)
@@ -388,31 +374,36 @@ lemma \<pi>_mono:
 (*>*)
 
 lemma Scan_bin_empty:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (Scan k inp I) i = {}"
+  assumes "i \<noteq> k" "i \<noteq> k+1"
+  shows "bin (Scan k inp I) i = {}"
 (*<*)
   sorry
 (*>*)
 
 lemma Predict_bin_empty:
-  "i \<noteq> k \<Longrightarrow> bin (Predict k cfg I) i = {}"
+  assumes "i \<noteq> k"
+  shows "bin (Predict k cfg I) i = {}"
 (*<*)
   sorry
 (*>*)
 
 lemma Complete_bin_empty:
-  "i \<noteq> k \<Longrightarrow> bin (Complete k I) i = {}"
+  assumes "i \<noteq> k" 
+  shows "bin (Complete k I) i = {}"
 (*<*)
   sorry
 (*>*)
 
 lemma \<pi>_step_bin_absorb:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k + 1 \<Longrightarrow> bin (\<pi>_step k cfg inp I) i = bin I i"
+  assumes "i \<noteq> k" "i \<noteq> k + 1"
+  shows "bin (\<pi>_step k cfg inp I) i = bin I i"
 (*<*)
   sorry
 (*>*)
 
 lemma funpower_bin_absorb:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (funpower (\<pi>_step k cfg inp) n I) i = bin I i"
+  assumes "i \<noteq> k" "i \<noteq> k+1"
+  shows "bin (funpower (\<pi>_step k cfg inp) n I) i = bin I i"
 (*<*)
   sorry
 (*>*)
@@ -490,14 +481,8 @@ lemma partially_completed_\<I>:
 (*>*)
 
 lemma partially_completed_\<II>:
-  "wf_cfg cfg \<Longrightarrow> partially_completed (length inp) cfg inp (\<II> cfg inp) (\<lambda>_. True)"
-(*<*)
-  sorry
-(*>*)
-
-lemma Derivation_\<SS>1:
-  assumes "Derivation cfg [\<SS> cfg] D inp" "is_word cfg inp" "wf_cfg cfg"
-  shows "\<exists>\<alpha> E. Derivation cfg \<alpha> E inp \<and> (\<SS> cfg,\<alpha>) \<in> set (\<RR> cfg)"
+  assumes "wf_cfg cfg"
+  shows "partially_completed (length inp) cfg inp (\<II> cfg inp) (\<lambda>_. True)"
 (*<*)
   sorry
 (*>*)
@@ -512,6 +497,20 @@ theorem completeness:
 corollary
   assumes "wf_cfg cfg" "is_word cfg inp"
   shows "earley_recognized (\<II> cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+(*<*)
+  sorry
+(*>*)
+
+section \<open>Finiteness\<close>
+
+lemma finiteness_UNIV_wf_item:
+  "finite { x | x. wf_item cfg inp x }"
+(*<*)
+  sorry
+(*>*)
+
+theorem finiteness:
+  "finite (\<II> cfg inp)"
 (*<*)
   sorry
 (*>*)
