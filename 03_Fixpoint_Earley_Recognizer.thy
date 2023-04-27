@@ -52,12 +52,6 @@ definition is_complete :: "'a item \<Rightarrow> bool" where
 definition next_symbol :: "'a item \<Rightarrow> 'a option" where
   "next_symbol x = (if is_complete x then None else Some ((item_rule_body x) ! (item_dot x)))"
 
-definition is_opening :: "'a item \<Rightarrow> bool" where
-  "is_opening x = (item_dot x = 0)"
-
-definition prev_symbol :: "'a item \<Rightarrow> 'a option" where
-  "prev_symbol x = (if is_opening x then None else Some ((item_rule_body x) ! (item_dot x - 1)))"
-
 definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
   "inc_item x k = Item (item_rule x) (item_dot x + 1) (item_origin x) k"
 
