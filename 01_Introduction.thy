@@ -6,15 +6,22 @@ theory "01_Introduction"
 begin
 (*>*)
 
-chapter\<open>Introduction\<close>
+chapter\<open>Snippets\<close>
 
-text\<open>@{thm conjI[no_vars]}\<close>
-text\<open>@{datatype cfg}\<close>
+section\<open>Earley\<close>
+
+section\<open>Jones\<close>
+
+section\<open>Scott\<close>
+
+chapter\<open>Introduction\<close>
 
 section\<open>Motivation\<close>
 
 text\<open>some introduction about parsing, formal development of correct algorithms: an example based on
 earley's recogniser, the benefits of formal methods, LocalLexing and the Bachelor thesis.\<close>
+
+text\<open>work with the snippets, reformulate!\<close>
 
 section\<open>Structure\<close>
 
@@ -30,7 +37,8 @@ text\<open>what did I do, what is new\<close>
 
 section \<open>Isabelle/HOL\<close>
 
-text\<open>take closest pair paper section and add additional notation as needed\<close>
+text\<open>take closest pair paper section and add additional notation as needed, also discuss
+the different representations of lemmas and definitions (separate or within the text)\<close>
 
 (*<*)
 end

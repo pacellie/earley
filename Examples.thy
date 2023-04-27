@@ -79,7 +79,7 @@ value "build_trees cfg1 inp1' (\<II>_it cfg1 inp1')"
 value "map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1'))"
 value "map_option (foldl (+) 0 \<circ> map length) (map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1')))"
 
-subsection \<open>Example 3: Cyclic reduction pointers\<close>
+section \<open>Example 3: Cyclic reduction pointers\<close>
 
 datatype t2 = x
 datatype n2 = A | B

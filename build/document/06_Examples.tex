@@ -25,12 +25,289 @@
 }
 \isamarkuptrue%
 %
+\isamarkupsection{epsilon free CFG%
+}
+\isamarkuptrue%
+%
 \endisatagdocument
 {\isafolddocument}%
 %
 \isadelimdocument
 %
 \endisadelimdocument
+\isacommand{definition}\isamarkupfalse%
+\ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ cfg\ {\isasymlongleftrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymforall}r\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ cfg{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ rule{\isacharunderscore}{\kern0pt}body\ r\ {\isasymnoteq}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{lemma}\isamarkupfalse%
+\ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}impl{\isacharunderscore}{\kern0pt}non{\isacharunderscore}{\kern0pt}empty{\isacharunderscore}{\kern0pt}deriv{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ cfg\ {\isasymLongrightarrow}\ N\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymNN}\ cfg{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymnot}\ derives\ cfg\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsection{Example 1: Addition%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+\isacommand{datatype}\isamarkupfalse%
+\ t{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ x\ {\isacharbar}{\kern0pt}\ plus\isanewline
+\isacommand{datatype}\isamarkupfalse%
+\ n{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ S\isanewline
+\isacommand{datatype}\isamarkupfalse%
+\ s{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ Terminal\ t{\isadigit{1}}\ {\isacharbar}{\kern0pt}\ Nonterminal\ n{\isadigit{1}}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ nonterminals{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{1}}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}nonterminals{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ S{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ terminals{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{1}}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}terminals{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ rules{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{1}}\ rule\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}rules{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Nonterminal\ S{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ start{\isacharunderscore}{\kern0pt}symbol{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ s{\isadigit{1}}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}start{\isacharunderscore}{\kern0pt}symbol{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ Nonterminal\ S{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ cfg{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{1}}\ cfg{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}cfg{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals{\isadigit{1}}\ terminals{\isadigit{1}}\ rules{\isadigit{1}}\ start{\isacharunderscore}{\kern0pt}symbol{\isadigit{1}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ inp{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{1}}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}inp{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{lemma}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}cfg{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}cfg\ cfg{\isadigit{1}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{lemma}\isamarkupfalse%
+\ is{\isacharunderscore}{\kern0pt}word{\isacharunderscore}{\kern0pt}inp{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}word\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{lemma}\isamarkupfalse%
+\ nonempty{\isacharunderscore}{\kern0pt}derives{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ cfg{\isadigit{1}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{lemma}\isamarkupfalse%
+\ correctness{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}earley{\isacharunderscore}{\kern0pt}recognized{\isacharunderscore}{\kern0pt}it\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isacharparenright}{\kern0pt}\ cfg{\isadigit{1}}\ inp{\isadigit{1}}\ {\isasymlongleftrightarrow}\ derives\ cfg{\isadigit{1}}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ cfg{\isadigit{1}}{\isacharbrackright}{\kern0pt}\ inp{\isadigit{1}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{fun}\isamarkupfalse%
+\ size{\isacharunderscore}{\kern0pt}bins\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}size{\isacharunderscore}{\kern0pt}bins\ bs\ {\isacharequal}{\kern0pt}\ fold\ {\isacharparenleft}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}map\ length\ bs{\isacharparenright}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}size{\isacharunderscore}{\kern0pt}bins\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}earley{\isacharunderscore}{\kern0pt}recognized{\isacharunderscore}{\kern0pt}it\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isacharparenright}{\kern0pt}\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ cfg{\isadigit{1}}\ inp{\isadigit{1}}\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}map{\isacharunderscore}{\kern0pt}option\ {\isacharparenleft}{\kern0pt}map\ trees{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees\ cfg{\isadigit{1}}\ inp{\isadigit{1}}\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}map{\isacharunderscore}{\kern0pt}option\ {\isacharparenleft}{\kern0pt}foldl\ {\isacharparenleft}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isadigit{0}}\ {\isasymcirc}\ map\ length{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}map{\isacharunderscore}{\kern0pt}option\ {\isacharparenleft}{\kern0pt}map\ trees{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees\ cfg{\isadigit{1}}\ inp{\isadigit{1}}\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{1}}\ inp{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsubsection{Example 2: Cyclic reduction pointers%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+\isacommand{datatype}\isamarkupfalse%
+\ t{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ x\isanewline
+\isacommand{datatype}\isamarkupfalse%
+\ n{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ A\ {\isacharbar}{\kern0pt}\ B\isanewline
+\isacommand{datatype}\isamarkupfalse%
+\ s{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ Terminal\ t{\isadigit{2}}\ {\isacharbar}{\kern0pt}\ Nonterminal\ n{\isadigit{2}}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ nonterminals{\isadigit{2}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{2}}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}nonterminals{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ A{\isacharcomma}{\kern0pt}\ Nonterminal\ B{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ terminals{\isadigit{2}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{2}}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}terminals{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ rules{\isadigit{2}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{2}}\ rule\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}rules{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ B{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ A{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ A{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ B{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ A{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ start{\isacharunderscore}{\kern0pt}symbol{\isadigit{2}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ s{\isadigit{2}}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}start{\isacharunderscore}{\kern0pt}symbol{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ Nonterminal\ A{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ cfg{\isadigit{2}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{2}}\ cfg{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}cfg{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals{\isadigit{2}}\ terminals{\isadigit{2}}\ rules{\isadigit{2}}\ start{\isacharunderscore}{\kern0pt}symbol{\isadigit{2}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ inp{\isadigit{2}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s{\isadigit{2}}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}inp{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{lemma}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}cfg{\isadigit{2}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}cfg\ cfg{\isadigit{2}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{lemma}\isamarkupfalse%
+\ is{\isacharunderscore}{\kern0pt}word{\isacharunderscore}{\kern0pt}inp{\isadigit{2}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}word\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{lemma}\isamarkupfalse%
+\ nonempty{\isacharunderscore}{\kern0pt}derives{\isadigit{2}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ cfg{\isadigit{2}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{lemma}\isamarkupfalse%
+\ correctness{\isadigit{2}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}earley{\isacharunderscore}{\kern0pt}recognized{\isacharunderscore}{\kern0pt}it\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isacharparenright}{\kern0pt}\ cfg{\isadigit{2}}\ inp{\isadigit{2}}\ {\isasymlongleftrightarrow}\ derives\ cfg{\isadigit{2}}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ cfg{\isadigit{2}}{\isacharbrackright}{\kern0pt}\ inp{\isadigit{2}}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}earley{\isacharunderscore}{\kern0pt}recognized{\isacharunderscore}{\kern0pt}it\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isacharparenright}{\kern0pt}\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ cfg{\isadigit{2}}\ inp{\isadigit{2}}\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isacommand{value}\isamarkupfalse%
+\ {\isachardoublequoteopen}map{\isacharunderscore}{\kern0pt}option\ {\isacharparenleft}{\kern0pt}map\ trees{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees\ cfg{\isadigit{2}}\ inp{\isadigit{2}}\ {\isacharparenleft}{\kern0pt}{\isasymII}{\isacharunderscore}{\kern0pt}it\ cfg{\isadigit{2}}\ inp{\isadigit{2}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 %
 \isadelimtheory
 %
@@ -49,3 +326,133 @@
 \endinput
 %:%file=06_Examples.tex%:%
 %:%24=9%:%
+%:%28=11%:%
+%:%38=13%:%
+%:%39=13%:%
+%:%40=14%:%
+%:%41=15%:%
+%:%42=16%:%
+%:%43=16%:%
+%:%44=17%:%
+%:%64=22%:%
+%:%74=24%:%
+%:%75=24%:%
+%:%76=25%:%
+%:%77=25%:%
+%:%78=26%:%
+%:%79=26%:%
+%:%80=27%:%
+%:%81=28%:%
+%:%82=28%:%
+%:%83=29%:%
+%:%84=30%:%
+%:%85=31%:%
+%:%86=31%:%
+%:%87=32%:%
+%:%88=33%:%
+%:%89=34%:%
+%:%90=34%:%
+%:%91=35%:%
+%:%94=38%:%
+%:%95=39%:%
+%:%96=40%:%
+%:%97=40%:%
+%:%98=41%:%
+%:%99=42%:%
+%:%100=43%:%
+%:%101=43%:%
+%:%102=44%:%
+%:%103=45%:%
+%:%104=46%:%
+%:%105=46%:%
+%:%106=47%:%
+%:%107=48%:%
+%:%108=49%:%
+%:%109=49%:%
+%:%110=50%:%
+%:%121=54%:%
+%:%124=55%:%
+%:%125=55%:%
+%:%126=56%:%
+%:%137=60%:%
+%:%140=61%:%
+%:%141=61%:%
+%:%142=62%:%
+%:%153=66%:%
+%:%156=67%:%
+%:%157=67%:%
+%:%158=68%:%
+%:%169=72%:%
+%:%172=73%:%
+%:%173=73%:%
+%:%174=74%:%
+%:%175=75%:%
+%:%176=76%:%
+%:%177=76%:%
+%:%178=77%:%
+%:%179=77%:%
+%:%180=78%:%
+%:%181=78%:%
+%:%182=79%:%
+%:%183=79%:%
+%:%184=80%:%
+%:%185=80%:%
+%:%186=81%:%
+%:%187=81%:%
+%:%194=83%:%
+%:%204=85%:%
+%:%205=85%:%
+%:%206=86%:%
+%:%207=86%:%
+%:%208=87%:%
+%:%209=87%:%
+%:%210=88%:%
+%:%211=89%:%
+%:%212=89%:%
+%:%213=90%:%
+%:%214=91%:%
+%:%215=92%:%
+%:%216=92%:%
+%:%217=93%:%
+%:%218=94%:%
+%:%219=95%:%
+%:%220=95%:%
+%:%221=96%:%
+%:%225=100%:%
+%:%226=101%:%
+%:%227=102%:%
+%:%228=102%:%
+%:%229=103%:%
+%:%230=104%:%
+%:%231=105%:%
+%:%232=105%:%
+%:%233=106%:%
+%:%234=107%:%
+%:%235=108%:%
+%:%236=108%:%
+%:%237=109%:%
+%:%238=110%:%
+%:%239=111%:%
+%:%240=111%:%
+%:%241=112%:%
+%:%252=116%:%
+%:%255=117%:%
+%:%256=117%:%
+%:%257=118%:%
+%:%268=122%:%
+%:%271=123%:%
+%:%272=123%:%
+%:%273=124%:%
+%:%284=128%:%
+%:%287=129%:%
+%:%288=129%:%
+%:%289=130%:%
+%:%300=134%:%
+%:%303=135%:%
+%:%304=135%:%
+%:%305=136%:%
+%:%306=136%:%
+%:%307=137%:%
+%:%308=137%:%
+%:%309=138%:%
+%:%310=138%:%
