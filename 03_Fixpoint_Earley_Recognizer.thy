@@ -27,12 +27,6 @@ text\<open>
 
 section \<open>Definitions\<close>
 
-fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
-  "slice _ _ [] = []"
-| "slice _ 0 (x#xs) = []"
-| "slice 0 (Suc b) (x#xs) = x # slice 0 b xs"
-| "slice (Suc a) (Suc b) (x#xs) = slice a b xs"
-
 definition rule_head :: "'a rule \<Rightarrow> 'a" where
   "rule_head = fst"
 
@@ -187,21 +181,21 @@ lemma wf_\<pi>:
 text\<open>@{term wf_funpower} by definition\<close>
 
 lemma wf_\<pi>0:
-  "wf_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
+  shows "wf_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
 text\<open>@{term wf_Init} @{term wf_\<pi>} by definition\<close>
 
 lemma wf_\<I>:
-  "wf_items cfg inp (\<I> n cfg inp)"
+  shows "wf_items cfg inp (\<I> n cfg inp)"
 (*<*)
   sorry
 (*>*)
 text\<open>@{term wf_\<pi>0} @{term wf_\<pi>} by induction on n\<close>
 
 lemma wf_\<II>:
-  "wf_items cfg inp (\<II> cfg inp)"
+  shows "wf_items cfg inp (\<II> cfg inp)"
 (*<*)
   sorry
 (*>*)
@@ -216,7 +210,7 @@ definition sound_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a ite
   "sound_items cfg inp I = (\<forall>x \<in> I. sound_item cfg inp x)"
 
 lemma sound_Init:
-  "sound_items cfg inp (Init cfg)"
+  shows "sound_items cfg inp (Init cfg)"
 (*<*)
   sorry
 (*>*)
@@ -272,25 +266,25 @@ lemma sound_\<pi>:
 (*>*)
 
 lemma sound_\<pi>0:
-  "sound_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
+  shows "sound_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
 
 lemma sound_\<I>:
-  "sound_items cfg inp (\<I> k cfg inp)"
+  shows "sound_items cfg inp (\<I> k cfg inp)"
 (*<*)
   sorry
 (*>*)
 
 lemma sound_\<II>:
-  "sound_items cfg inp (\<II> cfg inp)"
+  shows "sound_items cfg inp (\<II> cfg inp)"
 (*<*)
   sorry
 (*>*)
 
 theorem soundness:
-  "earley_recognized (\<II> cfg inp) cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "earley_recognized (\<II> cfg inp) cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)
@@ -298,25 +292,25 @@ theorem soundness:
 section \<open>Monotonicity and Absorption\<close>
 
 lemma \<pi>_idem:
-  "\<pi> k cfg inp (\<pi> k cfg inp I) = \<pi> k cfg inp I"
+  shows "\<pi> k cfg inp (\<pi> k cfg inp I) = \<pi> k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
 lemma Scan_bin_absorb:
-  "Scan k inp (bin I k) = Scan k inp I"
+  shows "Scan k inp (bin I k) = Scan k inp I"
 (*<*)
   sorry
 (*>*)
 
 lemma Predict_bin_absorb:
-  "Predict k cfg (bin I k) = Predict k cfg I"
+  shows "Predict k cfg (bin I k) = Predict k cfg I"
 (*<*)
   sorry
 (*>*)
 
 lemma Complete_bin_absorb:
-  "Complete k (bin I k) \<subseteq> Complete k I"
+  shows "Complete k (bin I k) \<subseteq> Complete k I"
 (*<*)
   sorry
 (*>*)
@@ -350,25 +344,25 @@ lemma \<pi>_sub_mono:
 (*>*)
 
 lemma Scan_Predict_Complete_\<pi>_step_mono:
-  "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi>_step k cfg inp I"
+  shows "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi>_step k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
 lemma \<pi>_step_\<pi>_mono:
-  "\<pi>_step k cfg inp I \<subseteq> \<pi> k cfg inp I"
+  shows "\<pi>_step k cfg inp I \<subseteq> \<pi> k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
 lemma Scan_Predict_Complete_\<pi>_mono:
-  "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi> k cfg inp I"
+  shows "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi> k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
 lemma \<pi>_mono:
-  "I \<subseteq> \<pi> k cfg inp I"
+  shows "I \<subseteq> \<pi> k cfg inp I"
 (*<*)
   sorry
 (*>*)
@@ -504,13 +498,13 @@ corollary
 section \<open>Finiteness\<close>
 
 lemma finiteness_UNIV_wf_item:
-  "finite { x | x. wf_item cfg inp x }"
+  shows "finite { x | x. wf_item cfg inp x }"
 (*<*)
   sorry
 (*>*)
 
 theorem finiteness:
-  "finite (\<II> cfg inp)"
+  shows "finite (\<II> cfg inp)"
 (*<*)
   sorry
 (*>*)

@@ -47,25 +47,25 @@ definition inp1 :: "s1 list" where
   "inp1 = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
 
 lemma wf_cfg1:
-  "wf_cfg cfg1"
+  shows "wf_cfg cfg1"
 (*<*)
   sorry  
 (*>*)
 
 lemma is_word_inp1:
-  "is_word cfg1 inp1"
+  shows "is_word cfg1 inp1"
 (*<*)
   sorry  
 (*>*)
 
 lemma nonempty_derives1:
-  "nonempty_derives cfg1"
+  shows "nonempty_derives cfg1"
 (*<*)
   sorry  
 (*>*)
 
 lemma correctness1:
-  "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  shows "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
 (*<*)
   sorry  
 (*>*)
@@ -109,25 +109,25 @@ definition inp2 :: "s2 list" where
   "inp2 = [Terminal x]"
 
 lemma wf_cfg2:
-  "wf_cfg cfg2"
+  shows "wf_cfg cfg2"
 (*<*)
   sorry  
 (*>*)
 
 lemma is_word_inp2:
-  "is_word cfg2 inp2"
+  shows "is_word cfg2 inp2"
 (*<*)
   sorry  
 (*>*)
 
 lemma nonempty_derives2:
-  "nonempty_derives cfg2"
+  shows "nonempty_derives cfg2"
 (*<*)
   sorry  
 (*>*)
 
 lemma correctness2:
-  "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  shows "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
 (*<*)
   sorry  
 (*>*)

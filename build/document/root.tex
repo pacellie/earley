@@ -14,7 +14,7 @@
 \usepackage[%
   backend=biber,
   url=false,
-  style=alphabetic,
+  style=numeric,
   maxnames=4,
   minnames=3,
   maxbibnames=99,
@@ -30,9 +30,13 @@
 \usepackage{booktabs}
 \usepackage[final]{microtype}
 \usepackage{caption}
+\usepackage{mathpartir}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
 % \usepackage[hidelinks]{hyperref} % hidelinks removes colored boxes around references and links
 
-\bibliography{bibliography}
+%\bibliography{bibliography}
+\addbibresource{bibliography}
 
 \setkomafont{disposition}{\normalfont\bfseries} % use serif font for headings
 \linespread{1.05} % adjust line spread for mathpazo font
@@ -239,7 +243,10 @@ I confirm that this \MakeLowercase{\getDoctype{}} is my own work and I have docu
 
 \vspace{10mm}
 
-TODO: Acknowledgments
+I owe an enormous debt of gratitude to my family which always suported me throughout my studies.
+Thank you. I also would like to thank Prof. Tobias Nipkow for introducing me to the world of formal
+verification through Isabelle and for supervising both my Bachelor's and my Master's thesis. It was
+a pleasure to learn from and to work with you.
 
 \cleardoublepage{}
 

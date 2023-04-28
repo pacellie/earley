@@ -1,6 +1,16 @@
+% Isabelle
+
+@Book{Nipkow:2002,
+  author	= {Tobias Nipkow and Lawrence C. Paulson and Markus Wenzel},
+  title		= {Isabelle/HOL --- A Proof Assistant for Higher-Order Logic},
+  publisher	= {Springer},
+  series	= {LNCS},
+  volume	= 2283,
+  year		= 2002}
+
 % Main Sources
 
-@inproceedings{Earley_Recogniser_Jones_1972,
+@inproceedings{Jones:1972,
 author = {Jones, C B},
 title = {Formal Development of Correct Algorithms: An Example Based on Earley's Recogniser},
 year = {1972},
@@ -16,7 +26,7 @@ numpages = {20},
 location = {Las Cruces, New Mexico, USA}
 }
 
-@article{Earley_Parsing_Earley_1970,
+@article{Earley:1970,
 author = {Earley, Jay},
 title = {An Efficient Context-Free Parsing Algorithm},
 year = {1970},
@@ -36,7 +46,7 @@ numpages = {9},
 keywords = {computational complexity, parsing, syntax analysis, context-free grammar, compilers}
 }
 
-@article{SPPF_Scott_2008,
+@article{Scott:2008,
 title = {SPPF-Style Parsing From Earley Recognisers},
 journal = {Electronic Notes in Theoretical Computer Science},
 volume = {203},
@@ -52,7 +62,7 @@ keywords = {Earley parsing, cubic generalised parsing, context free languages},
 abstract = {In its recogniser form, Earley's algorithm for testing whether a string can be derived from a grammar is worst case cubic on general context free grammars (CFG). Earley gave an outline of a method for turning his recognisers into parsers, but it turns out that this method is incorrect. Tomita's GLR parser returns a shared packed parse forest (SPPF) representation of all derivations of a given string from a given CFG but is worst case unbounded polynomial order. We have given a modified worst-case cubic version, the BRNGLR algorithm, that, for any string and any CFG, returns a binarised SPPF representation of all possible derivations of a given string. In this paper we apply similar techniques to develop two versions of an Earley parsing algorithm that, in worst-case cubic time, return an SPPF representation of all derivations of a given string from a given CFG.}
 }
 
-@article{Practical_Earley_Aycock_2002,
+@article{Aycock:2002,
 author = {Aycock, John and Horspool, R.},
 year = {2002},
 month = {06},
@@ -65,7 +75,7 @@ doi = {10.1093/comjnl/45.6.620}
 
 % Related Work
 
-@article{Tomita_Parser_Tomita_1987,
+@article{Tomita:1987,
 author = {Tomita, Masaru},
 title = {An Efficient Augmented-Context-Free Parsing Algorithm},
 year = {1987},
@@ -82,7 +92,7 @@ pages = {31–46},
 numpages = {16}
 }
 
-@inproceedings{Practical_Parser_Combinators_Izmaylova_2016,
+@inproceedings{Izmaylova:2016,
 author = {Izmaylova, Anastasia and Afroozeh, Ali and Storm, Tijs van der},
 title = {Practical, General Parser Combinators},
 year = {2016},
@@ -100,7 +110,7 @@ location = {St. Petersburg, FL, USA},
 series = {PEPM '16}
 }
 
-@InProceedings{Verified_LL1_Parser_Generator_Lasser_2019,
+@InProceedings{Lasser:2019,
   author =	{Sam Lasser and Chris Casinghino and Kathleen Fisher and Cody Roux},
   title =	{{A Verified LL(1) Parser Generator}},
   booktitle =	{10th International Conference on Interactive Theorem Proving (ITP 2019)},
@@ -119,7 +129,7 @@ series = {PEPM '16}
   annote =	{Keywords: interactive theorem proving, top-down parsing}
 }
 
-@InProceedings{Verified_Executable_Parsing_Barthwal_2009,
+@InProceedings{Barthwal:2009,
 author="Barthwal, Aditi
 and Norrish, Michael",
 editor="Castagna, Giuseppe",
@@ -133,7 +143,7 @@ abstract="We describe the mechanisation of an SLR parser produced by a parser ge
 isbn="978-3-642-00590-9"
 }
 
-@article{Verified_Packrat_Parser_Blaudeau_2020,
+@article{Blaudeau:2020,
   author       = {Clement Blaudeau and
                   Natarajan Shankar},
   title        = {A Verified Packrat Parser Interpreter for Parsing Expression Grammars},
@@ -148,7 +158,7 @@ isbn="978-3-642-00590-9"
   bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
-@InProceedings{Validating_LR1_Parsers_Jourdan_2012,
+@InProceedings{Jourdan:2012,
 author="Jourdan, Jacques-Henri
 and Pottier, Fran{\c{c}}ois
 and Leroy, Xavier",
@@ -163,7 +173,7 @@ abstract="An LR(1) parser is a finite-state automaton, equipped with a stack, wh
 isbn="978-3-642-28869-2"
 }
 
-@inproceedings{Verified_ALL_Parser_Lasser_2021,
+@inproceedings{Lasser:2021,
 author = {Lasser, Sam and Casinghino, Chris and Fisher, Kathleen and Roux, Cody},
 title = {CoStar: A Verified ALL(*) Parser},
 year = {2021},
@@ -181,7 +191,7 @@ location = {Virtual, Canada},
 series = {PLDI 2021}
 }
 
-@article{Verified_Parser_Interpreter_Koprowski_2011,
+@article{Koprowski:2011,
   author       = {Adam Koprowski and
                   Henri Binsztok},
   title        = {{TRX:} {A} Formally Verified Parser Interpreter},
@@ -196,9 +206,18 @@ series = {PLDI 2021}
   bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
+@misc{Obua:2017,
+      title={Local Lexing}, 
+      author={Steven Obua and Phil Scott and Jacques Fleuriot},
+      year={2017},
+      eprint={1702.03277},
+      archivePrefix={arXiv},
+      primaryClass={cs.LO}
+}
+
 % Future Work
 
-@article{Tree_Automata_Adams_2017,
+@article{Adams:2017,
 author = {Adams, Michael and Might, Matthew},
 year = {2017},
 month = {10},
@@ -209,7 +228,7 @@ journal = {Proceedings of the ACM on Programming Languages},
 doi = {10.1145/3133906}
 }
 
-@InProceedings{Safe_Afroozeh_2013,
+@InProceedings{Afroozeh:2013,
 author="Afroozeh, Ali
 and van den Brand, Mark
 and Johnstone, Adrian
@@ -228,7 +247,7 @@ abstract="In this paper we present an approach to specifying operator precedence
 isbn="978-3-319-02654-1"
 }
 
-@inproceedings{Deterministic_Aho_1973,
+@inproceedings{Aho:1973,
 author = {Aho, A. V. and Johnson, S. C. and Ullman, J. D.},
 title = {Deterministic Parsing of Ambiguous Grammars},
 year = {1973},
@@ -245,7 +264,7 @@ location = {Boston, Massachusetts},
 series = {POPL '73}
 }
 
-﻿@Article{Exclusion_Thorup_1996,
+﻿@Article{Thorup:1996,
 author={Thorup, Mikkel},
 title={Disambiguating grammars by exclusion of sub-parse trees},
 journal={Acta Informatica},
@@ -261,7 +280,7 @@ doi={10.1007/s002360050055},
 url={https://doi.org/10.1007/s002360050055}
 }
 
-@article{Ambiguity_Thorup_1994,
+@article{Thorup:1994,
 author = {Thorup, Mikkel},
 title = {Controlled Grammatic Ambiguity},
 year = {1994},
@@ -281,7 +300,7 @@ numpages = {27},
 keywords = {semantic unambiguity, grammatic ambiguity}
 }
 
-@article{Filters_Klint_1997,
+@article{Klint:1997,
 author = {Klint, Paul and Visser, Eelco},
 year = {1997},
 month = {04},
@@ -289,7 +308,7 @@ pages = {},
 title = {Using Filters for the Disambiguation of Context-free Grammars}
 }
 
-@InProceedings{Analyzing_Ambiguity_Brabrand_2007,
+@InProceedings{Brabrand:2007,
 author="Brabrand, Claus
 and Giegerich, Robert
 and M{\o}ller, Anders",

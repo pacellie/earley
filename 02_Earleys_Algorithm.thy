@@ -26,12 +26,8 @@ text\<open>TODO: Add nicer syntax for derives\<close>
 
 section\<open>Background Theory\<close>
 
-text\<open>use snippets\<close>
-
 type_synonym 'a rule = "'a \<times> 'a list"
-
 type_synonym 'a rules = "'a rule list"
-
 type_synonym 'a sentence = "'a list"
 
 datatype 'a cfg = 
@@ -41,36 +37,6 @@ datatype 'a cfg =
     (\<RR> : "'a rules")
     (\<SS> : "'a")
 
-definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
-  "disjunct_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
-
-definition valid_startsymbol :: "'a cfg \<Rightarrow> bool" where
-  "valid_startsymbol cfg \<longleftrightarrow> \<SS> cfg \<in> set (\<NN> cfg)"
-
-definition valid_rules :: "'a cfg \<Rightarrow> bool" where
-  "valid_rules cfg \<longleftrightarrow> (\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg) \<and> (\<forall>s \<in> set \<alpha>. s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg)))"
-
-definition distinct_rules :: "'a cfg \<Rightarrow> bool" where
-  "distinct_rules cfg = distinct (\<RR> cfg)"
-
-definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
-  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg \<and> distinct_rules cfg"
-
-definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
-  "is_terminal cfg s = (s \<in> set (\<TT> cfg))"
-
-definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
-  "is_nonterminal cfg s = (s \<in> set (\<NN> cfg))"
-
-definition is_symbol :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
-  "is_symbol cfg s \<longleftrightarrow> is_terminal cfg s \<or> is_nonterminal cfg s"
-
-definition wf_sentence :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "wf_sentence cfg s = (\<forall>x \<in> set s. is_symbol cfg x)"
-
-definition is_word :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "is_word cfg s = (\<forall>x \<in> set s. is_terminal cfg x)"
-   
 definition derives1 :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
   "derives1 cfg u v = 
      (\<exists> x y N \<alpha>. 
@@ -87,8 +53,115 @@ definition derivations :: "'a cfg \<Rightarrow> ('a sentence \<times> 'a sentenc
 definition derives :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
   "derives cfg u v = ((u, v) \<in> derivations cfg)"
 
+fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "slice _ _ [] = []"
+| "slice _ 0 (x#xs) = []"
+| "slice 0 (Suc b) (x#xs) = x # slice 0 b xs"
+| "slice (Suc a) (Suc b) (x#xs) = slice a b xs"
+
+lemma slice_induct:
+  assumes "\<And>a b. P a b []"
+  assumes "\<And>a x xs. P a 0 (x#xs)"
+  assumes "\<And>b x xs. P 0 b xs \<Longrightarrow> P 0 (Suc b) (x#xs)"
+  assumes "\<And>a b x xs. P a b xs \<Longrightarrow> P (Suc a) (Suc b) (x#xs)"
+  shows "P a b xs"
+(*<*)
+  sorry
+(*>*)
+
+
+
+definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
+  "disjunct_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
+
+definition valid_startsymbol :: "'a cfg \<Rightarrow> bool" where
+  "valid_startsymbol cfg \<longleftrightarrow> \<SS> cfg \<in> set (\<NN> cfg)"
+
+definition valid_rules :: "'a cfg \<Rightarrow> bool" where
+  "valid_rules cfg \<longleftrightarrow> (\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg) \<and> (\<forall>s \<in> set \<alpha>. s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg)))"
+
+definition distinct_rules :: "'a cfg \<Rightarrow> bool" where
+  "distinct_rules cfg = distinct (\<RR> cfg)"
+
+definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
+  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> valid_startsymbol cfg \<and> valid_rules cfg \<and> distinct_rules cfg"
+
+
+
+definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_terminal cfg s = (s \<in> set (\<TT> cfg))"
+
+definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_nonterminal cfg s = (s \<in> set (\<NN> cfg))"
+
+definition is_symbol :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_symbol cfg s \<longleftrightarrow> is_terminal cfg s \<or> is_nonterminal cfg s"
+
+definition wf_sentence :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "wf_sentence cfg s = (\<forall>x \<in> set s. is_symbol cfg x)"
+
+definition is_word :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+  "is_word cfg s = (\<forall>x \<in> set s. is_terminal cfg x)"
+
 
 section \<open>Earley Recognizer\<close>
+
+text\<open>
+  \begin{figure}[htpb]
+    \centering
+
+    \begin{mathpar}
+      \inferrule [Init]
+      {\\}
+      {$S \rightarrow \, \bullet\alpha, 0, 0$}
+  
+      \inferrule [Scan]
+      {$A \rightarrow \, \alpha \bullet a \beta, i, j$}
+      {$A \rightarrow \, \alpha a \bullet \beta, i, j+1$}
+  
+      \inferrule [Predict]
+      {$A \rightarrow \, \alpha \bullet B \beta, i, j$ \\ $B \rightarrow \, \gamma \, \in \, @{term "set (\<RR> cfg)"}$}
+      {$B \rightarrow \, \bullet \gamma, j, j$}
+  
+      \inferrule [Complete]
+      {$A \rightarrow \, \alpha \bullet B \beta, i, j$ \\ $B \rightarrow \, \gamma \bullet, j, k$}
+      {$A \rightarrow \, \alpha B \bullet \beta, i, k$}
+    \end{mathpar}
+    \caption[Earley Inference Rules]{Earley inference rules}\label{fig:earley-inference-rules}
+  \end{figure}
+\<close>
+
+text\<open>
+$$A \rightarrow \, \alpha \bullet \beta, i, j \,\,\, \textrm{iff} \,\,\, A \, \xRightarrow{\ast} \, @{term "slice i j inp"}$$
+$$@{term "\<SS> cfg"} \rightarrow \, \alpha \bullet, 0, @{term "length inp + 1"} \,\,\, \textrm{iff} \,\,\, @{term "\<SS> cfg"} \, \xRightarrow{\ast} \, @{term "inp"}$$
+\<close>
+
+text\<open>$S \rightarrow \, x$ $S \rightarrow \, S + S$\<close>
+
+text\<open>
+  \begin{table}[htpb]
+    \caption[Earley Items]{Earley items for the CFG $S \rightarrow \, x$, $S \rightarrow \, S + S$}\label{tab:earley-items}
+    \centering
+    \begin{tabular}{| l | l | l |}
+        0                                       & 1                                      & 2                                      \\
+      \midrule
+        $S \rightarrow \, \bullet x, 0, 0$      & $S \rightarrow \, x \bullet, 0, 1$     & $S \rightarrow \, S + \bullet S, 0, 2$ \\
+        $S \rightarrow \, \bullet S + S, 0 , 0$ & $S \rightarrow \, S \bullet + S, 0, 1$ & $S \rightarrow \, \bullet x, 2, 2$     \\
+                                                &                                        & $S \rightarrow \, \bullet S + S, 2, 2$ \\
+
+      \midrule
+
+        3                                      & 4                                      & 5 \\
+      \midrule
+        $S \rightarrow \, x \bullet, 2, 3$     & $S \rightarrow \, S + \bullet S, 2, 4$ & $S \rightarrow \, x \bullet, 4, 5$     \\
+        $S \rightarrow \, S + S \bullet, 0, 3$ & $S \rightarrow \, S + \bullet S, 0, 4$ & $S \rightarrow \, S + S \bullet, 2, 5$ \\
+        $S \rightarrow \, S \bullet + S, 2, 3$ & $S \rightarrow \, \bullet x, 4, 4$     & $S \rightarrow \, S + S \bullet, 0, 5$ \\
+        $S \rightarrow \, S \bullet + S, 0, 3$ & $S \rightarrow \, \bullet S + S, 4, 4$ & $S \rightarrow \, S \bullet + S, 4, 5$ \\
+                                               &                                        & $S \rightarrow \, S \bullet + S, 2, 5$ \\
+                                               &                                        & $S \rightarrow \, S \bullet + S, 0, 5$ \\
+    \end{tabular}
+  \end{table}
+\<close>
 
 (*<*)
 end

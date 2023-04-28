@@ -158,29 +158,33 @@ definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" 
 section \<open>Wellformedness\<close>
 
 lemma distinct_bin_upd:
-  "distinct (items b) \<Longrightarrow> distinct (items (bin_upd e b))"
+  assumes "distinct (items b)"
+  shows "distinct (items (bin_upd e b))"
 (*<*)
   sorry
 (*>*)
 
 lemma distinct_bin_upds:
-  "distinct (items b)  \<Longrightarrow> distinct (items (bin_upds es b))"
+  assumes "distinct (items b)"
+  shows "distinct (items (bin_upds es b))"
 (*<*)
   sorry
 (*>*)
 
 lemma distinct_bins_upd:
-  "distinct (items (bs ! k)) \<Longrightarrow> distinct (items (bins_upd bs k ips ! k))"
+  assumes "distinct (items (bs ! k))"
+  shows "distinct (items (bins_upd bs k ips ! k))"
 (*<*)
   sorry
 (*>*)
 
 lemma distinct_Scan_it:
-  "distinct (items (Scan_it k inp a x pre))"
+  shows "distinct (items (Scan_it k inp a x pre))"
   sorry
 
 lemma distinct_Predict_it:
-  "wf_cfg cfg \<Longrightarrow> distinct (items (Predict_it k cfg X))"
+  assumes "wf_cfg cfg"
+  shows "distinct (items (Predict_it k cfg X))"
 (*<*)
   sorry
 (*>*)
@@ -334,7 +338,8 @@ lemma wellformed_bins_\<I>_it:
 (*>*)
 
 lemma wellformed_bins_\<II>_it:
-  "k \<le> length inp \<Longrightarrow> wf_cfg cfg \<Longrightarrow> (k, cfg, inp, \<II>_it cfg inp) \<in> wellformed_bins"
+  assumes "k \<le> length inp" "wf_cfg cfg"
+  shows "(k, cfg, inp, \<II>_it cfg inp) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
@@ -361,7 +366,8 @@ lemma wf_bins_\<I>_it:
 (*>*)
 
 lemma wf_bins_\<II>_it:
-  "wf_cfg cfg \<Longrightarrow> wf_bins cfg inp (\<II>_it cfg inp)"
+  assumes "wf_cfg cfg" 
+  shows "wf_bins cfg inp (\<II>_it cfg inp)"
 (*<*)
   sorry
 (*>*)
@@ -369,7 +375,7 @@ lemma wf_bins_\<II>_it:
 section \<open>List to set\<close>
 
 lemma Init_it_eq_Init:
-  "bins_items (Init_it cfg inp) = Init cfg"
+  shows "bins_items (Init_it cfg inp) = Init cfg"
 (*<*)
   sorry
 (*>*)
@@ -423,7 +429,8 @@ lemma \<I>_it_sub_\<I>:
 (*>*)
 
 lemma \<II>_it_sub_\<II>:
-  "wf_cfg cfg \<Longrightarrow> bins_items (\<II>_it cfg inp) \<subseteq> \<II> cfg inp"
+  assumes "wf_cfg cfg" 
+  shows "bins_items (\<II>_it cfg inp) \<subseteq> \<II> cfg inp"
 (*<*)
   sorry
 (*>*)

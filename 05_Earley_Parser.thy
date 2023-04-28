@@ -90,13 +90,13 @@ lemma sound_mono_ptrs_\<pi>_it:
 (*>*)
 
 lemma sound_ptrs_Init_it:
-  "sound_ptrs inp (Init_it cfg inp)"
+  shows "sound_ptrs inp (Init_it cfg inp)"
 (*<*)
   sorry
 (*>*)
 
 lemma mono_red_ptr_Init_it:
-  "mono_red_ptr (Init_it cfg inp)"
+  shows "mono_red_ptr (Init_it cfg inp)"
 (*<*)
   sorry
 (*>*)

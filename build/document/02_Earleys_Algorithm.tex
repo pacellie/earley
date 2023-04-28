@@ -69,16 +69,10 @@ TODO: Add nicer syntax for derives%
 \isadelimdocument
 %
 \endisadelimdocument
-%
-\begin{isamarkuptext}%
-use snippets%
-\end{isamarkuptext}\isamarkuptrue%
 \isacommand{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
 \ {\isacharprime}{\kern0pt}a\ rule\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ list{\isachardoublequoteclose}\isanewline
-\isanewline
 \isacommand{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
 \ {\isacharprime}{\kern0pt}a\ rules\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ rule\ list{\isachardoublequoteclose}\isanewline
-\isanewline
 \isacommand{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
 \ {\isacharprime}{\kern0pt}a\ sentence\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ list{\isachardoublequoteclose}\isanewline
 \isanewline
@@ -89,6 +83,55 @@ use snippets%
 \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymTT}\ {\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ list{\isachardoublequoteclose}{\isacharparenright}{\kern0pt}\ \isanewline
 \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymRR}\ {\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ rules{\isachardoublequoteclose}{\isacharparenright}{\kern0pt}\isanewline
 \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymSS}\ {\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isachardoublequoteclose}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ derives{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}derives{\isadigit{1}}\ cfg\ u\ v\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymexists}\ x\ y\ N\ {\isasymalpha}{\isachardot}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ u\ {\isacharequal}{\kern0pt}\ x\ {\isacharat}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isacharat}{\kern0pt}\ y\isanewline
+\ \ \ \ \ \ \ \ {\isasymand}\ v\ {\isacharequal}{\kern0pt}\ x\ {\isacharat}{\kern0pt}\ {\isasymalpha}\ {\isacharat}{\kern0pt}\ y\isanewline
+\ \ \ \ \ \ \ \ {\isasymand}\ {\isacharparenleft}{\kern0pt}N{\isacharcomma}{\kern0pt}\ {\isasymalpha}{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ cfg{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ derivations{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ sentence\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentence{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}derivations{\isadigit{1}}\ cfg\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}u{\isacharcomma}{\kern0pt}v{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ u\ v{\isachardot}{\kern0pt}\ derives{\isadigit{1}}\ cfg\ u\ v\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ derivations\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ sentence\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentence{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\ \isanewline
+\ \ {\isachardoublequoteopen}derivations\ cfg\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}derivations{\isadigit{1}}\ cfg{\isacharparenright}{\kern0pt}{\isacharcircum}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ derives\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}derives\ cfg\ u\ v\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}u{\isacharcomma}{\kern0pt}\ v{\isacharparenright}{\kern0pt}\ {\isasymin}\ derivations\ cfg{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{fun}\isamarkupfalse%
+\ slice\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}nat\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ list\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}slice\ {\isacharunderscore}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+{\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}slice\ {\isacharunderscore}{\kern0pt}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+{\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}slice\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}Suc\ b{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ x\ {\isacharhash}{\kern0pt}\ slice\ {\isadigit{0}}\ b\ xs{\isachardoublequoteclose}\isanewline
+{\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}slice\ {\isacharparenleft}{\kern0pt}Suc\ a{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Suc\ b{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ slice\ a\ b\ xs{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{lemma}\isamarkupfalse%
+\ slice{\isacharunderscore}{\kern0pt}induct{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymAnd}a\ b{\isachardot}{\kern0pt}\ P\ a\ b\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymAnd}a\ x\ xs{\isachardot}{\kern0pt}\ P\ a\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymAnd}b\ x\ xs{\isachardot}{\kern0pt}\ P\ {\isadigit{0}}\ b\ xs\ {\isasymLongrightarrow}\ P\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}Suc\ b{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymAnd}a\ b\ x\ xs{\isachardot}{\kern0pt}\ P\ a\ b\ xs\ {\isasymLongrightarrow}\ P\ {\isacharparenleft}{\kern0pt}Suc\ a{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Suc\ b{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}P\ a\ b\ xs{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ disjunct{\isacharunderscore}{\kern0pt}symbols\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
@@ -110,6 +153,8 @@ use snippets%
 \ wf{\isacharunderscore}{\kern0pt}cfg\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}cfg\ cfg\ {\isasymlongleftrightarrow}\ disjunct{\isacharunderscore}{\kern0pt}symbols\ cfg\ {\isasymand}\ valid{\isacharunderscore}{\kern0pt}startsymbol\ cfg\ {\isasymand}\ valid{\isacharunderscore}{\kern0pt}rules\ cfg\ {\isasymand}\ distinct{\isacharunderscore}{\kern0pt}rules\ cfg{\isachardoublequoteclose}\isanewline
 \isanewline
+\isanewline
+\isanewline
 \isacommand{definition}\isamarkupfalse%
 \ is{\isacharunderscore}{\kern0pt}terminal\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}terminal\ cfg\ s\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}s\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymTT}\ cfg{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
@@ -128,27 +173,7 @@ use snippets%
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ is{\isacharunderscore}{\kern0pt}word\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}word\ cfg\ s\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymforall}x\ {\isasymin}\ set\ s{\isachardot}{\kern0pt}\ is{\isacharunderscore}{\kern0pt}terminal\ cfg\ x{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \ \isanewline
-\isacommand{definition}\isamarkupfalse%
-\ derives{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}derives{\isadigit{1}}\ cfg\ u\ v\ {\isacharequal}{\kern0pt}\ \isanewline
-\ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymexists}\ x\ y\ N\ {\isasymalpha}{\isachardot}{\kern0pt}\ \isanewline
-\ \ \ \ \ \ \ \ \ \ u\ {\isacharequal}{\kern0pt}\ x\ {\isacharat}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isacharat}{\kern0pt}\ y\isanewline
-\ \ \ \ \ \ \ \ {\isasymand}\ v\ {\isacharequal}{\kern0pt}\ x\ {\isacharat}{\kern0pt}\ {\isasymalpha}\ {\isacharat}{\kern0pt}\ y\isanewline
-\ \ \ \ \ \ \ \ {\isasymand}\ {\isacharparenleft}{\kern0pt}N{\isacharcomma}{\kern0pt}\ {\isasymalpha}{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ cfg{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ derivations{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ sentence\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentence{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}derivations{\isadigit{1}}\ cfg\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}u{\isacharcomma}{\kern0pt}v{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ u\ v{\isachardot}{\kern0pt}\ derives{\isadigit{1}}\ cfg\ u\ v\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ derivations\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ sentence\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentence{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\ \isanewline
-\ \ {\isachardoublequoteopen}derivations\ cfg\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}derivations{\isadigit{1}}\ cfg{\isacharparenright}{\kern0pt}{\isacharcircum}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ derives\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentence\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}derives\ cfg\ u\ v\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}u{\isacharcomma}{\kern0pt}\ v{\isacharparenright}{\kern0pt}\ {\isasymin}\ derivations\ cfg{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}word\ cfg\ s\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymforall}x\ {\isasymin}\ set\ s{\isachardot}{\kern0pt}\ is{\isacharunderscore}{\kern0pt}terminal\ cfg\ x{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimdocument
 %
 \endisadelimdocument
@@ -165,6 +190,65 @@ use snippets%
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+\begin{figure}[htpb]
+    \centering
+
+    \begin{mathpar}
+      \inferrule [Init]
+      {\\}
+      {$S \rightarrow \, \bullet\alpha, 0, 0$}
+  
+      \inferrule [Scan]
+      {$A \rightarrow \, \alpha \bullet a \beta, i, j$}
+      {$A \rightarrow \, \alpha a \bullet \beta, i, j+1$}
+  
+      \inferrule [Predict]
+      {$A \rightarrow \, \alpha \bullet B \beta, i, j$ \\ $B \rightarrow \, \gamma \, \in \, \isa{set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ cfg{\isacharparenright}{\kern0pt}}$}
+      {$B \rightarrow \, \bullet \gamma, j, j$}
+  
+      \inferrule [Complete]
+      {$A \rightarrow \, \alpha \bullet B \beta, i, j$ \\ $B \rightarrow \, \gamma \bullet, j, k$}
+      {$A \rightarrow \, \alpha B \bullet \beta, i, k$}
+    \end{mathpar}
+    \caption[Earley Inference Rules]{Earley inference rules}\label{fig:earley-inference-rules}
+  \end{figure}%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+$$A \rightarrow \, \alpha \bullet \beta, i, j \,\,\, \textrm{iff} \,\,\, A \, \xRightarrow{\ast} \, \isa{slice\ i\ j\ inp}$$
+$$\isa{{\isasymSS}\ cfg} \rightarrow \, \alpha \bullet, 0, \isa{{\isacharbar}{\kern0pt}inp{\isacharbar}{\kern0pt}\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}} \,\,\, \textrm{iff} \,\,\, \isa{{\isasymSS}\ cfg} \, \xRightarrow{\ast} \, \isa{inp}$$%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+$S \rightarrow \, x$ $S \rightarrow \, S + S$%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+\begin{table}[htpb]
+    \caption[Earley Items]{Earley items for the CFG $S \rightarrow \, x$, $S \rightarrow \, S + S$}\label{tab:earley-items}
+    \centering
+    \begin{tabular}{| l | l | l |}
+        0                                       & 1                                      & 2                                      \\
+      \midrule
+        $S \rightarrow \, \bullet x, 0, 0$      & $S \rightarrow \, x \bullet, 0, 1$     & $S \rightarrow \, S + \bullet S, 0, 2$ \\
+        $S \rightarrow \, \bullet S + S, 0 , 0$ & $S \rightarrow \, S \bullet + S, 0, 1$ & $S \rightarrow \, \bullet x, 2, 2$     \\
+                                                &                                        & $S \rightarrow \, \bullet S + S, 2, 2$ \\
+
+      \midrule
+
+        3                                      & 4                                      & 5 \\
+      \midrule
+        $S \rightarrow \, x \bullet, 2, 3$     & $S \rightarrow \, S + \bullet S, 2, 4$ & $S \rightarrow \, x \bullet, 4, 5$     \\
+        $S \rightarrow \, S + S \bullet, 0, 3$ & $S \rightarrow \, S + \bullet S, 0, 4$ & $S \rightarrow \, S + S \bullet, 2, 5$ \\
+        $S \rightarrow \, S \bullet + S, 2, 3$ & $S \rightarrow \, \bullet x, 4, 4$     & $S \rightarrow \, S + S \bullet, 0, 5$ \\
+        $S \rightarrow \, S \bullet + S, 0, 3$ & $S \rightarrow \, \bullet S + S, 4, 4$ & $S \rightarrow \, S \bullet + S, 4, 5$ \\
+                                               &                                        & $S \rightarrow \, S \bullet + S, 2, 5$ \\
+                                               &                                        & $S \rightarrow \, S \bullet + S, 0, 5$ \\
+    \end{tabular}
+  \end{table}%
+\end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimtheory
 %
@@ -196,7 +280,10 @@ use snippets%
 %:%49=22%:%
 %:%53=25%:%
 %:%62=27%:%
-%:%74=29%:%
+%:%72=29%:%
+%:%73=29%:%
+%:%74=30%:%
+%:%75=30%:%
 %:%76=31%:%
 %:%77=31%:%
 %:%78=32%:%
@@ -204,70 +291,130 @@ use snippets%
 %:%80=33%:%
 %:%81=34%:%
 %:%82=35%:%
-%:%83=35%:%
-%:%84=36%:%
-%:%85=37%:%
-%:%86=37%:%
-%:%87=38%:%
-%:%88=39%:%
-%:%89=40%:%
-%:%90=41%:%
-%:%91=42%:%
-%:%92=43%:%
-%:%93=44%:%
-%:%94=44%:%
-%:%95=45%:%
-%:%96=46%:%
-%:%97=47%:%
-%:%98=47%:%
-%:%99=48%:%
-%:%100=49%:%
-%:%101=50%:%
-%:%102=50%:%
-%:%103=51%:%
-%:%104=52%:%
-%:%105=53%:%
-%:%106=53%:%
-%:%107=54%:%
-%:%108=55%:%
-%:%109=56%:%
-%:%110=56%:%
-%:%111=57%:%
-%:%112=58%:%
-%:%113=59%:%
-%:%114=59%:%
-%:%115=60%:%
-%:%116=61%:%
-%:%117=62%:%
-%:%118=62%:%
-%:%119=63%:%
-%:%120=64%:%
-%:%121=65%:%
-%:%122=65%:%
-%:%123=66%:%
-%:%124=67%:%
-%:%125=68%:%
-%:%126=68%:%
-%:%127=69%:%
-%:%128=70%:%
-%:%129=71%:%
-%:%130=71%:%
-%:%131=72%:%
-%:%132=73%:%
-%:%133=74%:%
-%:%134=74%:%
-%:%135=75%:%
-%:%139=79%:%
-%:%140=80%:%
-%:%141=81%:%
-%:%142=81%:%
-%:%143=82%:%
-%:%144=83%:%
-%:%145=84%:%
-%:%146=84%:%
-%:%147=85%:%
-%:%148=86%:%
-%:%149=87%:%
-%:%150=87%:%
-%:%151=88%:%
+%:%83=36%:%
+%:%84=37%:%
+%:%85=38%:%
+%:%86=39%:%
+%:%87=40%:%
+%:%88=40%:%
+%:%89=41%:%
+%:%93=45%:%
+%:%94=46%:%
+%:%95=47%:%
+%:%96=47%:%
+%:%97=48%:%
+%:%98=49%:%
+%:%99=50%:%
+%:%100=50%:%
+%:%101=51%:%
+%:%102=52%:%
+%:%103=53%:%
+%:%104=53%:%
+%:%105=54%:%
+%:%106=55%:%
+%:%107=56%:%
+%:%108=56%:%
+%:%109=57%:%
+%:%110=58%:%
+%:%111=59%:%
+%:%112=60%:%
+%:%113=61%:%
+%:%114=62%:%
+%:%115=62%:%
+%:%116=63%:%
+%:%117=64%:%
+%:%118=65%:%
+%:%119=66%:%
+%:%120=67%:%
+%:%131=71%:%
+%:%134=72%:%
+%:%135=73%:%
+%:%136=74%:%
+%:%137=74%:%
+%:%138=75%:%
+%:%139=76%:%
+%:%140=77%:%
+%:%141=77%:%
+%:%142=78%:%
+%:%143=79%:%
+%:%144=80%:%
+%:%145=80%:%
+%:%146=81%:%
+%:%147=82%:%
+%:%148=83%:%
+%:%149=83%:%
+%:%150=84%:%
+%:%151=85%:%
+%:%152=86%:%
+%:%153=86%:%
+%:%154=87%:%
+%:%155=88%:%
+%:%156=89%:%
+%:%157=90%:%
 %:%158=91%:%
+%:%159=91%:%
+%:%160=92%:%
+%:%161=93%:%
+%:%162=94%:%
+%:%163=94%:%
+%:%164=95%:%
+%:%165=96%:%
+%:%166=97%:%
+%:%167=97%:%
+%:%168=98%:%
+%:%169=99%:%
+%:%170=100%:%
+%:%171=100%:%
+%:%172=101%:%
+%:%173=102%:%
+%:%174=103%:%
+%:%175=103%:%
+%:%176=104%:%
+%:%183=107%:%
+%:%195=110%:%
+%:%196=111%:%
+%:%197=112%:%
+%:%198=113%:%
+%:%199=114%:%
+%:%200=115%:%
+%:%201=116%:%
+%:%202=117%:%
+%:%203=118%:%
+%:%204=119%:%
+%:%205=120%:%
+%:%206=121%:%
+%:%207=122%:%
+%:%208=123%:%
+%:%209=124%:%
+%:%210=125%:%
+%:%211=126%:%
+%:%212=127%:%
+%:%213=128%:%
+%:%214=129%:%
+%:%215=130%:%
+%:%216=131%:%
+%:%220=135%:%
+%:%221=136%:%
+%:%225=139%:%
+%:%229=142%:%
+%:%230=143%:%
+%:%231=144%:%
+%:%232=145%:%
+%:%233=146%:%
+%:%234=147%:%
+%:%235=148%:%
+%:%236=149%:%
+%:%237=150%:%
+%:%238=151%:%
+%:%239=152%:%
+%:%240=153%:%
+%:%241=154%:%
+%:%242=155%:%
+%:%243=156%:%
+%:%244=157%:%
+%:%245=158%:%
+%:%246=159%:%
+%:%247=160%:%
+%:%248=161%:%
+%:%249=162%:%
+%:%250=163%:%
