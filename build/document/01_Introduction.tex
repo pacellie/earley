@@ -36,7 +36,6 @@
 \begin{itemize}
     \item How much explain the proofs? \\
     \item How reference thm names? \\
-    \item How to tum blau assumes shows fun ... keywords? \\
   \end{itemize}%
 \end{isamarkuptext}\isamarkuptrue%
 %
@@ -108,16 +107,11 @@ context-free grammars and constructs a Shared Packed Parse Forest (SPPF) in wors
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO: LocalLexing!!!%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\begin{isamarkuptext}%
 Obua \textit{et al} \cite{Obua:2017} introduce local lexing, a novel parsing concept which interleaves
 lexing and parsing whilst allowing lexing to be dependent on the parsing process. They base their
 development on Earley's algorithm and have verified the correctness with respect to its local lexing
 semantics in the theorem prover Isabelle/HOL. The background theory of this Master's thesis is based
-upon the local lexing entry \cite{LocalLexing-AFP} in the Archive of Formal Proofs. Definitions and lemmas
-which were only slightly adapted from this work are marked with \textit{LocalLexing} throughout this thesis.
+upon the local lexing entry \cite{LocalLexing-AFP} in the Archive of Formal Proofs.
 
 Lasser \textit{et al} \cite{Lasser:2019} verify an LL(1) parser generator using the Coq proof assistant.
 
@@ -146,6 +140,61 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 \isamarkupsection{Future Work%
 }
 \isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+Different approaches:
+
+(1) SPPF style parse trees as in Scott et al -> need Imperative/HOL for this
+
+Performance improvements:
+
+(1) Look-ahead of k or at least 1 like in the original Earley paper.
+(2) Optimize the representation of the grammar instead of single list, group by production, ...
+(3) Keep a set of already inserted items to not double check item insertion.
+(4) Use a queue instead of a list for bins.
+(5) Refine the algorithm to an imperative version using a single linked list and actual pointers instead
+    of natural numbers.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+Parse tree disambiguation:
+
+Parser generators like YACC resolve ambiguities in context-free grammers by allowing the user
+the specify precedence and associativity declarations restricting the set of allowed parses. But they
+do not handle all grammatical restrictions, like 'dangling else' or interactions between binary operators
+and functional 'if'-expressions.
+
+Grammar rewriting:
+
+Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach reinterpreting CFGs as
+the tree automata, intersectiong them with tree automata encoding desired restrictions and reinterpreting
+the results back into CFGs.
+
+Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach to specifying operator precedence
+based on declarative disambiguation rules basing their implementation on grammar rewriting.
+
+Thorup \cite{Thorup:1996} develops two concrete algorithms for disambiguation of grammars based on the idea of 
+excluding a certain set of forbidden sub-parse trees.
+
+Parse tree filtering:
+
+Klint \textit{et al} \cite{Klint:1997} propose a framework of filters to describe and compare a wide
+range of disambiguation problems in a parser-independent way. A filter is a function that selects
+from a set of parse trees the intended trees.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
 %
 \isamarkupchapter{Introduction%
 }
@@ -255,54 +304,87 @@ what did I do, what is new%
 %:%37=12%:%
 %:%38=13%:%
 %:%39=14%:%
-%:%40=15%:%
-%:%49=18%:%
-%:%53=20%:%
-%:%57=22%:%
-%:%61=24%:%
-%:%65=26%:%
-%:%69=28%:%
-%:%73=30%:%
+%:%48=17%:%
+%:%52=19%:%
+%:%56=21%:%
+%:%60=23%:%
+%:%64=25%:%
+%:%68=27%:%
+%:%72=29%:%
+%:%84=31%:%
 %:%85=32%:%
 %:%86=33%:%
 %:%87=34%:%
 %:%88=35%:%
 %:%89=36%:%
-%:%90=37%:%
-%:%99=40%:%
-%:%111=42%:%
-%:%115=45%:%
-%:%116=46%:%
-%:%117=47%:%
-%:%118=48%:%
-%:%119=49%:%
-%:%120=50%:%
-%:%121=51%:%
-%:%122=52%:%
-%:%123=53%:%
-%:%124=54%:%
-%:%125=55%:%
-%:%126=56%:%
-%:%127=57%:%
-%:%128=58%:%
-%:%129=59%:%
-%:%130=60%:%
-%:%131=61%:%
-%:%132=62%:%
-%:%133=63%:%
-%:%134=64%:%
-%:%135=65%:%
-%:%136=66%:%
-%:%137=67%:%
-%:%146=72%:%
-%:%150=74%:%
-%:%154=76%:%
-%:%166=78%:%
-%:%167=79%:%
-%:%171=81%:%
-%:%180=83%:%
-%:%192=85%:%
-%:%201=87%:%
-%:%213=89%:%
-%:%222=91%:%
-%:%234=93%:%
+%:%98=39%:%
+%:%110=42%:%
+%:%111=43%:%
+%:%112=44%:%
+%:%113=45%:%
+%:%114=46%:%
+%:%115=47%:%
+%:%116=48%:%
+%:%117=49%:%
+%:%118=50%:%
+%:%119=51%:%
+%:%120=52%:%
+%:%121=53%:%
+%:%122=54%:%
+%:%123=55%:%
+%:%124=56%:%
+%:%125=57%:%
+%:%126=58%:%
+%:%127=59%:%
+%:%128=60%:%
+%:%129=61%:%
+%:%130=62%:%
+%:%131=63%:%
+%:%140=68%:%
+%:%152=71%:%
+%:%153=72%:%
+%:%154=73%:%
+%:%155=74%:%
+%:%156=75%:%
+%:%157=76%:%
+%:%158=77%:%
+%:%159=78%:%
+%:%160=79%:%
+%:%161=80%:%
+%:%162=81%:%
+%:%163=82%:%
+%:%167=86%:%
+%:%168=87%:%
+%:%169=88%:%
+%:%170=89%:%
+%:%171=90%:%
+%:%172=91%:%
+%:%173=92%:%
+%:%174=93%:%
+%:%175=94%:%
+%:%176=95%:%
+%:%177=96%:%
+%:%178=97%:%
+%:%179=98%:%
+%:%180=99%:%
+%:%181=100%:%
+%:%182=101%:%
+%:%183=102%:%
+%:%184=103%:%
+%:%185=104%:%
+%:%186=105%:%
+%:%187=106%:%
+%:%188=107%:%
+%:%189=108%:%
+%:%190=109%:%
+%:%199=112%:%
+%:%203=114%:%
+%:%215=116%:%
+%:%216=117%:%
+%:%220=119%:%
+%:%229=121%:%
+%:%241=123%:%
+%:%250=125%:%
+%:%262=127%:%
+%:%271=129%:%
+%:%283=131%:%
