@@ -65,6 +65,82 @@
 }
 \isamarkuptrue%
 %
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+Earley's parsing algorithm is a general algorithm, capable of parsing according to any context-free
+grammar. General parsing algorithms like Earley parsing allow unfettered expression of ambiguous grammar
+contructs which come up often in practice (REFERENCE).
+
+Earley parsers operate by constructing a sequence of sets, sometime called Earley sets. Given an input
+$x_1 x_2 \dots x_n$ the parser builds $n+1$ sets: an initial set $S_0$ and one set $S_i$ for each input
+symbol $x_i$. Elements of these sets are referred to as Earley items, which consist of three parts:
+a grammar rule, a position in the right-hand side of the rule indicating how much of that rule has been
+seen and a pointer to an earlier Earley set. Typically Earley items are written as $\dots$ where the position
+in the rule's right-hand side is denoted by a dot and $j$ is a pointer to set $S_j$.
+An Earley set $S_i$ is computed from an initial set of Earley items in $S_i$ and $S_{i+1}$ is initialized, by
+applying the followingn three steps to the items in $S_i$ until no more can be added. $\dots$
+An item is added to a set only if it is not in the set already. The initial set $S_0$ contains the items $\dots$
+to begin with. If the final set contains the item $\dots$ then the input is accepted.
+
+We have not used a lookahead in this description of Earley parsing since it's primary purpose is to
+increase the efficieny of the Earley parser on a large class of grammars (REFERENCE).
+
+In terms of implementation, the Earley sets are built in increasing order as the input is read. Also,
+each set is typically represented as a list of items. This list representation of a set is particularly
+convenient, because the list of items acts as a work queue when building the sets: items are examined
+in order, applying the transformations as necessary: items added to the set are appended onto the end of
+the list.
+
+At any given point $i$ in the parse, we have two partially constructed sets. Scanner may add items to
+$S_{i+1}$ and $S_i$ may have items added to it by Predictor and Completer. It is this latter possibility,
+adding items to $S_i$ while representing sets as lists, which causes grief with epsilon-rules.
+When Completer processes an item A -> dot, j which corresponds to the epsilon-rule A -> epsiolon, it must
+look through $S_j$ for items with the dot before an A. Unfortunately, for epsilon-rule items, j is always
+equal to i. Completer is thus looking through the partially constructed set $S_i$. Since implementations
+process items in $S_i$ in order, if an item B -> alpha dot A beta, k is added to $S_i$ after Completer
+has processed A -> dot, j, Completer will never add B -> \alpha A dot \beta, k to $S_i$. In turn, items
+resulting directly and indirectly from B -> \alpha A dot \beta, k will be omitted too. This effectively
+prunes protential derivation paths which might cause correct input to be rejected. (EXAMPLE)
+Aho \textit{et al} \cite{Aho:1972} propose the stay clam and keep running the Predictor and Completer
+in turn until neither has anything more to add. Earley himself suggest to have the Completer note that
+the dot needed to be moved over A, then looking for this whenever future items were added to $S_i$.
+For efficiency's sake the collection of on-terminals to watch for should be stored in a data structure
+which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycoack:2002}
+is a simple modification of the Predictor based on the idea of nullability. A non-terminal A is said to be
+nullable if A derives star epsilon. Terminal symbols of course can never be nullable. The nullability of
+non-terminals in a grammar may be precomputed using well-known techniques \cite{Appel:2003} \cite{Fischer:2009}
+Using this notion the Predictor can be stated as follows: if A -> \alpha dot B \beta, j is in $S_i$,
+add B -> dot \gamma, i to $S_i$ for all rules B -> \gamma. If B is nullable, also add A -> \alpha B dot \beta, j
+to $S_i$. Explanation why I decided against it. Involves every grammar can be rewritten to not contain epsilon
+productions. In other words we eagerly move the dot over a nonterminal if that non-terminal can derive epsilon
+and effectivley disappear. The source implements this precomputation by constructing a variant of 
+a LR(0) deterministic finite automata (DFA). But for an earley parser we must keep track of which parent
+pointers and LR(0) items belong together which leads to complex and inelegant implementations \cite{McLean:1996}.
+The source resolves this problem by constructing split epsilon DFAs, but still need to adjust the classical
+earley algorithm by adding not only predecessor links but also causal links, and to construct the split
+epsilon DFAs not the original grammar but a slightly adjusted equivalent grammar is used that encodes
+explicitly information that is crucial to reconstructing derivations, called a grammar in nihilist normal form (NNF)
+which might increase the size of the grammar whereas the authors note empirical results that the increase
+is quite modest (a factor of 2 at most).
+
+Example:
+S -> AAAA, A -> a, A -> E, E -> epsilon, input a
+$S_0$ S -> dot AAAA,0, A -> dot a, 0, A -> dot E, 0, E -> dot, 0, A -> E dot, 0, S -> A dot AAA, 0
+$S_1$ A -> a dot, 0, S -> A dot AAA, 0, S -> AA dot AA, 0, A -> dot a, 1, A -> dot E, 1, E -> dot, 1, A -> E dot, 1, S -> AAA dot A, 0%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
 \isamarkupsection{Related Work%
 }
 \isamarkuptrue%
@@ -309,82 +385,142 @@ what did I do, what is new%
 %:%56=21%:%
 %:%60=23%:%
 %:%64=25%:%
-%:%68=27%:%
-%:%72=29%:%
-%:%84=31%:%
-%:%85=32%:%
-%:%86=33%:%
-%:%87=34%:%
-%:%88=35%:%
-%:%89=36%:%
-%:%98=39%:%
-%:%110=42%:%
-%:%111=43%:%
-%:%112=44%:%
-%:%113=45%:%
-%:%114=46%:%
-%:%115=47%:%
-%:%116=48%:%
-%:%117=49%:%
-%:%118=50%:%
-%:%119=51%:%
-%:%120=52%:%
-%:%121=53%:%
-%:%122=54%:%
-%:%123=55%:%
-%:%124=56%:%
-%:%125=57%:%
-%:%126=58%:%
-%:%127=59%:%
-%:%128=60%:%
-%:%129=61%:%
-%:%130=62%:%
-%:%131=63%:%
-%:%140=68%:%
-%:%152=71%:%
-%:%153=72%:%
-%:%154=73%:%
-%:%155=74%:%
-%:%156=75%:%
-%:%157=76%:%
-%:%158=77%:%
-%:%159=78%:%
-%:%160=79%:%
-%:%161=80%:%
-%:%162=81%:%
-%:%163=82%:%
-%:%167=86%:%
-%:%168=87%:%
-%:%169=88%:%
-%:%170=89%:%
-%:%171=90%:%
-%:%172=91%:%
-%:%173=92%:%
-%:%174=93%:%
-%:%175=94%:%
-%:%176=95%:%
-%:%177=96%:%
-%:%178=97%:%
-%:%179=98%:%
-%:%180=99%:%
-%:%181=100%:%
-%:%182=101%:%
-%:%183=102%:%
-%:%184=103%:%
-%:%185=104%:%
+%:%76=28%:%
+%:%77=29%:%
+%:%78=30%:%
+%:%79=31%:%
+%:%80=32%:%
+%:%81=33%:%
+%:%82=34%:%
+%:%83=35%:%
+%:%84=36%:%
+%:%85=37%:%
+%:%86=38%:%
+%:%87=39%:%
+%:%88=40%:%
+%:%89=41%:%
+%:%90=42%:%
+%:%91=43%:%
+%:%92=44%:%
+%:%93=45%:%
+%:%94=46%:%
+%:%95=47%:%
+%:%96=48%:%
+%:%97=49%:%
+%:%98=50%:%
+%:%99=51%:%
+%:%100=52%:%
+%:%101=53%:%
+%:%102=54%:%
+%:%103=55%:%
+%:%104=56%:%
+%:%105=57%:%
+%:%106=58%:%
+%:%107=59%:%
+%:%108=60%:%
+%:%109=61%:%
+%:%110=62%:%
+%:%111=63%:%
+%:%112=64%:%
+%:%113=65%:%
+%:%114=66%:%
+%:%115=67%:%
+%:%116=68%:%
+%:%117=69%:%
+%:%118=70%:%
+%:%119=71%:%
+%:%120=72%:%
+%:%121=73%:%
+%:%122=74%:%
+%:%123=75%:%
+%:%124=76%:%
+%:%125=77%:%
+%:%126=78%:%
+%:%127=79%:%
+%:%128=80%:%
+%:%129=81%:%
+%:%130=82%:%
+%:%131=83%:%
+%:%132=84%:%
+%:%133=85%:%
+%:%134=86%:%
+%:%135=87%:%
+%:%144=90%:%
+%:%148=92%:%
+%:%160=94%:%
+%:%161=95%:%
+%:%162=96%:%
+%:%163=97%:%
+%:%164=98%:%
+%:%165=99%:%
+%:%174=102%:%
 %:%186=105%:%
 %:%187=106%:%
 %:%188=107%:%
 %:%189=108%:%
 %:%190=109%:%
-%:%199=112%:%
-%:%203=114%:%
-%:%215=116%:%
-%:%216=117%:%
-%:%220=119%:%
-%:%229=121%:%
-%:%241=123%:%
-%:%250=125%:%
-%:%262=127%:%
-%:%271=129%:%
-%:%283=131%:%
+%:%191=110%:%
+%:%192=111%:%
+%:%193=112%:%
+%:%194=113%:%
+%:%195=114%:%
+%:%196=115%:%
+%:%197=116%:%
+%:%198=117%:%
+%:%199=118%:%
+%:%200=119%:%
+%:%201=120%:%
+%:%202=121%:%
+%:%203=122%:%
+%:%204=123%:%
+%:%205=124%:%
+%:%206=125%:%
+%:%207=126%:%
+%:%216=131%:%
+%:%228=134%:%
+%:%229=135%:%
+%:%230=136%:%
+%:%231=137%:%
+%:%232=138%:%
+%:%233=139%:%
+%:%234=140%:%
+%:%235=141%:%
+%:%236=142%:%
+%:%237=143%:%
+%:%238=144%:%
+%:%239=145%:%
+%:%243=149%:%
+%:%244=150%:%
+%:%245=151%:%
+%:%246=152%:%
+%:%247=153%:%
+%:%248=154%:%
+%:%249=155%:%
+%:%250=156%:%
+%:%251=157%:%
+%:%252=158%:%
+%:%253=159%:%
+%:%254=160%:%
+%:%255=161%:%
+%:%256=162%:%
+%:%257=163%:%
+%:%258=164%:%
+%:%259=165%:%
+%:%260=166%:%
+%:%261=167%:%
+%:%262=168%:%
+%:%263=169%:%
+%:%264=170%:%
+%:%265=171%:%
+%:%266=172%:%
+%:%275=175%:%
+%:%279=177%:%
+%:%291=179%:%
+%:%292=180%:%
+%:%296=182%:%
+%:%305=184%:%
+%:%317=186%:%
+%:%326=188%:%
+%:%338=190%:%
+%:%347=192%:%
+%:%359=194%:%

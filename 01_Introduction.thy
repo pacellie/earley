@@ -24,6 +24,69 @@ section\<open>Scott\<close>
 
 section\<open>Aycock\<close>
 
+text\<open>
+Earley's parsing algorithm is a general algorithm, capable of parsing according to any context-free
+grammar. General parsing algorithms like Earley parsing allow unfettered expression of ambiguous grammar
+contructs which come up often in practice (REFERENCE).
+
+Earley parsers operate by constructing a sequence of sets, sometime called Earley sets. Given an input
+$x_1 x_2 \dots x_n$ the parser builds $n+1$ sets: an initial set $S_0$ and one set $S_i$ for each input
+symbol $x_i$. Elements of these sets are referred to as Earley items, which consist of three parts:
+a grammar rule, a position in the right-hand side of the rule indicating how much of that rule has been
+seen and a pointer to an earlier Earley set. Typically Earley items are written as $\dots$ where the position
+in the rule's right-hand side is denoted by a dot and $j$ is a pointer to set $S_j$.
+An Earley set $S_i$ is computed from an initial set of Earley items in $S_i$ and $S_{i+1}$ is initialized, by
+applying the followingn three steps to the items in $S_i$ until no more can be added. $\dots$
+An item is added to a set only if it is not in the set already. The initial set $S_0$ contains the items $\dots$
+to begin with. If the final set contains the item $\dots$ then the input is accepted.
+
+We have not used a lookahead in this description of Earley parsing since it's primary purpose is to
+increase the efficieny of the Earley parser on a large class of grammars (REFERENCE).
+
+In terms of implementation, the Earley sets are built in increasing order as the input is read. Also,
+each set is typically represented as a list of items. This list representation of a set is particularly
+convenient, because the list of items acts as a work queue when building the sets: items are examined
+in order, applying the transformations as necessary: items added to the set are appended onto the end of
+the list.
+
+At any given point $i$ in the parse, we have two partially constructed sets. Scanner may add items to
+$S_{i+1}$ and $S_i$ may have items added to it by Predictor and Completer. It is this latter possibility,
+adding items to $S_i$ while representing sets as lists, which causes grief with epsilon-rules.
+When Completer processes an item A -> dot, j which corresponds to the epsilon-rule A -> epsiolon, it must
+look through $S_j$ for items with the dot before an A. Unfortunately, for epsilon-rule items, j is always
+equal to i. Completer is thus looking through the partially constructed set $S_i$. Since implementations
+process items in $S_i$ in order, if an item B -> alpha dot A beta, k is added to $S_i$ after Completer
+has processed A -> dot, j, Completer will never add B -> \alpha A dot \beta, k to $S_i$. In turn, items
+resulting directly and indirectly from B -> \alpha A dot \beta, k will be omitted too. This effectively
+prunes protential derivation paths which might cause correct input to be rejected. (EXAMPLE)
+Aho \textit{et al} \cite{Aho:1972} propose the stay clam and keep running the Predictor and Completer
+in turn until neither has anything more to add. Earley himself suggest to have the Completer note that
+the dot needed to be moved over A, then looking for this whenever future items were added to $S_i$.
+For efficiency's sake the collection of on-terminals to watch for should be stored in a data structure
+which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycoack:2002}
+is a simple modification of the Predictor based on the idea of nullability. A non-terminal A is said to be
+nullable if A derives star epsilon. Terminal symbols of course can never be nullable. The nullability of
+non-terminals in a grammar may be precomputed using well-known techniques \cite{Appel:2003} \cite{Fischer:2009}
+Using this notion the Predictor can be stated as follows: if A -> \alpha dot B \beta, j is in $S_i$,
+add B -> dot \gamma, i to $S_i$ for all rules B -> \gamma. If B is nullable, also add A -> \alpha B dot \beta, j
+to $S_i$. Explanation why I decided against it. Involves every grammar can be rewritten to not contain epsilon
+productions. In other words we eagerly move the dot over a nonterminal if that non-terminal can derive epsilon
+and effectivley disappear. The source implements this precomputation by constructing a variant of 
+a LR(0) deterministic finite automata (DFA). But for an earley parser we must keep track of which parent
+pointers and LR(0) items belong together which leads to complex and inelegant implementations \cite{McLean:1996}.
+The source resolves this problem by constructing split epsilon DFAs, but still need to adjust the classical
+earley algorithm by adding not only predecessor links but also causal links, and to construct the split
+epsilon DFAs not the original grammar but a slightly adjusted equivalent grammar is used that encodes
+explicitly information that is crucial to reconstructing derivations, called a grammar in nihilist normal form (NNF)
+which might increase the size of the grammar whereas the authors note empirical results that the increase
+is quite modest (a factor of 2 at most).
+
+Example:
+S -> AAAA, A -> a, A -> E, E -> epsilon, input a
+$S_0$ S -> dot AAAA,0, A -> dot a, 0, A -> dot E, 0, E -> dot, 0, A -> E dot, 0, S -> A dot AAA, 0
+$S_1$ A -> a dot, 0, S -> A dot AAA, 0, S -> AA dot AA, 0, A -> dot a, 1, A -> dot E, 1, E -> dot, 1, A -> E dot, 1, S -> AAA dot A, 0
+\<close>
+
 section\<open>Related Work\<close>
 
 subsection\<open>Related Parsing Algorithms\<close>
