@@ -18,9 +18,121 @@ chapter\<open>Snippets\<close>
 
 section\<open>Earley\<close>
 
-section\<open>Jones\<close>
+text\<open>
+Context-free grammars have been used extensively for describing the syntax of programming languages
+and natural languages. Parsing algorithms for context-free grammars consequently play a large role in
+the implementation of compilers and interpreters for programming languages and of programs which understand
+or translate natural languages. Numerous parsing algorithms have been developed. Some are general,
+in the sense that they can handle all context-free grammars, while others can handle only subclasses of
+grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
+seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
+in linear time than most of the restricted algorithms.
+
+A language is a set of strings over a finite set of symbols. We call these terminal symbols and represent
+them by lowercase letters: a, b, c. We use a context-free grammar as a formal device for specifying which
+strings are in the set. This grammar uses another set of symbols, the nonterminals, which we can think of
+as syntactic classes. We use capitals for nonterminals: A, B, C. String of either terminals or non-terminals
+are represented by greek letters: alpha, beta, gamma. The empty string is epsilon. There is a finite set of
+productions or rewriting rules of the form A -> alpha. The nonterminal which stands for sentence is called the
+root R of the grammar. The productions with a particular nonterminal A on their left sides are called the
+alternatives of A. We write alpha => beta if exists gamma, delta, ny, A such taht a = gamma A delta and
+beta = gamma ny delta and A -> ny is a production. We write alpha =>* beta if exists alpha0, alpha1, ...
+alpham (m > =0) such that alpha = alpha0 => alpha1 => ... => alpham = beta The sequence alphai is called a
+derivation of beta from alpha. A sentential form is a string alpha such the the root R =>* alpha. A sentence
+is a sentential form consisting entirely of terminal symbols. The language defined by a grammar L(G) is the
+set of its sentences. We may represent any sentential form in at least one way as a derivation tree or parse
+tree reflecting the steps made in deriving it. The degree of ambiguity of a sentence is the number of its
+distinct derivation trees. A sentence is unambiguous if it has degree 1 of ambiguity. A grammar is unambiguous
+if each of its sentences is unambiguous. A grammar is reduced if every nonterminal appears in some derivation
+of some sentence. A recognizer is an algorithm which takes a input a string and either accepts or rejects it
+depending on whether or not the string is a sentence of the grammer. A parser is a recogizer which also outputs
+the set of all legal derivation trees for the string.
+
+The algorithm scans an input string X1, ..., Xn from left to right. As eachsymbol Xi is scanned, a set of
+states Si is constructed which represents the condition of the recognition process at that point in the
+scan. Each state in the set represents (1) a production such that we are currently scanning a portion of
+the input string which is derived from its right side, (2) a point in that production which shows how much of the
+production's right side we have recognized so far, (3) a pointer back to the position in the input string
+at which we began to look for that instance of the production. In general, we operate on a state set Si as follows:
+we process the states in the set in order, performing one of three operatins on each one depending on the form
+of the state. These operations may add more states to Si and may also put states in a new state set Si+1. We
+describe the operations by example: ... The predictor operation is applicable to a state when there is a nonterminal
+to  the right of the dot. It causes us to add one new state to Si for each alternative of that nonterminal.
+We put the dot at the beginning of the production in each new state, since we have not scanned any of its symbols yet.
+The pointer is set to i, since the state was created in Si. Thus the predictor adds to Si all the productions
+which might generate substrings beginning at Xi+1. The scanner is applicable in case there is a terminal to the right
+of the dot. The scanner compares that symbol with Xi+1 and if they match, it adds the state to Si+1 with the dot
+moved over one in the state to indicate that that terminal symbol has been scanned. If we finish processing Si and
+Si+1 remains empty an error has occurred in the input string. Otherwise, we start to process Si+1.
+The completer is applicable to a state if its dot is at the end of its production. It goes back to the state set
+indicated by its pointer and adds all states from this state set which have the dot in front of its nonterminal.
+It then moves over the dot. Intuitively, the origin state set is the state set we were in when we went looking
+for that nonterminal. We have now found it, so we go back to all the states which caused us to look for it, and move
+the dot over in these states to show that it has been successfully scanned. If the algorithm ever produces an Si+1
+consisting of the single state S -> alpha dot, 0, n, then the sentence is part of the grammar. Note that the algorithm
+is in effect a top-down parser in which we carry along all possible parses simultaneously in such a way that we can often
+combine like subparses.
+\<close>
 
 section\<open>Scott\<close>
+
+text\<open>
+The Computer Science community has been able to automatically generate parsers for a very wide class of context
+free languages. However, many parsers are still written manually, either using tool support or even completely
+by hand. This is partly because in some application areas such as natural language processing and bioinformatics
+we don not have the luxury of designing the language so that it is amendable to know parsing techniques, but also
+it is clear that left to themselves computer language designers do not naturally write LR(1) grammars. A grammar
+not only defines the syntax of a language, it is also the starting point for the definition of the semantics,
+and the grammar which facilitates semantics definition is not usually the one which is LR(1). Given this difficulty
+in constructing natural LR(1) grammars that support desired semantics, the general parsing techniques, such as
+the CYK Younger \cite{Younger:1967}, Earley \cite{Earley:1970} and GLR Tomita \cite{Tomita:1985} algorithms, developed
+for natural language processing are also of interest to the wider computer science community. When using grammars as
+the starting point for semantics definition, we distinguish between recognizers which simply determine whether or not
+a given string is in the language defined by a given grammar, and parserwhich also return some form of derivation
+of the string, if one exists. In their basic form the CYK and Earley algorithms are recognizers while GLR-style
+algorithms are designed with derivation tree construction, and hence parsing, in mind.
+
+There is no known liner time parsing or recognition algorithm that can be used with all context free grammars.
+In their recognizer forms the CYK algorithm is worst case cubic on grammars in Chomsky normal form and Earley's
+algorithm is worst case cubic on general context free grammers and worst case n2 on non-ambibuous grammars.
+General recognizers must, by definition, be applicable to ambiguous grammars. Tomita's GLR algorithm is of unbounded
+polynomial order in the worst case. Expanding general recognizers to parser raises several problems, not least
+because there can be exponentially many or even infinitely many derivations for a given input string. A cubic
+recognizer which was modified to simply return all derivations could become an unbounded parser.
+Of course, it can be argued that ambiguous grammars reflect ambiguous semantics and thus should not be used in
+practice. This would be far too extreme a position to take. For example, it is well known that the if-else
+statement in hthe AnSI-standard grammar for C is ambiguous, but a longest match resolution results in a linear
+time parser that attach the else to the most recent if, as specified by the ANSI-C semantics. The ambiguous
+ANSI-C grammar is certainly practical for parser implementation. However, in general ambiguity is not so easily handled,
+and it is well known that grammar ambiguity is in fact undecidable Hopcroft \textit{et al} \cite{Hopcroft:2006}, thus
+we cannot expect a parser generator simply to check for ambiguity inthe grammar and report the problem back to the user.
+Another possiblity is to avoid the issue by just returning one derivation. However, if only one derivation is returned
+then this creates problems for a user who wants all derivations and, even in the case where only one derivation is
+required, there is the issue of ensuring that it is the required derivationthat is returned. A truely general parser
+will reutrn all possible derivations in some form. Perhaps the most well known representation is the shared packed
+parse foreset SPPF described and used by Tomita \cite{Tomita:1985}. Tomita's description of the representation does ont allow
+for the infinitely many derivations which arise from grammars which contain cycles, the source adapt the SPPF representation
+to allow these. Johnson \cite{Johnson:1991} has shown that Tomita-style SPPFs are worst case unbounded polynomial size. Thus
+using such structures will alo turn any cubic recognition technique into a worst case unbounded polynomial parsing technique.
+Leaving aside the potential increase in complexity when turning a recogniser into a parser, it is clear that this proccess is often difficult to carry
+out correctly. Earley gave an algorithm for constructing derivations of a string accepted by his recognizer,
+but this was subsequently shown by Tomita \cite{Tomita:1985} to return spurious derivations in certain cases.
+Tomita's original version of his algorithm failed to terminate on grammars with hidden left recursio and, as remarked above
+, had no mechanism for contructing complete SPPFs for grammers with cycles.
+
+A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
+trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
+to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
+family of children. Nodes can be packed only if their yields correspond to the same portion of the input string. Thus, to make it easier
+to determine whether two alternates can be packed under a given node, SPPF nodes are labelled with a triple (x,i,j) where
+$a_{j+1} \dots a_i$ is a substring matched by x. To obtain a cubic algorithm we use binarised SPPFs which contain intermediate additional
+nodes but which are of worst case cubic size. (EXAMPlE SPPF running example???)
+
+We can turn earley's algorithm into a correct parser by adding pointers between items rather than instances of non-terminals, and labelling th epointers
+in a way which allows a binariesd SPPF to be constructed by walking the resulting structure. However, inorder to
+construct a binarised SPPF we also have to introduce additional nodes for grammar rules of length greater than two,
+complicating the final algorithm.
+\<close>
 
 section\<open>Aycock\<close>
 

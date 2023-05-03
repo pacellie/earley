@@ -83,6 +83,90 @@ address = {USA},
 abstract = {From volume 1 Preface (See Front Matter for full Preface)This book is intended for a one or two semester course in compiling theory at the senior or graduate level. It is a theoretically oriented treatment of a practical subject. Our motivation for making it so is threefold.(1) In an area as rapidly changing as Computer Science, sound pedagogy demands that courses emphasize ideas, rather than implementation details. It is our hope that the algorithms and concepts presented in this book will survive the next generation of computers and programming languages, and that at least some of them will be applicable to fields other than compiler writing.(2) Compiler writing has progressed to the point where many portions of a compiler can be isolated and subjected to design optimization. It is important that appropriate mathematical tools be available to the person attempting this optimization.(3) Some of the most useful and most efficient compiler algorithms, e.g. LR(k) parsing, require a good deal of mathematical background for full understanding. We expect, therefore, that a good theoretical background will become essential for the compiler designer.While we have not omitted difficult theorems that are relevant to compiling, we have tried to make the book as readable as possible. Numerous examples are given, each based on a small grammar, rather than on the large grammars encountered in practice. It is hoped that these examples are sufficient to illustrate the basic ideas, even in cases where the theoretical developments are difficult to follow in isolation.From volume 2 Preface (See Front Matter for full Preface)Compiler design is one of the first major areas of systems programming for which a strong theoretical foundation is becoming available. Volume I of The Theory of Parsing, Translation, and Compiling developed the relevant parts of mathematics and language theory for this foundation and developed the principal methods of fast syntactic analysis. Volume II is a continuation of Volume I, but except for Chapters 7 and 8 it is oriented towards the nonsyntactic aspects of compiler design.The treatment of the material in Volume II is much the same as in Volume I, although proofs have become a little more sketchy. We have tried to make the discussion as readable as possible by providing numerous examples, each illustrating one or two concepts.Since the text emphasizes concepts rather than language or machine details, a programming laboratory should accompany a course based on this book, so that a student can develop some facility in applying the concepts discussed to practical problems. The programming exercises appearing at the ends of sections can be used as recommended projects in such a laboratory. Part of the laboratory course should discuss the code to be generated for such programming language constructs as recursion, parameter passing, subroutine linkages, array references, loops, and so forth.}
 }
 
+@book{Appel:2003,
+author = {Appel, Andrew W. and Palsberg, Jens},
+title = {Modern Compiler Implementation in Java},
+year = {2003},
+isbn = {052182060X},
+publisher = {Cambridge University Press},
+address = {USA},
+edition = {2nd},
+abstract = {From the Publisher:The first part of the book, Fundamentals of Compilation, is suitable for a one-semester first course in compiler design. The second part, Advanced Topics, which includes the compilation of object-oriented and functional languages, garbage collection, loop optimization, SSA form, instruction scheduling, optimization for cache-memory hierarchies, can be used for a second-semester or graduate course.}
+}
+
+@book{Fischer:2009,
+author = {Fischer, Charles N. and Cytron, Ronald K. and LeBlanc, Richard J.},
+title = {Crafting A Compiler},
+year = {2009},
+isbn = {0136067050},
+publisher = {Addison-Wesley Publishing Company},
+address = {USA},
+edition = {1st},
+abstract = {Clear description of algorithms and clean design of compiler components. Crafting a Compiler presents a practical approach to compiler construction with thorough coverage of the material and examples that clearly illustrate the concepts in the book. Unlike other texts on the market, Fischer/Cytron/LeBlanc uses object-oriented design patterns and incorporates an algorithmic exposition with modern software practices. An ideal reference and tutorial. MARKET: Software engineers, systems analysts, software architects}
+}
+
+@InProceedings{McLean:1996,
+author="McLean, Philippe
+and Horspool, R. Nigel",
+editor="Gyim{\'o}thy, Tibor",
+title="A faster Earley parser",
+booktitle="Compiler Construction",
+year="1996",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="281--293",
+abstract="We present a parsing technique which is a hybrid of Earley's method and the LR(k) methods. The new method retains the ability of Earley's method to parse using arbitrary context-free grammars. However, by using precomputed LR(k) sets of items, we obtain much faster recognition speeds while also reducing memory requirements.",
+isbn="978-3-540-49939-8"
+}
+
+@article{Younger:1967,
+title = {Recognition and parsing of context-free languages in time n3},
+journal = {Information and Control},
+volume = {10},
+number = {2},
+pages = {189-208},
+year = {1967},
+issn = {0019-9958},
+doi = {https://doi.org/10.1016/S0019-9958(67)80007-X},
+url = {https://www.sciencedirect.com/science/article/pii/S001999586780007X},
+author = {Daniel H. Younger},
+abstract = {A recognition algorithm is exhibited whereby an arbitrary string over a given vocabulary can be tested for containment in a given context-free language. A special merit of this algorithm is that it is completed in a number of steps proportional to the “cube” of the number of symbols in the tested string. As a byproduct of the grammatical analysis, required by the recognition algorithm, one can obtain, by some additional processing not exceeding the “cube” factor of computational complexity, a parsing matrix—a complete summary of the grammatical structure of the sentence. It is also shown how, by means of a minor modification of the recognition algorithm, one can obtain an integer representing the ambiguity of the sentence, i.e., the number of distinct ways in which that sentence can be generated by the grammar. The recognition algorithm is then simulated on a Turing Machine. It is shown that this simulation likewise requires a number of steps proportional to only the “cube” of the test string length.}
+}
+
+@book{Tomita:1985,
+author = {Tomita, Masaru},
+title = {Efficient Parsing for Natural Language: A Fast Algorithm for Practical Systems},
+year = {1985},
+isbn = {0898382025},
+publisher = {Kluwer Academic Publishers},
+address = {USA}
+}
+
+@book{Hopcroft:2006,
+author = {Hopcroft, John E. and Motwani, Rajeev and Ullman, Jeffrey D.},
+title = {Introduction to Automata Theory, Languages, and Computation (3rd Edition)},
+year = {2006},
+isbn = {0321455363},
+publisher = {Addison-Wesley Longman Publishing Co., Inc.},
+address = {USA}
+}
+
+@Inbook{Johnson:1991,
+author="Johnson, Mark",
+title="The Computational Complexity of GLR Parsing",
+bookTitle="Generalized LR Parsing",
+year="1991",
+publisher="Springer US",
+address="Boston, MA",
+pages="35--42",
+abstract="The Tomita parsing algorithm adapts Knuth's (1967) well-known parsing algorithm for LR(K) grammars to non-LR grammars, including ambiguous grammars. Knuth's algorithm is provably efficient: it requires at most O(n|G|) units of time, where {\backslash}G{\backslash} is the size of (i.e. the number of symbols in) G and n is the length of the string to be parsed. This is often significantly better than the O(n3|G|2) worst case time required by standard parsing algorithms such as the Earley algorithm. Since the Tomita algorithm is closely related to Knuth's algorithm, one might expect that it too is provably more efficient than the Earley algorithm, especially as actual computational implementations of Tomita's algorithm outperform implementations of the Earley algorithm (Tomita 1986, 1987).",
+isbn="978-1-4615-4034-2",
+doi="10.1007/978-1-4615-4034-2_3",
+url="https://doi.org/10.1007/978-1-4615-4034-2_3"
+}
+
+
+
 % Related Work
 
 @article{Tomita:1987,
@@ -323,6 +407,7 @@ keywords = {semantic unambiguity, grammatic ambiguity}
 
 @article{Klint:1997,
 author = {Klint, Paul and Visser, Eelco},
+journal = {},
 year = {1997},
 month = {04},
 pages = {},

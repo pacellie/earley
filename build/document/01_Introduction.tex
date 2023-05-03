@@ -53,13 +53,149 @@
 }
 \isamarkuptrue%
 %
-\isamarkupsection{Jones%
-}
-\isamarkuptrue%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+Context-free grammars have been used extensively for describing the syntax of programming languages
+and natural languages. Parsing algorithms for context-free grammars consequently play a large role in
+the implementation of compilers and interpreters for programming languages and of programs which understand
+or translate natural languages. Numerous parsing algorithms have been developed. Some are general,
+in the sense that they can handle all context-free grammars, while others can handle only subclasses of
+grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
+seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
+in linear time than most of the restricted algorithms.
+
+A language is a set of strings over a finite set of symbols. We call these terminal symbols and represent
+them by lowercase letters: a, b, c. We use a context-free grammar as a formal device for specifying which
+strings are in the set. This grammar uses another set of symbols, the nonterminals, which we can think of
+as syntactic classes. We use capitals for nonterminals: A, B, C. String of either terminals or non-terminals
+are represented by greek letters: alpha, beta, gamma. The empty string is epsilon. There is a finite set of
+productions or rewriting rules of the form A -> alpha. The nonterminal which stands for sentence is called the
+root R of the grammar. The productions with a particular nonterminal A on their left sides are called the
+alternatives of A. We write alpha => beta if exists gamma, delta, ny, A such taht a = gamma A delta and
+beta = gamma ny delta and A -> ny is a production. We write alpha =>* beta if exists alpha0, alpha1, ...
+alpham (m > =0) such that alpha = alpha0 => alpha1 => ... => alpham = beta The sequence alphai is called a
+derivation of beta from alpha. A sentential form is a string alpha such the the root R =>* alpha. A sentence
+is a sentential form consisting entirely of terminal symbols. The language defined by a grammar L(G) is the
+set of its sentences. We may represent any sentential form in at least one way as a derivation tree or parse
+tree reflecting the steps made in deriving it. The degree of ambiguity of a sentence is the number of its
+distinct derivation trees. A sentence is unambiguous if it has degree 1 of ambiguity. A grammar is unambiguous
+if each of its sentences is unambiguous. A grammar is reduced if every nonterminal appears in some derivation
+of some sentence. A recognizer is an algorithm which takes a input a string and either accepts or rejects it
+depending on whether or not the string is a sentence of the grammer. A parser is a recogizer which also outputs
+the set of all legal derivation trees for the string.
+
+The algorithm scans an input string X1, ..., Xn from left to right. As eachsymbol Xi is scanned, a set of
+states Si is constructed which represents the condition of the recognition process at that point in the
+scan. Each state in the set represents (1) a production such that we are currently scanning a portion of
+the input string which is derived from its right side, (2) a point in that production which shows how much of the
+production's right side we have recognized so far, (3) a pointer back to the position in the input string
+at which we began to look for that instance of the production. In general, we operate on a state set Si as follows:
+we process the states in the set in order, performing one of three operatins on each one depending on the form
+of the state. These operations may add more states to Si and may also put states in a new state set Si+1. We
+describe the operations by example: ... The predictor operation is applicable to a state when there is a nonterminal
+to  the right of the dot. It causes us to add one new state to Si for each alternative of that nonterminal.
+We put the dot at the beginning of the production in each new state, since we have not scanned any of its symbols yet.
+The pointer is set to i, since the state was created in Si. Thus the predictor adds to Si all the productions
+which might generate substrings beginning at Xi+1. The scanner is applicable in case there is a terminal to the right
+of the dot. The scanner compares that symbol with Xi+1 and if they match, it adds the state to Si+1 with the dot
+moved over one in the state to indicate that that terminal symbol has been scanned. If we finish processing Si and
+Si+1 remains empty an error has occurred in the input string. Otherwise, we start to process Si+1.
+The completer is applicable to a state if its dot is at the end of its production. It goes back to the state set
+indicated by its pointer and adds all states from this state set which have the dot in front of its nonterminal.
+It then moves over the dot. Intuitively, the origin state set is the state set we were in when we went looking
+for that nonterminal. We have now found it, so we go back to all the states which caused us to look for it, and move
+the dot over in these states to show that it has been successfully scanned. If the algorithm ever produces an Si+1
+consisting of the single state S -> alpha dot, 0, n, then the sentence is part of the grammar. Note that the algorithm
+is in effect a top-down parser in which we carry along all possible parses simultaneously in such a way that we can often
+combine like subparses.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
 %
 \isamarkupsection{Scott%
 }
 \isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+The Computer Science community has been able to automatically generate parsers for a very wide class of context
+free languages. However, many parsers are still written manually, either using tool support or even completely
+by hand. This is partly because in some application areas such as natural language processing and bioinformatics
+we don not have the luxury of designing the language so that it is amendable to know parsing techniques, but also
+it is clear that left to themselves computer language designers do not naturally write LR(1) grammars. A grammar
+not only defines the syntax of a language, it is also the starting point for the definition of the semantics,
+and the grammar which facilitates semantics definition is not usually the one which is LR(1). Given this difficulty
+in constructing natural LR(1) grammars that support desired semantics, the general parsing techniques, such as
+the CYK Younger \cite{Younger:1967}, Earley \cite{Earley:1970} and GLR Tomita \cite{Tomita:1985} algorithms, developed
+for natural language processing are also of interest to the wider computer science community. When using grammars as
+the starting point for semantics definition, we distinguish between recognizers which simply determine whether or not
+a given string is in the language defined by a given grammar, and parserwhich also return some form of derivation
+of the string, if one exists. In their basic form the CYK and Earley algorithms are recognizers while GLR-style
+algorithms are designed with derivation tree construction, and hence parsing, in mind.
+
+There is no known liner time parsing or recognition algorithm that can be used with all context free grammars.
+In their recognizer forms the CYK algorithm is worst case cubic on grammars in Chomsky normal form and Earley's
+algorithm is worst case cubic on general context free grammers and worst case n2 on non-ambibuous grammars.
+General recognizers must, by definition, be applicable to ambiguous grammars. Tomita's GLR algorithm is of unbounded
+polynomial order in the worst case. Expanding general recognizers to parser raises several problems, not least
+because there can be exponentially many or even infinitely many derivations for a given input string. A cubic
+recognizer which was modified to simply return all derivations could become an unbounded parser.
+Of course, it can be argued that ambiguous grammars reflect ambiguous semantics and thus should not be used in
+practice. This would be far too extreme a position to take. For example, it is well known that the if-else
+statement in hthe AnSI-standard grammar for C is ambiguous, but a longest match resolution results in a linear
+time parser that attach the else to the most recent if, as specified by the ANSI-C semantics. The ambiguous
+ANSI-C grammar is certainly practical for parser implementation. However, in general ambiguity is not so easily handled,
+and it is well known that grammar ambiguity is in fact undecidable Hopcroft \textit{et al} \cite{Hopcroft:2006}, thus
+we cannot expect a parser generator simply to check for ambiguity inthe grammar and report the problem back to the user.
+Another possiblity is to avoid the issue by just returning one derivation. However, if only one derivation is returned
+then this creates problems for a user who wants all derivations and, even in the case where only one derivation is
+required, there is the issue of ensuring that it is the required derivationthat is returned. A truely general parser
+will reutrn all possible derivations in some form. Perhaps the most well known representation is the shared packed
+parse foreset SPPF described and used by Tomita \cite{Tomita:1985}. Tomita's description of the representation does ont allow
+for the infinitely many derivations which arise from grammars which contain cycles, the source adapt the SPPF representation
+to allow these. Johnson \cite{Johnson:1991} has shown that Tomita-style SPPFs are worst case unbounded polynomial size. Thus
+using such structures will alo turn any cubic recognition technique into a worst case unbounded polynomial parsing technique.
+Leaving aside the potential increase in complexity when turning a recogniser into a parser, it is clear that this proccess is often difficult to carry
+out correctly. Earley gave an algorithm for constructing derivations of a string accepted by his recognizer,
+but this was subsequently shown by Tomita \cite{Tomita:1985} to return spurious derivations in certain cases.
+Tomita's original version of his algorithm failed to terminate on grammars with hidden left recursio and, as remarked above
+, had no mechanism for contructing complete SPPFs for grammers with cycles.
+
+A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
+trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
+to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
+family of children. Nodes can be packed only if their yields correspond to the same portion of the input string. Thus, to make it easier
+to determine whether two alternates can be packed under a given node, SPPF nodes are labelled with a triple (x,i,j) where
+$a_{j+1} \dots a_i$ is a substring matched by x. To obtain a cubic algorithm we use binarised SPPFs which contain intermediate additional
+nodes but which are of worst case cubic size. (EXAMPlE SPPF running example???)
+
+We can turn earley's algorithm into a correct parser by adding pointers between items rather than instances of non-terminals, and labelling th epointers
+in a way which allows a binariesd SPPF to be constructed by walking the resulting structure. However, inorder to
+construct a binarised SPPF we also have to introduce additional nodes for grammar rules of length greater than two,
+complicating the final algorithm.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
 %
 \isamarkupsection{Aycock%
 }
@@ -382,145 +518,252 @@ what did I do, what is new%
 %:%39=14%:%
 %:%48=17%:%
 %:%52=19%:%
-%:%56=21%:%
-%:%60=23%:%
-%:%64=25%:%
-%:%76=28%:%
-%:%77=29%:%
-%:%78=30%:%
-%:%79=31%:%
-%:%80=32%:%
-%:%81=33%:%
-%:%82=34%:%
-%:%83=35%:%
-%:%84=36%:%
-%:%85=37%:%
-%:%86=38%:%
-%:%87=39%:%
-%:%88=40%:%
-%:%89=41%:%
-%:%90=42%:%
-%:%91=43%:%
-%:%92=44%:%
-%:%93=45%:%
-%:%94=46%:%
-%:%95=47%:%
-%:%96=48%:%
-%:%97=49%:%
-%:%98=50%:%
-%:%99=51%:%
-%:%100=52%:%
-%:%101=53%:%
-%:%102=54%:%
-%:%103=55%:%
-%:%104=56%:%
-%:%105=57%:%
-%:%106=58%:%
-%:%107=59%:%
-%:%108=60%:%
-%:%109=61%:%
-%:%110=62%:%
-%:%111=63%:%
-%:%112=64%:%
-%:%113=65%:%
-%:%114=66%:%
-%:%115=67%:%
-%:%116=68%:%
-%:%117=69%:%
-%:%118=70%:%
-%:%119=71%:%
-%:%120=72%:%
-%:%121=73%:%
-%:%122=74%:%
-%:%123=75%:%
-%:%124=76%:%
+%:%64=22%:%
+%:%65=23%:%
+%:%66=24%:%
+%:%67=25%:%
+%:%68=26%:%
+%:%69=27%:%
+%:%70=28%:%
+%:%71=29%:%
+%:%72=30%:%
+%:%73=31%:%
+%:%74=32%:%
+%:%75=33%:%
+%:%76=34%:%
+%:%77=35%:%
+%:%78=36%:%
+%:%79=37%:%
+%:%80=38%:%
+%:%81=39%:%
+%:%82=40%:%
+%:%83=41%:%
+%:%84=42%:%
+%:%85=43%:%
+%:%86=44%:%
+%:%87=45%:%
+%:%88=46%:%
+%:%89=47%:%
+%:%90=48%:%
+%:%91=49%:%
+%:%92=50%:%
+%:%93=51%:%
+%:%94=52%:%
+%:%95=53%:%
+%:%96=54%:%
+%:%97=55%:%
+%:%98=56%:%
+%:%99=57%:%
+%:%100=58%:%
+%:%101=59%:%
+%:%102=60%:%
+%:%103=61%:%
+%:%104=62%:%
+%:%105=63%:%
+%:%106=64%:%
+%:%107=65%:%
+%:%108=66%:%
+%:%109=67%:%
+%:%110=68%:%
+%:%111=69%:%
+%:%112=70%:%
+%:%113=71%:%
+%:%114=72%:%
+%:%115=73%:%
+%:%116=74%:%
 %:%125=77%:%
-%:%126=78%:%
-%:%127=79%:%
-%:%128=80%:%
-%:%129=81%:%
-%:%130=82%:%
-%:%131=83%:%
-%:%132=84%:%
-%:%133=85%:%
-%:%134=86%:%
-%:%135=87%:%
-%:%144=90%:%
-%:%148=92%:%
-%:%160=94%:%
-%:%161=95%:%
-%:%162=96%:%
-%:%163=97%:%
-%:%164=98%:%
-%:%165=99%:%
-%:%174=102%:%
-%:%186=105%:%
-%:%187=106%:%
-%:%188=107%:%
-%:%189=108%:%
-%:%190=109%:%
-%:%191=110%:%
-%:%192=111%:%
-%:%193=112%:%
-%:%194=113%:%
-%:%195=114%:%
-%:%196=115%:%
-%:%197=116%:%
-%:%198=117%:%
-%:%199=118%:%
-%:%200=119%:%
-%:%201=120%:%
-%:%202=121%:%
-%:%203=122%:%
-%:%204=123%:%
-%:%205=124%:%
-%:%206=125%:%
-%:%207=126%:%
-%:%216=131%:%
-%:%228=134%:%
-%:%229=135%:%
-%:%230=136%:%
-%:%231=137%:%
-%:%232=138%:%
-%:%233=139%:%
-%:%234=140%:%
-%:%235=141%:%
-%:%236=142%:%
-%:%237=143%:%
-%:%238=144%:%
-%:%239=145%:%
-%:%243=149%:%
-%:%244=150%:%
-%:%245=151%:%
-%:%246=152%:%
-%:%247=153%:%
-%:%248=154%:%
-%:%249=155%:%
-%:%250=156%:%
-%:%251=157%:%
-%:%252=158%:%
-%:%253=159%:%
-%:%254=160%:%
-%:%255=161%:%
-%:%256=162%:%
-%:%257=163%:%
-%:%258=164%:%
-%:%259=165%:%
-%:%260=166%:%
-%:%261=167%:%
-%:%262=168%:%
-%:%263=169%:%
-%:%264=170%:%
-%:%265=171%:%
-%:%266=172%:%
-%:%275=175%:%
-%:%279=177%:%
-%:%291=179%:%
-%:%292=180%:%
-%:%296=182%:%
-%:%305=184%:%
-%:%317=186%:%
-%:%326=188%:%
-%:%338=190%:%
-%:%347=192%:%
-%:%359=194%:%
+%:%137=80%:%
+%:%138=81%:%
+%:%139=82%:%
+%:%140=83%:%
+%:%141=84%:%
+%:%142=85%:%
+%:%143=86%:%
+%:%144=87%:%
+%:%145=88%:%
+%:%146=89%:%
+%:%147=90%:%
+%:%148=91%:%
+%:%149=92%:%
+%:%150=93%:%
+%:%151=94%:%
+%:%152=95%:%
+%:%153=96%:%
+%:%154=97%:%
+%:%155=98%:%
+%:%156=99%:%
+%:%157=100%:%
+%:%158=101%:%
+%:%159=102%:%
+%:%160=103%:%
+%:%161=104%:%
+%:%162=105%:%
+%:%163=106%:%
+%:%164=107%:%
+%:%165=108%:%
+%:%166=109%:%
+%:%167=110%:%
+%:%168=111%:%
+%:%169=112%:%
+%:%170=113%:%
+%:%171=114%:%
+%:%172=115%:%
+%:%173=116%:%
+%:%174=117%:%
+%:%175=118%:%
+%:%176=119%:%
+%:%177=120%:%
+%:%178=121%:%
+%:%179=122%:%
+%:%180=123%:%
+%:%181=124%:%
+%:%182=125%:%
+%:%183=126%:%
+%:%184=127%:%
+%:%185=128%:%
+%:%186=129%:%
+%:%187=130%:%
+%:%188=131%:%
+%:%189=132%:%
+%:%190=133%:%
+%:%191=134%:%
+%:%200=137%:%
+%:%212=140%:%
+%:%213=141%:%
+%:%214=142%:%
+%:%215=143%:%
+%:%216=144%:%
+%:%217=145%:%
+%:%218=146%:%
+%:%219=147%:%
+%:%220=148%:%
+%:%221=149%:%
+%:%222=150%:%
+%:%223=151%:%
+%:%224=152%:%
+%:%225=153%:%
+%:%226=154%:%
+%:%227=155%:%
+%:%228=156%:%
+%:%229=157%:%
+%:%230=158%:%
+%:%231=159%:%
+%:%232=160%:%
+%:%233=161%:%
+%:%234=162%:%
+%:%235=163%:%
+%:%236=164%:%
+%:%237=165%:%
+%:%238=166%:%
+%:%239=167%:%
+%:%240=168%:%
+%:%241=169%:%
+%:%242=170%:%
+%:%243=171%:%
+%:%244=172%:%
+%:%245=173%:%
+%:%246=174%:%
+%:%247=175%:%
+%:%248=176%:%
+%:%249=177%:%
+%:%250=178%:%
+%:%251=179%:%
+%:%252=180%:%
+%:%253=181%:%
+%:%254=182%:%
+%:%255=183%:%
+%:%256=184%:%
+%:%257=185%:%
+%:%258=186%:%
+%:%259=187%:%
+%:%260=188%:%
+%:%261=189%:%
+%:%262=190%:%
+%:%263=191%:%
+%:%264=192%:%
+%:%265=193%:%
+%:%266=194%:%
+%:%267=195%:%
+%:%268=196%:%
+%:%269=197%:%
+%:%270=198%:%
+%:%271=199%:%
+%:%280=202%:%
+%:%284=204%:%
+%:%296=206%:%
+%:%297=207%:%
+%:%298=208%:%
+%:%299=209%:%
+%:%300=210%:%
+%:%301=211%:%
+%:%310=214%:%
+%:%322=217%:%
+%:%323=218%:%
+%:%324=219%:%
+%:%325=220%:%
+%:%326=221%:%
+%:%327=222%:%
+%:%328=223%:%
+%:%329=224%:%
+%:%330=225%:%
+%:%331=226%:%
+%:%332=227%:%
+%:%333=228%:%
+%:%334=229%:%
+%:%335=230%:%
+%:%336=231%:%
+%:%337=232%:%
+%:%338=233%:%
+%:%339=234%:%
+%:%340=235%:%
+%:%341=236%:%
+%:%342=237%:%
+%:%343=238%:%
+%:%352=243%:%
+%:%364=246%:%
+%:%365=247%:%
+%:%366=248%:%
+%:%367=249%:%
+%:%368=250%:%
+%:%369=251%:%
+%:%370=252%:%
+%:%371=253%:%
+%:%372=254%:%
+%:%373=255%:%
+%:%374=256%:%
+%:%375=257%:%
+%:%379=261%:%
+%:%380=262%:%
+%:%381=263%:%
+%:%382=264%:%
+%:%383=265%:%
+%:%384=266%:%
+%:%385=267%:%
+%:%386=268%:%
+%:%387=269%:%
+%:%388=270%:%
+%:%389=271%:%
+%:%390=272%:%
+%:%391=273%:%
+%:%392=274%:%
+%:%393=275%:%
+%:%394=276%:%
+%:%395=277%:%
+%:%396=278%:%
+%:%397=279%:%
+%:%398=280%:%
+%:%399=281%:%
+%:%400=282%:%
+%:%401=283%:%
+%:%402=284%:%
+%:%411=287%:%
+%:%415=289%:%
+%:%427=291%:%
+%:%428=292%:%
+%:%432=294%:%
+%:%441=296%:%
+%:%453=298%:%
+%:%462=300%:%
+%:%474=302%:%
+%:%483=304%:%
+%:%495=306%:%
