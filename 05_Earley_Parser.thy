@@ -159,7 +159,7 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
     map (\<lambda>ts. Branch N ts) (combinations tss)
   )"
 
-section \<open>A single parse tree\<close>
+section \<open>A Single Parse Tree\<close>
 
 partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree option" where
   "build_tree' bs inp k i = (
@@ -196,8 +196,8 @@ definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bi
 fun build_tree'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) \<Rightarrow> nat" where
   "build_tree'_measure (bs, inp, k, i) = foldl (+) 0 (map length (take k bs)) + i"
 
-definition wellformed_tree_ptrs :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) set" where
-  "wellformed_tree_ptrs = {
+definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) set" where
+  "wf_tree_input = {
     (bs, inp, k, i) | bs inp k i.
       sound_ptrs inp bs \<and>
       mono_red_ptr bs \<and>
@@ -205,39 +205,39 @@ definition wellformed_tree_ptrs :: "('a bins \<times> 'a sentential \<times> nat
       i < length (bs!k)
   }"
 
-lemma wellformed_tree_ptrs_pre:
-  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+lemma wf_tree_input_pre:
+  assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "e = bs!k!i" "pointer e = Pre pre"
-  shows "(bs, inp, (k-1), pre) \<in> wellformed_tree_ptrs"
+  shows "(bs, inp, (k-1), pre) \<in> wf_tree_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_tree_ptrs_prered_pre:
-  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+lemma wf_tree_input_prered_pre:
+  assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
-  shows "(bs, inp, k', pre) \<in> wellformed_tree_ptrs"
+  shows "(bs, inp, k', pre) \<in> wf_tree_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_tree_ptrs_prered_red:
-  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+lemma wf_tree_input_prered_red:
+  assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
-  shows "(bs, inp, k, red) \<in> wellformed_tree_ptrs"
+  shows "(bs, inp, k, red) \<in> wf_tree_input"
 (*<*)
   sorry
 (*>*)
 
 lemma build_tree'_termination:
-  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "(bs, inp, k, i) \<in> wf_tree_input"
   shows "\<exists>N ts. build_tree' bs inp k i = Some (Branch N ts)"
 (*<*)
   sorry
 (*>*)
 
 lemma wf_item_tree_build_tree':
-  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "wf_bins cfg inp bs"
   assumes "k < length bs" "i < length (bs!k)"
   assumes "build_tree' bs inp k i = Some t"
@@ -247,7 +247,7 @@ lemma wf_item_tree_build_tree':
 (*>*)
 
 lemma wf_yield_tree_build_tree':
-  assumes "(bs, inp, k, i) \<in> wellformed_tree_ptrs"
+  assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "wf_bins cfg inp bs"
   assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
   assumes "build_tree' bs inp k i = Some t"
@@ -279,7 +279,7 @@ theorem correctness_build_tree_earley_list:
   sorry
 (*>*)
 
-section \<open>Parse trees\<close>
+section \<open>All Parse Trees\<close>
 
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
   "insert_group K V a [] = [(K a, [V a])]"
@@ -343,8 +343,8 @@ definition build_trees :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a b
 fun build_forest'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
   "build_forest'_measure (bs, inp, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
-definition wellformed_forest_ptrs :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) set" where
-  "wellformed_forest_ptrs = {
+definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) set" where
+  "wf_trees_input = {
     (bs, inp, k, i, I) | bs inp k i I.
       sound_ptrs inp bs \<and>
       k < length bs \<and>
@@ -353,45 +353,45 @@ definition wellformed_forest_ptrs :: "('a bins \<times> 'a sentential \<times> n
       i \<in> I
   }"
 
-lemma wellformed_forest_ptrs_pre:
-  assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
+lemma wf_trees_input_pre:
+  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "e = bs!k!i" "pointer e = Pre pre"
-  shows "(bs, inp, (k-1), pre, {pre}) \<in> wellformed_forest_ptrs"
+  shows "(bs, inp, (k-1), pre, {pre}) \<in> wf_trees_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_forest_ptrs_prered_pre:
-  assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
+lemma wf_trees_input_prered_pre:
+  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "e = bs!k!i" "pointer e = PreRed p ps"
   assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
   assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
   assumes "((k', pre), reds) \<in> set gs"
-  shows "(bs, inp, k', pre, {pre}) \<in> wellformed_forest_ptrs"
+  shows "(bs, inp, k', pre, {pre}) \<in> wf_trees_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_forest_ptrs_prered_red:
-  assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
+lemma wf_trees_input_prered_red:
+  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "e = bs!k!i" "pointer e = PreRed p ps"
   assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
   assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
   assumes "((k', pre), reds) \<in> set gs" "red \<in> set reds"
-  shows "(bs, inp, k, red, I \<union> {red}) \<in> wellformed_forest_ptrs"
+  shows "(bs, inp, k, red, I \<union> {red}) \<in> wf_trees_input"
 (*<*)
   sorry
 (*>*)
 
 lemma build_trees'_termination:
-  assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
+  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   shows "\<exists>fs. build_trees' bs inp k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
 (*<*)
   sorry
 (*>*)
 
 lemma wf_item_tree_build_trees':
-  assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
+  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "wf_bins cfg inp bs"
   assumes "k < length bs" "i < length (bs!k)"
   assumes "build_trees' bs inp k i I = Some fs"
@@ -403,7 +403,7 @@ lemma wf_item_tree_build_trees':
 (*>*)
 
 lemma wf_yield_tree_build_trees':
-  assumes "(bs, inp, k, i, I) \<in> wellformed_forest_ptrs"
+  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "wf_bins cfg inp bs"
   assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
   assumes "build_trees' bs inp k i I = Some fs"
@@ -445,7 +445,7 @@ theorem termination_build_tree_earley_list:
   sorry
 (*>*)
 
-section \<open>A word on completeness\<close>
+section \<open>A Word on Completeness\<close>
 
 (*<*)
 end

@@ -311,7 +311,7 @@
 %
 \isatagdocument
 %
-\isamarkupsection{A single parse tree%
+\isamarkupsection{A Single Parse Tree%
 }
 \isamarkuptrue%
 %
@@ -360,8 +360,8 @@
 \ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}measure\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ foldl\ {\isacharparenleft}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}map\ length\ {\isacharparenleft}{\kern0pt}take\ k\ bs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharplus}{\kern0pt}\ i{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\isanewline
 \ \ \ \ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ inp\ k\ i{\isachardot}{\kern0pt}\isanewline
 \ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ inp\ bs\ {\isasymand}\isanewline
 \ \ \ \ \ \ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs\ {\isasymand}\isanewline
@@ -370,10 +370,10 @@
 \ \ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isachardoublequoteclose}\ {\isachardoublequoteopen}pointer\ e\ {\isacharequal}{\kern0pt}\ Pre\ pre{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -388,10 +388,10 @@
 %
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isachardoublequoteclose}\ {\isachardoublequoteopen}pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -406,10 +406,10 @@
 %
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}red{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}red{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isachardoublequoteclose}\ {\isachardoublequoteopen}pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -425,7 +425,7 @@
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}termination{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymexists}N\ ts{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ inp\ k\ i\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}Branch\ N\ ts{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
@@ -442,7 +442,7 @@
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ cfg\ inp\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ length\ bs{\isachardoublequoteclose}\ {\isachardoublequoteopen}i\ {\isacharless}{\kern0pt}\ length\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ inp\ k\ i\ {\isacharequal}{\kern0pt}\ Some\ t{\isachardoublequoteclose}\isanewline
@@ -462,7 +462,7 @@
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ cfg\ inp\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ length\ bs{\isachardoublequoteclose}\ {\isachardoublequoteopen}i\ {\isacharless}{\kern0pt}\ length\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isachardoublequoteopen}k\ {\isasymle}\ length\ inp{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ inp\ k\ i\ {\isacharequal}{\kern0pt}\ Some\ t{\isachardoublequoteclose}\isanewline
@@ -539,7 +539,7 @@
 %
 \isatagdocument
 %
-\isamarkupsection{Parse trees%
+\isamarkupsection{All Parse Trees%
 }
 \isamarkuptrue%
 %
@@ -619,8 +619,8 @@
 \ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forest{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}measure\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ foldl\ {\isacharparenleft}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}map\ length\ {\isacharparenleft}{\kern0pt}take\ {\isacharparenleft}{\kern0pt}k{\isacharplus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ bs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharminus}{\kern0pt}\ card\ I{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ set{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ set{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\isanewline
 \ \ \ \ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ inp\ k\ i\ I{\isachardot}{\kern0pt}\isanewline
 \ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ inp\ bs\ {\isasymand}\isanewline
 \ \ \ \ \ \ k\ {\isacharless}{\kern0pt}\ length\ bs\ {\isasymand}\isanewline
@@ -630,10 +630,10 @@
 \ \ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isachardoublequoteclose}\ {\isachardoublequoteopen}pointer\ e\ {\isacharequal}{\kern0pt}\ Pre\ pre{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -648,13 +648,13 @@
 %
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}pre{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isachardoublequoteclose}\ {\isachardoublequoteopen}pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ p\ ps{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}ps{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}\ filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ red\ {\isasymnotin}\ I{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}p{\isacharhash}{\kern0pt}ps{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}gs\ {\isacharequal}{\kern0pt}\ group{\isacharunderscore}{\kern0pt}by\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps{\isacharprime}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ reds{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ gs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -669,13 +669,13 @@
 %
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
-\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}red{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}red{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isachardoublequoteclose}\ {\isachardoublequoteopen}pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ p\ ps{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}ps{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}\ filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ red\ {\isasymnotin}\ I{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}p{\isacharhash}{\kern0pt}ps{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}gs\ {\isacharequal}{\kern0pt}\ group{\isacharunderscore}{\kern0pt}by\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps{\isacharprime}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ reds{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ gs{\isachardoublequoteclose}\ {\isachardoublequoteopen}red\ {\isasymin}\ set\ reds{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ red{\isacharcomma}{\kern0pt}\ I\ {\isasymunion}\ {\isacharbraceleft}{\kern0pt}red{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ red{\isacharcomma}{\kern0pt}\ I\ {\isasymunion}\ {\isacharbraceleft}{\kern0pt}red{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -691,7 +691,7 @@
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}termination{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymexists}fs{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ inp\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs\ {\isasymand}\ {\isacharparenleft}{\kern0pt}{\isasymforall}f\ {\isasymin}\ set\ fs{\isachardot}{\kern0pt}\ {\isasymexists}N\ fss{\isachardot}{\kern0pt}\ f\ {\isacharequal}{\kern0pt}\ FBranch\ N\ fss{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
@@ -708,7 +708,7 @@
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ cfg\ inp\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ length\ bs{\isachardoublequoteclose}\ {\isachardoublequoteopen}i\ {\isacharless}{\kern0pt}\ length\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ inp\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
@@ -730,7 +730,7 @@
 \endisadelimproof
 \isacommand{lemma}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wellformed{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}ptrs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ inp{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ cfg\ inp\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ length\ bs{\isachardoublequoteclose}\ {\isachardoublequoteopen}i\ {\isacharless}{\kern0pt}\ length\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isachardoublequoteopen}k\ {\isasymle}\ length\ inp{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ inp\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
@@ -827,7 +827,7 @@
 %
 \isatagdocument
 %
-\isamarkupsection{A word on completeness%
+\isamarkupsection{A Word on Completeness%
 }
 \isamarkuptrue%
 %

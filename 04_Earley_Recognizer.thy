@@ -33,6 +33,31 @@ text\<open>
 
 chapter\<open>Earley Recognizer Implementation\<close>
 
+text\<open>
+  \begin{table}[htpb]
+    \caption[Earley items with pointers running example]{Earley items with pointers for the grammar @{term \<G>}: $S \rightarrow \, x$, $S \rightarrow \, S + S$}\label{tab:earley-items}
+    \centering
+    \begin{tabular}{| l | l | l | l |}
+          & $B_0$                                       & $B_1$                                           & $B_2$                                     \\
+      \midrule
+        0 & $S \rightarrow \, \bullet x, 0, 0;$     & $S \rightarrow \, x \bullet, 0, 1; 0$           & $S \rightarrow \, S + \bullet S, 0, 2; 1$ \\
+        1 & $S \rightarrow \, \bullet S + S, 0, 0;$ & $S \rightarrow \, S \bullet + S, 0, 1; (0,1,0)$ & $S \rightarrow \, \bullet x, 2, 2;$       \\
+        2 &                                         &                                                 & $S \rightarrow \, \bullet S + S, 2, 2;$   \\
+
+      \midrule
+
+          & $B_3$                                               & $B_4$                                     & $B_5$                                                    \\
+      \midrule
+        0 & $S \rightarrow \, x \bullet, 2, 3; 1$           & $S \rightarrow \, S + \bullet S, 2, 4; 2$ & $S \rightarrow \, x \bullet, 4, 5; 2$                    \\
+        1 & $S \rightarrow \, S + S \bullet, 0, 3; (2,0,0)$ & $S \rightarrow \, S + \bullet S, 0, 4; 3$ & $S \rightarrow \, S + S \bullet, 2, 5; (4,0,0)$          \\
+        2 & $S \rightarrow \, S \bullet + S, 2, 3; (2,2,0)$ & $S \rightarrow \, \bullet x, 4, 4;$       & $S \rightarrow \, S + S \bullet, 0, 5; (4,1,0), (2,0,1)$ \\
+        3 & $S \rightarrow \, S \bullet + S, 0, 3; (0,1,1)$ & $S \rightarrow \, \bullet S + S, 4, 4;$   & $S \rightarrow \, S \bullet + S, 4, 5; (4,3,0)$          \\
+        4 &                                                 &                                           & $S \rightarrow \, S \bullet + S, 2, 5; (2,2,1)$          \\
+        5 &                                                 &                                           & $S \rightarrow \, S \bullet + S, 0, 5; (0,1,2)$          \\
+    \end{tabular}
+  \end{table}
+\<close>
+
 section\<open>Definitions\<close>
 
 fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
@@ -211,8 +236,8 @@ lemma wf_bins_Complete_list:
 fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
   "earley_measure (k, cfg, inp, bs) i = card { x | x. wf_item cfg inp x \<and> item_end x = k } - i"
 
-definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
-  "wellformed_bins = { 
+definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
+  "wf_earley_input = { 
     (k, cfg, inp, bs) | k cfg inp bs.
       k \<le> length inp \<and>
       length bs = length inp + 1 \<and>
@@ -220,80 +245,75 @@ definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentential \<tim
       wf_bins cfg inp bs
   }"
 
-typedef 'a wf_bins = "wellformed_bins::(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set"
- (*<*)
-  sorry
- (*>*)
-
-lemma wellformed_bins_Init_list:
+lemma wf_earley_input_Init_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, Init_list cfg inp) \<in> wellformed_bins"
+  shows "(k, cfg, inp, Init_list cfg inp) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_Complete_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs!k)) \<le> i"
+lemma wf_earley_input_Complete_list:
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" "\<not> length (items (bs!k)) \<le> i"
   assumes "x = items (bs!k)!i" "next_symbol x = None"
-  shows "(k, cfg, inp, bins_upd bs k (Complete_list k x bs red)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs k (Complete_list k x bs red)) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_Scan_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs!k)) \<le> i"
+lemma wf_earley_input_Scan_list:
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" "\<not> length (items (bs!k)) \<le> i"
   assumes "x = items (bs!k)!i" "next_symbol x = Some a"
   assumes "is_terminal cfg a" "k < length inp"
-  shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_list k inp a x pre)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_list k inp a x pre)) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_Predict_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs!k)) \<le> i"
+lemma wf_earley_input_Predict_list:
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" "\<not> length (items (bs!k)) \<le> i"
   assumes "x = items (bs!k)!i" "next_symbol x = Some a" "\<not> is_terminal cfg a"
-  shows "(k, cfg, inp, bins_upd bs k (Predict_list k cfg a)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs k (Predict_list k cfg a)) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_E_list':
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
-  shows "(k, cfg, inp, E_list' k cfg inp bs i) \<in> wellformed_bins"
+lemma wf_earley_input_E_list':
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
+  shows "(k, cfg, inp, E_list' k cfg inp bs i) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_E_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
-  shows "(k, cfg, inp, E_list k cfg inp bs) \<in> wellformed_bins"
+lemma wf_earley_input_E_list:
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
+  shows "(k, cfg, inp, E_list k cfg inp bs) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_\<E>_list:
+lemma wf_earley_input_\<E>_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, \<E>_list k cfg inp) \<in> wellformed_bins"
+  shows "(k, cfg, inp, \<E>_list k cfg inp) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_earley_list:
+lemma wf_earley_input_earley_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, earley_list cfg inp) \<in> wellformed_bins"
+  shows "(k, cfg, inp, earley_list cfg inp) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
 lemma wf_bins_E_list':
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
   shows "wf_bins cfg inp (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
 lemma wf_bins_E_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
   shows "wf_bins cfg inp (E_list k cfg inp bs)"
 (*<*)
   sorry
@@ -313,7 +333,7 @@ lemma wf_bins_earley_list:
   sorry
 (*>*)
 
-section \<open>List to set\<close>
+section \<open>Soundness\<close>
 
 lemma Init_list_eq_Init:
   shows "bins_items (Init_list cfg inp) = Init cfg"
@@ -346,7 +366,7 @@ lemma Complete_list_sub_Complete:
 (*>*)
 
 lemma E_list'_sub_E:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "bins_items bs \<subseteq> I"
   shows "bins_items (E_list' k cfg inp bs i) \<subseteq> E k cfg inp I"
 (*<*)
@@ -354,7 +374,7 @@ lemma E_list'_sub_E:
 (*>*)
 
 lemma E_list_sub_E:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "bins_items bs \<subseteq> I"
   shows "bins_items (E_list k cfg inp bs) \<subseteq> E k cfg inp I"
 (*<*)
@@ -375,7 +395,7 @@ lemma earley_list_sub_earley:
   sorry
 (*>*)
 
-section \<open>Set to list\<close>
+section \<open>Completeness\<close>
 
 lemma impossible_complete_item:
   assumes "wf_cfg cfg" "wf_item cfg inp x" "sound_item cfg inp x"
@@ -408,14 +428,14 @@ lemma Complete_sub_bins_Un_Complete_list:
 (*>*)
 
 lemma E_list'_mono:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   shows "bins_items bs \<subseteq> bins_items (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
 lemma E_step_sub_E_list':
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k i) \<subseteq> bins_items bs"
   assumes "sound_items cfg inp (bins_items bs)" "is_sentence cfg inp" "nonempty_derives cfg"
   shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (E_list' k cfg inp bs i)"
@@ -424,7 +444,7 @@ lemma E_step_sub_E_list':
 (*>*)
 
 lemma E_step_sub_E_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs"
   assumes "sound_items cfg inp (bins_items bs)" "is_sentence cfg inp" "nonempty_derives cfg"
   shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
@@ -433,7 +453,7 @@ lemma E_step_sub_E_list:
 (*>*)
 
 lemma E_list'_bins_items_eq:
-  assumes "(k, cfg, inp, as) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, as) \<in> wf_earley_input"
   assumes "bins_eq_items as bs" "wf_bins cfg inp as"
   shows "bins_eq_items (E_list' k cfg inp as i) (E_list' k cfg inp bs i)"
 (*<*)
@@ -441,7 +461,7 @@ lemma E_list'_bins_items_eq:
 (*>*)
 
 lemma E_list'_idem:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "i \<le> j" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
   shows "bins_items (E_list' k cfg inp (E_list' k cfg inp bs i) j) = bins_items (E_list' k cfg inp bs i)"
 (*<*)
@@ -449,7 +469,7 @@ lemma E_list'_idem:
 (*>*)
 
 lemma E_list_idem:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
   shows "bins_items (E_list k cfg inp (E_list k cfg inp bs)) = bins_items (E_list k cfg inp bs)"
 (*<*)
@@ -457,7 +477,7 @@ lemma E_list_idem:
 (*>*)
 
 lemma funpower_E_step_sub_E_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
   assumes "is_sentence cfg inp" "nonempty_derives cfg"
   shows "funpower (E_step k cfg inp) n (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
@@ -466,7 +486,7 @@ lemma funpower_E_step_sub_E_list:
 (*>*)
 
 lemma E_sub_E_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
+  assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
   assumes "is_sentence cfg inp" "nonempty_derives cfg"
   shows "E k cfg inp (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"

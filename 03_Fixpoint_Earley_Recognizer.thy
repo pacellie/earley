@@ -6,7 +6,7 @@ theory "03_Fixpoint_Earley_Recognizer"
 begin
 (*>*)
 
-chapter \<open>Earley Formalization\<close>
+chapter \<open>Earley's Algorithm Formalization\<close>
 
 section \<open>Draft\<close>
 

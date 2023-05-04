@@ -38,31 +38,6 @@ if each of its sentences is unambiguous. A grammar is reduced if every nontermin
 of some sentence. A recognizer is an algorithm which takes a input a string and either accepts or rejects it
 depending on whether or not the string is a sentence of the grammer. A parser is a recogizer which also outputs
 the set of all legal derivation trees for the string.
-
-The algorithm scans an input string X1, ..., Xn from left to right. As eachsymbol Xi is scanned, a set of
-states Si is constructed which represents the condition of the recognition process at that point in the
-scan. Each state in the set represents (1) a production such that we are currently scanning a portion of
-the input string which is derived from its right side, (2) a point in that production which shows how much of the
-production's right side we have recognized so far, (3) a pointer back to the position in the input string
-at which we began to look for that instance of the production. In general, we operate on a state set Si as follows:
-we process the states in the set in order, performing one of three operatins on each one depending on the form
-of the state. These operations may add more states to Si and may also put states in a new state set Si+1. We
-describe the operations by example: ... The predictor operation is applicable to a state when there is a nonterminal
-to  the right of the dot. It causes us to add one new state to Si for each alternative of that nonterminal.
-We put the dot at the beginning of the production in each new state, since we have not scanned any of its symbols yet.
-The pointer is set to i, since the state was created in Si. Thus the predictor adds to Si all the productions
-which might generate substrings beginning at Xi+1. The scanner is applicable in case there is a terminal to the right
-of the dot. The scanner compares that symbol with Xi+1 and if they match, it adds the state to Si+1 with the dot
-moved over one in the state to indicate that that terminal symbol has been scanned. If we finish processing Si and
-Si+1 remains empty an error has occurred in the input string. Otherwise, we start to process Si+1.
-The completer is applicable to a state if its dot is at the end of its production. It goes back to the state set
-indicated by its pointer and adds all states from this state set which have the dot in front of its nonterminal.
-It then moves over the dot. Intuitively, the origin state set is the state set we were in when we went looking
-for that nonterminal. We have now found it, so we go back to all the states which caused us to look for it, and move
-the dot over in these states to show that it has been successfully scanned. If the algorithm ever produces an Si+1
-consisting of the single state S -> alpha dot, 0, n, then the sentence is part of the grammar. Note that the algorithm
-is in effect a top-down parser in which we carry along all possible parses simultaneously in such a way that we can often
-combine like subparses.
 \<close>
 
 section\<open>Scott\<close>
@@ -131,20 +106,6 @@ text\<open>
 Earley's parsing algorithm is a general algorithm, capable of parsing according to any context-free
 grammar. General parsing algorithms like Earley parsing allow unfettered expression of ambiguous grammar
 contructs which come up often in practice (REFERENCE).
-
-Earley parsers operate by constructing a sequence of sets, sometime called Earley sets. Given an input
-$x_1 x_2 \dots x_n$ the parser builds $n+1$ sets: an initial set $S_0$ and one set $S_i$ for each input
-symbol $x_i$. Elements of these sets are referred to as Earley items, which consist of three parts:
-a grammar rule, a position in the right-hand side of the rule indicating how much of that rule has been
-seen and a pointer to an earlier Earley set. Typically Earley items are written as $\dots$ where the position
-in the rule's right-hand side is denoted by a dot and $j$ is a pointer to set $S_j$.
-An Earley set $S_i$ is computed from an initial set of Earley items in $S_i$ and $S_{i+1}$ is initialized, by
-applying the followingn three steps to the items in $S_i$ until no more can be added. $\dots$
-An item is added to a set only if it is not in the set already. The initial set $S_0$ contains the items $\dots$
-to begin with. If the final set contains the item $\dots$ then the input is accepted.
-
-We have not used a lookahead in this description of Earley parsing since it's primary purpose is to
-increase the efficieny of the Earley parser on a large class of grammars (REFERENCE).
 
 In terms of implementation, the Earley sets are built in increasing order as the input is read. Also,
 each set is typically represented as a list of items. This list representation of a set is particularly

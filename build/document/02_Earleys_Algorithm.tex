@@ -66,6 +66,51 @@
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
+EARLEY:
+
+The algorithm scans an input string X1, ..., Xn from left to right. As eachsymbol Xi is scanned, a set of
+states Si is constructed which represents the condition of the recognition process at that point in the
+scan. Each state in the set represents (1) a production such that we are currently scanning a portion of
+the input string which is derived from its right side, (2) a point in that production which shows how much of the
+production's right side we have recognized so far, (3) a pointer back to the position in the input string
+at which we began to look for that instance of the production. In general, we operate on a state set Si as follows:
+we process the states in the set in order, performing one of three operatins on each one depending on the form
+of the state. These operations may add more states to Si and may also put states in a new state set Si+1. We
+describe the operations by example: ... The predictor operation is applicable to a state when there is a nonterminal
+to  the right of the dot. It causes us to add one new state to Si for each alternative of that nonterminal.
+We put the dot at the beginning of the production in each new state, since we have not scanned any of its symbols yet.
+The pointer is set to i, since the state was created in Si. Thus the predictor adds to Si all the productions
+which might generate substrings beginning at Xi+1. The scanner is applicable in case there is a terminal to the right
+of the dot. The scanner compares that symbol with Xi+1 and if they match, it adds the state to Si+1 with the dot
+moved over one in the state to indicate that that terminal symbol has been scanned. If we finish processing Si and
+Si+1 remains empty an error has occurred in the input string. Otherwise, we start to process Si+1.
+The completer is applicable to a state if its dot is at the end of its production. It goes back to the state set
+indicated by its pointer and adds all states from this state set which have the dot in front of its nonterminal.
+It then moves over the dot. Intuitively, the origin state set is the state set we were in when we went looking
+for that nonterminal. We have now found it, so we go back to all the states which caused us to look for it, and move
+the dot over in these states to show that it has been successfully scanned. If the algorithm ever produces an Si+1
+consisting of the single state S -> alpha dot, 0, n, then the sentence is part of the grammar. Note that the algorithm
+is in effect a top-down parser in which we carry along all possible parses simultaneously in such a way that we can often
+combine like subparses.
+
+AYCOCK:
+
+Earley parsers operate by constructing a sequence of sets, sometime called Earley sets. Given an input
+$x_1 x_2 \dots x_n$ the parser builds $n+1$ sets: an initial set $S_0$ and one set $S_i$ for each input
+symbol $x_i$. Elements of these sets are referred to as Earley items, which consist of three parts:
+a grammar rule, a position in the right-hand side of the rule indicating how much of that rule has been
+seen and a pointer to an earlier Earley set. Typically Earley items are written as $\dots$ where the position
+in the rule's right-hand side is denoted by a dot and $j$ is a pointer to set $S_j$.
+An Earley set $S_i$ is computed from an initial set of Earley items in $S_i$ and $S_{i+1}$ is initialized, by
+applying the followingn three steps to the items in $S_i$ until no more can be added. $\dots$
+An item is added to a set only if it is not in the set already. The initial set $S_0$ contains the items $\dots$
+to begin with. If the final set contains the item $\dots$ then the input is accepted.
+
+We have not used a lookahead in this description of Earley parsing since it's primary purpose is to
+increase the efficieny of the Earley parser on a large class of grammars (REFERENCE).%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
 \begin{figure}[htpb]
     \centering
 
@@ -86,7 +131,7 @@
       {$A \rightarrow \, \alpha \bullet B \beta, i, j$ \\ $B \rightarrow \, \gamma \bullet, j, k$}
       {$A \rightarrow \, \alpha B \bullet \beta, i, k$}
     \end{mathpar}
-    \caption[Earley Inference Rules]{Earley inference rules}\label{fig:earley-inference-rules}
+    \caption[Earley inference rules]{Earley inference rules}\label{fig:earley-inference-rules}
   \end{figure}%
 \end{isamarkuptext}\isamarkuptrue%
 %
@@ -101,7 +146,7 @@ $S \rightarrow \, x$ $S \rightarrow \, S + S$%
 %
 \begin{isamarkuptext}%
 \begin{table}[htpb]
-    \caption[Earley Items]{Earley items for the CFG $S \rightarrow \, x$, $S \rightarrow \, S + S$}\label{tab:earley-items}
+    \caption[Earley items running example]{Earley items for the grammar \isa{{\isasymG}}: $S \rightarrow \, x$, $S \rightarrow \, S + S$}\label{tab:earley-items}
     \centering
     \begin{tabular}{| l | l | l |}
         $B_0$                                   & $B_1$                                    & $B_2$                                \\
@@ -152,50 +197,92 @@ $S \rightarrow \, x$ $S \rightarrow \, S + S$%
 %:%47=20%:%
 %:%48=21%:%
 %:%57=24%:%
-%:%69=27%:%
-%:%70=28%:%
-%:%71=29%:%
-%:%72=30%:%
-%:%73=31%:%
-%:%74=32%:%
-%:%75=33%:%
-%:%76=34%:%
-%:%77=35%:%
-%:%78=36%:%
-%:%79=37%:%
-%:%80=38%:%
-%:%81=39%:%
-%:%82=40%:%
-%:%83=41%:%
-%:%84=42%:%
-%:%85=43%:%
-%:%86=44%:%
-%:%87=45%:%
-%:%88=46%:%
-%:%89=47%:%
-%:%90=48%:%
-%:%94=52%:%
-%:%95=53%:%
-%:%99=56%:%
-%:%103=59%:%
-%:%104=60%:%
-%:%105=61%:%
-%:%106=62%:%
-%:%107=63%:%
-%:%108=64%:%
-%:%109=65%:%
-%:%110=66%:%
-%:%111=67%:%
-%:%112=68%:%
-%:%113=69%:%
-%:%114=70%:%
-%:%115=71%:%
-%:%116=72%:%
-%:%117=73%:%
-%:%118=74%:%
-%:%119=75%:%
-%:%120=76%:%
-%:%121=77%:%
-%:%122=78%:%
-%:%123=79%:%
-%:%124=80%:%
+%:%69=28%:%
+%:%70=29%:%
+%:%71=30%:%
+%:%72=31%:%
+%:%73=32%:%
+%:%74=33%:%
+%:%75=34%:%
+%:%76=35%:%
+%:%77=36%:%
+%:%78=37%:%
+%:%79=38%:%
+%:%80=39%:%
+%:%81=40%:%
+%:%82=41%:%
+%:%83=42%:%
+%:%84=43%:%
+%:%85=44%:%
+%:%86=45%:%
+%:%87=46%:%
+%:%88=47%:%
+%:%89=48%:%
+%:%90=49%:%
+%:%91=50%:%
+%:%92=51%:%
+%:%93=52%:%
+%:%94=53%:%
+%:%95=54%:%
+%:%96=55%:%
+%:%97=56%:%
+%:%98=57%:%
+%:%99=58%:%
+%:%100=59%:%
+%:%101=60%:%
+%:%102=61%:%
+%:%103=62%:%
+%:%104=63%:%
+%:%105=64%:%
+%:%106=65%:%
+%:%107=66%:%
+%:%108=67%:%
+%:%109=68%:%
+%:%110=69%:%
+%:%114=73%:%
+%:%115=74%:%
+%:%116=75%:%
+%:%117=76%:%
+%:%118=77%:%
+%:%119=78%:%
+%:%120=79%:%
+%:%121=80%:%
+%:%122=81%:%
+%:%123=82%:%
+%:%124=83%:%
+%:%125=84%:%
+%:%126=85%:%
+%:%127=86%:%
+%:%128=87%:%
+%:%129=88%:%
+%:%130=89%:%
+%:%131=90%:%
+%:%132=91%:%
+%:%133=92%:%
+%:%134=93%:%
+%:%135=94%:%
+%:%139=98%:%
+%:%140=99%:%
+%:%144=102%:%
+%:%148=105%:%
+%:%149=106%:%
+%:%150=107%:%
+%:%151=108%:%
+%:%152=109%:%
+%:%153=110%:%
+%:%154=111%:%
+%:%155=112%:%
+%:%156=113%:%
+%:%157=114%:%
+%:%158=115%:%
+%:%159=116%:%
+%:%160=117%:%
+%:%161=118%:%
+%:%162=119%:%
+%:%163=120%:%
+%:%164=121%:%
+%:%165=122%:%
+%:%166=123%:%
+%:%167=124%:%
+%:%168=125%:%
+%:%169=126%:%
