@@ -3,6 +3,8 @@ theory Earley_Recognizer_Executable
     Earley
 begin
 
+unused_thms CFG - Earley
+
 section \<open>Earley recognizer\<close>
 
 subsection \<open>List auxilaries\<close>

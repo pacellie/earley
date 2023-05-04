@@ -1,14 +1,12 @@
 (*<*)
 theory "06_Examples"
   imports
-    "../Examples"
+    "05_Earley_Parser"
     "HOL-Library.LaTeXsugar"
 begin
 (*>*)
 
-chapter \<open>Examples\<close>
-
-section \<open>epsilon free CFG\<close>
+chapter \<open>Usage\<close>
 
 definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
   "\<epsilon>_free cfg \<longleftrightarrow> (\<forall>r \<in> set (\<RR> cfg). rule_body r \<noteq> [])"
@@ -19,123 +17,54 @@ lemma \<epsilon>_free_impl_non_empty_deriv:
   sorry  
 (*>*)
 
-section \<open>Example 1: Addition\<close>
+datatype t = x | plus
+datatype n = S
+datatype s = Terminal t | Nonterminal n
 
-datatype t1 = x | plus
-datatype n1 = S
-datatype s1 = Terminal t1 | Nonterminal n1
+definition nonterminals :: "s list" where
+  "nonterminals = [Nonterminal S]"
 
-definition nonterminals1 :: "s1 list" where
-  "nonterminals1 = [Nonterminal S]"
+definition terminals :: "s list" where
+  "terminals = [Terminal x, Terminal plus]"
 
-definition terminals1 :: "s1 list" where
-  "terminals1 = [Terminal x, Terminal plus]"
-
-definition rules1 :: "s1 rule list" where
-  "rules1 = [
+definition rules :: "s rule list" where
+  "rules = [
     (Nonterminal S, [Terminal x]),
     (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])
   ]"
 
-definition start_symbol1 :: s1 where
-  "start_symbol1 = Nonterminal S"
+definition start_symbol :: s where
+  "start_symbol = Nonterminal S"
 
-definition cfg1 :: "s1 cfg" where
-  "cfg1 = CFG nonterminals1 terminals1 rules1 start_symbol1"
+definition cfg :: "s cfg" where
+  "cfg = CFG nonterminals terminals rules start_symbol"
 
-definition inp1 :: "s1 list" where
-  "inp1 = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
+definition inp :: "s list" where
+  "inp = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
 
-lemma wf_cfg1:
-  shows "wf_cfg cfg1"
+lemma wf_cfg:
+  shows "wf_cfg cfg"
 (*<*)
   sorry  
 (*>*)
 
-lemma is_word_inp1:
-  shows "is_word cfg1 inp1"
+lemma is_sentence_inp:
+  shows "is_sentence cfg inp"
 (*<*)
   sorry  
 (*>*)
 
-lemma nonempty_derives1:
-  shows "nonempty_derives cfg1"
+lemma nonempty_derives:
+  shows "nonempty_derives cfg"
 (*<*)
   sorry  
 (*>*)
 
-lemma correctness1:
-  shows "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+lemma correctness:
+  shows "earley_recognized_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry  
 (*>*)
-
-fun size_bins :: "'a bins \<Rightarrow> nat" where
-  "size_bins bs = fold (+) (map length bs) 0"
-
-value "\<II>_it cfg1 inp1"
-value "size_bins (\<II>_it cfg1 inp1)"
-value "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1"
-value "build_trees cfg1 inp1 (\<II>_it cfg1 inp1)"
-value "map_option (map trees) (build_trees cfg1 inp1 (\<II>_it cfg1 inp1))"
-value "map_option (foldl (+) 0 \<circ> map length) (map_option (map trees) (build_trees cfg1 inp1 (\<II>_it cfg1 inp1)))"
-
-subsection \<open>Example 2: Cyclic reduction pointers\<close>
-
-datatype t2 = x
-datatype n2 = A | B
-datatype s2 = Terminal t2 | Nonterminal n2
-
-definition nonterminals2 :: "s2 list" where
-  "nonterminals2 = [Nonterminal A, Nonterminal B]"
-
-definition terminals2 :: "s2 list" where
-  "terminals2 = [Terminal x]"
-
-definition rules2 :: "s2 rule list" where
-  "rules2 = [
-    (Nonterminal B, [Nonterminal A]),
-    (Nonterminal A, [Nonterminal B]),
-    (Nonterminal A, [Terminal x])
-  ]"
-
-definition start_symbol2 :: s2 where
-  "start_symbol2 = Nonterminal A"
-
-definition cfg2 :: "s2 cfg" where
-  "cfg2 = CFG nonterminals2 terminals2 rules2 start_symbol2"
-
-definition inp2 :: "s2 list" where
-  "inp2 = [Terminal x]"
-
-lemma wf_cfg2:
-  shows "wf_cfg cfg2"
-(*<*)
-  sorry  
-(*>*)
-
-lemma is_word_inp2:
-  shows "is_word cfg2 inp2"
-(*<*)
-  sorry  
-(*>*)
-
-lemma nonempty_derives2:
-  shows "nonempty_derives cfg2"
-(*<*)
-  sorry  
-(*>*)
-
-lemma correctness2:
-  shows "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
-(*<*)
-  sorry  
-(*>*)
-
-value "\<II>_it cfg2 inp2"
-value "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2"
-value "build_trees cfg2 inp2 (\<II>_it cfg2 inp2)"
-value "map_option (map trees) (build_trees cfg2 inp2 (\<II>_it cfg2 inp2))"
 
 (*<*)
 end

@@ -12,6 +12,7 @@ section \<open>Draft\<close>
 
 text\<open>
   \begin{itemize}
+    \item Introduce background theory about CFG and Isabelle syntax
     \item explain the auxiliary definitions until earley\_recognized, the small ones incorporated into
       text, the big ones as definitions \\
     \item explain Init, Scan, Predict, Complete REFERENCE and relate them back to the previous chapter \\
@@ -24,6 +25,78 @@ text\<open>
     \item explain finiteness proof
   \end{itemize}
 \<close>
+
+section\<open>Background Theory\<close>
+
+type_synonym 'a rule = "'a \<times> 'a list"
+type_synonym 'a rules = "'a rule list"
+type_synonym 'a sentential = "'a list"
+
+datatype 'a cfg = 
+  CFG 
+    (\<NN> : "'a list") 
+    (\<TT> : "'a list") 
+    (\<RR> : "'a rules")
+    (\<SS> : "'a")
+
+definition derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "derives1 cfg u v \<equiv>
+     \<exists> x y N \<alpha>. 
+         u = x @ [N] @ y
+       \<and> v = x @ \<alpha> @ y
+       \<and> (N, \<alpha>) \<in> set (\<RR> cfg)"  
+
+definition derivations1 :: "'a cfg \<Rightarrow> ('a sentential \<times> 'a sentential) set" where
+  "derivations1 cfg = { (u,v) | u v. derives1 cfg u v }"
+
+definition derivations :: "'a cfg \<Rightarrow> ('a sentential \<times> 'a sentential) set" where 
+  "derivations cfg = (derivations1 cfg)^*"
+
+definition derives :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "derives cfg u v \<equiv> (u, v) \<in> derivations cfg"
+
+fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "slice _ _ [] = []"
+| "slice _ 0 (x#xs) = []"
+| "slice 0 (Suc b) (x#xs) = x # slice 0 b xs"
+| "slice (Suc a) (Suc b) (x#xs) = slice a b xs"
+
+lemma slice_append:
+  assumes "a \<le> b" "b \<le> c"
+  shows "slice a b xs @ slice b c xs = slice a c xs"
+(*<*)
+  sorry
+(*>*)
+
+definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
+  "disjunct_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
+
+definition wf_startsymbol :: "'a cfg \<Rightarrow> bool" where
+  "wf_startsymbol cfg \<longleftrightarrow> \<SS> cfg \<in> set (\<NN> cfg)"
+
+definition wf_rules :: "'a cfg \<Rightarrow> bool" where
+  "wf_rules cfg \<equiv> \<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg) \<and> (\<forall>s \<in> set \<alpha>. s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg))"
+
+definition distinct_rules :: "'a cfg \<Rightarrow> bool" where
+  "distinct_rules cfg = distinct (\<RR> cfg)"
+
+definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
+  "wf_cfg cfg \<longleftrightarrow> disjunct_symbols cfg \<and> wf_startsymbol cfg \<and> wf_rules cfg \<and> distinct_rules cfg"
+
+definition is_terminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_terminal cfg s \<equiv> s \<in> set (\<TT> cfg)"
+
+definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_nonterminal cfg s \<equiv> s \<in> set (\<NN> cfg)"
+
+definition is_symbol :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_symbol cfg s \<longleftrightarrow> is_terminal cfg s \<or> is_nonterminal cfg s"
+
+definition wf_sentential :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "wf_sentential cfg s \<equiv> \<forall>x \<in> set s. is_symbol cfg x"
+
+definition is_sentence :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "is_sentence cfg s \<equiv> \<forall>x \<in> set s. is_terminal cfg x"
 
 section \<open>Definitions\<close>
 
@@ -45,23 +118,23 @@ type_synonym 'a items = "'a item set"
 definition item_rule_head :: "'a item \<Rightarrow> 'a" where
   "item_rule_head x = rule_head (item_rule x)"
 
-definition item_rule_body :: "'a item \<Rightarrow> 'a sentence" where
+definition item_rule_body :: "'a item \<Rightarrow> 'a sentential" where
   "item_rule_body x = rule_body (item_rule x)"
 
-definition item_\<alpha> :: "'a item \<Rightarrow> 'a sentence" where
+definition item_\<alpha> :: "'a item \<Rightarrow> 'a sentential" where
   "item_\<alpha> x = take (item_dot x) (item_rule_body x)"
 
-definition item_\<beta> :: "'a item \<Rightarrow> 'a sentence" where 
+definition item_\<beta> :: "'a item \<Rightarrow> 'a sentential" where 
   "item_\<beta> x = drop (item_dot x) (item_rule_body x)"
 
 definition init_item :: "'a rule \<Rightarrow> nat \<Rightarrow> 'a item" where
   "init_item r k = Item r 0 k k"
 
 definition is_complete :: "'a item \<Rightarrow> bool" where
-  "is_complete x = (item_dot x \<ge> length (item_rule_body x))"
+  "is_complete x \<equiv> item_dot x \<ge> length (item_rule_body x)"
 
 definition next_symbol :: "'a item \<Rightarrow> 'a option" where
-  "next_symbol x = (if is_complete x then None else Some ((item_rule_body x) ! (item_dot x)))"
+  "next_symbol x \<equiv> if is_complete x then None else Some ((item_rule_body x) ! (item_dot x))"
 
 definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
   "inc_item x k = Item (item_rule x) (item_dot x + 1) (item_origin x) k"
@@ -69,30 +142,30 @@ definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
 definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
   "bin I k = { x . x \<in> I \<and> item_end x = k }"
 
-definition wf_item :: "'a cfg \<Rightarrow> 'a sentence => 'a item \<Rightarrow> bool" where 
-  "wf_item cfg inp x = (
+definition wf_item :: "'a cfg \<Rightarrow> 'a sentential => 'a item \<Rightarrow> bool" where 
+  "wf_item cfg inp x \<equiv> 
     item_rule x \<in> set (\<RR> cfg) \<and> 
     item_dot x \<le> length (item_rule_body x) \<and>
     item_origin x \<le> item_end x \<and> 
-    item_end x \<le> length inp)"
+    item_end x \<le> length inp"
 
-definition wf_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> bool" where
-  "wf_items cfg inp I = (\<forall>x \<in> I. wf_item cfg inp x)"
+definition wf_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> bool" where
+  "wf_items cfg inp I \<equiv> \<forall>x \<in> I. wf_item cfg inp x"
 
-definition is_finished :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "is_finished cfg inp x \<longleftrightarrow> (
+definition is_finished :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "is_finished cfg inp x \<equiv> 
     item_rule_head x = \<SS> cfg \<and>
     item_origin x = 0 \<and>
     item_end x = length inp \<and> 
-    is_complete x)"
+    is_complete x"
 
-definition earley_recognized :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "earley_recognized I cfg inp = (\<exists>x \<in> I. is_finished cfg inp x)"
+definition earley_recognized :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "earley_recognized I cfg inp \<equiv> \<exists>x \<in> I. is_finished cfg inp x"
 
 definition Init :: "'a cfg \<Rightarrow> 'a items" where
   "Init cfg = { init_item r 0 | r. r \<in> set (\<RR> cfg) \<and> fst r = (\<SS> cfg) }"
 
-definition Scan :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+definition Scan :: "nat \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
   "Scan k inp I = 
     { inc_item x (k+1) | x a.
         x \<in> bin I k \<and>
@@ -125,18 +198,18 @@ definition natUnion :: "(nat \<Rightarrow> 'a set) \<Rightarrow> 'a set" where
 definition limit  :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
   "limit f x = natUnion (\<lambda> n. funpower f n x)"
 
-definition \<pi>_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "\<pi>_step k cfg inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k cfg I"
+definition E_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "E_step k cfg inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k cfg I"
 
-definition \<pi> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "\<pi> k cfg inp I = limit (\<pi>_step k cfg inp) I"
+definition E :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "E k cfg inp I = limit (E_step k cfg inp) I"
 
-fun \<I> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items" where
-  "\<I> 0 cfg inp = \<pi> 0 cfg inp (Init cfg)"
-| "\<I> (Suc n) cfg inp = \<pi> (Suc n) cfg inp (\<I> n cfg inp)"
+fun \<E> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
+  "\<E> 0 cfg inp = E 0 cfg inp (Init cfg)"
+| "\<E> (Suc n) cfg inp = E (Suc n) cfg inp (\<E> n cfg inp)"
 
-definition \<II> :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items" where
-  "\<II> cfg inp = \<I> (length inp) cfg inp"
+definition earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
+  "earley cfg inp = \<E> (length inp) cfg inp"
 
 section \<open>Wellformedness\<close>
 
@@ -156,58 +229,58 @@ lemma wf_Scan_Predict_Complete:
 (*>*)
 text\<open>by definition\<close>
 
-lemma wf_\<pi>_step:
+lemma wf_E_step:
   assumes "wf_items cfg inp I"
-  shows "wf_items cfg inp (\<pi>_step k cfg inp I)"
+  shows "wf_items cfg inp (E_step k cfg inp I)"
 (*<*)
   sorry
 (*>*)
-text\<open>@{term wf_Scan_Predict_Complete} by definition\<close>
+text\<open>@{thm[source] wf_Scan_Predict_Complete} by definition\<close>
 
 lemma wf_funpower:
   assumes "wf_items cfg inp I"
-  shows " wf_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
+  shows " wf_items cfg inp (funpower (E_step k cfg inp) n I)"
 (*<*)
   sorry
 (*>*)
-text\<open>@{term wf_\<pi>_step}, by induction on n\<close>
+text\<open>@{thm[source] wf_E_step}, by induction on n\<close>
 
-lemma wf_\<pi>:
+lemma wf_E:
   assumes "wf_items cfg inp I"
-  shows "wf_items cfg inp (\<pi> k cfg inp I)"
+  shows "wf_items cfg inp (E k cfg inp I)"
 (*<*)
   sorry
 (*>*)
-text\<open>@{term wf_funpower} by definition\<close>
+text\<open>@{thm[source] wf_funpower} by definition\<close>
 
-lemma wf_\<pi>0:
-  shows "wf_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
+lemma wf_E0:
+  shows "wf_items cfg inp (E 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
-text\<open>@{term wf_Init} @{term wf_\<pi>} by definition\<close>
+text\<open>@{thm[source] wf_Init} @{term wf_E} by definition\<close>
 
-lemma wf_\<I>:
-  shows "wf_items cfg inp (\<I> n cfg inp)"
+lemma wf_\<E>:
+  shows "wf_items cfg inp (\<E> n cfg inp)"
 (*<*)
   sorry
 (*>*)
-text\<open>@{term wf_\<pi>0} @{term wf_\<pi>} by induction on n\<close>
+text\<open>@{thm[source] wf_E0} @{thm[source] wf_E} by induction on n\<close>
 
-lemma wf_\<II>:
-  shows "wf_items cfg inp (\<II> cfg inp)"
+lemma wf_earley:
+  shows "wf_items cfg inp (earley cfg inp)"
 (*<*)
   sorry
 (*>*)
-text\<open>@{term wf_\<I>} by definition\<close>
+text\<open>@{thm[source] wf_\<E>} by definition\<close>
 
 section \<open>Soundness\<close>
 
-definition sound_item :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
+definition sound_item :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a item \<Rightarrow> bool" where
   "sound_item cfg inp x = derives cfg [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
 
-definition sound_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> bool" where
-  "sound_items cfg inp I = (\<forall>x \<in> I. sound_item cfg inp x)"
+definition sound_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> bool" where
+  "sound_items cfg inp I \<equiv> \<forall>x \<in> I. sound_item cfg inp x"
 
 lemma sound_Init:
   shows "sound_items cfg inp (Init cfg)"
@@ -244,218 +317,98 @@ lemma sound_Complete:
   sorry
 (*>*)
 
-lemma sound_\<pi>_step:
+lemma sound_E_step:
   assumes "wf_items cfg inp I" "sound_items cfg inp I" 
-  shows "sound_items cfg inp (\<pi>_step k cfg inp I)"
+  shows "sound_items cfg inp (E_step k cfg inp I)"
 (*<*)
   sorry
 (*>*)
 
 lemma sound_funpower:
   assumes "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
+  shows "sound_items cfg inp (funpower (E_step k cfg inp) n I)"
 (*<*)
   sorry
 (*>*)
 
-lemma sound_\<pi>:
+lemma sound_E:
   assumes "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (\<pi> k cfg inp I)"
+  shows "sound_items cfg inp (E k cfg inp I)"
 (*<*)
   sorry
 (*>*)
 
-lemma sound_\<pi>0:
-  shows "sound_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
+lemma sound_E0:
+  shows "sound_items cfg inp (E 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
 
-lemma sound_\<I>:
-  shows "sound_items cfg inp (\<I> k cfg inp)"
+lemma sound_\<E>:
+  shows "sound_items cfg inp (\<E> k cfg inp)"
 (*<*)
   sorry
 (*>*)
 
-lemma sound_\<II>:
-  shows "sound_items cfg inp (\<II> cfg inp)"
+lemma sound_earley:
+  shows "sound_items cfg inp (earley cfg inp)"
 (*<*)
   sorry
 (*>*)
 
 theorem soundness:
-  shows "earley_recognized (\<II> cfg inp) cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
-(*<*)
-  sorry
-(*>*)
-
-section \<open>Monotonicity and Absorption\<close>
-
-lemma \<pi>_idem:
-  shows "\<pi> k cfg inp (\<pi> k cfg inp I) = \<pi> k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Scan_bin_absorb:
-  shows "Scan k inp (bin I k) = Scan k inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Predict_bin_absorb:
-  shows "Predict k cfg (bin I k) = Predict k cfg I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Complete_bin_absorb:
-  shows "Complete k (bin I k) \<subseteq> Complete k I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Scan_Predict_Complete_sub_mono:
-  assumes "I \<subseteq> J"
-  shows "Scan k inp I \<subseteq> Scan k inp J" "Predict k cfg I \<subseteq> Predict k cfg J" "Complete k I \<subseteq> Complete k J"
-(*<*)
-  sorry
-(*>*)
-
-lemma \<pi>_step_sub_mono:
-  assumes "I \<subseteq> J"
-  shows "\<pi>_step k cfg inp I \<subseteq> \<pi>_step k cfg inp J"
-(*<*)
-  sorry
-(*>*)
-
-lemma funpower_sub_mono:
-  assumes "I \<subseteq> J"
-  shows "funpower (\<pi>_step k cfg inp) n I \<subseteq> funpower (\<pi>_step k cfg inp) n J"
-(*<*)
-  sorry
-(*>*)
-
-lemma \<pi>_sub_mono:
-  assumes "I \<subseteq> J"
-  shows "\<pi> k cfg inp I \<subseteq> \<pi> k cfg inp J"
-(*<*)
-  sorry
-(*>*)
-
-lemma Scan_Predict_Complete_\<pi>_step_mono:
-  shows "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi>_step k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma \<pi>_step_\<pi>_mono:
-  shows "\<pi>_step k cfg inp I \<subseteq> \<pi> k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Scan_Predict_Complete_\<pi>_mono:
-  shows "Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> \<pi> k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma \<pi>_mono:
-  shows "I \<subseteq> \<pi> k cfg inp I"
-(*<*)
-  sorry
-(*>*)
-
-lemma Scan_bin_empty:
-  assumes "i \<noteq> k" "i \<noteq> k+1"
-  shows "bin (Scan k inp I) i = {}"
-(*<*)
-  sorry
-(*>*)
-
-lemma Predict_bin_empty:
-  assumes "i \<noteq> k"
-  shows "bin (Predict k cfg I) i = {}"
-(*<*)
-  sorry
-(*>*)
-
-lemma Complete_bin_empty:
-  assumes "i \<noteq> k" 
-  shows "bin (Complete k I) i = {}"
-(*<*)
-  sorry
-(*>*)
-
-lemma \<pi>_step_bin_absorb:
-  assumes "i \<noteq> k" "i \<noteq> k + 1"
-  shows "bin (\<pi>_step k cfg inp I) i = bin I i"
-(*<*)
-  sorry
-(*>*)
-
-lemma funpower_bin_absorb:
-  assumes "i \<noteq> k" "i \<noteq> k+1"
-  shows "bin (funpower (\<pi>_step k cfg inp) n I) i = bin I i"
-(*<*)
-  sorry
-(*>*)
-
-lemma \<pi>_bin_absorb:
-  assumes "i \<noteq> k" "i \<noteq> k+1" 
-  shows "bin (\<pi> k cfg inp I) i = bin I i"
+  assumes "earley_recognized (earley cfg inp) cfg inp"
+  shows "derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)
 
 section \<open>Completeness\<close>
 
-lemma Scan_\<I>:
-  assumes "i+1 \<le> k" "k \<le> length inp" "x \<in> bin (\<I> k cfg inp) i"
+lemma Scan_\<E>:
+  assumes "i+1 \<le> k" "k \<le> length inp" "x \<in> bin (\<E> k cfg inp) i"
   assumes "next_symbol x = Some a" "inp!i = a"
-  shows "inc_item x (i+1) \<in> \<I> k cfg inp"
+  shows "inc_item x (i+1) \<in> \<E> k cfg inp"
 (*<*)
   sorry
 (*>*)
 
-lemma Predict_\<I>:
-  assumes "i \<le> k" "x \<in> bin (\<I> k cfg inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set (\<RR> cfg)"
-  shows "init_item (N,\<alpha>) i \<in> \<I> k cfg inp"
+lemma Predict_\<E>:
+  assumes "i \<le> k" "x \<in> bin (\<E> k cfg inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set (\<RR> cfg)"
+  shows "init_item (N,\<alpha>) i \<in> \<E> k cfg inp"
 (*<*)
   sorry
 (*>*)
 
-lemma Complete_\<I>:
-  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<I> k cfg inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set (\<RR> cfg)"
-  assumes "i = item_origin y" "y \<in> bin (\<I> k cfg inp) j" "item_rule y = (N,\<alpha>)" "is_complete y"
-  shows "inc_item x j \<in> \<I> k cfg inp"
+lemma Complete_\<E>:
+  assumes "i \<le> j" "j \<le> k" "x \<in> bin (\<E> k cfg inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set (\<RR> cfg)"
+  assumes "i = item_origin y" "y \<in> bin (\<E> k cfg inp) j" "item_rule y = (N,\<alpha>)" "is_complete y"
+  shows "inc_item x j \<in> \<E> k cfg inp"
 (*<*)
   sorry
 (*>*)
 
 type_synonym 'a derivation = "(nat \<times> 'a rule) list"
 
-definition Derives1 :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a rule \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "Derives1 cfg u i r v = 
-     (\<exists> x y N \<alpha>. 
+definition Derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a rule \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "Derives1 cfg u i r v \<equiv> 
+     \<exists> x y N \<alpha>. 
           u = x @ [N] @ y
         \<and> v = x @ \<alpha> @ y
         \<and> (N, \<alpha>) \<in> set (\<RR> cfg)
-        \<and> r = (N, \<alpha>) \<and> i = length x)"
+        \<and> r = (N, \<alpha>) \<and> i = length x"
 
-fun Derivation :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a derivation \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+fun Derivation :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a derivation \<Rightarrow> 'a sentential \<Rightarrow> bool" where
   "Derivation _ a [] b = (a = b)"
 | "Derivation cfg a (d#D) b = (\<exists> x. Derives1 cfg a (fst d) (snd d) x \<and> Derivation cfg x D b)"
 
-definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
-  "partially_completed k cfg inp I P = (
+definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
+  "partially_completed k cfg inp I P \<equiv>
     \<forall>i j x a D.
       i \<le> j \<and> j \<le> k \<and> k \<le> length inp \<and>
       x \<in> bin I i \<and> next_symbol x = Some a \<and>
       Derivation cfg [a] D (slice i j inp) \<and> P D \<longrightarrow>
-      inc_item x j \<in> I
-  )"
+      inc_item x j \<in> I"
 
 lemma fully_completed:
   assumes "j \<le> k" "k \<le> length inp"
@@ -467,30 +420,30 @@ lemma fully_completed:
   sorry
 (*>*)
 
-lemma partially_completed_\<I>:
+lemma partially_completed_\<E>:
   assumes "wf_cfg cfg"
-  shows "partially_completed k cfg inp (\<I> k cfg inp) (\<lambda>_. True)"
+  shows "partially_completed k cfg inp (\<E> k cfg inp) (\<lambda>_. True)"
 (*<*)
   sorry
 (*>*)
 
-lemma partially_completed_\<II>:
+lemma partially_completed_earley:
   assumes "wf_cfg cfg"
-  shows "partially_completed (length inp) cfg inp (\<II> cfg inp) (\<lambda>_. True)"
+  shows "partially_completed (length inp) cfg inp (earley cfg inp) (\<lambda>_. True)"
 (*<*)
   sorry
 (*>*)
 
 theorem completeness:
-  assumes "derives cfg [\<SS> cfg] inp" "is_word cfg inp" "wf_cfg cfg"
-  shows "earley_recognized (\<II> cfg inp) cfg inp"
+  assumes "derives cfg [\<SS> cfg] inp" "is_sentence cfg inp" "wf_cfg cfg"
+  shows "earley_recognized (earley cfg inp) cfg inp"
 (*<*)
   sorry
 (*>*)
 
 corollary
-  assumes "wf_cfg cfg" "is_word cfg inp"
-  shows "earley_recognized (\<II> cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  assumes "wf_cfg cfg" "is_sentence cfg inp"
+  shows "earley_recognized (earley cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)
@@ -504,7 +457,7 @@ lemma finiteness_UNIV_wf_item:
 (*>*)
 
 theorem finiteness:
-  shows "finite (\<II> cfg inp)"
+  shows "finite (earley cfg inp)"
 (*<*)
   sorry
 (*>*)

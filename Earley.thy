@@ -1106,4 +1106,5 @@ theorem finiteness:
   "finite (\<II> cfg inp)"
   using finiteness_UNIV_wf_item wf_items_def wf_\<II> rev_finite_subset by (metis mem_Collect_eq subsetI)
 
+
 end

@@ -75,42 +75,42 @@ definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" w
 definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
   "bins_items_upto bs k i = \<Union> { set (items (bs ! l)) | l. l < k } \<union> bin_items_upto (bs ! k) i"
 
-definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
-  "wf_bin_items cfg inp k xs = (\<forall>x \<in> set xs. wf_item cfg inp x \<and> item_end x = k)"
+definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
+  "wf_bin_items cfg inp k xs \<equiv> \<forall>x \<in> set xs. wf_item cfg inp x \<and> item_end x = k"
 
-definition wf_bin :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
-  "wf_bin cfg inp k b \<longleftrightarrow> distinct (items b) \<and> wf_bin_items cfg inp k (items b)"
+definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
+  "wf_bin cfg inp k b \<equiv> distinct (items b) \<and> wf_bin_items cfg inp k (items b)"
 
 definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "wf_bins cfg inp bs \<longleftrightarrow> (\<forall>k < length bs. wf_bin cfg inp k (bs ! k))"
+  "wf_bins cfg inp bs \<equiv> \<forall>k < length bs. wf_bin cfg inp k (bs ! k)"
 
 definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
-  "nonempty_derives cfg = (\<forall>N. N \<in> set (\<NN> cfg) \<longrightarrow> \<not> derives cfg [N] [])"
+  "nonempty_derives cfg \<equiv> \<forall>N. N \<in> set (\<NN> cfg) \<longrightarrow> \<not> derives cfg [N] []"
 
-definition Init_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
-  "Init_it cfg inp = (
+definition Init_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
+  "Init_list cfg inp \<equiv> 
     let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
     let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
     let bs = replicate (length inp + 1) ([]) in
-    bs[0 := b0])"
+    bs[0 := b0]"
 
-definition Scan_it :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry list" where
-  "Scan_it k inp a x pre = (
+definition Scan_list :: "nat \<Rightarrow> 'a sentential \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+  "Scan_list k inp a x pre \<equiv>
     if inp!k = a then
       let x' = inc_item x (k+1) in
       [Entry x' (Pre pre)]
-    else [])"
+    else []"
 
-definition Predict_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
-  "Predict_it k cfg X = (
+definition Predict_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
+  "Predict_list k cfg X \<equiv>
     let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
-    map (\<lambda>r. (Entry (init_item r k) Null)) rs)"
+    map (\<lambda>r. (Entry (init_item r k) Null)) rs"
 
-definition Complete_it :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
-  "Complete_it k y bs red = (
+definition Complete_list :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+  "Complete_list k y bs red \<equiv>
     let orig = bs ! (item_origin y) in
     let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
-    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is)"
+    map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is"
 
 fun bin_upd :: "'a entry \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
   "bin_upd e' [] = [e']"
@@ -130,8 +130,8 @@ fun bin_upds :: "'a entry list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
 definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<Rightarrow> 'a bins" where
   "bins_upd bs k es = bs[k := bin_upds es (bs!k)]"
 
-partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
-  "\<pi>_it' k cfg inp bs i = (
+partial_function (tailrec) E_list' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
+  "E_list' k cfg inp bs i = (
     if i \<ge> length (items (bs ! k)) then bs
     else
       let x = items (bs!k) ! i in
@@ -139,65 +139,26 @@ partial_function (tailrec) \<pi>_it' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 
         case next_symbol x of
           Some a \<Rightarrow>
             if is_terminal cfg a then
-              if k < length inp then bins_upd bs (k+1) (Scan_it k inp a x i)
+              if k < length inp then bins_upd bs (k+1) (Scan_list k inp a x i)
               else bs
-            else bins_upd bs k (Predict_it k cfg a)
-        | None \<Rightarrow> bins_upd bs k (Complete_it k x bs i)
-      in \<pi>_it' k cfg inp bs' (i+1))"
+            else bins_upd bs k (Predict_list k cfg a)
+        | None \<Rightarrow> bins_upd bs k (Complete_list k x bs i)
+      in E_list' k cfg inp bs' (i+1))"
 
-definition \<pi>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
-  "\<pi>_it k cfg inp bs = \<pi>_it' k cfg inp bs 0"
+definition E_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
+  "E_list k cfg inp bs = E_list' k cfg inp bs 0"
 
-fun \<I>_it :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
-  "\<I>_it 0 cfg inp = \<pi>_it 0 cfg inp (Init_it cfg inp)"
-| "\<I>_it (Suc n) cfg inp = \<pi>_it (Suc n) cfg inp (\<I>_it n cfg inp)"
+fun \<E>_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
+  "\<E>_list 0 cfg inp = E_list 0 cfg inp (Init_list cfg inp)"
+| "\<E>_list (Suc n) cfg inp = E_list (Suc n) cfg inp (\<E>_list n cfg inp)"
 
-definition \<II>_it :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
-  "\<II>_it cfg inp = \<I>_it (length inp) cfg inp"
+definition earley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
+  "earley_list cfg inp = \<E>_list (length inp) cfg inp"
 
 section \<open>Wellformedness\<close>
 
-lemma distinct_bin_upd:
-  assumes "distinct (items b)"
-  shows "distinct (items (bin_upd e b))"
-(*<*)
-  sorry
-(*>*)
-
-lemma distinct_bin_upds:
-  assumes "distinct (items b)"
-  shows "distinct (items (bin_upds es b))"
-(*<*)
-  sorry
-(*>*)
-
-lemma distinct_bins_upd:
-  assumes "distinct (items (bs ! k))"
-  shows "distinct (items (bins_upd bs k ips ! k))"
-(*<*)
-  sorry
-(*>*)
-
-lemma distinct_Scan_it:
-  shows "distinct (items (Scan_it k inp a x pre))"
-  sorry
-
-lemma distinct_Predict_it:
-  assumes "wf_cfg cfg"
-  shows "distinct (items (Predict_it k cfg X))"
-(*<*)
-  sorry
-(*>*)
-
-lemma distinct_Complete_it:
-  assumes "wf_bins cfg inp bs" "item_origin y < length bs"
-  shows "distinct (items (Complete_it k y bs red))"
-(*<*)
-  sorry
-(*>*)
-
 lemma wf_bin_bin_upd:
-  assumes "wf_bin cfg inp k b" "wf_item cfg inp (item e) \<and> item_end (item e) = k"
+  assumes "wf_bin cfg inp k b" "wf_item cfg inp (item e)" "item_end (item e) = k"
   shows "wf_bin cfg inp k (bin_upd e b)"
 (*<*)
   sorry
@@ -219,36 +180,38 @@ lemma wf_bins_bins_upd:
   sorry
 (*>*)
 
-lemma wf_bins_Init_it:
+lemma wf_bins_Init_list:
   assumes "wf_cfg cfg"
-  shows "wf_bins cfg inp (Init_it cfg inp)"
+  shows "wf_bins cfg inp (Init_list cfg inp)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_Scan_it:
-  assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set (items (bs ! k))" "k < length inp" "next_symbol x \<noteq> None"
-  shows "\<forall>y \<in> set (items (Scan_it k inp a x pre)). wf_item cfg inp y \<and> item_end y = (k+1)"
+lemma wf_bins_Scan_list:
+  assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set (items (bs!k))" "k < length inp" "next_symbol x \<noteq> None"
+  shows "\<forall>y \<in> set (items (Scan_list k inp a x pre)). wf_item cfg inp y \<and> item_end y = k+1"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_Predict_it:
+lemma wf_bins_Predict_list:
   assumes "wf_bins cfg inp bs" "k < length bs" "k \<le> length inp" "wf_cfg cfg"
-  shows "\<forall>y \<in> set (items (Predict_it k cfg X)). wf_item cfg inp y \<and> item_end y = k"
+  shows "\<forall>y \<in> set (items (Predict_list k cfg X)). wf_item cfg inp y \<and> item_end y = k"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_Complete_it:
-  assumes "wf_bins cfg inp bs" "k < length bs" "y \<in> set (items (bs ! k))"
-  shows "\<forall>x \<in> set (items (Complete_it k y bs red)). wf_item cfg inp x \<and> item_end x = k"
+lemma wf_bins_Complete_list:
+  assumes "wf_bins cfg inp bs" "k < length bs" "y \<in> set (items (bs!k))"
+  shows "\<forall>x \<in> set (items (Complete_list k y bs red)). wf_item cfg inp x \<and> item_end x = k"
 (*<*)
   sorry
 (*>*)
 
+fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
+  "earley_measure (k, cfg, inp, bs) i = card { x | x. wf_item cfg inp x \<and> item_end x = k } - i"
 
-definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set" where
+definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
   "wellformed_bins = { 
     (k, cfg, inp, bs) | k cfg inp bs.
       k \<le> length inp \<and>
@@ -257,222 +220,157 @@ definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentence \<times
       wf_bins cfg inp bs
   }"
 
-typedef 'a wf_bins = "wellformed_bins::(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set"
+typedef 'a wf_bins = "wellformed_bins::(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set"
  (*<*)
   sorry
  (*>*)
 
-lemma wellformed_bins_Init_it:
+lemma wellformed_bins_Init_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, Init_it cfg inp) \<in> wellformed_bins"
+  shows "(k, cfg, inp, Init_list cfg inp) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_Complete_it:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs ! k)) \<le> i"
-  assumes "x = items (bs ! k) ! i" "next_symbol x = None"
-  shows "(k, cfg, inp, bins_upd bs k (Complete_it k x bs red)) \<in> wellformed_bins"
+lemma wellformed_bins_Complete_list:
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs!k)) \<le> i"
+  assumes "x = items (bs!k)!i" "next_symbol x = None"
+  shows "(k, cfg, inp, bins_upd bs k (Complete_list k x bs red)) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_Scan_it:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs ! k)) \<le> i"
-  assumes "x = items (bs ! k) ! i" "next_symbol x = Some a"
+lemma wellformed_bins_Scan_list:
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs!k)) \<le> i"
+  assumes "x = items (bs!k)!i" "next_symbol x = Some a"
   assumes "is_terminal cfg a" "k < length inp"
-  shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_it k inp a x pre)) \<in> wellformed_bins"
+  shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_list k inp a x pre)) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_Predict_it:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs ! k)) \<le> i"
-  assumes "x = items (bs ! k) ! i" "next_symbol x = Some a" "\<not> is_terminal cfg a"
-  shows "(k, cfg, inp, bins_upd bs k (Predict_it k cfg a)) \<in> wellformed_bins"
+lemma wellformed_bins_Predict_list:
+  assumes "(k, cfg, inp, bs) \<in> wellformed_bins" "\<not> length (items (bs!k)) \<le> i"
+  assumes "x = items (bs!k)!i" "next_symbol x = Some a" "\<not> is_terminal cfg a"
+  shows "(k, cfg, inp, bins_upd bs k (Predict_list k cfg a)) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
-  "earley_measure (k, cfg, inp, bs) i = card { x | x. wf_item cfg inp x \<and> item_end x = k } - i"
-
-lemma \<pi>_it'_induct:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes base: "\<And>k cfg inp bs i. i \<ge> length (items (bs ! k)) \<Longrightarrow> P k cfg inp bs i"
-  assumes complete: "\<And>k cfg inp bs i x. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = None \<Longrightarrow> P k cfg inp (bins_upd bs k (Complete_it k x bs i)) (i+1) \<Longrightarrow> P k cfg inp bs i"
-  assumes scan: "\<And>k cfg inp bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = Some a \<Longrightarrow> is_terminal cfg a \<Longrightarrow> k < length inp \<Longrightarrow> 
-            P k cfg inp (bins_upd bs (k+1) (Scan_it k inp a x i)) (i+1) \<Longrightarrow> P k cfg inp bs i"
-  assumes pass: "\<And>k cfg inp bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = Some a \<Longrightarrow> is_terminal cfg a \<Longrightarrow> \<not> k < length inp \<Longrightarrow>
-            P k cfg inp bs (i+1) \<Longrightarrow> P k cfg inp bs i"
-  assumes predict: "\<And>k cfg inp bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = Some a \<Longrightarrow> \<not> is_terminal cfg a \<Longrightarrow> 
-            P k cfg inp (bins_upd bs k (Predict_it k cfg a)) (i+1) \<Longrightarrow> P k cfg inp bs i"
-  shows "P k cfg inp bs i"
-(*<*)
-  sorry
-(*>*)
-
-lemma wellformed_bins_\<pi>_it':
+lemma wellformed_bins_E_list':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
-  shows "(k, cfg, inp, \<pi>_it' k cfg inp bs i) \<in> wellformed_bins"
+  shows "(k, cfg, inp, E_list' k cfg inp bs i) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_\<pi>_it:
+lemma wellformed_bins_E_list:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
-  shows "(k, cfg, inp, \<pi>_it k cfg inp bs) \<in> wellformed_bins"
+  shows "(k, cfg, inp, E_list k cfg inp bs) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_\<I>_it:
+lemma wellformed_bins_\<E>_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
+  shows "(k, cfg, inp, \<E>_list k cfg inp) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wellformed_bins_\<II>_it:
+lemma wellformed_bins_earley_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, \<II>_it cfg inp) \<in> wellformed_bins"
+  shows "(k, cfg, inp, earley_list cfg inp) \<in> wellformed_bins"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_\<pi>_it':
+lemma wf_bins_E_list':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
-  shows "wf_bins cfg inp (\<pi>_it' k cfg inp bs i)"
+  shows "wf_bins cfg inp (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_\<pi>_it:
+lemma wf_bins_E_list:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins" 
-  shows "wf_bins cfg inp (\<pi>_it k cfg inp bs)"
+  shows "wf_bins cfg inp (E_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_\<I>_it:
+lemma wf_bins_\<E>_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "wf_bins cfg inp (\<I>_it k cfg inp)"
+  shows "wf_bins cfg inp (\<E>_list k cfg inp)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_\<II>_it:
+lemma wf_bins_earley_list:
   assumes "wf_cfg cfg" 
-  shows "wf_bins cfg inp (\<II>_it cfg inp)"
+  shows "wf_bins cfg inp (earley_list cfg inp)"
 (*<*)
   sorry
 (*>*)
 
 section \<open>List to set\<close>
 
-lemma Init_it_eq_Init:
-  shows "bins_items (Init_it cfg inp) = Init cfg"
+lemma Init_list_eq_Init:
+  shows "bins_items (Init_list cfg inp) = Init cfg"
 (*<*)
   sorry
 (*>*)
 
-lemma Scan_it_sub_Scan:
+lemma Scan_list_sub_Scan:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))"
-  assumes "k < length bs" "k < length inp"
-  assumes "next_symbol x = Some a"
-  shows "set (items (Scan_it k inp a x pre)) \<subseteq> Scan k inp I"
+  assumes "k < length bs" "k < length inp" "next_symbol x = Some a"
+  shows "set (items (Scan_list k inp a x pre)) \<subseteq> Scan k inp I"
 (*<*)
   sorry
 (*>*)
 
-lemma Predict_it_sub_Predict:
+lemma Predict_list_sub_Predict:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol x = Some X"
-  shows "set (items (Predict_it k cfg X)) \<subseteq> Predict k cfg I"
+  shows "set (items (Predict_list k cfg X)) \<subseteq> Predict k cfg I"
 (*<*)
   sorry
 (*>*)
 
-lemma Complete_it_sub_Complete:
+lemma Complete_list_sub_Complete:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "y \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol y = None"
-  shows "set (items (Complete_it k y bs red)) \<subseteq> Complete k I"
+  shows "set (items (Complete_list k y bs red)) \<subseteq> Complete k I"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_it'_sub_\<pi>:
+lemma E_list'_sub_E:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (\<pi>_it' k cfg inp bs i) \<subseteq> \<pi> k cfg inp I"
+  shows "bins_items (E_list' k cfg inp bs i) \<subseteq> E k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_it_sub_\<pi>:
+lemma E_list_sub_E:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (\<pi>_it k cfg inp bs) \<subseteq> \<pi> k cfg inp I"
+  shows "bins_items (E_list k cfg inp bs) \<subseteq> E k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
-lemma \<I>_it_sub_\<I>:
+lemma \<E>_list_sub_\<E>:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "bins_items (\<I>_it k cfg inp) \<subseteq> \<I> k cfg inp"
+  shows "bins_items (\<E>_list k cfg inp) \<subseteq> \<E> k cfg inp"
 (*<*)
   sorry
 (*>*)
 
-lemma \<II>_it_sub_\<II>:
+lemma earley_list_sub_earley:
   assumes "wf_cfg cfg" 
-  shows "bins_items (\<II>_it cfg inp) \<subseteq> \<II> cfg inp"
-(*<*)
-  sorry
-(*>*)
-
-section \<open>Soundness\<close>
-
-lemma sound_Scan_it:
-  assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs" "k < length inp"
-  assumes "next_symbol x = Some a" "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (set (items (Scan_it k inp a x i)))"
-(*<*)
-  sorry
-(*>*)
-
-lemma sound_Predict_it:
-  assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs"
-  assumes "next_symbol x = Some X" "sound_items cfg inp I"
-  shows "sound_items cfg inp (set (items (Predict_it k cfg X)))"
-(*<*)
-  sorry
-(*>*)
-
-lemma sound_Complete_it:
-  assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "y \<in> set (items (bs ! k))" "k < length bs"
-  assumes "next_symbol y = None" "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (set (items (Complete_it k y bs i)))"
-(*<*)
-  sorry
-(*>*)
-
-lemma sound_\<pi>_it':
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "sound_items cfg inp (bins_items bs)"
-  shows "sound_items cfg inp (bins_items (\<pi>_it' k cfg inp bs i))"
-(*<*)
-  sorry
-(*>*)
-
-lemma sound_\<pi>_it:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "sound_items cfg inp (bins_items bs)"
-  shows "sound_items cfg inp (bins_items (\<pi>_it k cfg inp bs))"
+  shows "bins_items (earley_list cfg inp) \<subseteq> earley cfg inp"
 (*<*)
   sorry
 (*>*)
@@ -502,110 +400,110 @@ lemma Complete_Un_eq_nonterminal:
   sorry
 (*>*)
 
-lemma Complete_sub_bins_Un_Complete_it:
+lemma Complete_sub_bins_Un_Complete_list:
   assumes "Complete k I \<subseteq> bins_items bs" "I \<subseteq> bins_items bs" "is_complete z" "wf_bins cfg inp bs" "wf_item cfg inp z"
-  shows "Complete k (I \<union> {z}) \<subseteq> bins_items bs \<union> set (items (Complete_it k z bs red))"
+  shows "Complete k (I \<union> {z}) \<subseteq> bins_items bs \<union> set (items (Complete_list k z bs red))"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_it'_mono:
+lemma E_list'_mono:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  shows "bins_items bs \<subseteq> bins_items (\<pi>_it' k cfg inp bs i)"
+  shows "bins_items bs \<subseteq> bins_items (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_step_sub_\<pi>_it':
+lemma E_step_sub_E_list':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "\<pi>_step k cfg inp (bins_items_upto bs k i) \<subseteq> bins_items bs"
-  assumes "sound_items cfg inp (bins_items bs)" "is_word cfg inp" "nonempty_derives cfg"
-  shows "\<pi>_step k cfg inp (bins_items bs) \<subseteq> bins_items (\<pi>_it' k cfg inp bs i)"
+  assumes "E_step k cfg inp (bins_items_upto bs k i) \<subseteq> bins_items bs"
+  assumes "sound_items cfg inp (bins_items bs)" "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_step_sub_\<pi>_it:
+lemma E_step_sub_E_list:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "\<pi>_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs"
-  assumes "sound_items cfg inp (bins_items bs)" "is_word cfg inp" "nonempty_derives cfg"
-  shows "\<pi>_step k cfg inp (bins_items bs) \<subseteq> bins_items (\<pi>_it k cfg inp bs)"
+  assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs"
+  assumes "sound_items cfg inp (bins_items bs)" "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_it'_bins_items_eq:
+lemma E_list'_bins_items_eq:
   assumes "(k, cfg, inp, as) \<in> wellformed_bins"
   assumes "bins_eq_items as bs" "wf_bins cfg inp as"
-  shows "bins_eq_items (\<pi>_it' k cfg inp as i) (\<pi>_it' k cfg inp bs i)"
+  shows "bins_eq_items (E_list' k cfg inp as i) (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_it'_idem:
+lemma E_list'_idem:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "i \<le> j" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
-  shows "bins_items (\<pi>_it' k cfg inp (\<pi>_it' k cfg inp bs i) j) = bins_items (\<pi>_it' k cfg inp bs i)"
+  shows "bins_items (E_list' k cfg inp (E_list' k cfg inp bs i) j) = bins_items (E_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_it_idem:
+lemma E_list_idem:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
-  shows "bins_items (\<pi>_it k cfg inp (\<pi>_it k cfg inp bs)) = bins_items (\<pi>_it k cfg inp bs)"
+  shows "bins_items (E_list k cfg inp (E_list k cfg inp bs)) = bins_items (E_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma funpower_\<pi>_step_sub_\<pi>_it:
+lemma funpower_E_step_sub_E_list:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "\<pi>_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
-  assumes "is_word cfg inp" "nonempty_derives cfg"
-  shows "funpower (\<pi>_step k cfg inp) n (bins_items bs) \<subseteq> bins_items (\<pi>_it k cfg inp bs)"
+  assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
+  assumes "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "funpower (E_step k cfg inp) n (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<pi>_sub_\<pi>_it:
+lemma E_sub_E_list:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "\<pi>_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
-  assumes "is_word cfg inp" "nonempty_derives cfg"
-  shows "\<pi> k cfg inp (bins_items bs) \<subseteq> bins_items (\<pi>_it k cfg inp bs)"
+  assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
+  assumes "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "E k cfg inp (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<I>_sub_\<I>_it:
+lemma \<E>_sub_\<E>_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  assumes "is_word cfg inp" "nonempty_derives cfg"
-  shows "\<I> k cfg inp \<subseteq> bins_items (\<I>_it k cfg inp)"
+  assumes "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "\<E> k cfg inp \<subseteq> bins_items (\<E>_list k cfg inp)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<II>_sub_\<II>_it:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "\<II> cfg inp \<subseteq> bins_items (\<II>_it cfg inp)"
+lemma earley_sub_earley_list:
+  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "earley cfg inp \<subseteq> bins_items (earley_list cfg inp)"
 (*<*)
   sorry
 (*>*)
 
 section \<open>Main Theorem\<close>
 
-definition earley_recognized_it :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "earley_recognized_it I cfg inp = (\<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x)"
+definition earley_recognized_list :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "earley_recognized_list I cfg inp \<equiv> \<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x"
 
-theorem earley_recognized_it_iff_earley_recognized:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> earley_recognized (\<II> cfg inp) cfg inp"
+theorem earley_recognized_list_iff_earley_recognized:
+  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "earley_recognized_list (earley_list cfg inp) cfg inp \<longleftrightarrow> earley_recognized (earley cfg inp) cfg inp"
 (*<*)
   sorry
 (*>*)
 
 corollary correctness_list:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
+  shows "earley_recognized_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)
