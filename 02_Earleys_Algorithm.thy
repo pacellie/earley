@@ -24,15 +24,33 @@ text\<open>
 section \<open>Earley Recognizer\<close>
 
 text\<open>
+We present a slightly simplified version of Earley's original recognizer algorithm \cite{Earley:1970}.
+Throughout this thesis we will work with a running example. The grammar is a tiny excerpt of a toy
+arithmetic expression grammar: @{term "\<G>"} $::= S \rightarrow \, x \, \vert \, S \rightarrow \, S + S$ and
+the input is @{term \<omega>} $= x + x + x$. Given a grammar @{term \<G>}, a recognizer for the language @{term "\<L>\<^sub>\<G>"} accepts the input @{term \<omega>}
+if and only if there exists a derivation of @{term \<omega>} originating from start symbol $S$ of @{term \<G>}.
+
+Intuitively, Earley's recognizer works in principle like a top-down parser carrying along all possible
+parses simultaneously in an efficient manner.
+In detail, the algorithm works as follows: it scans the input @{term \<omega>} $=a_0,\dots,a_n$, constructing
+$n+1$ bins $B_i$ which are sets of Earley items. An inital bin $B_0$ and one bin $B_{i+1}$ for
+each symbol $a_i$ of the input.
+In generell, an Earley item $A \rightarrow \, \alpha \bullet \beta, i, j$ consists of four parts: a production rule of the grammar which we are currently
+scanning, a bullet signalling how much of the production's right-hand side we have recognized so far,
+an origin $i$ describing the position of @{term \<omega>} where we started scanning, and an end $j$ indicating
+the position  of @{term \<omega>} we are currently considering next for the remaining right-hand side of the production rule.
+For example, the bin $B_4$ contains, for our arithmetic expression grammar, the item $S \rightarrow \, S + \bullet S, 2, 4$.
+We are scanning the rule $S \rightarrow \, S + S$, have recognized the substring from $2$ to $4$ (the first index being
+inclusive the second one exclusive) of @{term \<omega>} by $\alpha = S +$, and are trying to scan $\beta = S$ from position 4 in \omega. 
+
+We say an item is part of bin $B_j$ if it's end is the index $j$.
+\<close>
+
+text\<open>
 
 EARLEY:
 
-The algorithm scans an input string X1, ..., Xn from left to right. As eachsymbol Xi is scanned, a set of
-states Si is constructed which represents the condition of the recognition process at that point in the
-scan. Each state in the set represents (1) a production such that we are currently scanning a portion of
-the input string which is derived from its right side, (2) a point in that production which shows how much of the
-production's right side we have recognized so far, (3) a pointer back to the position in the input string
-at which we began to look for that instance of the production. In general, we operate on a state set Si as follows:
+In general, we operate on a state set Si as follows:
 we process the states in the set in order, performing one of three operatins on each one depending on the form
 of the state. These operations may add more states to Si and may also put states in a new state set Si+1. We
 describe the operations by example: ... The predictor operation is applicable to a state when there is a nonterminal
@@ -48,18 +66,10 @@ indicated by its pointer and adds all states from this state set which have the 
 It then moves over the dot. Intuitively, the origin state set is the state set we were in when we went looking
 for that nonterminal. We have now found it, so we go back to all the states which caused us to look for it, and move
 the dot over in these states to show that it has been successfully scanned. If the algorithm ever produces an Si+1
-consisting of the single state S -> alpha dot, 0, n, then the sentence is part of the grammar. Note that the algorithm
-is in effect a top-down parser in which we carry along all possible parses simultaneously in such a way that we can often
-combine like subparses.
+consisting of the single state S -> alpha dot, 0, n, then the sentence is part of the grammar.
 
 AYCOCK:
 
-Earley parsers operate by constructing a sequence of sets, sometime called Earley sets. Given an input
-$x_1 x_2 \dots x_n$ the parser builds $n+1$ sets: an initial set $S_0$ and one set $S_i$ for each input
-symbol $x_i$. Elements of these sets are referred to as Earley items, which consist of three parts:
-a grammar rule, a position in the right-hand side of the rule indicating how much of that rule has been
-seen and a pointer to an earlier Earley set. Typically Earley items are written as $\dots$ where the position
-in the rule's right-hand side is denoted by a dot and $j$ is a pointer to set $S_j$.
 An Earley set $S_i$ is computed from an initial set of Earley items in $S_i$ and $S_{i+1}$ is initialized, by
 applying the followingn three steps to the items in $S_i$ until no more can be added. $\dots$
 An item is added to a set only if it is not in the set already. The initial set $S_0$ contains the items $\dots$
@@ -91,6 +101,7 @@ text\<open>
       {$A \rightarrow \, \alpha B \bullet \beta, i, k$}
     \end{mathpar}
     \caption[Earley inference rules]{Earley inference rules}\label{fig:earley-inference-rules}
+    \label{fig:inference_rules}
   \end{figure}
 \<close>
 
