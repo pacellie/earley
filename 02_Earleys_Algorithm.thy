@@ -7,8 +7,6 @@ begin
 
 chapter \<open>Earley's Algorithm\<close>
 
-section \<open>Earley Recognizer\<close>
-
 text\<open>
 We present a slightly simplified version of Earley's original recognizer algorithm \cite{Earley:1970},
 omitting Earley's proposed look-ahead since it's primary purpose is to increase the efficiency of the
@@ -38,41 +36,60 @@ in detail:
 \begin{enumerate}
   \item The \textit{Init} operation adds items
     $S \rightarrow \, \bullet\alpha, 0, 0$ for each production rule containing the start symbol $S$ on its left-hand side.
-    For our example \textit{Init} adds the items $S \rightarrow \, \bullet x, 0, 0$ and $S \rightarrow \, \bullet S + S, 0 , 0$. \\
+
+    For our example \textit{Init} adds the items $S \rightarrow \, \bullet x, 0, 0$ and $S \rightarrow \, \bullet S + S, 0 , 0$.
   \item The \textit{Scan} operation applies if there is a terminal to the right side of the bullet, or items of the form $A \rightarrow \, \alpha \bullet a \beta, i, j$,
     and the $j$-th symbol of @{term \<omega>} matches the terminal symbol following the bullet. We add one new item $A \rightarrow \, \alpha a \bullet \beta, i, j+1$
-    to $B$ moving the bullet over the scanned terminal symbol. Considering our example, bin $B_3$ contains
+    to $B$ moving the bullet over the scanned terminal symbol.
+
+    Considering our example, bin $B_3$ contains
     the item $S \rightarrow \, S \bullet + S, 2, 3$, the third element of @{term \<omega>} is the terminal $+$, so we add the
-    item $S \rightarrow \, S + \bullet S, 2, 4$ to the conceptual bin $B_4$. \\
+    item $S \rightarrow \, S + \bullet S, 2, 4$ to the conceptual bin $B_4$.
   \item The \textit{Predict} operation is applicable to an item when there is a non-terminal to the right of
     the bullet or items of the form $A \rightarrow \, \alpha \bullet B \beta, i, j$. It adds one new item $B \rightarrow \, \bullet \gamma, j, j$
-    to the bin for each alternate $B \rightarrow \, \gamma$ of that non-terminal. E.g. for the item  $S \rightarrow \, S + \bullet S, 0, 2$ in $B_2$
+    to the bin for each alternate $B \rightarrow \, \gamma$ of that non-terminal.
+
+    E.g. for the item  $S \rightarrow \, S + \bullet S, 0, 2$ in $B_2$
     we add the two items $S \rightarrow \, \bullet x, 2, 2$ and $S \rightarrow \, \bullet S + S, 2, 2$ corresponding
     to the two alternates of $S$. The bullet is set to the beginning of the right-hand side of the production
     rule, the origin and end are set to $j = 2$ to indicate that we are starting to scan in the current bin and
-    have not scanned anything so far. \\
+    have not scanned anything so far.
   \item The \textit{Complete} operation applies if we process an item with the bullet at the end of the
     right side of its production rule. For an item $B \rightarrow \, \gamma \bullet, j, k$ we have successfully scanned the substring
     \omega[j..k) and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
     $A \rightarrow \, \alpha \bullet B \beta, i, j$ containing a bullet in front of the non-terminal we completed, or the reason we
     predicted it on the first place. Since we scanned the predicted non-terminal successfully, we are allowed to
     move over the bullet, resulting in one new item $A \rightarrow \, \alpha B \bullet \beta, i, k$. Note in particular
-    the origin and end indices. Looking back at our example, we can add the item $S \rightarrow \, S + S \bullet, 0, 5$
+    the origin and end indices.
+
+    Looking back at our example, we can add the item $S \rightarrow \, S + S \bullet, 0, 5$
     for two different reasons corresponding conceptually to the two different ways we can derive \omega.
     When processing $S \rightarrow \, x \bullet, 4, 5$ we find $S \rightarrow \, S + \bullet S, 0, 4$ in the origin
     bin $B_4$ which conceptually corresponds to recognizing $(x + x) + x$. We \glq add \grq the same item again
     while applying the \textit{Complete} operation to $S \rightarrow \, S + S \bullet, 2, 5$ and $S \rightarrow \, S + \bullet S, 0, 2$
-    which corresponds to recognizing the input as $x + (x + x)$. \\
+    which corresponds to recognizing the input as $x + (x + x)$.
 \end{enumerate}
 
-If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, @{term "length \<omega> + 1"}$, in
-the example $S \rightarrow \, S + S \bullet, 0, 5$, it returns \textit{true}, otherwise it returns \textit{false}.
+If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, @{term "length \<omega> + 1"}$,
+it returns \textit{true}, otherwise it returns \textit{false}. For the tiny arithmetic expression grammar
+we generate the item $S \rightarrow \, S + S \bullet, 0, 5$ and return the correct answer \textit{true},
+since there exist derivations for $\omega = x + x + x$, e.g.
+$S \Rightarrow S + S \Rightarrow x + S \Rightarrow x + S + S \xRightarrow{\ast} x + x + x$ or
+$S \Rightarrow S + S \Rightarrow S + x \Rightarrow S + S + x \xRightarrow{\ast} x + x + x$.
 
-\<close>
+To proof the correctness of Earley's recognizer algorithm we need to show the following theorem:
 
-text\<open>
-$$A \rightarrow \, \alpha \bullet \beta, i, j \,\,\, \textrm{iff} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j)$$
-$$S \rightarrow \, \alpha \bullet, 0, @{term "length \<omega> + 1"} \,\,\, \textrm{iff} \,\,\, S \, \xRightarrow{\ast} \, @{term \<omega>}$$
+$$S \rightarrow \, \alpha \bullet, 0, @{term "length \<omega> + 1"} \in B \,\,\, \textrm{iff} \,\,\, S \, \xRightarrow{\ast} \, @{term \<omega>}$$
+
+It follows from the following three lemmas:
+
+\begin{enumerate}
+  \item Termination: there only exist a finite number of Earley items
+  \item Soundness: for every generated item there exists an according derivation: \\
+     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j)$
+  \item Completeness: for every derivation we generate an according item: \\
+     $A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
+\end{enumerate}
 \<close>
 
 text\<open>
