@@ -214,11 +214,37 @@ $S_1$ A -> a dot, 0, S -> A dot AAA, 0, S -> AA dot AA, 0, A -> dot a, 1, A -> d
 %
 \isatagdocument
 %
-\isamarkupsection{Related Work%
+\isamarkupchapter{Introduction%
 }
 \isamarkuptrue%
 %
-\isamarkupsubsection{Related Parsing Algorithms%
+\isamarkupsection{Motivation%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+some introduction about parsing, formal development of correct algorithms: an example based on
+earley's recogniser, the benefits of formal methods, LocalLexing and the Bachelor thesis.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsection{Structure%
+}
+\isamarkuptrue%
+%
+\isamarkupsection{Related Work%
 }
 \isamarkuptrue%
 %
@@ -237,23 +263,6 @@ Izmaylova \textit{et al} \cite{Izmaylova:2016} develop a general parser
 combinator library based on memoized Continuation-Passing Style (CPS) recognizers that supports all
 context-free grammars and constructs a Shared Packed Parse Forest (SPPF) in worst case cubic time and space.%
 \end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupsubsection{Related Verification Work%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
 %
 \begin{isamarkuptext}%
 Obua \textit{et al} \cite{Obua:2017} introduce local lexing, a novel parsing concept which interleaves
@@ -286,137 +295,6 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %
 \isatagdocument
 %
-\isamarkupsection{Future Work%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-Different approaches:
-
-(1) SPPF style parse trees as in Scott et al -> need Imperative/HOL for this
-
-Performance improvements:
-
-(1) Look-ahead of k or at least 1 like in the original Earley paper.
-(2) Optimize the representation of the grammar instead of single list, group by production, ...
-(3) Keep a set of already inserted items to not double check item insertion.
-(4) Use a queue instead of a list for bins.
-(5) Refine the algorithm to an imperative version using a single linked list and actual pointers instead
-    of natural numbers.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\begin{isamarkuptext}%
-Parse tree disambiguation:
-
-Parser generators like YACC resolve ambiguities in context-free grammers by allowing the user
-the specify precedence and associativity declarations restricting the set of allowed parses. But they
-do not handle all grammatical restrictions, like 'dangling else' or interactions between binary operators
-and functional 'if'-expressions.
-
-Grammar rewriting:
-
-Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach reinterpreting CFGs as
-the tree automata, intersectiong them with tree automata encoding desired restrictions and reinterpreting
-the results back into CFGs.
-
-Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach to specifying operator precedence
-based on declarative disambiguation rules basing their implementation on grammar rewriting.
-
-Thorup \cite{Thorup:1996} develops two concrete algorithms for disambiguation of grammars based on the idea of 
-excluding a certain set of forbidden sub-parse trees.
-
-Parse tree filtering:
-
-Klint \textit{et al} \cite{Klint:1997} propose a framework of filters to describe and compare a wide
-range of disambiguation problems in a parser-independent way. A filter is a function that selects
-from a set of parse trees the intended trees.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupchapter{Introduction%
-}
-\isamarkuptrue%
-%
-\isamarkupsection{Motivation%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-some introduction about parsing, formal development of correct algorithms: an example based on
-earley's recogniser, the benefits of formal methods, LocalLexing and the Bachelor thesis.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\begin{isamarkuptext}%
-work with the snippets, reformulate!%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupsection{Structure%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-standard blabla%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupsection{Related Work%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-see folder and bibliography%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
 \isamarkupsection{Contributions%
 }
 \isamarkuptrue%
@@ -427,10 +305,6 @@ see folder and bibliography%
 \isadelimdocument
 %
 \endisadelimdocument
-%
-\begin{isamarkuptext}%
-what did I do, what is new%
-\end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimtheory
 %
@@ -585,78 +459,34 @@ what did I do, what is new%
 %:%221=156%:%
 %:%233=158%:%
 %:%234=159%:%
-%:%235=160%:%
-%:%236=161%:%
-%:%237=162%:%
-%:%238=163%:%
-%:%247=166%:%
-%:%259=169%:%
-%:%260=170%:%
-%:%261=171%:%
-%:%262=172%:%
-%:%263=173%:%
-%:%264=174%:%
-%:%265=175%:%
-%:%266=176%:%
-%:%267=177%:%
-%:%268=178%:%
-%:%269=179%:%
-%:%270=180%:%
-%:%271=181%:%
-%:%272=182%:%
-%:%273=183%:%
-%:%274=184%:%
-%:%275=185%:%
-%:%276=186%:%
-%:%277=187%:%
-%:%278=188%:%
-%:%279=189%:%
-%:%280=190%:%
+%:%243=161%:%
+%:%247=163%:%
+%:%259=165%:%
+%:%260=166%:%
+%:%261=167%:%
+%:%262=168%:%
+%:%263=169%:%
+%:%264=170%:%
+%:%268=174%:%
+%:%269=175%:%
+%:%270=176%:%
+%:%271=177%:%
+%:%272=178%:%
+%:%273=179%:%
+%:%274=180%:%
+%:%275=181%:%
+%:%276=182%:%
+%:%277=183%:%
+%:%278=184%:%
+%:%279=185%:%
+%:%280=186%:%
+%:%281=187%:%
+%:%282=188%:%
+%:%283=189%:%
+%:%284=190%:%
+%:%285=191%:%
+%:%286=192%:%
+%:%287=193%:%
+%:%288=194%:%
 %:%289=195%:%
-%:%301=198%:%
-%:%302=199%:%
-%:%303=200%:%
-%:%304=201%:%
-%:%305=202%:%
-%:%306=203%:%
-%:%307=204%:%
-%:%308=205%:%
-%:%309=206%:%
-%:%310=207%:%
-%:%311=208%:%
-%:%312=209%:%
-%:%316=213%:%
-%:%317=214%:%
-%:%318=215%:%
-%:%319=216%:%
-%:%320=217%:%
-%:%321=218%:%
-%:%322=219%:%
-%:%323=220%:%
-%:%324=221%:%
-%:%325=222%:%
-%:%326=223%:%
-%:%327=224%:%
-%:%328=225%:%
-%:%329=226%:%
-%:%330=227%:%
-%:%331=228%:%
-%:%332=229%:%
-%:%333=230%:%
-%:%334=231%:%
-%:%335=232%:%
-%:%336=233%:%
-%:%337=234%:%
-%:%338=235%:%
-%:%339=236%:%
-%:%348=239%:%
-%:%352=241%:%
-%:%364=243%:%
-%:%365=244%:%
-%:%369=246%:%
-%:%378=248%:%
-%:%390=250%:%
-%:%399=252%:%
-%:%411=254%:%
-%:%420=256%:%
-%:%432=258%:%
+%:%298=198%:%

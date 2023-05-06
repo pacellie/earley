@@ -40,6 +40,48 @@
 %
 \endisadelimdocument
 %
+\begin{isamarkuptext}%
+Different approaches:
+
+(1) SPPF style parse trees as in Scott et al -> need Imperative/HOL for this
+
+Performance improvements:
+
+(1) Look-ahead of k or at least 1 like in the original Earley paper.
+(2) Optimize the representation of the grammar instead of single list, group by production, ...
+(3) Keep a set of already inserted items to not double check item insertion.
+(4) Use a queue instead of a list for bins.
+(5) Refine the algorithm to an imperative version using a single linked list and actual pointers instead
+    of natural numbers.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+Parse tree disambiguation:
+
+Parser generators like YACC resolve ambiguities in context-free grammers by allowing the user
+the specify precedence and associativity declarations restricting the set of allowed parses. But they
+do not handle all grammatical restrictions, like 'dangling else' or interactions between binary operators
+and functional 'if'-expressions.
+
+Grammar rewriting:
+
+Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach reinterpreting CFGs as
+the tree automata, intersectiong them with tree automata encoding desired restrictions and reinterpreting
+the results back into CFGs.
+
+Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach to specifying operator precedence
+based on declarative disambiguation rules basing their implementation on grammar rewriting.
+
+Thorup \cite{Thorup:1996} develops two concrete algorithms for disambiguation of grammars based on the idea of 
+excluding a certain set of forbidden sub-parse trees.
+
+Parse tree filtering:
+
+Klint \textit{et al} \cite{Klint:1997} propose a framework of filters to describe and compare a wide
+range of disambiguation problems in a parser-independent way. A filter is a function that selects
+from a set of parse trees the intended trees.%
+\end{isamarkuptext}\isamarkuptrue%
+%
 \isadelimtheory
 %
 \endisadelimtheory
@@ -59,3 +101,39 @@
 %:%24=9%:%
 %:%28=11%:%
 %:%32=13%:%
+%:%44=16%:%
+%:%45=17%:%
+%:%46=18%:%
+%:%47=19%:%
+%:%48=20%:%
+%:%49=21%:%
+%:%50=22%:%
+%:%51=23%:%
+%:%52=24%:%
+%:%53=25%:%
+%:%54=26%:%
+%:%55=27%:%
+%:%59=31%:%
+%:%60=32%:%
+%:%61=33%:%
+%:%62=34%:%
+%:%63=35%:%
+%:%64=36%:%
+%:%65=37%:%
+%:%66=38%:%
+%:%67=39%:%
+%:%68=40%:%
+%:%69=41%:%
+%:%70=42%:%
+%:%71=43%:%
+%:%72=44%:%
+%:%73=45%:%
+%:%74=46%:%
+%:%75=47%:%
+%:%76=48%:%
+%:%77=49%:%
+%:%78=50%:%
+%:%79=51%:%
+%:%80=52%:%
+%:%81=53%:%
+%:%82=54%:%
