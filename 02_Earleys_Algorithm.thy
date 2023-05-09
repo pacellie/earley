@@ -5,7 +5,7 @@ theory "02_Earleys_Algorithm"
 begin
 (*>*)
 
-chapter \<open>Earley's Algorithm\<close>
+chapter \<open>Earley's Algorithm \label{chapter:2}\<close>
 
 text\<open>
 We present a slightly simplified version of Earley's original recognizer algorithm \cite{Earley:1970},

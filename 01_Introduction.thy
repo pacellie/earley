@@ -18,26 +18,6 @@ in the sense that they can handle all context-free grammars, while others can ha
 grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
 seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
 in linear time than most of the restricted algorithms.
-
-A language is a set of strings over a finite set of symbols. We call these terminal symbols and represent
-them by lowercase letters: a, b, c. We use a context-free grammar as a formal device for specifying which
-strings are in the set. This grammar uses another set of symbols, the nonterminals, which we can think of
-as syntactic classes. We use capitals for nonterminals: A, B, C. String of either terminals or non-terminals
-are represented by greek letters: alpha, beta, gamma. The empty string is epsilon. There is a finite set of
-productions or rewriting rules of the form A -> alpha. The nonterminal which stands for sentence is called the
-root R of the grammar. The productions with a particular nonterminal A on their left sides are called the
-alternatives of A. We write alpha => beta if exists gamma, delta, ny, A such taht a = gamma A delta and
-beta = gamma ny delta and A -> ny is a production. We write alpha =>* beta if exists alpha0, alpha1, ...
-alpham (m > =0) such that alpha = alpha0 => alpha1 => ... => alpham = beta The sequence alphai is called a
-derivation of beta from alpha. A sentential form is a string alpha such the the root R =>* alpha. A sentence
-is a sentential form consisting entirely of terminal symbols. The language defined by a grammar L(G) is the
-set of its sentences. We may represent any sentential form in at least one way as a derivation tree or parse
-tree reflecting the steps made in deriving it. The degree of ambiguity of a sentence is the number of its
-distinct derivation trees. A sentence is unambiguous if it has degree 1 of ambiguity. A grammar is unambiguous
-if each of its sentences is unambiguous. A grammar is reduced if every nonterminal appears in some derivation
-of some sentence. A recognizer is an algorithm which takes a input a string and either accepts or rejects it
-depending on whether or not the string is a sentence of the grammer. A parser is a recogizer which also outputs
-the set of all legal derivation trees for the string.
 \<close>
 
 section\<open>Scott\<close>

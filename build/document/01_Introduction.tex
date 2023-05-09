@@ -44,27 +44,7 @@ or translate natural languages. Numerous parsing algorithms have been developed.
 in the sense that they can handle all context-free grammars, while others can handle only subclasses of
 grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
 seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
-in linear time than most of the restricted algorithms.
-
-A language is a set of strings over a finite set of symbols. We call these terminal symbols and represent
-them by lowercase letters: a, b, c. We use a context-free grammar as a formal device for specifying which
-strings are in the set. This grammar uses another set of symbols, the nonterminals, which we can think of
-as syntactic classes. We use capitals for nonterminals: A, B, C. String of either terminals or non-terminals
-are represented by greek letters: alpha, beta, gamma. The empty string is epsilon. There is a finite set of
-productions or rewriting rules of the form A -> alpha. The nonterminal which stands for sentence is called the
-root R of the grammar. The productions with a particular nonterminal A on their left sides are called the
-alternatives of A. We write alpha => beta if exists gamma, delta, ny, A such taht a = gamma A delta and
-beta = gamma ny delta and A -> ny is a production. We write alpha =>* beta if exists alpha0, alpha1, ...
-alpham (m > =0) such that alpha = alpha0 => alpha1 => ... => alpham = beta The sequence alphai is called a
-derivation of beta from alpha. A sentential form is a string alpha such the the root R =>* alpha. A sentence
-is a sentential form consisting entirely of terminal symbols. The language defined by a grammar L(G) is the
-set of its sentences. We may represent any sentential form in at least one way as a derivation tree or parse
-tree reflecting the steps made in deriving it. The degree of ambiguity of a sentence is the number of its
-distinct derivation trees. A sentence is unambiguous if it has degree 1 of ambiguity. A grammar is unambiguous
-if each of its sentences is unambiguous. A grammar is reduced if every nonterminal appears in some derivation
-of some sentence. A recognizer is an algorithm which takes a input a string and either accepts or rejects it
-depending on whether or not the string is a sentence of the grammer. A parser is a recogizer which also outputs
-the set of all legal derivation trees for the string.%
+in linear time than most of the restricted algorithms.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -240,10 +220,6 @@ earley's recogniser, the benefits of formal methods, LocalLexing and the Bachelo
 %
 \isatagdocument
 %
-\isamarkupsection{Structure%
-}
-\isamarkuptrue%
-%
 \isamarkupsection{Related Work%
 }
 \isamarkuptrue%
@@ -295,6 +271,10 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %
 \isatagdocument
 %
+\isamarkupsection{Structure%
+}
+\isamarkuptrue%
+%
 \isamarkupsection{Contributions%
 }
 \isamarkuptrue%
@@ -332,27 +312,27 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %:%45=18%:%
 %:%46=19%:%
 %:%47=20%:%
-%:%48=21%:%
-%:%49=22%:%
-%:%50=23%:%
-%:%51=24%:%
-%:%52=25%:%
-%:%53=26%:%
-%:%54=27%:%
-%:%55=28%:%
-%:%56=29%:%
-%:%57=30%:%
-%:%58=31%:%
-%:%59=32%:%
-%:%60=33%:%
-%:%61=34%:%
-%:%62=35%:%
-%:%63=36%:%
-%:%64=37%:%
-%:%65=38%:%
-%:%66=39%:%
-%:%67=40%:%
-%:%76=43%:%
+%:%56=23%:%
+%:%68=26%:%
+%:%69=27%:%
+%:%70=28%:%
+%:%71=29%:%
+%:%72=30%:%
+%:%73=31%:%
+%:%74=32%:%
+%:%75=33%:%
+%:%76=34%:%
+%:%77=35%:%
+%:%78=36%:%
+%:%79=37%:%
+%:%80=38%:%
+%:%81=39%:%
+%:%82=40%:%
+%:%83=41%:%
+%:%84=42%:%
+%:%85=43%:%
+%:%86=44%:%
+%:%87=45%:%
 %:%88=46%:%
 %:%89=47%:%
 %:%90=48%:%
@@ -388,27 +368,27 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %:%120=78%:%
 %:%121=79%:%
 %:%122=80%:%
-%:%123=81%:%
-%:%124=82%:%
-%:%125=83%:%
-%:%126=84%:%
-%:%127=85%:%
-%:%128=86%:%
-%:%129=87%:%
-%:%130=88%:%
-%:%131=89%:%
-%:%132=90%:%
-%:%133=91%:%
-%:%134=92%:%
-%:%135=93%:%
-%:%136=94%:%
-%:%137=95%:%
-%:%138=96%:%
-%:%139=97%:%
-%:%140=98%:%
-%:%141=99%:%
-%:%142=100%:%
-%:%151=103%:%
+%:%131=83%:%
+%:%143=86%:%
+%:%144=87%:%
+%:%145=88%:%
+%:%146=89%:%
+%:%147=90%:%
+%:%148=91%:%
+%:%149=92%:%
+%:%150=93%:%
+%:%151=94%:%
+%:%152=95%:%
+%:%153=96%:%
+%:%154=97%:%
+%:%155=98%:%
+%:%156=99%:%
+%:%157=100%:%
+%:%158=101%:%
+%:%159=102%:%
+%:%160=103%:%
+%:%161=104%:%
+%:%162=105%:%
 %:%163=106%:%
 %:%164=107%:%
 %:%165=108%:%
@@ -435,58 +415,38 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %:%186=129%:%
 %:%187=130%:%
 %:%188=131%:%
-%:%189=132%:%
-%:%190=133%:%
-%:%191=134%:%
-%:%192=135%:%
-%:%193=136%:%
-%:%194=137%:%
-%:%195=138%:%
-%:%196=139%:%
-%:%197=140%:%
-%:%198=141%:%
-%:%199=142%:%
-%:%200=143%:%
-%:%201=144%:%
-%:%202=145%:%
-%:%203=146%:%
-%:%204=147%:%
-%:%205=148%:%
-%:%206=149%:%
-%:%207=150%:%
-%:%208=151%:%
-%:%217=154%:%
-%:%221=156%:%
-%:%233=158%:%
-%:%234=159%:%
-%:%243=161%:%
-%:%247=163%:%
-%:%259=165%:%
-%:%260=166%:%
-%:%261=167%:%
-%:%262=168%:%
-%:%263=169%:%
-%:%264=170%:%
-%:%268=174%:%
-%:%269=175%:%
-%:%270=176%:%
-%:%271=177%:%
-%:%272=178%:%
-%:%273=179%:%
-%:%274=180%:%
-%:%275=181%:%
-%:%276=182%:%
-%:%277=183%:%
-%:%278=184%:%
-%:%279=185%:%
-%:%280=186%:%
-%:%281=187%:%
-%:%282=188%:%
-%:%283=189%:%
-%:%284=190%:%
-%:%285=191%:%
-%:%286=192%:%
-%:%287=193%:%
-%:%288=194%:%
-%:%289=195%:%
-%:%298=198%:%
+%:%197=134%:%
+%:%201=136%:%
+%:%213=138%:%
+%:%214=139%:%
+%:%223=141%:%
+%:%235=143%:%
+%:%236=144%:%
+%:%237=145%:%
+%:%238=146%:%
+%:%239=147%:%
+%:%240=148%:%
+%:%244=152%:%
+%:%245=153%:%
+%:%246=154%:%
+%:%247=155%:%
+%:%248=156%:%
+%:%249=157%:%
+%:%250=158%:%
+%:%251=159%:%
+%:%252=160%:%
+%:%253=161%:%
+%:%254=162%:%
+%:%255=163%:%
+%:%256=164%:%
+%:%257=165%:%
+%:%258=166%:%
+%:%259=167%:%
+%:%260=168%:%
+%:%261=169%:%
+%:%262=170%:%
+%:%263=171%:%
+%:%264=172%:%
+%:%265=173%:%
+%:%274=176%:%
+%:%278=178%:%
