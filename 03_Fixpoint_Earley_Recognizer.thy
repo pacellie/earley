@@ -39,7 +39,7 @@ nonterminals (@{term "\<NN> cfg"}), (2) a list of terminals (@{term "\<TT> cfg"}
 projections accessing the specific part of the instance @{term cfg} of the datatype @{term CFG}. Each rule consists of a left-hand side or @{term rule_head}, a single symbol,
 and a right-hand side or @{term rule_body}, a list of symbols.
 The productions with a particular nonterminal $N$ on their left-hand sides are called the alternatives of $N$.
-We make the usual assumptions about the well-formedness of a context-free grammar: the intersection of set of terminals and
+We make the usual assumptions about the well-formedness of a context-free grammar: the intersection of the set of terminals and
 the set of nonterminals is empty; the start symbol @{term \<SS>} is a nonterminal; the rule head of a production
 is a nonterminal and its rule body consists of only symbols. Additionally, since we are working with
 a list of productions, we make the assumption that this list is distinct.
@@ -102,7 +102,7 @@ definition is_nonterminal :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
   "is_nonterminal cfg s \<equiv> s \<in> set (\<NN> cfg)"
 
 definition is_symbol :: "'a cfg \<Rightarrow> 'a \<Rightarrow> bool" where
-  "is_symbol cfg s \<longleftrightarrow> is_terminal cfg s \<or> is_nonterminal cfg s"
+  "is_symbol cfg s \<equiv> is_terminal cfg s \<or> is_nonterminal cfg s"
 
 definition wf_sentential :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
   "wf_sentential cfg s \<equiv> \<forall>x \<in> set s. is_symbol cfg x"
@@ -166,7 +166,7 @@ of an item. Functions @{term item_\<alpha>} and @{term item_\<beta>} split the p
 We call an item @{term complete} if the bullet is at the end of the production rule body. The next symbol (@{term next_symbol}) of
 an item is either @{term None} if it is complete, or @{term "Some s"} where $s$ is the symbol in the production
 rule body following the bullet. An item is finished if the item rule head is the start symbol, the item is complete, and
-the whole input has been scanned or @{term "item_origin item = 0"} and @{term "item_end item = length \<omega>"}. Finally, we call a set of
+the whole input has been scanned or @{term "item_origin item = (0::nat)"} and @{term "item_end item = length \<omega>"}. Finally, we call a set of
 items @{term recognizing} if it contains at least one finished item.
 \<close>
 
@@ -224,10 +224,22 @@ definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
   "inc_item x k = Item (item_rule x) (item_bullet x + 1) (item_origin x) k"
 
 text\<open>
-TODO:
+There are different approaches of defining the set of Earley items in accordance the rules of Figure \ref{fig:inference_rules}.
+We can take an abstract approach and define the set inductively using Isabelle's inductive sets,
+or a more operational point of view. We take the latter approach and discuss the reasoning for this
+decision end the end of this section.
 
-Even though we are only constructing one set of Earley items. Conceptually all items with the same item end
-form one Earley bin.
+Note that, even though we are only constructing one set of Earley items, conceptually all items with the same item end
+form one Earley bin. Our operational approach is then the following: we generate Earley items bin by bin in ascending order,
+starting from the $0$-th bin which contains all initial items. The three operations @{term Scan}, @{term Predict}, and @{term Complete}
+all take as an arguments the index of the current bin and the current set of Earley items. For the $k$-th bin
+the @{term Scan} operation initializes the $k+1$-th bin, whereas the @{term Predict} and @{term Complete} operations
+only generate items belonging to the $k$-th bin. We then define a function @{term E_step} (short for Earley step) that
+returns the union of applying the three operations to a set of Earley items and this set itself. We complete the $k$-th
+bin and initialize the $k+1$-th bin by iterating @{term E_step} until the set of items stabilizes, captured by the @{term E_bin}
+definition. The function @{term \<E>} generates the bins up to the $n$-th bin by applying the @{term E_bin}
+function first to the initial set of items @{term Init} and continuing in ascending order bin by bin. Finally, we compute
+the set of Earley items by applying @{term \<E>} to the length of the input.
 \<close>
 
 definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
@@ -259,9 +271,8 @@ definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
-text\<open>
-TODO
-\<close>
+definition E_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "E_step k cfg inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k cfg I"
 
 fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'a)" where
   "funpower f 0 x = x"
@@ -270,32 +281,28 @@ fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rig
 definition natUnion :: "(nat \<Rightarrow> 'a set) \<Rightarrow> 'a set" where
   "natUnion f = \<Union> { f n | n. True }"
 
-definition limit  :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
+definition limit :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
   "limit f x = natUnion (\<lambda> n. funpower f n x)"
 
-definition E_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "E_step k cfg inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k cfg I"
-
-definition E :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "E k cfg inp I = limit (E_step k cfg inp) I"
+definition E_bin :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "E_bin k cfg inp I = limit (E_step k cfg inp) I"
 
 fun \<E> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
-  "\<E> 0 cfg inp = E 0 cfg inp (Init cfg)"
-| "\<E> (Suc n) cfg inp = E (Suc n) cfg inp (\<E> n cfg inp)"
+  "\<E> 0 cfg inp = E_bin 0 cfg inp (Init cfg)"
+| "\<E> (Suc n) cfg inp = E_bin (Suc n) cfg inp (\<E> n cfg inp)"
 
 definition earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
   "earley cfg inp = \<E> (length inp) cfg inp"
 
-(*
-TODO:
-
-inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items"
-  for cfg :: "'a cfg" and inp :: "'a sentential"
-  where
-  init: "r \<in> set (\<RR> cfg) \<Longrightarrow> fst r = \<SS> cfg \<Longrightarrow> init_item r 0 \<in> Earley cfg inp"
-| scan: "x \<in> bin (Earley cfg inp) k \<Longrightarrow> k < length inp \<Longrightarrow> inp!k = a \<Longrightarrow> next_symbol x = Some a
-    \<Longrightarrow> inc_item x (k+1) \<in> Earley cfg inp"
-*)
+text\<open>
+We followed this operational approach of defining the set of Earley items primarily for two reasons: first of all, we adapted
+most of the definitions of this chapter from the work on Local Lexing \cite{Obua:2017} \cite{LocalLexing-AFP},
+which takes the more operational approach and already defines useful lemmas for example on function iteration.
+Secondly, the operational approach maps more easily to the list-based implementation of the next chapter which
+necessarily takes an ordered approach to generating Earley items. Nonetheless, in hindsight defining the set
+of Earley items seems to be not only the more elegant approach but also might simplify some of the proofs of
+this chapter.
+\<close>
 
 section \<open>Well-formedness\<close>
 
@@ -349,16 +356,16 @@ lemma wf_funpower:
 (*>*)
 text\<open>@{thm[source] wf_E_step}, by induction on n\<close>
 
-lemma wf_E:
+lemma wf_E_bin:
   assumes "wf_items cfg inp I"
-  shows "wf_items cfg inp (E k cfg inp I)"
+  shows "wf_items cfg inp (E_bin k cfg inp I)"
 (*<*)
   sorry
 (*>*)
 text\<open>@{thm[source] wf_funpower} by definition\<close>
 
-lemma wf_E0:
-  shows "wf_items cfg inp (E 0 cfg inp (Init cfg))"
+lemma wf_E_bin0:
+  shows "wf_items cfg inp (E_bin 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
@@ -369,7 +376,7 @@ lemma wf_\<E>:
 (*<*)
   sorry
 (*>*)
-text\<open>@{thm[source] wf_E0} @{thm[source] wf_E} by induction on n\<close>
+text\<open>@{thm[source] wf_E_bin0} @{thm[source] wf_E_bin} by induction on n\<close>
 
 lemma wf_earley:
   shows "wf_items cfg inp (earley cfg inp)"
@@ -439,15 +446,15 @@ lemma sound_funpower:
   sorry
 (*>*)
 
-lemma sound_E:
+lemma sound_E_bin:
   assumes "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (E k cfg inp I)"
+  shows "sound_items cfg inp (E_bin k cfg inp I)"
 (*<*)
   sorry
 (*>*)
 
-lemma sound_E0:
-  shows "sound_items cfg inp (E 0 cfg inp (Init cfg))"
+lemma sound_E_bin0:
+  shows "sound_items cfg inp (E_bin 0 cfg inp (Init cfg))"
 (*<*)
   sorry
 (*>*)
