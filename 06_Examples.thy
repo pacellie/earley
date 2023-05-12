@@ -61,7 +61,7 @@ lemma nonempty_derives:
 (*>*)
 
 lemma correctness:
-  shows "earley_recognized_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry  
 (*>*)

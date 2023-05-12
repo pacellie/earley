@@ -12,7 +12,7 @@ text\<open>
 In this chapter we shortly introduce the interactive theorem prover Isabelle/HOL \cite{Nipkow:2002} used as
 the tool for verification in this thesis and recap some of the formalism of context-free grammars and its representation
 in Isabelle. Finally we formalize the simplified Earley recognizer algorithm presented in Chapter
-\ref{chapter:2}; presenting the implementation and the proofs for termination, soundness and completeness.
+\ref{chapter:2}; discussing the implementation and the proofs for termination, soundness and completeness.
 Note that most of the definitions of Sections \ref{sec:cfg} and \ref{sec:earley} are not our own work
 but only slightly adapted from \cite{Obua:2017} \cite{LocalLexing-AFP}. All of the proofs in this chapter are
 our own work. 
@@ -22,22 +22,26 @@ section\<open>Context-free grammars and Isabelle/HOL \label{sec:cfg}\<close>
 
 text\<open>
 Isabelle/HOL \cite{Nipkow:2002} is an interactive theorem prover based on a fragment of higher-order logic. It supports the core
-concepts known from common functional programming languages. The notation $t :: \tau$ means that term $t$ has type
-$\tau$. Basic types include \textit{bool}, \textit{nat}; the operator @{term "(\<times>)"} represents pairs at the type level. Type variables are written $'a$, $'b$, etc;
-most type constructors are written postfix, e.g. $'a \, \textit{set}$ and $'a \, \textit{list}$; the function
-space arrow is $\Rightarrow$; function \textit{set} converts a list into a set. Type synonyms are introduced via \textit{type\_synonym}. Algebraic data types are defined with the keyword \textit{datatype}.
+concepts commonly known from functional programming languages. The notation $t :: \tau$ means that term $t$ has type
+$\tau$. Basic types include \textit{bool}, \textit{nat}; type variables are written $'a$, $'b$, etc. Pairs are written
+@{term "(a, b)"}; triples and so forth are written @{term "(a, b, c)"} but are internally represented as
+nested pairs; the nesting is on the first component of a pair. Functions @{term fst} and @{term snd} return
+the first and second component of a pair; the operator @{term "(\<times>)"} represents pairs at the type level.
+Most type constructors are written postfix, e.g. $'a \, \textit{set}$ and $'a \, \textit{list}$; the function
+space arrow is $\Rightarrow$; function \textit{set} converts a list into a set. Type synonyms are introduced via the \textit{type\_synonym} command. Algebraic data types are defined with the keyword \textit{datatype}.
 Non-recursive definitions are introduced with the \textit{definition} keyword.
 
 It is standard to define a language as a set of strings over a finite set of symbols. We deviate slightly by introducing a type variable $'a$
 for the type of symbols. Thus a string corresponds to a list of symbols and a language is formalized as
-a set of lists of symbols. We represent a context-free grammar as the datatype \textit{CFG}. An instance \textit{cfg} consists of (1) a list of
-nonterminals @{term "\<NN> cfg"}, (2) a list of terminals @{term "\<TT> cfg"}, (3) a list of production rules
-@{term "\<RR> cfg"}, and a start symbol @{term "\<SS> cfg"}. Each rule consists in turn of a left-hand side, a single symbol,
-and a right-hand side, a list of symbols.
+a set of lists of symbols. We represent a context-free grammar as the datatype @{term CFG}. An instance \textit{cfg} consists of (1) a list of
+nonterminals (@{term "\<NN> cfg"}), (2) a list of terminals (@{term "\<TT> cfg"}), (3) a list of production rules
+(@{term "\<RR> cfg"}), and a start symbol (@{term "\<SS> cfg"}) where @{term \<NN>}, @{term \<TT>}, @{term \<RR>} and @{term \<SS>} are
+projections accessing the specific part of the instance @{term cfg} of the datatype @{term CFG}. Each rule consists of a left-hand side or @{term rule_head}, a single symbol,
+and a right-hand side or @{term rule_body}, a list of symbols.
 The productions with a particular nonterminal $N$ on their left-hand sides are called the alternatives of $N$.
-We make the usual assumptions about the wellformedness of a context-free grammar. The intersection of set of terminals and
-the set of nonterminals is empty; the start symbol @{term \<SS>} is a nonterminal; the left-hand side of a production
-is a nonterminal and its right-hand side consists of only symbols. Additionally, since we are working with
+We make the usual assumptions about the well-formedness of a context-free grammar: the intersection of set of terminals and
+the set of nonterminals is empty; the start symbol @{term \<SS>} is a nonterminal; the rule head of a production
+is a nonterminal and its rule body consists of only symbols. Additionally, since we are working with
 a list of productions, we make the assumption that this list is distinct.
 \<close>
 
@@ -50,6 +54,12 @@ datatype 'a cfg =
     (\<TT> : "'a list") 
     (\<RR> : "'a rules")
     (\<SS> : "'a")
+
+definition rule_head :: "'a rule \<Rightarrow> 'a" where
+  "rule_head = fst"
+
+definition rule_body :: "'a rule \<Rightarrow> 'a list" where
+  "rule_body = snd"
 
 definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
   "disjunct_symbols cfg \<equiv> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
@@ -67,10 +77,8 @@ definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
   "wf_cfg cfg \<equiv> disjunct_symbols cfg \<and> wf_startsymbol cfg \<and> wf_rules cfg \<and> distinct_rules cfg"
 
 text\<open>
-Furthermore, in Isabelle, lists are constructed from the empty list @{term "[]"} via the infix cons-operator @{term "(#)"}; the operator @{term "(@)"} appends two lists. Pairs are written
-@{term "(a, b)"}; triples and so forth are written @{term "(a, b, c)"} but are internally represented as
-nested pairs; the nesting is on the first component of a pair. Functions \textit{fst} and \textit{snd} return
-the first and second component of a pair. Sets follow the standard mathematical notation including
+Furthermore, in Isabelle, lists are constructed from the empty list @{term "[]"} via the infix cons-operator @{term "(#)"}; the operator @{term "(@)"} appends two lists.
+Sets follow the standard mathematical notation including
 the commonly found set builder notation or set comprehensions @{term "{ x | x. P x}"}, and can also be defined
 inductively using the keyword \textit{inductive\_set}.
 
@@ -79,7 +87,7 @@ $A$, $B$, $C$ denote nonterminals; lists of symbols are represented by greek let
 The empty list in the context of a language is \epsilon. A sentential is a list $\alpha$ consisting of only symbols. A sentence
 is a sentential if it only contains terminal symbols. We first define a predicate \textit{derives1} which expresses that
 we can derive $v$ from $u$ in a single step or @{term "derives1 cfg u v"} holds if there exist $\alpha$, $\beta$, $N$ and $\gamma$ such that @{term "u = \<alpha> @ [N] @ \<beta>"},
-@{term "v = \<alpha> @ \<gamma> @ \<beta>"} and @{term "(N, \<gamma>)"} is a production rule. We then can define the set of single-step derivations utilizing @{term derives1},
+@{term "v = \<alpha> @ \<gamma> @ \<beta>"} and @{term "(N, \<gamma>)"} is a production rule. We then can define the set of single-step derivations,
 and subsequently the set of all derivations given a particular grammar is the reflexive-transitive closure of the set of
 single-step derivations. Finally, we say $v$ can be derived from $u$ given a grammar \textit{cfg}, or @{term "derives cfg u v"} if
 @{term "(u, v) \<in> derivations cfg"}.
@@ -119,7 +127,7 @@ definition derives :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a sente
   "derives cfg u v \<equiv> (u, v) \<in> derivations cfg"
 
 text\<open>
-It goes without saying that we can also define functions in Isabelle. Potentially recursive but provably total functions that may make use of pattern matching are defined with
+Potentially recursive but provably total functions that may make use of pattern matching are defined with
 the \textit{fun} and \textit{function} keywords; partial functions are defined via \textit{partial\_function}
 Take for example the function @{term slice} defined below. Term @{term "slice i j xs"} computes the slice of a list @{term xs}
 between indices $i$ (inclusive) and $j$ (exclusive), e.g. @{term "slice (2::nat) (4::nat) [a, b, c, d, e]"} evaluates to @{term "[c, d]"}.
@@ -148,19 +156,24 @@ lemma slice_append:
 section \<open>Earley's Algorithm \label{sec:earley}\<close>
 
 text\<open>
-Now we are ready to formalize the algorithm presented in Chapter \ref{chapter:2}.
+Now we are ready to formalize the algorithm presented in Chapter \ref{chapter:2}. First we define the datatype @{term item}
+representing Earley items. For example, the item $S \rightarrow \, S + \bullet S, 2, 4$ consists of four parts:
+a production rule (@{term item_rule}), a natural number (@{term item_bullet}) indicating the position of the bullet in
+the production rule, and two natural numbers (@{term item_origin} inclusive, @{term item_end} exclusive) representing the portion
+of the input string @{term \<omega>} that has been scanned by the item. Additionally we introduce a few useful abbreviations:
+the functions @{term item_rule_head} and @{term item_rule_body} access the @{term rule_head} respectively @{term rule_body}
+of an item. Functions @{term item_\<alpha>} and @{term item_\<beta>} split the production rule body at the bullet, e.g. $S \rightarrow \, \alpha \bullet \beta$.
+We call an item @{term complete} if the bullet is at the end of the production rule body. The next symbol (@{term next_symbol}) of
+an item is either @{term None} if it is complete, or @{term "Some s"} where $s$ is the symbol in the production
+rule body following the bullet. An item is finished if the item rule head is the start symbol, the item is complete, and
+the whole input has been scanned or @{term "item_origin item = 0"} and @{term "item_end item = length \<omega>"}. Finally, we call a set of
+items @{term recognizing} if it contains at least one finished item.
 \<close>
-
-definition rule_head :: "'a rule \<Rightarrow> 'a" where
-  "rule_head = fst"
-
-definition rule_body :: "'a rule \<Rightarrow> 'a list" where
-  "rule_body = snd"
 
 datatype 'a item = 
   Item 
     (item_rule: "'a rule") 
-    (item_dot : nat) 
+    (item_bullet : nat) 
     (item_origin : nat)
     (item_end : nat)
 
@@ -173,35 +186,16 @@ definition item_rule_body :: "'a item \<Rightarrow> 'a sentential" where
   "item_rule_body x = rule_body (item_rule x)"
 
 definition item_\<alpha> :: "'a item \<Rightarrow> 'a sentential" where
-  "item_\<alpha> x = take (item_dot x) (item_rule_body x)"
+  "item_\<alpha> x = take (item_bullet x) (item_rule_body x)"
 
 definition item_\<beta> :: "'a item \<Rightarrow> 'a sentential" where 
-  "item_\<beta> x = drop (item_dot x) (item_rule_body x)"
+  "item_\<beta> x = drop (item_bullet x) (item_rule_body x)"
 
 definition is_complete :: "'a item \<Rightarrow> bool" where
-  "is_complete x \<equiv> item_dot x \<ge> length (item_rule_body x)"
+  "is_complete x \<equiv> item_bullet x \<ge> length (item_rule_body x)"
 
 definition next_symbol :: "'a item \<Rightarrow> 'a option" where
-  "next_symbol x \<equiv> if is_complete x then None else Some ((item_rule_body x) ! (item_dot x))"
-
-definition init_item :: "'a rule \<Rightarrow> nat \<Rightarrow> 'a item" where
-  "init_item r k = Item r 0 k k"
-
-definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
-  "inc_item x k = Item (item_rule x) (item_dot x + 1) (item_origin x) k"
-
-definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "bin I k = { x . x \<in> I \<and> item_end x = k }"
-
-definition wf_item :: "'a cfg \<Rightarrow> 'a sentential => 'a item \<Rightarrow> bool" where 
-  "wf_item cfg inp x \<equiv> 
-    item_rule x \<in> set (\<RR> cfg) \<and> 
-    item_dot x \<le> length (item_rule_body x) \<and>
-    item_origin x \<le> item_end x \<and> 
-    item_end x \<le> length inp"
-
-definition wf_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> bool" where
-  "wf_items cfg inp I \<equiv> \<forall>x \<in> I. wf_item cfg inp x"
+  "next_symbol x \<equiv> if is_complete x then None else Some ((item_rule_body x) ! (item_bullet x))"
 
 definition is_finished :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a item \<Rightarrow> bool" where
   "is_finished cfg inp x \<equiv> 
@@ -210,8 +204,34 @@ definition is_finished :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a i
     item_end x = length inp \<and> 
     is_complete x"
 
-definition earley_recognized :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
-  "earley_recognized I cfg inp \<equiv> \<exists>x \<in> I. is_finished cfg inp x"
+definition recognizing :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "recognizing I cfg inp \<equiv> \<exists>x \<in> I. is_finished cfg inp x"
+
+text\<open>
+Normally we don't construct items directly via the @{term Item} constructor but use two auxiliary constructors:
+the function @{term init_item} is used by the @{term Init} and @{term Predict} operations. It sets the @{term item_bullet} to 0 or
+the beginning of the production rule body, initializes the @{term item_rule}, and indicates that this is an initial item
+by assigning @{term item_origin} and @{term item_end} to the current position in the input. The function @{term inc_item}
+returns a new item moving the bullet over the next symbol (assuming there is one) and setting the @{term item_end} to the
+current position in the input, leaving the item rule and origin untouched. It is utilized by the @{term Scan} and
+@{term Complete} operations.
+\<close>
+
+definition init_item :: "'a rule \<Rightarrow> nat \<Rightarrow> 'a item" where
+  "init_item r k = Item r 0 k k"
+
+definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
+  "inc_item x k = Item (item_rule x) (item_bullet x + 1) (item_origin x) k"
+
+text\<open>
+TODO:
+
+Even though we are only constructing one set of Earley items. Conceptually all items with the same item end
+form one Earley bin.
+\<close>
+
+definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bin I k = { x . x \<in> I \<and> item_end x = k }"
 
 definition Init :: "'a cfg \<Rightarrow> 'a items" where
   "Init cfg = { init_item r 0 | r. r \<in> set (\<RR> cfg) \<and> fst r = (\<SS> cfg) }"
@@ -239,6 +259,10 @@ definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
+text\<open>
+TODO
+\<close>
+
 fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'a)" where
   "funpower f 0 x = x"
 | "funpower f (Suc n) x = f (funpower f n x)"
@@ -263,6 +287,8 @@ definition earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items"
   "earley cfg inp = \<E> (length inp) cfg inp"
 
 (*
+TODO:
+
 inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items"
   for cfg :: "'a cfg" and inp :: "'a sentential"
   where
@@ -271,7 +297,25 @@ inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a ite
     \<Longrightarrow> inc_item x (k+1) \<in> Earley cfg inp"
 *)
 
-section \<open>Wellformedness\<close>
+section \<open>Well-formedness\<close>
+
+text\<open>
+TODO:
+
+We define what it means for an item to be well-formed (@{term wf_item}): the item rule must be
+in the rules of the grammar; the item bullet has to be bounded by the length of the item rule body; the
+item origin should not exceed the item end, and finally the item end is at most the length of the input.
+\<close>
+
+definition wf_item :: "'a cfg \<Rightarrow> 'a sentential => 'a item \<Rightarrow> bool" where 
+  "wf_item cfg inp x \<equiv> 
+    item_rule x \<in> set (\<RR> cfg) \<and> 
+    item_bullet x \<le> length (item_rule_body x) \<and>
+    item_origin x \<le> item_end x \<and> 
+    item_end x \<le> length inp"
+
+definition wf_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> bool" where
+  "wf_items cfg inp I \<equiv> \<forall>x \<in> I. wf_item cfg inp x"
 
 lemma wf_Init:
   assumes "x \<in> Init cfg"
@@ -335,6 +379,10 @@ lemma wf_earley:
 text\<open>@{thm[source] wf_\<E>} by definition\<close>
 
 section \<open>Soundness\<close>
+
+text\<open>
+TODO:
+\<close>
 
 definition sound_item :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a item \<Rightarrow> bool" where
   "sound_item cfg inp x = derives cfg [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
@@ -417,13 +465,17 @@ lemma sound_earley:
 (*>*)
 
 theorem soundness:
-  assumes "earley_recognized (earley cfg inp) cfg inp"
+  assumes "recognizing (earley cfg inp) cfg inp"
   shows "derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)
 
 section \<open>Completeness\<close>
+
+text\<open>
+TODO:
+\<close>
 
 lemma Scan_\<E>:
   assumes "i+1 \<le> k" "k \<le> length inp" "x \<in> bin (\<E> k cfg inp) i"
@@ -496,14 +548,14 @@ lemma partially_completed_earley:
 
 theorem completeness:
   assumes "derives cfg [\<SS> cfg] inp" "is_sentence cfg inp" "wf_cfg cfg"
-  shows "earley_recognized (earley cfg inp) cfg inp"
+  shows "recognizing (earley cfg inp) cfg inp"
 (*<*)
   sorry
 (*>*)
 
 corollary
   assumes "wf_cfg cfg" "is_sentence cfg inp"
-  shows "earley_recognized (earley cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "recognizing (earley cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)

@@ -14,7 +14,7 @@ section \<open>Draft\<close>
 section \<open>Pointer lemmas\<close>
 
 definition predicts :: "'a item \<Rightarrow> bool" where
-  "predicts x \<equiv> item_origin x = item_end x \<and> item_dot x = 0"
+  "predicts x \<equiv> item_origin x = item_end x \<and> item_bullet x = 0"
 
 definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "scans inp k x y \<equiv> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
@@ -138,7 +138,7 @@ fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
 fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
   "wf_item_tree cfg _ (Leaf a) \<longleftrightarrow> True"
 | "wf_item_tree cfg x (Branch N ts) \<longleftrightarrow> (
-    N = item_rule_head x \<and> map root_tree ts = take (item_dot x) (item_rule_body x) \<and>
+    N = item_rule_head x \<and> map root_tree ts = take (item_bullet x) (item_rule_body x) \<and>
     (\<forall>t \<in> set ts. wf_rule_tree cfg t))"
 
 definition wf_yield_tree :: "'a sentential \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where

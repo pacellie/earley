@@ -511,19 +511,19 @@ lemma earley_sub_earley_list:
 
 section \<open>Main Theorem\<close>
 
-definition earley_recognized_list :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
-  "earley_recognized_list I cfg inp \<equiv> \<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x"
+definition recognizing_list :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
+  "recognizing_list I cfg inp \<equiv> \<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x"
 
-theorem earley_recognized_list_iff_earley_recognized:
+theorem recognizing_list_iff_earley_recognized:
   assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_list (earley_list cfg inp) cfg inp \<longleftrightarrow> earley_recognized (earley cfg inp) cfg inp"
+  shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> recognizing (earley cfg inp) cfg inp"
 (*<*)
   sorry
 (*>*)
 
 corollary correctness_list:
   assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
 (*<*)
   sorry
 (*>*)

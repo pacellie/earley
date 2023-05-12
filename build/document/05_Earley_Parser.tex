@@ -41,7 +41,7 @@
 \endisadelimdocument
 \isacommand{definition}\isamarkupfalse%
 \ predicts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}predicts\ x\ {\isasymequiv}\ item{\isacharunderscore}{\kern0pt}origin\ x\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x\ {\isasymand}\ item{\isacharunderscore}{\kern0pt}dot\ x\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\ \ {\isachardoublequoteopen}predicts\ x\ {\isasymequiv}\ item{\isacharunderscore}{\kern0pt}origin\ x\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x\ {\isasymand}\ item{\isacharunderscore}{\kern0pt}bullet\ x\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ scans\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
@@ -281,7 +281,7 @@
 \ wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ tree\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ cfg\ {\isacharunderscore}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Leaf\ a{\isacharparenright}{\kern0pt}\ {\isasymlongleftrightarrow}\ True{\isachardoublequoteclose}\isanewline
 {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ cfg\ x\ {\isacharparenleft}{\kern0pt}Branch\ N\ ts{\isacharparenright}{\kern0pt}\ {\isasymlongleftrightarrow}\ {\isacharparenleft}{\kern0pt}\isanewline
-\ \ \ \ N\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}head\ x\ {\isasymand}\ map\ root{\isacharunderscore}{\kern0pt}tree\ ts\ {\isacharequal}{\kern0pt}\ take\ {\isacharparenleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}dot\ x{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}body\ x{\isacharparenright}{\kern0pt}\ {\isasymand}\isanewline
+\ \ \ \ N\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}head\ x\ {\isasymand}\ map\ root{\isacharunderscore}{\kern0pt}tree\ ts\ {\isacharequal}{\kern0pt}\ take\ {\isacharparenleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}bullet\ x{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}body\ x{\isacharparenright}{\kern0pt}\ {\isasymand}\isanewline
 \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}t\ {\isasymin}\ set\ ts{\isachardot}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ cfg\ t{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
