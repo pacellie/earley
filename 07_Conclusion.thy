@@ -1,7 +1,7 @@
 (*<*)
 theory "07_Conclusion"
   imports
-    "HOL-Library.LaTeXsugar"
+    "06_Examples"
 begin
 (*>*)
 

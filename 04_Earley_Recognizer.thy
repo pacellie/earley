@@ -2,11 +2,12 @@
 theory "04_Earley_Recognizer"
   imports
     "03_Fixpoint_Earley_Recognizer"
-    "HOL-Library.LaTeXsugar"
 begin
 (*>*)
 
-chapter \<open>Draft\<close>
+chapter\<open>Earley Recognizer Implementation \label{chap:04}\<close> 
+
+section \<open>Draft\<close>
 
 text\<open>
   \begin{itemize}
@@ -30,8 +31,6 @@ text\<open>
     \item highlight main theorems
   \end{itemize}
 \<close>
-
-chapter\<open>Earley Recognizer Implementation\<close>
 
 text\<open>
   \begin{table}[htpb]
@@ -527,6 +526,45 @@ corollary correctness_list:
 (*<*)
   sorry
 (*>*)
+
+text\<open>
+SNIPPET:
+
+It is this latter possibility, adding items to $S_i$ while representing sets as lists, which causes grief with epsilon-rules.
+When Completer processes an item A -> dot, j which corresponds to the epsilon-rule A -> epsiolon, it must
+look through $S_j$ for items with the dot before an A. Unfortunately, for epsilon-rule items, j is always
+equal to i. Completer is thus looking through the partially constructed set $S_i$. Since implementations
+process items in $S_i$ in order, if an item B -> alpha dot A beta, k is added to $S_i$ after Completer
+has processed A -> dot, j, Completer will never add B -> \alpha A dot \beta, k to $S_i$. In turn, items
+resulting directly and indirectly from B -> \alpha A dot \beta, k will be omitted too. This effectively
+prunes protential derivation paths which might cause correct input to be rejected. (EXAMPLE)
+Aho \textit{et al} \cite{Aho:1972} propose the stay clam and keep running the Predictor and Completer
+in turn until neither has anything more to add. Earley himself suggest to have the Completer note that
+the dot needed to be moved over A, then looking for this whenever future items were added to $S_i$.
+For efficiency's sake the collection of on-terminals to watch for should be stored in a data structure
+which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycoack:2002}
+is a simple modification of the Predictor based on the idea of nullability. A non-terminal A is said to be
+nullable if A derives star epsilon. Terminal symbols of course can never be nullable. The nullability of
+non-terminals in a grammar may be precomputed using well-known techniques \cite{Appel:2003} \cite{Fischer:2009}
+Using this notion the Predictor can be stated as follows: if A -> \alpha dot B \beta, j is in $S_i$,
+add B -> dot \gamma, i to $S_i$ for all rules B -> \gamma. If B is nullable, also add A -> \alpha B dot \beta, j
+to $S_i$. Explanation why I decided against it. Involves every grammar can be rewritten to not contain epsilon
+productions. In other words we eagerly move the dot over a nonterminal if that non-terminal can derive epsilon
+and effectivley disappear. The source implements this precomputation by constructing a variant of 
+a LR(0) deterministic finite automata (DFA). But for an earley parser we must keep track of which parent
+pointers and LR(0) items belong together which leads to complex and inelegant implementations \cite{McLean:1996}.
+The source resolves this problem by constructing split epsilon DFAs, but still need to adjust the classical
+earley algorithm by adding not only predecessor links but also causal links, and to construct the split
+epsilon DFAs not the original grammar but a slightly adjusted equivalent grammar is used that encodes
+explicitly information that is crucial to reconstructing derivations, called a grammar in nihilist normal form (NNF)
+which might increase the size of the grammar whereas the authors note empirical results that the increase
+is quite modest (a factor of 2 at most).
+
+Example:
+S -> AAAA, A -> a, A -> E, E -> epsilon, input a
+$S_0$ S -> dot AAAA,0, A -> dot a, 0, A -> dot E, 0, E -> dot, 0, A -> E dot, 0, S -> A dot AAA, 0
+$S_1$ A -> a dot, 0, S -> A dot AAA, 0, S -> AA dot AA, 0, A -> dot a, 1, A -> dot E, 1, E -> dot, 1, A -> E dot, 1, S -> AAA dot A, 0
+\<close>
 
 (*<*)
 end

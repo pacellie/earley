@@ -10,6 +10,7 @@ session Earley = LocalLexing +
     Earley_Recognizer_Executable
     Earley_Parser_Executable
     Examples
+    MyLaTeXSugar
   theories
     "01_Introduction"
     "02_Earleys_Algorithm"

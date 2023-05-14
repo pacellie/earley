@@ -2,7 +2,6 @@
 theory "06_Examples"
   imports
     "05_Earley_Parser"
-    "HOL-Library.LaTeXsugar"
 begin
 (*>*)
 

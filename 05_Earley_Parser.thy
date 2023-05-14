@@ -3,7 +3,6 @@ theory "05_Earley_Parser"
   imports
     "04_Earley_Recognizer"
     "HOL-Library.Monad_Syntax"
-    "HOL-Library.LaTeXsugar"
 begin
 (*>*)
 
@@ -446,6 +445,23 @@ theorem termination_build_tree_earley_list:
 (*>*)
 
 section \<open>A Word on Completeness\<close>
+
+text\<open>
+SNIPPET:
+
+A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
+trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
+to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
+family of children. Nodes can be packed only if their yields correspond to the same portion of the input string. Thus, to make it easier
+to determine whether two alternates can be packed under a given node, SPPF nodes are labelled with a triple (x,i,j) where
+$a_{j+1} \dots a_i$ is a substring matched by x. To obtain a cubic algorithm we use binarised SPPFs which contain intermediate additional
+nodes but which are of worst case cubic size. (EXAMPlE SPPF running example???)
+
+We can turn earley's algorithm into a correct parser by adding pointers between items rather than instances of non-terminals, and labelling th epointers
+in a way which allows a binariesd SPPF to be constructed by walking the resulting structure. However, inorder to
+construct a binarised SPPF we also have to introduce additional nodes for grammar rules of length greater than two,
+complicating the final algorithm.
+\<close>
 
 (*<*)
 end

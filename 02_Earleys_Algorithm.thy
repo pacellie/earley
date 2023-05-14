@@ -1,7 +1,7 @@
 (*<*)
 theory "02_Earleys_Algorithm"
   imports
-    "HOL-Library.LaTeXsugar"
+    "MyLaTeXSugar"
 begin
 (*>*)
 
@@ -17,9 +17,9 @@ the input is @{term \<omega>} $= x + x + x$.
 Intuitively, Earley's recognizer works in principle like a top-down parser carrying along all possible
 parses simultaneously in an efficient manner.
 In detail, the algorithm works as follows: it scans the input @{term \<omega>} $=a_0,\dots,a_n$, constructing
-$n+1$ Earley bins $B_i$ which are sets of Earley items. An inital bin $B_0$ and one bin $B_{i+1}$ for
+$n+1$ Earley bins $B_i$ that are sets of Earley items. An inital bin $B_0$ and one bin $B_{i+1}$ for
 each symbol $a_i$ of the input.
-In general, an Earley item $A \rightarrow \, \alpha \bullet \beta, i, j$ consists of four parts: a production rule of the grammar which we are currently
+In general, an Earley item $A \rightarrow \, \alpha \bullet \beta, i, j$ consists of four parts: a production rule of the grammar that we are currently
 scanning, a bullet signalling how much of the production's right-hand side we have recognized so far,
 an origin $i$ describing the position of @{term \<omega>} where we started scanning, and an end $j$ indicating
 the position  of @{term \<omega>} we are currently considering next for the remaining right-hand side of the production rule.
@@ -65,7 +65,7 @@ in detail:
     Looking back at our example, we can add the item $S \rightarrow \, S + S \bullet, 0, 5$
     for two different reasons corresponding conceptually to the two different ways we can derive \omega.
     When processing $S \rightarrow \, x \bullet, 4, 5$ we find $S \rightarrow \, S + \bullet S, 0, 4$ in the origin
-    bin $B_4$ which conceptually corresponds to recognizing $(x + x) + x$. We \glq add \grq the same item again
+    bin $B_4$ which corresponds to recognizing $(x + x) + x$. We 'add' the same item again
     while applying the \textit{Complete} operation to $S \rightarrow \, S + S \bullet, 2, 5$ and $S \rightarrow \, S + \bullet S, 0, 2$
     which corresponds to recognizing the input as $x + (x + x)$.
 \end{enumerate}
@@ -86,9 +86,9 @@ It follows from the following three lemmas:
 \begin{enumerate}
   \item Termination: there only exist a finite number of Earley items
   \item Soundness: for every generated item there exists an according derivation: \\
-     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j)$
+     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \beta$
   \item Completeness: for every derivation we generate an according item: \\
-     $A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
+     $A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \beta \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
 \end{enumerate}
 \<close>
 

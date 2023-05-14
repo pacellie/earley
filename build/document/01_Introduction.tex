@@ -21,179 +21,6 @@
 %
 \isatagdocument
 %
-\isamarkupchapter{Snippets%
-}
-\isamarkuptrue%
-%
-\isamarkupsection{Earley%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-Context-free grammars have been used extensively for describing the syntax of programming languages
-and natural languages. Parsing algorithms for context-free grammars consequently play a large role in
-the implementation of compilers and interpreters for programming languages and of programs which understand
-or translate natural languages. Numerous parsing algorithms have been developed. Some are general,
-in the sense that they can handle all context-free grammars, while others can handle only subclasses of
-grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
-seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
-in linear time than most of the restricted algorithms.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupsection{Scott%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-The Computer Science community has been able to automatically generate parsers for a very wide class of context
-free languages. However, many parsers are still written manually, either using tool support or even completely
-by hand. This is partly because in some application areas such as natural language processing and bioinformatics
-we don not have the luxury of designing the language so that it is amendable to know parsing techniques, but also
-it is clear that left to themselves computer language designers do not naturally write LR(1) grammars. A grammar
-not only defines the syntax of a language, it is also the starting point for the definition of the semantics,
-and the grammar which facilitates semantics definition is not usually the one which is LR(1). Given this difficulty
-in constructing natural LR(1) grammars that support desired semantics, the general parsing techniques, such as
-the CYK Younger \cite{Younger:1967}, Earley \cite{Earley:1970} and GLR Tomita \cite{Tomita:1985} algorithms, developed
-for natural language processing are also of interest to the wider computer science community. When using grammars as
-the starting point for semantics definition, we distinguish between recognizers which simply determine whether or not
-a given string is in the language defined by a given grammar, and parserwhich also return some form of derivation
-of the string, if one exists. In their basic form the CYK and Earley algorithms are recognizers while GLR-style
-algorithms are designed with derivation tree construction, and hence parsing, in mind.
-
-There is no known liner time parsing or recognition algorithm that can be used with all context free grammars.
-In their recognizer forms the CYK algorithm is worst case cubic on grammars in Chomsky normal form and Earley's
-algorithm is worst case cubic on general context free grammers and worst case n2 on non-ambibuous grammars.
-General recognizers must, by definition, be applicable to ambiguous grammars. Tomita's GLR algorithm is of unbounded
-polynomial order in the worst case. Expanding general recognizers to parser raises several problems, not least
-because there can be exponentially many or even infinitely many derivations for a given input string. A cubic
-recognizer which was modified to simply return all derivations could become an unbounded parser.
-Of course, it can be argued that ambiguous grammars reflect ambiguous semantics and thus should not be used in
-practice. This would be far too extreme a position to take. For example, it is well known that the if-else
-statement in hthe AnSI-standard grammar for C is ambiguous, but a longest match resolution results in a linear
-time parser that attach the else to the most recent if, as specified by the ANSI-C semantics. The ambiguous
-ANSI-C grammar is certainly practical for parser implementation. However, in general ambiguity is not so easily handled,
-and it is well known that grammar ambiguity is in fact undecidable Hopcroft \textit{et al} \cite{Hopcroft:2006}, thus
-we cannot expect a parser generator simply to check for ambiguity inthe grammar and report the problem back to the user.
-Another possiblity is to avoid the issue by just returning one derivation. However, if only one derivation is returned
-then this creates problems for a user who wants all derivations and, even in the case where only one derivation is
-required, there is the issue of ensuring that it is the required derivationthat is returned. A truely general parser
-will reutrn all possible derivations in some form. Perhaps the most well known representation is the shared packed
-parse foreset SPPF described and used by Tomita \cite{Tomita:1985}. Tomita's description of the representation does ont allow
-for the infinitely many derivations which arise from grammars which contain cycles, the source adapt the SPPF representation
-to allow these. Johnson \cite{Johnson:1991} has shown that Tomita-style SPPFs are worst case unbounded polynomial size. Thus
-using such structures will alo turn any cubic recognition technique into a worst case unbounded polynomial parsing technique.
-Leaving aside the potential increase in complexity when turning a recogniser into a parser, it is clear that this proccess is often difficult to carry
-out correctly. Earley gave an algorithm for constructing derivations of a string accepted by his recognizer,
-but this was subsequently shown by Tomita \cite{Tomita:1985} to return spurious derivations in certain cases.
-Tomita's original version of his algorithm failed to terminate on grammars with hidden left recursio and, as remarked above
-, had no mechanism for contructing complete SPPFs for grammers with cycles.
-
-A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
-trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
-to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
-family of children. Nodes can be packed only if their yields correspond to the same portion of the input string. Thus, to make it easier
-to determine whether two alternates can be packed under a given node, SPPF nodes are labelled with a triple (x,i,j) where
-$a_{j+1} \dots a_i$ is a substring matched by x. To obtain a cubic algorithm we use binarised SPPFs which contain intermediate additional
-nodes but which are of worst case cubic size. (EXAMPlE SPPF running example???)
-
-We can turn earley's algorithm into a correct parser by adding pointers between items rather than instances of non-terminals, and labelling th epointers
-in a way which allows a binariesd SPPF to be constructed by walking the resulting structure. However, inorder to
-construct a binarised SPPF we also have to introduce additional nodes for grammar rules of length greater than two,
-complicating the final algorithm.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupsection{Aycock%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-Earley's parsing algorithm is a general algorithm, capable of parsing according to any context-free
-grammar. General parsing algorithms like Earley parsing allow unfettered expression of ambiguous grammar
-contructs which come up often in practice (REFERENCE).
-
-In terms of implementation, the Earley sets are built in increasing order as the input is read. Also,
-each set is typically represented as a list of items. This list representation of a set is particularly
-convenient, because the list of items acts as a work queue when building the sets: items are examined
-in order, applying the transformations as necessary: items added to the set are appended onto the end of
-the list.
-
-At any given point $i$ in the parse, we have two partially constructed sets. Scanner may add items to
-$S_{i+1}$ and $S_i$ may have items added to it by Predictor and Completer. It is this latter possibility,
-adding items to $S_i$ while representing sets as lists, which causes grief with epsilon-rules.
-When Completer processes an item A -> dot, j which corresponds to the epsilon-rule A -> epsiolon, it must
-look through $S_j$ for items with the dot before an A. Unfortunately, for epsilon-rule items, j is always
-equal to i. Completer is thus looking through the partially constructed set $S_i$. Since implementations
-process items in $S_i$ in order, if an item B -> alpha dot A beta, k is added to $S_i$ after Completer
-has processed A -> dot, j, Completer will never add B -> \alpha A dot \beta, k to $S_i$. In turn, items
-resulting directly and indirectly from B -> \alpha A dot \beta, k will be omitted too. This effectively
-prunes protential derivation paths which might cause correct input to be rejected. (EXAMPLE)
-Aho \textit{et al} \cite{Aho:1972} propose the stay clam and keep running the Predictor and Completer
-in turn until neither has anything more to add. Earley himself suggest to have the Completer note that
-the dot needed to be moved over A, then looking for this whenever future items were added to $S_i$.
-For efficiency's sake the collection of on-terminals to watch for should be stored in a data structure
-which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycoack:2002}
-is a simple modification of the Predictor based on the idea of nullability. A non-terminal A is said to be
-nullable if A derives star epsilon. Terminal symbols of course can never be nullable. The nullability of
-non-terminals in a grammar may be precomputed using well-known techniques \cite{Appel:2003} \cite{Fischer:2009}
-Using this notion the Predictor can be stated as follows: if A -> \alpha dot B \beta, j is in $S_i$,
-add B -> dot \gamma, i to $S_i$ for all rules B -> \gamma. If B is nullable, also add A -> \alpha B dot \beta, j
-to $S_i$. Explanation why I decided against it. Involves every grammar can be rewritten to not contain epsilon
-productions. In other words we eagerly move the dot over a nonterminal if that non-terminal can derive epsilon
-and effectivley disappear. The source implements this precomputation by constructing a variant of 
-a LR(0) deterministic finite automata (DFA). But for an earley parser we must keep track of which parent
-pointers and LR(0) items belong together which leads to complex and inelegant implementations \cite{McLean:1996}.
-The source resolves this problem by constructing split epsilon DFAs, but still need to adjust the classical
-earley algorithm by adding not only predecessor links but also causal links, and to construct the split
-epsilon DFAs not the original grammar but a slightly adjusted equivalent grammar is used that encodes
-explicitly information that is crucial to reconstructing derivations, called a grammar in nihilist normal form (NNF)
-which might increase the size of the grammar whereas the authors note empirical results that the increase
-is quite modest (a factor of 2 at most).
-
-Example:
-S -> AAAA, A -> a, A -> E, E -> epsilon, input a
-$S_0$ S -> dot AAAA,0, A -> dot a, 0, A -> dot E, 0, E -> dot, 0, A -> E dot, 0, S -> A dot AAA, 0
-$S_1$ A -> a dot, 0, S -> A dot AAA, 0, S -> AA dot AA, 0, A -> dot a, 1, A -> dot E, 1, E -> dot, 1, A -> E dot, 1, S -> AAA dot A, 0%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
 \isamarkupchapter{Introduction%
 }
 \isamarkuptrue%
@@ -286,6 +113,66 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %
 \endisadelimdocument
 %
+\begin{isamarkuptext}%
+SNIPPET:
+
+Context-free grammars have been used extensively for describing the syntax of programming languages
+and natural languages. Parsing algorithms for context-free grammars consequently play a large role in
+the implementation of compilers and interpreters for programming languages and of programs which understand
+or translate natural languages. Numerous parsing algorithms have been developed. Some are general,
+in the sense that they can handle all context-free grammars, while others can handle only subclasses of
+grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
+seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
+in linear time than most of the restricted algorithms.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+SNIPPET:
+
+The Computer Science community has been able to automatically generate parsers for a very wide class of context
+free languages. However, many parsers are still written manually, either using tool support or even completely
+by hand. This is partly because in some application areas such as natural language processing and bioinformatics
+we don not have the luxury of designing the language so that it is amendable to know parsing techniques, but also
+it is clear that left to themselves computer language designers do not naturally write LR(1) grammars. A grammar
+not only defines the syntax of a language, it is also the starting point for the definition of the semantics,
+and the grammar which facilitates semantics definition is not usually the one which is LR(1). Given this difficulty
+in constructing natural LR(1) grammars that support desired semantics, the general parsing techniques, such as
+the CYK Younger \cite{Younger:1967}, Earley \cite{Earley:1970} and GLR Tomita \cite{Tomita:1985} algorithms, developed
+for natural language processing are also of interest to the wider computer science community. When using grammars as
+the starting point for semantics definition, we distinguish between recognizers which simply determine whether or not
+a given string is in the language defined by a given grammar, and parserwhich also return some form of derivation
+of the string, if one exists. In their basic form the CYK and Earley algorithms are recognizers while GLR-style
+algorithms are designed with derivation tree construction, and hence parsing, in mind.
+
+There is no known liner time parsing or recognition algorithm that can be used with all context free grammars.
+In their recognizer forms the CYK algorithm is worst case cubic on grammars in Chomsky normal form and Earley's
+algorithm is worst case cubic on general context free grammers and worst case n2 on non-ambibuous grammars.
+General recognizers must, by definition, be applicable to ambiguous grammars. Tomita's GLR algorithm is of unbounded
+polynomial order in the worst case. Expanding general recognizers to parser raises several problems, not least
+because there can be exponentially many or even infinitely many derivations for a given input string. A cubic
+recognizer which was modified to simply return all derivations could become an unbounded parser.
+Of course, it can be argued that ambiguous grammars reflect ambiguous semantics and thus should not be used in
+practice. This would be far too extreme a position to take. For example, it is well known that the if-else
+statement in hthe AnSI-standard grammar for C is ambiguous, but a longest match resolution results in a linear
+time parser that attach the else to the most recent if, as specified by the ANSI-C semantics. The ambiguous
+ANSI-C grammar is certainly practical for parser implementation. However, in general ambiguity is not so easily handled,
+and it is well known that grammar ambiguity is in fact undecidable Hopcroft \textit{et al} \cite{Hopcroft:2006}, thus
+we cannot expect a parser generator simply to check for ambiguity inthe grammar and report the problem back to the user.
+Another possiblity is to avoid the issue by just returning one derivation. However, if only one derivation is returned
+then this creates problems for a user who wants all derivations and, even in the case where only one derivation is
+required, there is the issue of ensuring that it is the required derivationthat is returned. A truely general parser
+will reutrn all possible derivations in some form. Perhaps the most well known representation is the shared packed
+parse foreset SPPF described and used by Tomita \cite{Tomita:1985}. Tomita's description of the representation does ont allow
+for the infinitely many derivations which arise from grammars which contain cycles, the source adapt the SPPF representation
+to allow these. Johnson \cite{Johnson:1991} has shown that Tomita-style SPPFs are worst case unbounded polynomial size. Thus
+using such structures will alo turn any cubic recognition technique into a worst case unbounded polynomial parsing technique.
+Leaving aside the potential increase in complexity when turning a recogniser into a parser, it is clear that this proccess is often difficult to carry
+out correctly. Earley gave an algorithm for constructing derivations of a string accepted by his recognizer,
+but this was subsequently shown by Tomita \cite{Tomita:1985} to return spurious derivations in certain cases.
+Tomita's original version of his algorithm failed to terminate on grammars with hidden left recursio and, as remarked above
+, had no mechanism for contructing complete SPPFs for grammers with cycles.%
+\end{isamarkuptext}\isamarkuptrue%
+%
 \isadelimtheory
 %
 \endisadelimtheory
@@ -304,149 +191,90 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 %:%file=01_Introduction.tex%:%
 %:%24=8%:%
 %:%28=10%:%
-%:%40=13%:%
-%:%41=14%:%
-%:%42=15%:%
-%:%43=16%:%
-%:%44=17%:%
-%:%45=18%:%
-%:%46=19%:%
-%:%47=20%:%
-%:%56=23%:%
-%:%68=26%:%
-%:%69=27%:%
-%:%70=28%:%
-%:%71=29%:%
-%:%72=30%:%
-%:%73=31%:%
-%:%74=32%:%
-%:%75=33%:%
-%:%76=34%:%
-%:%77=35%:%
-%:%78=36%:%
-%:%79=37%:%
-%:%80=38%:%
-%:%81=39%:%
-%:%82=40%:%
-%:%83=41%:%
-%:%84=42%:%
-%:%85=43%:%
-%:%86=44%:%
-%:%87=45%:%
-%:%88=46%:%
-%:%89=47%:%
-%:%90=48%:%
-%:%91=49%:%
-%:%92=50%:%
-%:%93=51%:%
-%:%94=52%:%
-%:%95=53%:%
-%:%96=54%:%
-%:%97=55%:%
-%:%98=56%:%
-%:%99=57%:%
-%:%100=58%:%
-%:%101=59%:%
-%:%102=60%:%
-%:%103=61%:%
-%:%104=62%:%
-%:%105=63%:%
-%:%106=64%:%
-%:%107=65%:%
-%:%108=66%:%
-%:%109=67%:%
-%:%110=68%:%
-%:%111=69%:%
-%:%112=70%:%
-%:%113=71%:%
-%:%114=72%:%
-%:%115=73%:%
-%:%116=74%:%
-%:%117=75%:%
-%:%118=76%:%
-%:%119=77%:%
-%:%120=78%:%
-%:%121=79%:%
-%:%122=80%:%
-%:%131=83%:%
-%:%143=86%:%
-%:%144=87%:%
-%:%145=88%:%
-%:%146=89%:%
-%:%147=90%:%
-%:%148=91%:%
-%:%149=92%:%
-%:%150=93%:%
-%:%151=94%:%
-%:%152=95%:%
-%:%153=96%:%
-%:%154=97%:%
-%:%155=98%:%
-%:%156=99%:%
-%:%157=100%:%
-%:%158=101%:%
-%:%159=102%:%
-%:%160=103%:%
-%:%161=104%:%
-%:%162=105%:%
-%:%163=106%:%
-%:%164=107%:%
-%:%165=108%:%
-%:%166=109%:%
-%:%167=110%:%
-%:%168=111%:%
-%:%169=112%:%
-%:%170=113%:%
-%:%171=114%:%
-%:%172=115%:%
-%:%173=116%:%
-%:%174=117%:%
-%:%175=118%:%
-%:%176=119%:%
-%:%177=120%:%
-%:%178=121%:%
-%:%179=122%:%
-%:%180=123%:%
-%:%181=124%:%
-%:%182=125%:%
-%:%183=126%:%
-%:%184=127%:%
-%:%185=128%:%
-%:%186=129%:%
-%:%187=130%:%
-%:%188=131%:%
-%:%197=134%:%
-%:%201=136%:%
-%:%213=138%:%
-%:%214=139%:%
-%:%223=141%:%
-%:%235=143%:%
-%:%236=144%:%
-%:%237=145%:%
-%:%238=146%:%
-%:%239=147%:%
-%:%240=148%:%
-%:%244=152%:%
-%:%245=153%:%
-%:%246=154%:%
-%:%247=155%:%
-%:%248=156%:%
-%:%249=157%:%
-%:%250=158%:%
-%:%251=159%:%
-%:%252=160%:%
-%:%253=161%:%
-%:%254=162%:%
-%:%255=163%:%
-%:%256=164%:%
-%:%257=165%:%
-%:%258=166%:%
-%:%259=167%:%
-%:%260=168%:%
-%:%261=169%:%
-%:%262=170%:%
-%:%263=171%:%
-%:%264=172%:%
-%:%265=173%:%
-%:%274=176%:%
-%:%278=178%:%
+%:%40=12%:%
+%:%41=13%:%
+%:%50=15%:%
+%:%62=17%:%
+%:%63=18%:%
+%:%64=19%:%
+%:%65=20%:%
+%:%66=21%:%
+%:%67=22%:%
+%:%71=26%:%
+%:%72=27%:%
+%:%73=28%:%
+%:%74=29%:%
+%:%75=30%:%
+%:%76=31%:%
+%:%77=32%:%
+%:%78=33%:%
+%:%79=34%:%
+%:%80=35%:%
+%:%81=36%:%
+%:%82=37%:%
+%:%83=38%:%
+%:%84=39%:%
+%:%85=40%:%
+%:%86=41%:%
+%:%87=42%:%
+%:%88=43%:%
+%:%89=44%:%
+%:%90=45%:%
+%:%91=46%:%
+%:%92=47%:%
+%:%101=50%:%
+%:%105=52%:%
+%:%117=55%:%
+%:%118=56%:%
+%:%119=57%:%
+%:%120=58%:%
+%:%121=59%:%
+%:%122=60%:%
+%:%123=61%:%
+%:%124=62%:%
+%:%125=63%:%
+%:%126=64%:%
+%:%130=68%:%
+%:%131=69%:%
+%:%132=70%:%
+%:%133=71%:%
+%:%134=72%:%
+%:%135=73%:%
+%:%136=74%:%
+%:%137=75%:%
+%:%138=76%:%
+%:%139=77%:%
+%:%140=78%:%
+%:%141=79%:%
+%:%142=80%:%
+%:%143=81%:%
+%:%144=82%:%
+%:%145=83%:%
+%:%146=84%:%
+%:%147=85%:%
+%:%148=86%:%
+%:%149=87%:%
+%:%150=88%:%
+%:%151=89%:%
+%:%152=90%:%
+%:%153=91%:%
+%:%154=92%:%
+%:%155=93%:%
+%:%156=94%:%
+%:%157=95%:%
+%:%158=96%:%
+%:%159=97%:%
+%:%160=98%:%
+%:%161=99%:%
+%:%162=100%:%
+%:%163=101%:%
+%:%164=102%:%
+%:%165=103%:%
+%:%166=104%:%
+%:%167=105%:%
+%:%168=106%:%
+%:%169=107%:%
+%:%170=108%:%
+%:%171=109%:%
+%:%172=110%:%
+%:%173=111%:%
