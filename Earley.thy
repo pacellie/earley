@@ -785,23 +785,28 @@ lemma Scan_\<I>:
   using assms
 proof (induction k arbitrary: i x a)
   case (Suc k)
+  have "bin (\<I> (k+1) cfg inp) i = bin (\<pi> (k+1) cfg inp (\<I> k cfg inp)) i"
+    by simp
+  also have "... = bin (\<I> k cfg inp) i"
+    using \<pi>_bin_absorb Suc.prems(1) by (metis Suc_eq_plus1 add_le_same_cancel1 not_one_le_zero trans_le_add1)
+  finally have "bin (\<I> (k+1) cfg inp) i = bin (\<I> k cfg inp) i" .
+  hence *: "x \<in> bin (\<I> k cfg inp) i"
+    using Suc.prems(3) by force
   show ?case
   proof cases
     assume "i+1 \<le> k"
     hence "inc_item x (i+1) \<in> \<I> k cfg inp"
-      using Suc \<pi>_bin_absorb by (metis \<I>.simps(2) add_leE leD le_imp_less_Suc plus_1_eq_Suc)
+      using Suc.IH Suc.prems(2,4,5) * by simp
     thus ?thesis
-      using \<pi>_mono unfolding Scan_def by force
+      using \<pi>_mono by force
   next
     assume "\<not> i+1 \<le> k"
-    hence *: "i+1 = Suc k"
-      using le_Suc_eq Suc.prems(1) by blast
-    have "x \<in> bin (\<I> k cfg inp) i"
-      using Suc.prems(3) * \<pi>_bin_absorb by (metis Suc_eq_plus1 \<I>.simps(2) less_add_Suc2 nless_le plus_1_eq_Suc)
-    hence "inc_item x (i+1) \<in> \<pi> i cfg inp (\<I> k cfg inp)"
-      using * Suc.prems(2,4,5) Scan_\<pi>_mono unfolding Scan_def by force
+    hence "i = k"
+      using Suc.prems(1) by auto
+    hence "inc_item x (i+1) \<in> Scan k inp (\<I> k cfg inp)"
+      using Suc.prems(2,4,5) * Scan_def by force
     hence "inc_item x (i+1) \<in> \<pi> k cfg inp (\<I> k cfg inp)"
-      using * by force
+      using Scan_\<pi>_mono by blast
     hence "inc_item x (i+1) \<in> \<I> k cfg inp"
       using \<pi>_idem by (metis \<I>.elims)
     thus ?thesis

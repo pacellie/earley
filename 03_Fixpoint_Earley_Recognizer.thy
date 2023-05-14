@@ -623,8 +623,38 @@ theorem soundness:
 section \<open>Completeness\<close>
 
 text\<open>
-TODO:
+Next, we prove completeness and consequently obtain a concluded correctness proof using additionally
+@{thm[source] soundness}. The completeness proof is by far the most involved proof of this chapter. Thus
+we present it in greater detail, and also slightly deviate from the proof structure of the well-formedness
+and soundness proofs presented previously. We directly start to prove three properties of the @{term \<E>}
+function which correspond conceptually to the three different operations which can occur while generating
+the bins.
 \<close>
+
+lemma E_bin_bin_idem:
+  assumes "i \<noteq> k" "i \<noteq> k+1" 
+  shows "bin (E_bin k cfg inp I) i = bin I i"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma E_bin_mono:
+  "I \<union> Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> E_bin k cfg inp I"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma E_bin_idem:
+  "E_bin k cfg inp (E_bin k cfg inp I) = E_bin k cfg inp I"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
 
 lemma Scan_\<E>:
   assumes "i+1 \<le> k"
@@ -637,7 +667,10 @@ lemma Scan_\<E>:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
+\end{proof}
+\<close>
 
 lemma Predict_\<E>:
   assumes "i \<le> k"
@@ -676,7 +709,7 @@ definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sen
       Derivation cfg [a] D (slice i j \<omega>) \<and> P D \<longrightarrow>
       inc_item x j \<in> I"
 
-lemma fully_completed:
+lemma partially_completed_upto:
   assumes "wf_items cfg \<omega> I"
   assumes "j \<le> k" 
   assumes "k \<le> length inp"
