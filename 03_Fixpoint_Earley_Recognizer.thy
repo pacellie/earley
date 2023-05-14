@@ -709,6 +709,16 @@ definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sen
       Derivation cfg [a] D (slice i j \<omega>) \<and> P D \<longrightarrow>
       inc_item x j \<in> I"
 
+lemma Derivation_concat_split:
+  assumes "Derivation cfg (a@b) D c"
+  shows "\<exists>E F a' b'. Derivation cfg a E a' \<and> Derivation cfg b F b' \<and> c = a' @ b' \<and>
+    length E \<le> length D \<and> length F \<le> length D"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
 lemma partially_completed_upto:
   assumes "wf_items cfg \<omega> I"
   assumes "j \<le> k" 
@@ -727,6 +737,25 @@ text\<open>\<close>
 lemma partially_completed_\<E>:
   assumes "wf_cfg cfg"
   shows "partially_completed k cfg inp (\<E> k cfg \<omega>) (\<lambda>_. True)"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma slice_singleton:
+  assumes "b \<le> length xs"
+  assumes "[x] = slice a b xs"
+  shows "b = a + 1"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma slice_nth:
+  assumes "a < length xs"
+  shows "slice a (a+1) xs = [xs!a]"
 (*<*)
   sorry
 (*>*)
