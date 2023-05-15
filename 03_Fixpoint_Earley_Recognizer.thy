@@ -623,25 +623,31 @@ theorem soundness:
 section \<open>Completeness\<close>
 
 text\<open>
-Next, we prove completeness and consequently obtain a concluded correctness proof using additionally
-@{thm[source] soundness}. The completeness proof is by far the most involved proof of this chapter. Thus
+Next, we prove completeness and consequently obtain a concluded correctness proof using theorem
+@{thm[source] soundness}. The completeness proof is by far the most involved proof of this chapter. Thus,
 we present it in greater detail, and also slightly deviate from the proof structure of the well-formedness
 and soundness proofs presented previously. We directly start to prove three properties of the @{term \<E>}
-function which correspond conceptually to the three different operations which can occur while generating
+function that correspond conceptually to the three different operations that can occur while generating
 the bins.
+
+We need three simple lemmas concerning the @{term E_bin} function, stated without explicit proof: (1) @{term "E_bin k cfg \<omega> I"}
+only (potentially) changes bins $k$ and $k+1$ (lemma @{term E_bin_bin_idem}); (2) the @{term E_step}
+operation is subsumed by the @{term E_bin} operation, since it computes the limit of @{term E_step}
+(lemma @{term E_step_sub_E_bin}); and (3) the function @{term E_bin} is idempotent (lemma @{term E_bin_idem}).
 \<close>
 
 lemma E_bin_bin_idem:
-  assumes "i \<noteq> k" "i \<noteq> k+1" 
-  shows "bin (E_bin k cfg inp I) i = bin I i"
+  assumes "i \<noteq> k"
+  assumes "i \<noteq> k+1" 
+  shows "bin (E_bin k cfg \<omega> I) i = bin I i"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma E_bin_mono:
-  "I \<union> Scan k inp I \<union> Predict k cfg I \<union> Complete k I \<subseteq> E_bin k cfg inp I"
+lemma E_step_sub_E_bin:
+  shows "E_step k cfg \<omega> I \<subseteq> E_bin k cfg inp I"
 (*<*)
   sorry
 (*>*)
@@ -649,12 +655,14 @@ lemma E_bin_mono:
 text\<open>\<close>
 
 lemma E_bin_idem:
-  "E_bin k cfg inp (E_bin k cfg inp I) = E_bin k cfg inp I"
+  shows "E_bin k cfg \<omega> (E_bin k cfg \<omega> I) = E_bin k cfg \<omega> I"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>Next, we proof lemma @{term Scan_\<E>} in detail: it describes under which assumptions the function
+@{term \<E>} generates a 'scanned' item:
+\<close>
 
 lemma Scan_\<E>:
   assumes "i+1 \<le> k"
@@ -669,6 +677,34 @@ lemma Scan_\<E>:
 
 text\<open>
 \begin{proof}
+
+The proof is by induction in $k$ for arbitrary $i$, $x$, and $a$:
+
+The base case @{term "k = (0::nat)"} is trivial, since we have the assumption @{term "i+(1::nat) \<le> 0"}.
+
+For the induction step we can assume @{term "i+(1::nat) \<le> k+1"}, @{term "k+(1::nat) \<le> length \<omega>"},
+@{term "x \<in> bin (\<E> (k+1) cfg \<omega>) i"} , @{term "next_symbol x = Some a"}, and @{term "\<omega>!i = a"}.
+Assumptions @{term "x \<in> bin (\<E> (k+1) cfg \<omega>) i"} and @{term "i+(1::nat) \<le> k+1"} imply that
+@{term "x \<in> bin (\<E> k cfg inp) i"} by lemma @{thm[source] E_bin_bin_idem}.
+
+We then consider two cases: 
+\begin{itemize}
+  \item @{term "i+(1::nat) \<le> k"}: We can apply the induction hypothesis using assumptions
+    @{term "k+(1::nat) \<le> length \<omega>"}, @{term "next_symbol x = Some a"}, @{term "\<omega>!i = a"} and 
+    additionally @{term "x \<in> bin (\<E> k cfg inp) i"} and have @{term "inc_item x (i+1) \<in> \<E> k cfg \<omega>"}.
+    The statement to proof follows by lemma @{thm[source] E_step_sub_E_bin} and the definition of
+    @{term E_step}.
+  \item @{term "i+(1::nat) > k"}: We have @{term "i = k"}, since @{term "i+(1::nat) \<le> k+1"}.
+    Thus, we have @{term "inc_item x (i+1) \<in> Scan k \<omega> (\<E> k cfg \<omega>)"} using assumptions
+    @{term "k+(1::nat) \<le> length \<omega>"}, @{term "next_symbol x = Some a"}, @{term "\<omega>!i = a"}, and additionally
+    @{term "x \<in> bin (\<E> k cfg inp) i"} by the definition of the @{term Scan} operation.
+    This in turn implies @{term "inc_item x (i+1) \<in> E_step k cfg \<omega> (\<E> k cfg \<omega>)"} by lemma @{thm[source] E_step_sub_E_bin}
+    and the definition of @{term E_step}. Since the function @{term E_bin} is idempotent
+    (lemma @{thm[source] E_bin_idem}), we have @{term "inc_item x (i+1) \<in> \<E> k cfg \<omega>"} by definition of
+    @{term \<E>}. And again, the final statement follows by lemma @{thm[source] E_step_sub_E_bin} and the definition of
+    @{term E_step}.
+\end{itemize}
+
 \end{proof}
 \<close>
 
@@ -699,7 +735,24 @@ lemma Complete_\<E>:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>The proof of lemmas @{thm[source] Predict_\<E>} and @{thm[source] Complete_\<E>} are similar in structure
+to the proof of lemma @{thm[source] Scan_\<E>} with the exception of the base case that is in both cases non-trivial
+but can be proven with the help of lemmas @{thm[source] E_step_sub_E_bin} and @{thm[source] E_bin_idem}, the
+definition of @{term E_bin} and the definitions of @{term Predict} and @{term Complete}, respectively.
+
+The core idea for the completeness proof is the following: if there exists an item of the form
+$N \rightarrow \, \alpha \bullet \beta, i, j$ in a set of items $I$ and there exists a derivation
+$\beta \xRightarrow{D} \omega[j..k)$, then $I$ also contains the complete item 
+$N \rightarrow \, \alpha \beta \bullet, i, k$. Note that this statement (lemma @{term partially_completed_upto} below)
+holds only if @{term "j \<le> k"}, @{term "k \<le> length \<omega>"}, all items of $I$ are well-formed and most importantly
+$I$ must be @{term partially_completed} up to the length of the derivation $D$.
+
+Intuitively, a set $I$ is @{term partially_completed} if for each non-complete item $x$ in $I$, the
+existence of a derivation $D$ from the next symbol of $x$ implies that the item that can be obtained by
+moving the bullet over the next symbol of $x$ is also present in $I$. The full definition of @{term partially_completed}
+is slightly more involved since we need to keep track of the validity of the indices and the fact that we
+sometimes want to limit derivations to a certain depth as done above.
+\<close>
 
 definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
   "partially_completed k cfg \<omega> I P \<equiv>
@@ -709,21 +762,31 @@ definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sen
       Derivation cfg [a] D (slice i j \<omega>) \<and> P D \<longrightarrow>
       inc_item x j \<in> I"
 
-lemma Derivation_concat_split:
-  assumes "Derivation cfg (a@b) D c"
-  shows "\<exists>E F a' b'. Derivation cfg a E a' \<and> Derivation cfg b F b' \<and> c = a' @ b' \<and>
+text\<open>
+To proof lemma @{term partially_completed_upto}, we need an auxiliary lemma about derivations:
+a derivation $\alpha \beta \xRightarrow{D}\, \gamma$, can be split into two derivations $E$ and $F$
+whose length is bounded by the length of $D$, and there exist @{term "\<alpha>'"} and @{term "\<beta>'"} such that
+$\alpha \xRightarrow{E} \alpha'$, $\beta \xRightarrow{F} \beta'$ and @{term "\<gamma> = \<alpha>' @ \<beta>'"}.
+\<close>
+
+lemma Derivation_append_split:
+  assumes "Derivation cfg (\<alpha>@\<beta>) D \<gamma>"
+  shows "\<exists>E F \<alpha>' \<beta>'. Derivation cfg \<alpha> E \<alpha>' \<and> Derivation cfg \<beta> F \<beta>' \<and> \<gamma> = \<alpha>' @ \<beta>' \<and>
     length E \<le> length D \<and> length F \<le> length D"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
+\end{proof}
+\<close>
 
 lemma partially_completed_upto:
   assumes "wf_items cfg \<omega> I"
   assumes "j \<le> k" 
   assumes "k \<le> length inp"
-  assumes "x = Item (N,\<alpha>) d i j"
+  assumes "x = Item (N,\<alpha>) b i j"
   assumes "x \<in> I"
   assumes "Derivation cfg (item_\<beta> x) D (slice j k \<omega>)"
   assumes "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length D)"

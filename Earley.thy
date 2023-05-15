@@ -784,6 +784,12 @@ lemma Scan_\<I>:
   shows "inc_item x (i+1) \<in> \<I> k cfg inp"
   using assms
 proof (induction k arbitrary: i x a)
+  case 0
+  have False
+    using "0.prems"(1) by simp
+  thus ?case
+    by blast
+next
   case (Suc k)
   have "bin (\<I> (k+1) cfg inp) i = bin (\<pi> (k+1) cfg inp (\<I> k cfg inp)) i"
     by simp
@@ -812,7 +818,7 @@ proof (induction k arbitrary: i x a)
     thus ?thesis
       using \<pi>_mono by force
   qed
-qed simp
+qed
 
 lemma Predict_\<I>:
   assumes "i \<le> k" "x \<in> bin (\<I> k cfg inp) i" "next_symbol x = Some N" "(N,\<alpha>) \<in> set (\<RR> cfg)"

@@ -5,6 +5,15 @@ theory "01_Introduction"
 begin
 (*>*)
 
+chapter\<open>Questions:\<close>
+
+text\<open>
+\begin{itemize}
+  \item How long? Min/Max?
+  \item How to define Earley inductively?
+\end{itemize}
+\<close>
+
 chapter\<open>Introduction\<close>
 
 section\<open>Motivation\<close>
