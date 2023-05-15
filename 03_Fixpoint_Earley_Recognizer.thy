@@ -876,7 +876,9 @@ and split the proof into two different cases:
   \item @{term "D = d#D'"}: Since @{term "Derivation cfg [a] D (slice i j \<omega>)"}, there exists an $\alpha$ such that
   @{term "Derives1 cfg [a] (fst d) (snd d) \<alpha>"} and @{term "Derivation cfg \<alpha> D' (slice i j \<omega>)"}. From the definition
   of @{term "Derives1"} we see that there exists a nonterminal $N$ such that @{term "a = N"},
-  @{term "(N, \<alpha>) \<in> set (\<RR> cfg)"}, @{term "fst d = 0"}, and @{term "snd d = (N, \<alpha>)"}.
+  @{term "(N, \<alpha>) \<in> set (\<RR> cfg)"}, @{term "fst d = (0::nat)"}, and @{term "snd d = (N, \<alpha>)"}.
+
+  Let $y$ denote @{term "Item (N,\<alpha>) 0 i i"}
 
 \end{itemize}
 
