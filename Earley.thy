@@ -921,9 +921,10 @@ next
   have "x \<in> bin I j"
     using Cons.prems(3,4) by (auto simp: bin_def)
   moreover have "next_symbol x = Some b"
-    using Cons unfolding item_defs(4) next_symbol_def is_complete_def by (auto, metis nth_via_drop)
+    using Cons.hyps(2) unfolding item_defs(4) next_symbol_def is_complete_def by (auto, metis nth_via_drop)
   ultimately have "inc_item x j' \<in> I"
     using *(1,3-5) Cons.prems(2-4,7) partially_completed_def by metis
+
   moreover have "partially_completed k cfg inp I (\<lambda>D'. length D' \<le> length F)"
     using Cons.prems(7) *(6) unfolding partially_completed_def by fastforce
   moreover have "bs = item_\<beta> (Item (N,\<alpha>) (d+1) i j')"
@@ -962,7 +963,7 @@ proof (standard, standard, standard, standard, standard, standard)
       hence "inc_item x (i+1) \<in> \<I> k cfg inp"
         using Scan_\<I> \<open>j = i + 1\<close> "1.prems" by fast
       thus ?thesis
-        by (simp add: \<open>j = i + 1\<close> wf_Init wf_items_def)
+        by (simp add: \<open>j = i + 1\<close>)
     next
       assume "\<not> D = []"
       then obtain d D' where "D = d # D'"
@@ -983,23 +984,25 @@ proof (standard, standard, standard, standard, standard, standard)
         then obtain N \<alpha> where #: "[a] = [N]" "b = \<alpha>" "(N,\<alpha>) \<in> set (\<RR> cfg)" "fst d = 0" "snd d = (N,\<alpha>)"
           using *(1) unfolding Derives1_def by (simp add: Cons_eq_append_conv)
         define y where y_def: "y = Item (N,\<alpha>) 0 i i"
-        have "init_item (N, \<alpha>) i \<in> \<I> k cfg inp"
-          using Predict_\<I> #(1,3) "1.prems" by (metis (no_types, lifting) le_trans list.inject)
-        hence "y \<in> bin (\<I> k cfg inp) i"
-          unfolding init_item_def using y_def by (simp add: bin_def wf_Init wf_items_def)
+        have "y \<in> \<I> k cfg inp"
+          using Predict_\<I> #(1,3) "1.prems" y_def init_item_def
+          by (metis (no_types, lifting) le_trans list.inject)
+        have "i \<le> j"
+          using "1.prems" by blast
+        have "j \<le> length inp"
+          using "1.prems" by simp
         have "length D' < length D"
           using \<open>D = d # D'\<close> by fastforce
         hence "partially_completed k cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
           unfolding partially_completed_def using "1.hyps" "1.prems" le_less_trans by blast
-        hence "partially_completed j cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
+        hence 0: "partially_completed j cfg inp (\<I> k cfg inp) (\<lambda>E. length E \<le> length D')"
           unfolding partially_completed_def using "1.prems" by force
-        moreover have "Derivation cfg (item_\<beta> y) D' (slice i j inp)"
+        have 1: "Derivation cfg (item_\<beta> y) D' (slice i j inp)"
           using #(2) *(2) item_\<beta>_def item_rule_body_def rule_body_def y_def
           by (metis item.sel(1) item.sel(2) drop0 snd_conv)
-        ultimately have 0: "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (\<I> k cfg inp) j"
-          using fully_completed wf_\<I> "1.prems" wf_items_def \<open>y \<in> bin (\<I> k cfg inp) i\<close>
-          apply (auto simp: bin_def y_def)
-          using fully_completed le_trans partially_completed_def by (smt (verit, best) wf_\<I>)
+        have 0: "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (\<I> k cfg inp) j"
+          using fully_completed[OF \<open>i \<le> j\<close> \<open>j \<le> length inp\<close> y_def \<open>y \<in> \<I> k cfg inp\<close> wf_\<I> 1 0] bin_def
+          by force
         have 1: "x \<in> bin (\<I> k cfg inp) i"
           by (simp add: "1.prems")
         have "next_symbol x = Some N"

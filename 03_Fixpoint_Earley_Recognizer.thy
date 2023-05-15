@@ -763,10 +763,16 @@ definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sen
       inc_item x j \<in> I"
 
 text\<open>
-To proof lemma @{term partially_completed_upto}, we need an auxiliary lemma about derivations:
+To proof lemma @{term partially_completed_upto}, we need two auxiliary lemmas: The first one is about splitting derivations (lemma @{term  Derivation_append_split}):
 a derivation $\alpha \beta \xRightarrow{D}\, \gamma$, can be split into two derivations $E$ and $F$
 whose length is bounded by the length of $D$, and there exist @{term "\<alpha>'"} and @{term "\<beta>'"} such that
-$\alpha \xRightarrow{E} \alpha'$, $\beta \xRightarrow{F} \beta'$ and @{term "\<gamma> = \<alpha>' @ \<beta>'"}.
+$\alpha \xRightarrow{E} \alpha'$, $\beta \xRightarrow{F} \beta'$ and @{term "\<gamma> = \<alpha>' @ \<beta>'"}. The proof
+is by induction on $D$ for arbitrary $\alpha$ and $\beta$ and quite technical since we need to manipulate
+the exact indices where each rewriting rule is applied in $\alpha$ and $\beta$, and thus we omit it.
+
+The second one is a similar lemma about splitting slices (lemma @{term slice_append_split}). The proof
+is straightforward by induction on the computation of the @{term slice} function, we also omit it, and
+move on to the proof of lemmas @{term partially_completed_upto} and @{term partially_completed_\<E>}.
 \<close>
 
 lemma Derivation_append_split:
@@ -777,15 +783,22 @@ lemma Derivation_append_split:
   sorry
 (*>*)
 
-text\<open>
-\begin{proof}
-\end{proof}
-\<close>
+text\<open>\<close>
+
+lemma slice_append_split:
+  assumes "i \<le> k"
+  assumes "slice i k xs = ys @ zs"
+  shows "\<exists>j. ys = slice i j xs \<and> zs = slice j k xs \<and> i \<le> b \<and> b \<le> k"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
 
 lemma partially_completed_upto:
   assumes "wf_items cfg \<omega> I"
   assumes "j \<le> k" 
-  assumes "k \<le> length inp"
+  assumes "k \<le> length \<omega>"
   assumes "x = Item (N,\<alpha>) b i j"
   assumes "x \<in> I"
   assumes "Derivation cfg (item_\<beta> x) D (slice j k \<omega>)"
@@ -795,7 +808,44 @@ lemma partially_completed_upto:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
+
+The proof is by induction on the @{term "item_\<beta> x"} for arbitrary $b$, $i$, $j$, $k$, $N$, $\alpha$,
+$x$, and $D$:
+
+For the base case we have @{term "item_\<beta> x = []"} and need to show that @{term "Item (N, \<alpha>) (length \<alpha>) i k \<in> I"}:
+
+The bullet of $x$ is right before @{term "item_\<beta> x"}, or @{term "item_\<alpha> x = \<alpha>"}. Thus, the value of the
+bullet must be equal to the length of $\alpha$, which implies @{term "x = Item (N,\<alpha>) (length \<alpha>) i j"}, since $x$
+is a well-formed item and @{term "item_\<beta> x = []"}.
+
+We also know that $j = k$: we have @{term "Derivation cfg (item_\<beta> x) D (slice j k \<omega>)"} and
+@{term "item_\<beta> x = []"} which in turn implies that @{term "slice j k \<omega> = []"}, and thus $j = k$.
+
+Hence, the statement follows from the assumption @{term "x \<in> I"} and the fact that @{term "x = Item (N,\<alpha>) (length \<alpha>) i j"}.
+
+For the induction step we have @{term "item_\<beta> x = a#as"} and need to show that @{term "Item (N, \<alpha>) (length \<alpha>) i k \<in> I"}:
+
+Using lemmas @{thm[source] Derivation_append_split} and @{thm[source] slice_append_split}
+there exists an index $j'$ and derivations $E$ and $F$ such that @{term "Derivation cfg [a] E (slice j j' \<omega>)"},
+@{term "length E \<le> length D"}, @{term "Derivation cfg as F (slice j' k \<omega>)"}, @{term "length F \<le> length D"},
+@{term "j \<le> j'"}, and @{term "j' \<le> k"}.
+
+Using the facts about derivation $E$, @{term "j \<le> j'"}, @{term "j' \<le> k"} and the assumptions
+@{term "k \<le> length \<omega>"}, @{term "x = Item (N, \<alpha>) b i j"}, @{term "x \<in> I"}, @{term "next_symbol x = Some a"}
+(since @{term "item_\<beta> x = a#as"}) and @{term "x \<in> bin I j"}, we have @{term "inc_item x j' \<in> I"} by the
+assumption @{term "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length D)"}.
+Note that @{term "inc_item x j' = Item (N, \<alpha>) (b+1) i j'"}, which we will from now on name item $x'$.
+
+From @{term "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length D)"} and @{term "length F \<le> length D"}
+follows @{term "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length F)"}. We also have @{term "as = item_\<beta> x'"}
+and @{term "x' \<in> I"}. Hence, we can apply the induction hypothesis for $x'$ using additionally the assumptions
+@{term "wf_items cfg \<omega> I"}, @{term "k \<le> length \<omega>"}, and the facts about derivation $F$ from above, and
+have @{term "Item (N, \<alpha>) (length \<alpha>) i k \<in> I"}, what we intended to show.
+
+\end{proof}
+\<close>
 
 lemma partially_completed_\<E>:
   assumes "wf_cfg cfg"
@@ -804,26 +854,34 @@ lemma partially_completed_\<E>:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-lemma slice_singleton:
-  assumes "b \<le> length xs"
-  assumes "[x] = slice a b xs"
-  shows "b = a + 1"
-(*<*)
-  sorry
-(*>*)
+Let $x$, $i$, $a$, $D$, and $j$ be arbitrary but fixed.
 
-text\<open>\<close>
+By definition of @{term partially_completed} we can assume @{term "i \<le> j"}, @{term "j \<le> k"},
+@{term "k \<le> length \<omega>"}, @{term "x \<in> bin (\<E> k cfg \<omega>) i"}, @{term "next_symbol x = Some a"},
+@{term "Derivation cfg [a] D (slice i j \<omega>)"}, and need to show @{term "inc_item x j \<in> \<E> k cfg \<omega>"}.
 
-lemma slice_nth:
-  assumes "a < length xs"
-  shows "slice a (a+1) xs = [xs!a]"
-(*<*)
-  sorry
-(*>*)
+We proof this by complete induction on @{term "length D"} for arbitrary $x$, $i$, $a$, $j$, and $D$,
+and split the proof into two different cases:
 
-text\<open>\<close>
+\begin{itemize}
+
+  \item @{term "D = []"}: Since @{term "Derivation cfg [a] D (slice i j \<omega>)"}, we have @{term "[a] = slice i j \<omega>"},
+  and consequently @{term "\<omega>!i = a"} and @{term "j = i+1"}. Now we discharge the assumptions of lemma @{thm[source] Scan_\<E>},
+  using additionally @{term "x \<in> bin (\<E> k cfg \<omega>) i"}, @{term "next_symbol x = Some a"}, and @{term "j \<le> length \<omega>"},
+  and have @{term "inc_item x (i+1) \<in> \<E> k cfg \<omega>"} which finishes the proof since @{term "j = i+1"}.
+  
+  \item @{term "D = d#D'"}: Since @{term "Derivation cfg [a] D (slice i j \<omega>)"}, there exists an $\alpha$ such that
+  @{term "Derives1 cfg [a] (fst d) (snd d) \<alpha>"} and @{term "Derivation cfg \<alpha> D' (slice i j \<omega>)"}. From the definition
+  of @{term "Derives1"} we see that there exists a nonterminal $N$ such that @{term "a = N"},
+  @{term "(N, \<alpha>) \<in> set (\<RR> cfg)"}, @{term "fst d = 0"}, and @{term "snd d = (N, \<alpha>)"}.
+
+\end{itemize}
+
+\end{proof}
+\<close>
 
 lemma partially_completed_earley:
   assumes "wf_cfg cfg"
