@@ -11,6 +11,8 @@ text\<open>
 \begin{itemize}
   \item How long? Min/Max?
   \item How to define Earley inductively?
+  \item Nicer notation for all the different kinds of derivations?
+  \item Fix bibliography???
 \end{itemize}
 \<close>
 

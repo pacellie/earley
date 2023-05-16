@@ -12,22 +12,22 @@ section \<open>Draft\<close>
 text\<open>
   \begin{itemize}
     \item introduce auxiliary definitions: filter\_with\_index, pointer, entry in more detail
-      most everything else in text \\
+      most everything else in text
     \item overview over earley implementation with linked list and pointers and the mapping into a
-      functional setting \\
+      functional setting
     \item introduce Init\_it, Scan\_it, Predict\_it and Complete\_it, compare them with the set notation
-      and discuss performance improvements (Grammar in more specific form) Why do they all return a list?! \\
-    \item discus bin(s)\_upd(s) functions. Why bin\_upds like this -> easier than fold for proofs! \\
+      and discuss performance improvements (Grammar in more specific form) Why do they all return a list?!
+    \item discus bin(s)\_upd(s) functions. Why bin\_upds like this -> easier than fold for proofs!
     \item discuss pi\_it and why it is a partial function -> only terminates for valid input and foreshadow
-      how this is done in isabelle \\
-    \item introduce remaining definitions (analog to sets) \\
+      how this is done in isabelle
+    \item introduce remaining definitions (analog to sets)
     \item discuss wf proofs quickly and go into detail about isabelle specifics about termination and
-      the custom induction scheme using finiteness \\
-    \item outline the approach to proof correctness aka subsumption in both directions \\
+      the custom induction scheme using finiteness
+    \item outline the approach to proof correctness aka subsumption in both directions
     \item discuss list to set proofs
     \item discuss soundness proofs (maybe omit since obvious)
     \item discuss completeness proof focusing on the complete case shortly explaining scan and predict
-      which don't change via iteration and order does not matter \\
+      which don't change via iteration and order does not matter
     \item highlight main theorems
   \end{itemize}
 \<close>
@@ -59,15 +59,6 @@ text\<open>
 
 section\<open>Definitions\<close>
 
-fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
-  "filter_with_index' _ _ [] = []"
-| "filter_with_index' i P (x#xs) = (
-    if P x then (x,i) # filter_with_index' (i+1) P xs
-    else filter_with_index' (i+1) P xs)"
-
-definition filter_with_index :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
-  "filter_with_index P xs = filter_with_index' 0 P xs"
-
 datatype pointer =
   Null
   | Pre nat
@@ -91,7 +82,7 @@ definition bins_eq_items :: "'a bins \<Rightarrow> 'a bins \<Rightarrow> bool" w
   "bins_eq_items bs0 bs1 \<longleftrightarrow> map items bs0 = map items bs1"
 
 definition bins_items :: "'a bins \<Rightarrow> 'a items" where
-  "bins_items bs = \<Union> { set (items (bs ! k)) | k. k < length bs }"
+  "bins_items bs = \<Union> { set (items (bs!k)) | k. k < length bs }"
 
 definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
   "bin_items_upto b i = { items b ! j | j. j < i \<and> j < length (items b) }"
@@ -130,6 +121,15 @@ definition Predict_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarr
     let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
     map (\<lambda>r. (Entry (init_item r k) Null)) rs"
 
+fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
+  "filter_with_index' _ _ [] = []"
+| "filter_with_index' i P (x#xs) = (
+    if P x then (x,i) # filter_with_index' (i+1) P xs
+    else filter_with_index' (i+1) P xs)"
+
+definition filter_with_index :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
+  "filter_with_index P xs = filter_with_index' 0 P xs"
+
 definition Complete_list :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
   "Complete_list k y bs red \<equiv>
     let orig = bs ! (item_origin y) in
@@ -154,8 +154,8 @@ fun bin_upds :: "'a entry list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
 definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<Rightarrow> 'a bins" where
   "bins_upd bs k es = bs[k := bin_upds es (bs!k)]"
 
-partial_function (tailrec) E_list' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
-  "E_list' k cfg inp bs i = (
+partial_function (tailrec) Earley_bin_list' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
+  "Earley_bin_list' k cfg inp bs i = (
     if i \<ge> length (items (bs ! k)) then bs
     else
       let x = items (bs!k) ! i in
@@ -167,17 +167,17 @@ partial_function (tailrec) E_list' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a
               else bs
             else bins_upd bs k (Predict_list k cfg a)
         | None \<Rightarrow> bins_upd bs k (Complete_list k x bs i)
-      in E_list' k cfg inp bs' (i+1))"
+      in Earley_bin_list' k cfg inp bs' (i+1))"
 
-definition E_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
-  "E_list k cfg inp bs = E_list' k cfg inp bs 0"
+definition Earley_bin_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
+  "Earley_bin_list k cfg inp bs = Earley_bin_list' k cfg inp bs 0"
 
-fun \<E>_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
-  "\<E>_list 0 cfg inp = E_list 0 cfg inp (Init_list cfg inp)"
-| "\<E>_list (Suc n) cfg inp = E_list (Suc n) cfg inp (\<E>_list n cfg inp)"
+fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
+  "Earley_list 0 cfg inp = Earley_bin_list 0 cfg inp (Init_list cfg inp)"
+| "Earley_list (Suc n) cfg inp = Earley_bin_list (Suc n) cfg inp (Earley_list n cfg inp)"
 
-definition earley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
-  "earley_list cfg inp = \<E>_list (length inp) cfg inp"
+definition \<E>arley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
+  "\<E>arley_list cfg inp = Earley_list (length inp) cfg inp"
 
 section \<open>Wellformedness\<close>
 
@@ -188,6 +188,8 @@ lemma wf_bin_bin_upd:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_bin_bin_upds:
   assumes "wf_bin cfg inp k b" "distinct (items es)"
   assumes "\<forall>x \<in> set (items es). wf_item cfg inp x \<and> item_end x = k"
@@ -195,6 +197,8 @@ lemma wf_bin_bin_upds:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_bins_bins_upd:
   assumes "wf_bins cfg inp bs" "distinct (items es)"
@@ -204,12 +208,16 @@ lemma wf_bins_bins_upd:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_bins_Init_list:
   assumes "wf_cfg cfg"
   shows "wf_bins cfg inp (Init_list cfg inp)"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_bins_Scan_list:
   assumes "wf_bins cfg inp bs" "k < length bs" "x \<in> set (items (bs!k))" "k < length inp" "next_symbol x \<noteq> None"
@@ -218,6 +226,8 @@ lemma wf_bins_Scan_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_bins_Predict_list:
   assumes "wf_bins cfg inp bs" "k < length bs" "k \<le> length inp" "wf_cfg cfg"
   shows "\<forall>y \<in> set (items (Predict_list k cfg X)). wf_item cfg inp y \<and> item_end y = k"
@@ -225,12 +235,16 @@ lemma wf_bins_Predict_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_bins_Complete_list:
   assumes "wf_bins cfg inp bs" "k < length bs" "y \<in> set (items (bs!k))"
   shows "\<forall>x \<in> set (items (Complete_list k y bs red)). wf_item cfg inp x \<and> item_end x = k"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
   "earley_measure (k, cfg, inp, bs) i = card { x | x. wf_item cfg inp x \<and> item_end x = k } - i"
@@ -251,6 +265,8 @@ lemma wf_earley_input_Init_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_earley_input_Complete_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" "\<not> length (items (bs!k)) \<le> i"
   assumes "x = items (bs!k)!i" "next_symbol x = None"
@@ -258,6 +274,8 @@ lemma wf_earley_input_Complete_list:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_earley_input_Scan_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" "\<not> length (items (bs!k)) \<le> i"
@@ -268,6 +286,8 @@ lemma wf_earley_input_Scan_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_earley_input_Predict_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" "\<not> length (items (bs!k)) \<le> i"
   assumes "x = items (bs!k)!i" "next_symbol x = Some a" "\<not> is_terminal cfg a"
@@ -276,58 +296,74 @@ lemma wf_earley_input_Predict_list:
   sorry
 (*>*)
 
-lemma wf_earley_input_E_list':
+text\<open>\<close>
+
+lemma wf_earley_input_Earley_bin_list':
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
-  shows "(k, cfg, inp, E_list' k cfg inp bs i) \<in> wf_earley_input"
+  shows "(k, cfg, inp, Earley_bin_list' k cfg inp bs i) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_earley_input_E_list:
+text\<open>\<close>
+
+lemma wf_earley_input_Earley_bin_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
-  shows "(k, cfg, inp, E_list k cfg inp bs) \<in> wf_earley_input"
+  shows "(k, cfg, inp, Earley_bin_list k cfg inp bs) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_earley_input_\<E>_list:
+text\<open>\<close>
+
+lemma wf_earley_input_Earley_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, \<E>_list k cfg inp) \<in> wf_earley_input"
+  shows "(k, cfg, inp, Earley_list k cfg inp) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_earley_input_earley_list:
+text\<open>\<close>
+
+lemma wf_earley_input_\<E>arley_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "(k, cfg, inp, earley_list cfg inp) \<in> wf_earley_input"
+  shows "(k, cfg, inp, \<E>arley_list cfg inp) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_E_list':
+text\<open>\<close>
+
+lemma wf_bins_Earley_bin_list':
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
-  shows "wf_bins cfg inp (E_list' k cfg inp bs i)"
+  shows "wf_bins cfg inp (Earley_bin_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_E_list:
+text\<open>\<close>
+
+lemma wf_bins_Earley_bin_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input" 
-  shows "wf_bins cfg inp (E_list k cfg inp bs)"
+  shows "wf_bins cfg inp (Earley_bin_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_\<E>_list:
+text\<open>\<close>
+
+lemma wf_bins_Earley_list:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "wf_bins cfg inp (\<E>_list k cfg inp)"
+  shows "wf_bins cfg inp (Earley_list k cfg inp)"
 (*<*)
   sorry
 (*>*)
 
-lemma wf_bins_earley_list:
+text\<open>\<close>
+
+lemma wf_bins_\<E>arley_list:
   assumes "wf_cfg cfg" 
-  shows "wf_bins cfg inp (earley_list cfg inp)"
+  shows "wf_bins cfg inp (\<E>arley_list cfg inp)"
 (*<*)
   sorry
 (*>*)
@@ -340,6 +376,8 @@ lemma Init_list_eq_Init:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma Scan_list_sub_Scan:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))"
   assumes "k < length bs" "k < length inp" "next_symbol x = Some a"
@@ -347,6 +385,8 @@ lemma Scan_list_sub_Scan:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma Predict_list_sub_Predict:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs"
@@ -356,6 +396,8 @@ lemma Predict_list_sub_Predict:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma Complete_list_sub_Complete:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "y \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol y = None"
@@ -364,32 +406,40 @@ lemma Complete_list_sub_Complete:
   sorry
 (*>*)
 
-lemma E_list'_sub_E:
+text\<open>\<close>
+
+lemma Earley_bin_list'_sub_E:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (E_list' k cfg inp bs i) \<subseteq> E k cfg inp I"
+  shows "bins_items (Earley_bin_list' k cfg inp bs i) \<subseteq> E k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
-lemma E_list_sub_E:
+text\<open>\<close>
+
+lemma Earley_bin_list_sub_E:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (E_list k cfg inp bs) \<subseteq> E k cfg inp I"
+  shows "bins_items (Earley_bin_list k cfg inp bs) \<subseteq> E k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
-lemma \<E>_list_sub_\<E>:
+text\<open>\<close>
+
+lemma Earley_list_sub_\<E>:
   assumes "k \<le> length inp" "wf_cfg cfg"
-  shows "bins_items (\<E>_list k cfg inp) \<subseteq> \<E> k cfg inp"
+  shows "bins_items (Earley_list k cfg inp) \<subseteq> \<E> k cfg inp"
 (*<*)
   sorry
 (*>*)
 
-lemma earley_list_sub_earley:
+text\<open>\<close>
+
+lemma \<E>arley_list_sub_earley:
   assumes "wf_cfg cfg" 
-  shows "bins_items (earley_list cfg inp) \<subseteq> earley cfg inp"
+  shows "bins_items (\<E>arley_list cfg inp) \<subseteq> earley cfg inp"
 (*<*)
   sorry
 (*>*)
@@ -404,12 +454,16 @@ lemma impossible_complete_item:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma Complete_Un_eq_terminal:
   assumes "next_symbol z = Some a" "is_terminal cfg a" "wf_items cfg inp I" "wf_item cfg inp z" "wf_cfg cfg"
   shows "Complete k (I \<union> {z}) = Complete k I"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma Complete_Un_eq_nonterminal:
   assumes "next_symbol z = Some a" "is_nonterminal cfg a" "sound_items cfg inp I" "item_end z = k"
@@ -419,6 +473,8 @@ lemma Complete_Un_eq_nonterminal:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma Complete_sub_bins_Un_Complete_list:
   assumes "Complete k I \<subseteq> bins_items bs" "I \<subseteq> bins_items bs" "is_complete z" "wf_bins cfg inp bs" "wf_item cfg inp z"
   shows "Complete k (I \<union> {z}) \<subseteq> bins_items bs \<union> set (items (Complete_list k z bs red))"
@@ -426,103 +482,133 @@ lemma Complete_sub_bins_Un_Complete_list:
   sorry
 (*>*)
 
-lemma E_list'_mono:
+text\<open>\<close>
+
+lemma Earley_bin_list'_mono:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
-  shows "bins_items bs \<subseteq> bins_items (E_list' k cfg inp bs i)"
+  shows "bins_items bs \<subseteq> bins_items (Earley_bin_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma E_step_sub_E_list':
+text\<open>\<close>
+
+lemma E_step_sub_Earley_bin_list':
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k i) \<subseteq> bins_items bs"
   assumes "sound_items cfg inp (bins_items bs)" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (E_list' k cfg inp bs i)"
+  shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (Earley_bin_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma E_step_sub_E_list:
+text\<open>\<close>
+
+lemma E_step_sub_Earley_bin_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs"
   assumes "sound_items cfg inp (bins_items bs)" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
+  shows "E_step k cfg inp (bins_items bs) \<subseteq> bins_items (Earley_bin_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma E_list'_bins_items_eq:
+text\<open>\<close>
+
+lemma Earley_bin_list'_bins_items_eq:
   assumes "(k, cfg, inp, as) \<in> wf_earley_input"
   assumes "bins_eq_items as bs" "wf_bins cfg inp as"
-  shows "bins_eq_items (E_list' k cfg inp as i) (E_list' k cfg inp bs i)"
+  shows "bins_eq_items (Earley_bin_list' k cfg inp as i) (Earley_bin_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma E_list'_idem:
+text\<open>\<close>
+
+lemma Earley_bin_list'_idem:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "i \<le> j" "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
-  shows "bins_items (E_list' k cfg inp (E_list' k cfg inp bs i) j) = bins_items (E_list' k cfg inp bs i)"
+  shows "bins_items (Earley_bin_list' k cfg inp (Earley_bin_list' k cfg inp bs i) j) = bins_items (Earley_bin_list' k cfg inp bs i)"
 (*<*)
   sorry
 (*>*)
 
-lemma E_list_idem:
+text\<open>\<close>
+
+lemma Earley_bin_list_idem:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "sound_items cfg inp (bins_items bs)" "nonempty_derives cfg"
-  shows "bins_items (E_list k cfg inp (E_list k cfg inp bs)) = bins_items (E_list k cfg inp bs)"
+  shows "bins_items (Earley_bin_list k cfg inp (Earley_bin_list k cfg inp bs)) = bins_items (Earley_bin_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma funpower_E_step_sub_E_list:
+text\<open>\<close>
+
+lemma funpower_E_step_sub_Earley_bin_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
   assumes "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "funpower (E_step k cfg inp) n (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
+  shows "funpower (E_step k cfg inp) n (bins_items bs) \<subseteq> bins_items (Earley_bin_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma E_sub_E_list:
+text\<open>\<close>
+
+lemma E_sub_Earley_bin_list:
   assumes "(k, cfg, inp, bs) \<in> wf_earley_input"
   assumes "E_step k cfg inp (bins_items_upto bs k 0) \<subseteq> bins_items bs" "sound_items cfg inp (bins_items bs)"
   assumes "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "E k cfg inp (bins_items bs) \<subseteq> bins_items (E_list k cfg inp bs)"
+  shows "E k cfg inp (bins_items bs) \<subseteq> bins_items (Earley_bin_list k cfg inp bs)"
 (*<*)
   sorry
 (*>*)
 
-lemma \<E>_sub_\<E>_list:
-  assumes "k \<le> length inp" "wf_cfg cfg"
-  assumes "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "\<E> k cfg inp \<subseteq> bins_items (\<E>_list k cfg inp)"
+text\<open>\<close>
+
+lemma Earley_sub_Earley_list:
+  assumes "k \<le> length \<omega>"
+  assumes "wf_cfg cfg"
+  assumes "is_sentence cfg \<omega>"
+  assumes "nonempty_derives cfg"
+  shows "Earley k cfg \<omega> \<subseteq> bins_items (Earley_list k cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
-lemma earley_sub_earley_list:
-  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "earley cfg inp \<subseteq> bins_items (earley_list cfg inp)"
+text\<open>\<close>
+
+lemma \<E>arley_sub_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "is_sentence cfg \<omega>"
+  assumes "nonempty_derives cfg"
+  shows "\<E>arley cfg \<omega> \<subseteq> bins_items (\<E>arley_list cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
-section \<open>Main Theorem\<close>
+section \<open>Main Theorems\<close>
 
 definition recognizing_list :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
-  "recognizing_list I cfg inp \<equiv> \<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x"
+  "recognizing_list I cfg \<omega> \<equiv> \<exists>x \<in> set (items (I ! length \<omega>)). is_finished cfg \<omega> x"
 
-theorem recognizing_list_iff_earley_recognized:
-  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> recognizing (earley cfg inp) cfg inp"
+theorem recognizing_list_iff_recognizing:
+  assumes "wf_cfg cfg"
+  assumes "is_sentence cfg \<omega>"
+  assumes "nonempty_derives cfg"
+  shows "recognizing_list (\<E>arley_list cfg \<omega>) cfg \<omega> \<longleftrightarrow> recognizing (\<E>arley cfg \<omega>) cfg \<omega>"
 (*<*)
   sorry
 (*>*)
 
+text\<open>\<close>
+
 corollary correctness_list:
-  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  assumes "wf_cfg cfg"
+  assumes "is_sentence cfg \<omega>"
+  assumes "nonempty_derives cfg"
+  shows "recognizing_list (\<E>arley_list cfg \<omega>) cfg \<omega> \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
 (*<*)
   sorry
 (*>*)

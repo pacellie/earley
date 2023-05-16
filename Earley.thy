@@ -1005,10 +1005,12 @@ proof (standard, standard, standard, standard, standard, standard)
           by force
         have 1: "x \<in> bin (\<I> k cfg inp) i"
           by (simp add: "1.prems")
+        have "j \<le> k"
+          using "1.prems" by blast
         have "next_symbol x = Some N"
           using #(1) "1.prems" by fastforce
         thus ?thesis
-          using "1.prems" Complete_\<I>[OF _ _ 1 _ _ _ 0] #(3) by (auto simp: is_complete_def item_rule_body_def rule_body_def)
+          using "1.prems" Complete_\<I>[OF \<open>i \<le> j\<close> \<open>j \<le> k\<close> 1 \<open>next_symbol x = Some N\<close> #(3) _ 0] by (auto simp: is_complete_def item_rule_body_def rule_body_def)
       qed
     qed
   qed

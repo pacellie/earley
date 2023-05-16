@@ -55,8 +55,10 @@ notation (latex output)
   length  ("|_|")
 
 (* nth *)
+(*
 notation (latex output)
   nth  ("_\<^latex>\<open>\\ensuremath{_{[\\mathit{\<close>_\<^latex>\<open>}]}}\<close>" [1000,0] 1000)
+*)
 
 (* DUMMY *)
 consts DUMMY :: 'a ("\<^latex>\<open>\\_\<close>")

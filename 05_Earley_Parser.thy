@@ -51,6 +51,8 @@ lemma sound_ptrs_bin_upd:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma mono_red_ptr_bin_upd:
   assumes "mono_red_ptr bs" "k < length bs" "es = bs!k" "distinct (items es)"
   assumes "\<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < length es"
@@ -58,6 +60,8 @@ lemma mono_red_ptr_bin_upd:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma sound_mono_ptrs_bin_upds:
   assumes "sound_ptrs inp bs" "mono_red_ptr bs" "k < length bs" "b = bs!k" "distinct (items b)" "distinct (items es)"
@@ -67,6 +71,8 @@ lemma sound_mono_ptrs_bin_upds:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma sound_mono_ptrs_E_list':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
@@ -78,6 +84,8 @@ lemma sound_mono_ptrs_E_list':
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma sound_mono_ptrs_E_list:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_ptrs inp bs" "sound_items cfg inp (bins_items bs)"
@@ -88,11 +96,15 @@ lemma sound_mono_ptrs_E_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma sound_ptrs_Init_list:
   shows "sound_ptrs inp (Init_list cfg inp)"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma mono_red_ptr_Init_list:
   shows "mono_red_ptr (Init_list cfg inp)"
@@ -100,12 +112,16 @@ lemma mono_red_ptr_Init_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma sound_mono_ptrs_\<E>_list:
   assumes "k \<le> length inp" "wf_cfg cfg" "nonempty_derives cfg" "wf_cfg cfg"
   shows "sound_ptrs inp (\<E>_list k cfg inp) \<and> mono_red_ptr (\<E>_list k cfg inp)"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma sound_mono_ptrs_earley_list:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
@@ -212,6 +228,8 @@ lemma wf_tree_input_pre:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_tree_input_prered_pre:
   assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
@@ -219,6 +237,8 @@ lemma wf_tree_input_prered_pre:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_tree_input_prered_red:
   assumes "(bs, inp, k, i) \<in> wf_tree_input"
@@ -228,12 +248,16 @@ lemma wf_tree_input_prered_red:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma build_tree'_termination:
   assumes "(bs, inp, k, i) \<in> wf_tree_input"
   shows "\<exists>N ts. build_tree' bs inp k i = Some (Branch N ts)"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_item_tree_build_tree':
   assumes "(bs, inp, k, i) \<in> wf_tree_input"
@@ -245,6 +269,8 @@ lemma wf_item_tree_build_tree':
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_yield_tree_build_tree':
   assumes "(bs, inp, k, i) \<in> wf_tree_input"
   assumes "wf_bins cfg inp bs"
@@ -255,6 +281,8 @@ lemma wf_yield_tree_build_tree':
   sorry
 (*>*)
 
+text\<open>\<close>
+
 theorem wf_rule_root_yield_tree_build_tree:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "mono_red_ptr bs" "length bs = length inp + 1"
   assumes "build_tree cfg inp bs = Some t"
@@ -263,6 +291,8 @@ theorem wf_rule_root_yield_tree_build_tree:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 corollary wf_rule_root_yield_tree_build_tree_earley_list:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
   assumes "build_tree cfg inp (earley_list cfg inp) = Some t"
@@ -270,6 +300,8 @@ corollary wf_rule_root_yield_tree_build_tree_earley_list:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 theorem correctness_build_tree_earley_list:
   assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
@@ -360,6 +392,8 @@ lemma wf_trees_input_pre:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_trees_input_prered_pre:
   assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "e = bs!k!i" "pointer e = PreRed p ps"
@@ -370,6 +404,8 @@ lemma wf_trees_input_prered_pre:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_trees_input_prered_red:
   assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
@@ -382,12 +418,16 @@ lemma wf_trees_input_prered_red:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma build_trees'_termination:
   assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   shows "\<exists>fs. build_trees' bs inp k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma wf_item_tree_build_trees':
   assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
@@ -401,6 +441,8 @@ lemma wf_item_tree_build_trees':
   sorry
 (*>*)
 
+text\<open>\<close>
+
 lemma wf_yield_tree_build_trees':
   assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
   assumes "wf_bins cfg inp bs"
@@ -413,6 +455,8 @@ lemma wf_yield_tree_build_trees':
   sorry
 (*>*)
 
+text\<open>\<close>
+
 theorem wf_rule_root_yield_tree_build_trees:
   assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
   assumes "build_trees cfg inp bs = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
@@ -420,6 +464,8 @@ theorem wf_rule_root_yield_tree_build_trees:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 corollary wf_rule_root_yield_tree_build_trees_earley_list:
   assumes "wf_cfg cfg" "nonempty_derives cfg"
@@ -429,6 +475,8 @@ corollary wf_rule_root_yield_tree_build_trees_earley_list:
   sorry
 (*>*)
 
+text\<open>\<close>
+
 theorem soundness_build_trees_earley_list:
   assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
   assumes "build_trees cfg inp (earley_list cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
@@ -436,6 +484,8 @@ theorem soundness_build_trees_earley_list:
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 theorem termination_build_tree_earley_list:
   assumes "wf_cfg cfg" "nonempty_derives cfg" "derives cfg [\<SS> cfg] inp"

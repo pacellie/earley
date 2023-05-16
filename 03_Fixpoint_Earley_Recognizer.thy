@@ -9,10 +9,10 @@ chapter \<open>Earley's Algorithm Formalization \label{chapter:3}\<close>
 
 text\<open>
 In this chapter we shortly introduce the interactive theorem prover Isabelle/HOL \cite{Nipkow:2002} used as
-the tool for verification in this thesis and recap some of the formalism of context-free grammars and its representation
+the tool for verification in this thesis and recap some of the formalism of context-free grammars and their representation
 in Isabelle. Finally we formalize the simplified Earley recognizer algorithm presented in Chapter
-\ref{chapter:2}; discussing the implementation and the proofs for termination, soundness and completeness.
-Note that most of the definitions of Sections \ref{sec:cfg} and \ref{sec:earley} are not our own work
+\ref{chapter:2}; discussing the implementation and the proofs for soundness, completeness, and finiteness.
+Note that most of the basic definitions of Sections \ref{sec:cfg} and \ref{sec:earley} are not our own work
 but only slightly adapted from \cite{Obua:2017} \cite{LocalLexing-AFP}. All of the proofs in this chapter are
 our own work. 
 \<close>
@@ -23,7 +23,7 @@ text\<open>
 Isabelle/HOL \cite{Nipkow:2002} is an interactive theorem prover based on a fragment of higher-order logic. It supports the core
 concepts commonly known from functional programming languages. The notation $t :: \tau$ means that term $t$ has type
 $\tau$. Basic types include \textit{bool}, \textit{nat}; type variables are written $'a$, $'b$, etc. Pairs are written
-@{term "(a, b)"}; triples and so forth are written @{term "(a, b, c)"} but are internally represented as
+@{term "(a, b)"}; triples are written @{term "(a, b, c)"} and so forth but are internally represented as
 nested pairs; the nesting is on the first component of a pair. Functions @{term fst} and @{term snd} return
 the first and second component of a pair; the operator @{term "(\<times>)"} represents pairs at the type level.
 Most type constructors are written postfix, e.g. $'a \, \textit{set}$ and $'a \, \textit{list}$; the function
@@ -33,14 +33,14 @@ Non-recursive definitions are introduced with the \textit{definition} keyword.
 It is standard to define a language as a set of strings over a finite set of symbols. We deviate slightly by introducing a type variable $'a$
 for the type of symbols. Thus a string corresponds to a list of symbols and a language is formalized as
 a set of lists of symbols. We represent a context-free grammar as the datatype @{term CFG}. An instance \textit{cfg} consists of (1) a list of
-nonterminals (@{term "\<NN> cfg"}), (2) a list of terminals (@{term "\<TT> cfg"}), (3) a list of production rules
+non-terminals (@{term "\<NN> cfg"}), (2) a list of terminals (@{term "\<TT> cfg"}), (3) a list of production rules
 (@{term "\<RR> cfg"}), and a start symbol (@{term "\<SS> cfg"}) where @{term \<NN>}, @{term \<TT>}, @{term \<RR>} and @{term \<SS>} are
-projections accessing the specific part of the instance @{term cfg} of the datatype @{term CFG}. Each rule consists of a left-hand side or @{term rule_head}, a single symbol,
+projections accessing the specific part of an instance @{term cfg} of the datatype @{term CFG}. Each rule consists of a left-hand side or @{term rule_head}, a single symbol,
 and a right-hand side or @{term rule_body}, a list of symbols.
-The productions with a particular nonterminal $N$ on their left-hand sides are called the alternatives of $N$.
+The productions with a particular non-terminal $N$ on their left-hand sides are called the alternatives of $N$.
 We make the usual assumptions about the well-formedness of a context-free grammar: the intersection of the set of terminals and
-the set of nonterminals is empty; the start symbol is a nonterminal; the rule head of a production
-is a nonterminal and its rule body consists of only symbols. Additionally, since we are working with
+the set of non-terminals is empty; the start symbol is a non-terminal; the rule head of a production
+is a non-terminal and its rule body consists of only symbols. Additionally, since we are working with
 a list of productions, we make the assumption that this list is distinct.
 \<close>
 
@@ -76,13 +76,14 @@ definition wf_cfg :: "'a cfg \<Rightarrow> bool" where
   "wf_cfg cfg \<equiv> disjunct_symbols cfg \<and> wf_startsymbol cfg \<and> wf_rules cfg \<and> distinct_rules cfg"
 
 text\<open>
-Furthermore, in Isabelle, lists are constructed from the empty list @{term "[]"} via the infix cons-operator @{term "(#)"}; the operator @{term "(@)"} appends two lists.
+Furthermore, in Isabelle, lists are constructed from the empty list @{term "[]"} via the infix cons-operator @{term "(#)"};
+the operator @{term "(@)"} appends two lists; @{term "xs!n"} returns the $n$-th item of the list @{term xs}.
 Sets follow the standard mathematical notation including
-the commonly found set builder notation or set comprehensions @{term "{ x | x. P x}"}, and can also be defined
+the commonly found set builder notation or set comprehensions @{term "{ x | x. P x}"}. Sets can also be defined
 inductively using the keyword \textit{inductive\_set}.
 
 Next we formalize the concept of a derivation. We use lowercase letters $a$, $b$, $c$ indicating terminal symbols; capital letters
-$A$, $B$, $C$ denote nonterminals; lists of symbols are represented by greek letters: \alpha, \beta, \gamma, occasionally also by lowercase letters $u$, $v$, $w$.
+$A$, $B$, $C$ denote non-terminals; lists of symbols are represented by greek letters: \alpha, \beta, \gamma, occasionally also by lowercase letters $u$, $v$, $w$.
 The empty list in the context of a language is \epsilon. A sentential is a list consisting of only symbols. A sentence
 is a sentential if it only contains terminal symbols. We first define a predicate @{term "derives1 cfg u v"} which expresses that
 we can derive $v$ from $u$ in a single step or the predicate holds if there exist $\alpha$, $\beta$, $N$ and $\gamma$ such that @{term "u = \<alpha> @ [N] @ \<beta>"},
@@ -152,7 +153,7 @@ lemma slice_append:
   sorry
 (*>*)
 
-section \<open>Earley's Algorithm \label{sec:earley}\<close>
+section \<open>The Algorithm \label{sec:earley}\<close>
 
 text\<open>
 Next we formalize the algorithm presented in Chapter \ref{chapter:2}. First we define the datatype @{term item}
@@ -211,7 +212,7 @@ Normally we don't construct items directly via the @{term Item} constructor but 
 the function @{term init_item} is used by the @{term Init} and @{term Predict} operations. It sets the @{term item_bullet} to 0 or
 the beginning of the production rule body, initializes the @{term item_rule}, and indicates that this is an initial item
 by assigning @{term item_origin} and @{term item_end} to the current position in the input. The function @{term inc_item}
-returns a new item moving the bullet over the next symbol (assuming there is one) and setting the @{term item_end} to the
+returns a new item, moving the bullet over the next symbol (assuming there is one), and setting the @{term item_end} to the
 current position in the input, leaving the item rule and origin untouched. It is utilized by the @{term Scan} and
 @{term Complete} operations.
 \<close>
@@ -233,12 +234,12 @@ form one Earley bin. Our operational approach is then the following: we generate
 starting from the $0$-th bin which contains all initial items computed by the @{term Init} operation. The three operations @{term Scan}, @{term Predict}, and @{term Complete}
 all take as arguments the index of the current bin and the current set of Earley items. For the $k$-th bin
 the @{term Scan} operation initializes the $k+1$-th bin, whereas the @{term Predict} and @{term Complete} operations
-only generate items belonging to the $k$-th bin. We then define a function @{term E_step} (short for Earley step) that
-returns the union of applying the three operations to a set of Earley items and this set itself. We complete the $k$-th
-bin and initialize the $k+1$-th bin by iterating @{term E_step} until the set of items stabilizes, captured by the @{term E_bin}
-definition. The function @{term \<E>} then generates the bins up to the $n$-th bin by applying the @{term E_bin}
+only generate items belonging to the $k$-th bin. We then define a function @{term Earley_step} (short for Earley step) that
+returns the union of the set itself and applying the three operations to a set of Earley items. We complete the $k$-th
+bin and initialize the $k+1$-th bin by iterating @{term Earley_step} until the set of items stabilizes, captured by the @{term Earley_bin}
+definition. The function @{term Earley} then generates the bins up to the $n$-th bin by applying the @{term Earley_bin}
 function first to the initial set of items @{term Init} and continuing in ascending order bin by bin. Finally, we compute
-the set of Earley items by applying @{term \<E>} to the length of the input.
+the set of Earley items by applying @{term Earley} to the length of the input.
 \<close>
 
 definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
@@ -270,8 +271,8 @@ definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
-definition E_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "E_step k cfg \<omega> I = I \<union> Scan k \<omega> I \<union> Complete k I \<union> Predict k cfg I"
+definition Earley_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "Earley_step k cfg \<omega> I = I \<union> Scan k \<omega> I \<union> Complete k I \<union> Predict k cfg I"
 
 fun funpower :: "('a \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'a)" where
   "funpower f 0 x = x"
@@ -283,34 +284,34 @@ definition natUnion :: "(nat \<Rightarrow> 'a set) \<Rightarrow> 'a set" where
 definition limit :: "('a set \<Rightarrow> 'a set) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
   "limit f x = natUnion (\<lambda> n. funpower f n x)"
 
-definition E_bin :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
-  "E_bin k cfg \<omega> I = limit (E_step k cfg \<omega>) I"
+definition Earley_bin :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+  "Earley_bin k cfg \<omega> I = limit (Earley_step k cfg \<omega>) I"
 
-fun \<E> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
-  "\<E> 0 cfg \<omega> = E_bin 0 cfg \<omega> (Init cfg)"
-| "\<E> (Suc n) cfg \<omega> = E_bin (Suc n) cfg \<omega> (\<E> n cfg \<omega>)"
+fun Earley :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
+  "Earley 0 cfg \<omega> = Earley_bin 0 cfg \<omega> (Init cfg)"
+| "Earley (Suc n) cfg \<omega> = Earley_bin (Suc n) cfg \<omega> (Earley n cfg \<omega>)"
 
-definition earley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
-  "earley cfg \<omega> = \<E> (length \<omega>) cfg \<omega>"
+definition \<E>arley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items" where
+  "\<E>arley cfg \<omega> = Earley (length \<omega>) cfg \<omega>"
 
 text\<open>
-We followed the operational approach of defining the set of Earley items primarily for two reasons: first of all, we adapted
-most of the definitions of this chapter from the work on Local Lexing \cite{Obua:2017} \cite{LocalLexing-AFP},
+We follow the operational approach of defining the set of Earley items primarily for two reasons: first of all, we reuse and only slightly adapt
+most of the basic definitions of this chapter from the work of Obua on \textit{Local Lexing} \cite{Obua:2017} \cite{LocalLexing-AFP},
 which takes the more operational approach and already defines useful lemmas, for example on function iteration.
-Secondly, the operational approach maps more easily to the list-based implementation of the next chapter which
+Secondly, the operational approach maps more easily to the list-based implementation of the next chapter that
 necessarily takes an ordered approach to generating Earley items. Nonetheless, in hindsight, defining the set
 of Earley items inductively seems to be not only the more elegant approach but also might simplify some of the proofs of
-this chapter.
+this chapter, and is consequently future work worth considering.
 \<close>
 
 section \<open>Well-formedness\<close>
 
 text\<open>
 Due to the operational view of generating the set of Earley items, the proofs of, not only, well-formedness, but
-also soundness and completeness follow the same structure: we first proof a property about the basic building
+also soundness and completeness follow a similar structure: we first proof a property about the basic building
 blocks, the @{term Init}, @{term Scan}, @{term Predict}, and @{term Complete} operations. Then, we proof that
-this property is maintained iterating the function @{term E_step}, and thus holds for the @{term E_bin} operation.
-Finally, we show that the function @{term \<E>} maintains this property for all conceptual bins and thus for the @{term earley} definition, or
+this property is maintained iterating the function @{term Earley_step}, and thus holds for the @{term Earley_bin} operation.
+Finally, we show that the function @{term Earley} maintains this property for all conceptual bins and thus for the @{term \<E>arley} definition, or
 the set of Earley items.
 
 Before we start to proof soundness and completeness of the generated set of Earley items, especially the
@@ -350,65 +351,65 @@ lemma wf_Scan_Predict_Complete:
 
 text\<open>\<close>
 
-lemma wf_E_step:
+lemma wf_Earley_step:
   assumes "wf_items cfg \<omega> I"
-  shows "wf_items cfg \<omega> (E_step k cfg \<omega> I)"
+  shows "wf_items cfg \<omega> (Earley_step k cfg \<omega> I)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>
-Lemmas @{thm[source] wf_Init}, @{thm[source] wf_Scan_Predict_Complete}, and @{thm[source] wf_E_step}
+Lemmas @{thm[source] wf_Init}, @{thm[source] wf_Scan_Predict_Complete}, and @{thm[source] wf_Earley_step}
 follow trivially by definition of the respective operations.
 \<close>
 
 lemma wf_funpower:
   assumes "wf_items cfg \<omega> I"
-  shows "wf_items cfg \<omega> (funpower (E_step k cfg \<omega>) n I)"
+  shows "wf_items cfg \<omega> (funpower (Earley_step k cfg \<omega>) n I)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma wf_E_bin:
+lemma wf_Earley_bin:
   assumes "wf_items cfg \<omega> I"
-  shows "wf_items cfg \<omega> (E_bin k cfg \<omega> I)"
+  shows "wf_items cfg \<omega> (Earley_bin k cfg \<omega> I)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma wf_E_bin0:
-  shows "wf_items cfg \<omega> (E_bin 0 cfg \<omega> (Init cfg))"
+lemma wf_Earley_bin0:
+  shows "wf_items cfg \<omega> (Earley_bin 0 cfg \<omega> (Init cfg))"
 (*<*)
   sorry
 (*>*)
 
 text\<open>
-We proof the lemma @{thm[source] wf_funpower} by induction on $n$ using @{thm[source] wf_E_step}, and
-lemmas @{thm[source] wf_E_bin} and @{thm[source] wf_E_bin0} follow immediately using additionally the fact
+We proof the lemma @{thm[source] wf_funpower} by induction on $n$ using lemma @{thm[source] wf_Earley_step}, and
+lemmas @{thm[source] wf_Earley_bin} and @{thm[source] wf_Earley_bin0} follow immediately using additionally the fact
 that @{term "x \<in> limit f X \<equiv> \<exists>n. x \<in> funpower f n X"} and lemma @{thm[source] wf_Init}.
 \<close>
 
-lemma wf_\<E>:
-  shows "wf_items cfg \<omega> (\<E> n cfg \<omega>)"
+lemma wf_Earley:
+  shows "wf_items cfg \<omega> (Earley n cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma wf_earley:
-  shows "wf_items cfg \<omega> (earley cfg \<omega>)"
+lemma wf_\<E>arley:
+  shows "wf_items cfg \<omega> (\<E>arley cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>
-Finally, lemma @{thm[source] wf_\<E>} is proved by induction on $n$ using lemmas @{thm[source] wf_E_bin} 
-and @{thm[source] wf_E_bin0}; lemma @{thm[source] wf_earley} follows by definition.
+Finally, lemma @{thm[source] wf_Earley} is proved by induction on $n$ using lemmas @{thm[source] wf_Earley_bin} 
+and @{thm[source] wf_Earley_bin0}; lemma @{thm[source] wf_\<E>arley} follows by definition of @{term \<E>arley}.
 \<close>
 
 section \<open>Soundness\<close>
@@ -445,9 +446,8 @@ definition Derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<R
         \<and> r = (N, \<gamma>) \<and> i = length \<alpha>"
 
 text\<open>
-We then define the type of a \textit{derivation} as a list of pairs representing precisely the positions and rules
-used to apply each rewrite step. The predicate @{term Derivation} is defined recursively as follows: $\alpha \Rightarrow \beta$ only
-holds for the empty derivation or list. If the derivation consists of at least one rewrite pair $(i, r)$, or
+He then defines the type of a \textit{derivation} as a list of pairs representing precisely the positions and rules
+used to apply each rewrite step. The predicate @{term Derivation} is defined recursively as follows: @{term "Derivation \<alpha> [] \<beta>"} holds only if @{term "\<alpha> = \<beta>"}. If the derivation consists of at least one rewrite pair $(i, r)$, or
 @{term "Derivation cfg \<alpha> ((i, r)#D) \<beta>"}, then there must exist a $\gamma$ such that @{term "Derives1 cfg \<alpha> i r \<gamma>"} and
 @{term "Derivation cfg \<gamma> D \<beta>"}. Obua then proves that both notions of a derivation are equivalent (lemma @{term derives_equiv_Derivation})
 \<close>
@@ -554,10 +554,10 @@ lemma sound_Predict:
 
 text\<open>\<close>
 
-lemma sound_E_step:
+lemma sound_Earley_step:
   assumes "wf_items cfg \<omega> I"
   assumes "sound_items cfg \<omega> I" 
-  shows "sound_items cfg \<omega> (E_step k cfg \<omega> I)"
+  shows "sound_items cfg \<omega> (Earley_step k cfg \<omega> I)"
 (*<*)
   sorry
 (*>*)
@@ -567,54 +567,54 @@ text\<open>\<close>
 lemma sound_funpower:
   assumes "wf_items cfg \<omega> I"
   assumes "sound_items cfg \<omega> I"
-  shows "sound_items cfg \<omega> (funpower (E_step k cfg \<omega>) n I)"
+  shows "sound_items cfg \<omega> (funpower (Earley_step k cfg \<omega>) n I)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_E_bin:
+lemma sound_Earley_bin:
   assumes "wf_items cfg \<omega> I"
   assumes "sound_items cfg \<omega> I"
-  shows "sound_items cfg \<omega> (E_bin k cfg \<omega> I)"
+  shows "sound_items cfg \<omega> (Earley_bin k cfg \<omega> I)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_E_bin0:
-  shows "sound_items cfg \<omega> (E_bin 0 cfg \<omega> (Init cfg))"
+lemma sound_Earley_bin0:
+  shows "sound_items cfg \<omega> (Earley_bin 0 cfg \<omega> (Init cfg))"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_\<E>:
-  shows "sound_items cfg \<omega> (\<E> k cfg \<omega>)"
+lemma sound_Earley:
+  shows "sound_items cfg \<omega> (Earley k cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_earley:
-  shows "sound_items cfg \<omega> (earley cfg \<omega>)"
+lemma sound_\<E>arley:
+  shows "sound_items cfg \<omega> (\<E>arley cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>
-Finally, using @{thm[source] sound_earley} and the definitions of @{term sound_item}, @{term recognizing},
+Finally, using @{thm[source] sound_\<E>arley} and the definitions of @{term sound_item}, @{term recognizing},
 @{term is_finished} and @{term is_complete} the final theorem follows: if the generated set of Earley
-items is @{term recognizing}, or contains a \textit{finished} item then there exists a derivation from
-the start symbol of the grammar to the input $\omega$.
+items is @{term recognizing}, or contains a \textit{finished} item, then there exists a derivation
+of the input $\omega$ from the start symbol of the grammar.
 \<close>
 
 theorem soundness:
-  assumes "recognizing (earley cfg \<omega>) cfg \<omega>"
+  assumes "recognizing (\<E>arley cfg \<omega>) cfg \<omega>"
   shows "derives cfg [\<SS> cfg] \<omega>"
 (*<*)
   sorry
@@ -626,51 +626,51 @@ text\<open>
 Next, we prove completeness and consequently obtain a concluded correctness proof using theorem
 @{thm[source] soundness}. The completeness proof is by far the most involved proof of this chapter. Thus,
 we present it in greater detail, and also slightly deviate from the proof structure of the well-formedness
-and soundness proofs presented previously. We directly start to prove three properties of the @{term \<E>}
+and soundness proofs presented previously. We directly start to prove three properties of the @{term Earley}
 function that correspond conceptually to the three different operations that can occur while generating
 the bins.
 
-We need three simple lemmas concerning the @{term E_bin} function, stated without explicit proof: (1) @{term "E_bin k cfg \<omega> I"}
-only (potentially) changes bins $k$ and $k+1$ (lemma @{term E_bin_bin_idem}); (2) the @{term E_step}
-operation is subsumed by the @{term E_bin} operation, since it computes the limit of @{term E_step}
-(lemma @{term E_step_sub_E_bin}); and (3) the function @{term E_bin} is idempotent (lemma @{term E_bin_idem}).
+We need three simple lemmas concerning the @{term Earley_bin} function, stated without explicit proof: (1) @{term "Earley_bin k cfg \<omega> I"}
+only (potentially) changes bins $k$ and $k+1$ (lemma @{term Earley_bin_bin_idem}); (2) the @{term Earley_step}
+operation is subsumed by the @{term Earley_bin} operation, since it computes the limit of @{term Earley_step}
+(lemma @{term Earley_step_sub_Earley_bin}); and (3) the function @{term Earley_bin} is idempotent (lemma @{term Earley_bin_idem}).
 \<close>
 
-lemma E_bin_bin_idem:
+lemma Earley_bin_bin_idem:
   assumes "i \<noteq> k"
   assumes "i \<noteq> k+1" 
-  shows "bin (E_bin k cfg \<omega> I) i = bin I i"
+  shows "bin (Earley_bin k cfg \<omega> I) i = bin I i"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma E_step_sub_E_bin:
-  shows "E_step k cfg \<omega> I \<subseteq> E_bin k cfg inp I"
+lemma Earley_step_sub_Earley_bin:
+  shows "Earley_step k cfg \<omega> I \<subseteq> Earley_bin k cfg inp I"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma E_bin_idem:
-  shows "E_bin k cfg \<omega> (E_bin k cfg \<omega> I) = E_bin k cfg \<omega> I"
+lemma Earley_bin_idem:
+  shows "Earley_bin k cfg \<omega> (Earley_bin k cfg \<omega> I) = Earley_bin k cfg \<omega> I"
 (*<*)
   sorry
 (*>*)
 
-text\<open>Next, we proof lemma @{term Scan_\<E>} in detail: it describes under which assumptions the function
-@{term \<E>} generates a 'scanned' item:
+text\<open>Next, we proof lemma @{term Scan_Earley} in detail: it describes under which assumptions the function
+@{term Earley} generates a 'scanned' item:
 \<close>
 
-lemma Scan_\<E>:
+lemma Scan_Earley:
   assumes "i+1 \<le> k"
-  assumes "x \<in> bin (\<E> k cfg \<omega>) i"
+  assumes "x \<in> bin (Earley k cfg \<omega>) i"
   assumes "next_symbol x = Some a"
   assumes "k \<le> length \<omega>"
   assumes "\<omega>!i = a"
-  shows "inc_item x (i+1) \<in> \<E> k cfg \<omega>"
+  shows "inc_item x (i+1) \<in> Earley k cfg \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -683,75 +683,93 @@ The proof is by induction in $k$ for arbitrary $i$, $x$, and $a$:
 The base case @{term "k = (0::nat)"} is trivial, since we have the assumption @{term "i+(1::nat) \<le> 0"}.
 
 For the induction step we can assume @{term "i+(1::nat) \<le> k+1"}, @{term "k+(1::nat) \<le> length \<omega>"},
-@{term "x \<in> bin (\<E> (k+1) cfg \<omega>) i"} , @{term "next_symbol x = Some a"}, and @{term "\<omega>!i = a"}.
-Assumptions @{term "x \<in> bin (\<E> (k+1) cfg \<omega>) i"} and @{term "i+(1::nat) \<le> k+1"} imply that
-@{term "x \<in> bin (\<E> k cfg inp) i"} by lemma @{thm[source] E_bin_bin_idem}.
+@{term "x \<in> bin (Earley (k+1) cfg \<omega>) i"} , @{term "next_symbol x = Some a"}, and @{term "\<omega>!i = a"}.
+Assumptions @{term "x \<in> bin (Earley (k+1) cfg \<omega>) i"} and @{term "i+(1::nat) \<le> k+1"} imply that
+@{term "x \<in> bin (Earley k cfg inp) i"} by lemma @{thm[source] Earley_bin_bin_idem}.
 
 We then consider two cases: 
 \begin{itemize}
   \item @{term "i+(1::nat) \<le> k"}: We can apply the induction hypothesis using assumptions
     @{term "k+(1::nat) \<le> length \<omega>"}, @{term "next_symbol x = Some a"}, @{term "\<omega>!i = a"} and 
-    additionally @{term "x \<in> bin (\<E> k cfg inp) i"} and have @{term "inc_item x (i+1) \<in> \<E> k cfg \<omega>"}.
-    The statement to proof follows by lemma @{thm[source] E_step_sub_E_bin} and the definition of
-    @{term E_step}.
+    additionally @{term "x \<in> bin (Earley k cfg inp) i"} and have @{term "inc_item x (i+1) \<in> Earley k cfg \<omega>"}.
+    The statement to proof follows by lemma @{thm[source] Earley_step_sub_Earley_bin} and the definition of
+    @{term Earley_step}.
   \item @{term "i+(1::nat) > k"}: We have @{term "i = k"}, since @{term "i+(1::nat) \<le> k+1"}.
-    Thus, we have @{term "inc_item x (i+1) \<in> Scan k \<omega> (\<E> k cfg \<omega>)"} using assumptions
+    Thus, we have @{term "inc_item x (i+1) \<in> Scan k \<omega> (Earley k cfg \<omega>)"} using assumptions
     @{term "k+(1::nat) \<le> length \<omega>"}, @{term "next_symbol x = Some a"}, @{term "\<omega>!i = a"}, and additionally
-    @{term "x \<in> bin (\<E> k cfg inp) i"} by the definition of the @{term Scan} operation.
-    This in turn implies @{term "inc_item x (i+1) \<in> E_step k cfg \<omega> (\<E> k cfg \<omega>)"} by lemma @{thm[source] E_step_sub_E_bin}
-    and the definition of @{term E_step}. Since the function @{term E_bin} is idempotent
-    (lemma @{thm[source] E_bin_idem}), we have @{term "inc_item x (i+1) \<in> \<E> k cfg \<omega>"} by definition of
-    @{term \<E>}. And again, the final statement follows by lemma @{thm[source] E_step_sub_E_bin} and the definition of
-    @{term E_step}.
+    @{term "x \<in> bin (Earley k cfg inp) i"} by the definition of the @{term Scan} operation.
+    This in turn implies @{term "inc_item x (i+1) \<in> Earley_step k cfg \<omega> (Earley k cfg \<omega>)"} by lemma @{thm[source] Earley_step_sub_Earley_bin}
+    and the definition of @{term Earley_step}. Since the function @{term Earley_bin} is idempotent
+    (lemma @{thm[source] Earley_bin_idem}), we have @{term "inc_item x (i+1) \<in> Earley k cfg \<omega>"} by definition of
+    @{term Earley}. And again, the final statement follows by lemma @{thm[source] Earley_step_sub_Earley_bin} and the definition of
+    @{term Earley_step}.
 \end{itemize}
 
 \end{proof}
 \<close>
 
-lemma Predict_\<E>:
+lemma Predict_Earley:
   assumes "i \<le> k"
-  assumes "x \<in> bin (\<E> k cfg \<omega>) i"
+  assumes "x \<in> bin (Earley k cfg \<omega>) i"
   assumes "next_symbol x = Some N"
   assumes "(N,\<alpha>) \<in> set (\<RR> cfg)"
-  shows "init_item (N,\<alpha>) i \<in> \<E> k cfg \<omega>"
+  shows "init_item (N,\<alpha>) i \<in> Earley k cfg \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma Complete_\<E>:
+lemma Complete_Earley:
   assumes "i \<le> j"
   assumes "j \<le> k"
-  assumes "x \<in> bin (\<E> k cfg \<omega>) i"
+  assumes "x \<in> bin (Earley k cfg \<omega>) i"
   assumes "next_symbol x = Some N"
   assumes "(N,\<alpha>) \<in> set (\<RR> cfg)"
-  assumes "y \<in> bin (\<E> k cfg \<omega>) j"
+  assumes "y \<in> bin (Earley k cfg \<omega>) j"
   assumes "item_rule y = (N,\<alpha>)"
   assumes "i = item_origin y"
   assumes "is_complete y"
-  shows "inc_item x j \<in> \<E> k cfg \<omega>"
+  shows "inc_item x j \<in> Earley k cfg \<omega>"
 (*<*)
   sorry
 (*>*)
 
-text\<open>The proof of lemmas @{thm[source] Predict_\<E>} and @{thm[source] Complete_\<E>} are similar in structure
-to the proof of lemma @{thm[source] Scan_\<E>} with the exception of the base case that is in both cases non-trivial
-but can be proven with the help of lemmas @{thm[source] E_step_sub_E_bin} and @{thm[source] E_bin_idem}, the
-definition of @{term E_bin} and the definitions of @{term Predict} and @{term Complete}, respectively.
+text\<open>The proof of lemmas @{thm[source] Predict_Earley} and @{thm[source] Complete_Earley} are similar in structure
+to the proof of lemma @{thm[source] Scan_Earley} with the exception of the base case that is in both cases non-trivial
+but can be proven with the help of lemmas @{thm[source] Earley_step_sub_Earley_bin} and @{thm[source] Earley_bin_idem}, the
+definition of @{term Earley_bin} and the definitions of @{term Predict} and @{term Complete}, respectively.
 
-The core idea for the completeness proof is the following: if there exists an item of the form
+Next, we give some intuition about the core idea of the completeness proof. Assume there exists an
+item $N \rightarrow \, \bullet A_0 A_1 \dots A_n$ in a \textit{complete} (we define what exactly this means) set of items $I$ where $A_i$ are either terminal or non-terminal symbols.
+Furthermore, assume there exist the following derivations for $i_0 \le i_1 \le \dots \le i_n \le i_{n+1}$:
+\begin{equation*}
+\begin{split}
+  & A_0 \xRightarrow{\ast} \, \omega[i_0 .. i_1) \\
+  & A_1 \xRightarrow{\ast} \, \omega[i_1 .. i_2) \\
+  & \dots \\
+  & A_n \xRightarrow{\ast} \, \omega[i_n .. i_{n+1}) \\
+\end{split}
+\end{equation*}
+
+Then, we have one derivation to move the bullet over each terminal or non-terminal $A_i$ then the
+item $N \rightarrow \, A_0 A_1 \dots A_n \bullet$ should be in $I$ if $I$ is a \textit{complete} set of items.
+
+We formalize this idea as follows: a set $I$ is @{term partially_completed} if for each non-complete
+item $x$ in $I$, the existence of a derivation $D$ from the next symbol of $x$ implies, that the item
+that can be obtained by moving the bullet over the next symbol of $x$, is also present in $I$.
+The full definition of @{term partially_completed} below is slightly more involved since we need to
+keep track of the validity of the indices. Note that the definition also requires that an arbitrary
+predicate $P$ holds for the derivation $D$. This predicate is necessary since the completeness proof
+requires a proof on the length of the derivation $D$, and thus we limit the @{term partially_completed}
+property to derivations that don't exceed a certain length.
+
+Lemma @{term partially_completed_upto} then formalizes the core idea: if 
 $N \rightarrow \, \alpha \bullet \beta, i, j$ in a set of items $I$ and there exists a derivation
 $\beta \xRightarrow{D} \omega[j..k)$, then $I$ also contains the complete item 
-$N \rightarrow \, \alpha \beta \bullet, i, k$. Note that this statement (lemma @{term partially_completed_upto} below)
+$N \rightarrow \, \alpha \beta \bullet, i, k$. Note that this
 holds only if @{term "j \<le> k"}, @{term "k \<le> length \<omega>"}, all items of $I$ are well-formed and most importantly
 $I$ must be @{term partially_completed} up to the length of the derivation $D$.
-
-Intuitively, a set $I$ is @{term partially_completed} if for each non-complete item $x$ in $I$, the
-existence of a derivation $D$ from the next symbol of $x$ implies that the item that can be obtained by
-moving the bullet over the next symbol of $x$ is also present in $I$. The full definition of @{term partially_completed}
-is slightly more involved since we need to keep track of the validity of the indices and the fact that we
-sometimes want to limit derivations to a certain depth as done above.
 \<close>
 
 definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
@@ -770,9 +788,9 @@ $\alpha \xRightarrow{E} \alpha'$, $\beta \xRightarrow{F} \beta'$ and @{term "\<g
 is by induction on $D$ for arbitrary $\alpha$ and $\beta$ and quite technical since we need to manipulate
 the exact indices where each rewriting rule is applied in $\alpha$ and $\beta$, and thus we omit it.
 
-The second one is a similar lemma about splitting slices (lemma @{term slice_append_split}). The proof
+The second one is a, in spirit similar, lemma about splitting slices (lemma @{term slice_append_split}). The proof
 is straightforward by induction on the computation of the @{term slice} function, we also omit it, and
-move on to the proof of lemmas @{term partially_completed_upto} and @{term partially_completed_\<E>}.
+move on to the proof of lemmas @{term partially_completed_upto} and @{term partially_completed_Earley}.
 \<close>
 
 lemma Derivation_append_split:
@@ -811,7 +829,7 @@ lemma partially_completed_upto:
 text\<open>
 \begin{proof}
 
-The proof is by induction on the @{term "item_\<beta> x"} for arbitrary $b$, $i$, $j$, $k$, $N$, $\alpha$,
+The proof is by induction on (@{term "item_\<beta> x"}) for arbitrary $b$, $i$, $j$, $k$, $N$, $\alpha$,
 $x$, and $D$:
 
 For the base case we have @{term "item_\<beta> x = []"} and need to show that @{term "Item (N, \<alpha>) (length \<alpha>) i k \<in> I"}:
@@ -828,15 +846,21 @@ Hence, the statement follows from the assumption @{term "x \<in> I"} and the fac
 For the induction step we have @{term "item_\<beta> x = a#as"} and need to show that @{term "Item (N, \<alpha>) (length \<alpha>) i k \<in> I"}:
 
 Using lemmas @{thm[source] Derivation_append_split} and @{thm[source] slice_append_split}
-there exists an index $j'$ and derivations $E$ and $F$ such that @{term "Derivation cfg [a] E (slice j j' \<omega>)"},
-@{term "length E \<le> length D"}, @{term "Derivation cfg as F (slice j' k \<omega>)"}, @{term "length F \<le> length D"},
-@{term "j \<le> j'"}, and @{term "j' \<le> k"}.
+there exists an index $j'$ and derivations $E$ and $F$ such that
+
+\begin{equation*}
+\begin{split}
+ @{term "Derivation cfg [a] E (slice j j' \<omega>)"} & @{term "length E \<le> length D"} \\
+ @{term "Derivation cfg as F (slice j' k \<omega>)"} & @{term "length F \<le> length D"} \\
+ @{term "j \<le> j'"} \qquad @{term "j' \<le> k"} &
+\end{split}
+\end{equation*}
 
 Using the facts about derivation $E$, @{term "j \<le> j'"}, @{term "j' \<le> k"} and the assumptions
 @{term "k \<le> length \<omega>"}, @{term "x = Item (N, \<alpha>) b i j"}, @{term "x \<in> I"}, @{term "next_symbol x = Some a"}
 (since @{term "item_\<beta> x = a#as"}) and @{term "x \<in> bin I j"}, we have @{term "inc_item x j' \<in> I"} by the
 assumption @{term "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length D)"}.
-Note that @{term "inc_item x j' = Item (N, \<alpha>) (b+1) i j'"}, which we will from now on name item $x'$.
+Note that @{term "inc_item x j' = Item (N, \<alpha>) (b+1) i j'"}, which we will from now on refer to as item $x'$.
 
 From @{term "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length D)"} and @{term "length F \<le> length D"}
 follows @{term "partially_completed k cfg \<omega> I (\<lambda>D'. length D' \<le> length F)"}. We also have @{term "as = item_\<beta> x'"}
@@ -847,9 +871,9 @@ have @{term "Item (N, \<alpha>) (length \<alpha>) i k \<in> I"}, what we intende
 \end{proof}
 \<close>
 
-lemma partially_completed_\<E>:
+lemma partially_completed_Earley:
   assumes "wf_cfg cfg"
-  shows "partially_completed k cfg inp (\<E> k cfg \<omega>) (\<lambda>_. True)"
+  shows "partially_completed k cfg \<omega> (Earley k cfg \<omega>) (\<lambda>_. True)"
 (*<*)
   sorry
 (*>*)
@@ -860,8 +884,8 @@ text\<open>
 Let $x$, $i$, $a$, $D$, and $j$ be arbitrary but fixed.
 
 By definition of @{term partially_completed} we can assume @{term "i \<le> j"}, @{term "j \<le> k"},
-@{term "k \<le> length \<omega>"}, @{term "x \<in> bin (\<E> k cfg \<omega>) i"}, @{term "next_symbol x = Some a"},
-@{term "Derivation cfg [a] D (slice i j \<omega>)"}, and need to show @{term "inc_item x j \<in> \<E> k cfg \<omega>"}.
+@{term "k \<le> length \<omega>"}, @{term "x \<in> bin (Earley k cfg \<omega>) i"}, @{term "next_symbol x = Some a"},
+@{term "Derivation cfg [a] D (slice i j \<omega>)"}, and need to show @{term "inc_item x j \<in> Earley k cfg \<omega>"}.
 
 We proof this by complete induction on @{term "length D"} for arbitrary $x$, $i$, $a$, $j$, and $D$,
 and split the proof into two different cases:
@@ -869,70 +893,100 @@ and split the proof into two different cases:
 \begin{itemize}
 
   \item @{term "D = []"}: Since @{term "Derivation cfg [a] D (slice i j \<omega>)"}, we have @{term "[a] = slice i j \<omega>"},
-  and consequently @{term "\<omega>!i = a"} and @{term "j = i+1"}. Now we discharge the assumptions of lemma @{thm[source] Scan_\<E>},
-  using additionally @{term "x \<in> bin (\<E> k cfg \<omega>) i"}, @{term "next_symbol x = Some a"}, and @{term "j \<le> length \<omega>"},
-  and have @{term "inc_item x (i+1) \<in> \<E> k cfg \<omega>"} which finishes the proof since @{term "j = i+1"}.
+  and consequently @{term "\<omega>!i = a"} and @{term "j = i+(1::nat)"}. Now we discharge the assumptions of lemma @{thm[source] Scan_Earley},
+  using additionally @{term "x \<in> bin (Earley k cfg \<omega>) i"}, @{term "next_symbol x = Some a"}, and @{term "j \<le> length \<omega>"},
+  and have @{term "inc_item x (i+1) \<in> Earley k cfg \<omega>"} which finishes the proof since @{term "j = i+(1::nat)"}.
   
   \item @{term "D = d#D'"}: Since @{term "Derivation cfg [a] D (slice i j \<omega>)"}, there exists an $\alpha$ such that
   @{term "Derives1 cfg [a] (fst d) (snd d) \<alpha>"} and @{term "Derivation cfg \<alpha> D' (slice i j \<omega>)"}. From the definition
-  of @{term "Derives1"} we see that there exists a nonterminal $N$ such that @{term "a = N"},
+  of @{term "Derives1"} we see that there exists a non-terminal $N$ such that @{term "a = N"},
   @{term "(N, \<alpha>) \<in> set (\<RR> cfg)"}, @{term "fst d = (0::nat)"}, and @{term "snd d = (N, \<alpha>)"}.
 
-  Let $y$ denote @{term "Item (N,\<alpha>) 0 i i"}
+  Let $y$ denote @{term "Item (N,\<alpha>) 0 i i"}. Since we have @{term "i \<le> k"}, @{term "x \<in> bin (Earley k cfg \<omega>) i"},
+  and @{term "next_symbol x = Some a"} by assumption, we showed that @{term "a = N"} and @{term "(N, \<alpha>) \<in> set (\<RR> cfg)"},
+  and $y$ is an initial item, we have @{term "y \<in> Earley k cfg \<omega>"} by lemma @{thm[source] Predict_Earley}.
 
+  Next, we use lemma @{thm[source] partially_completed_upto} to show that we the completed version
+  of item $y$ is also present in the $j$-th bin of @{term "Earley k cfg \<omega>"} since we have a derivation
+  $\alpha \xRightarrow{D'} \, \omega[i..j)$, or @{term "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (Earley k cfg \<omega>) j"}:
+  we have @{term "i \<le> j"}, @{term "j \<le> length \<omega>"} by assumption; have proven @{term "y \<in> Earley k cfg \<omega>"};
+  and have @{term "wf_items cfg \<omega> (Earley k cfg \<omega>)"} by lemma @{thm[source] wf_Earley}. Additionally, we know
+  @{term "Derivation cfg (item_\<beta> y) D' (slice i j \<omega>)"} since @{term "Derivation cfg [a] D' (slice i j \<omega>)"} and
+  @{term "a = N"}, by the definition of item $y$. Finally, we use the induction hypothesis to show
+  @{term "partially_completed k cfg \<omega> (Earley k cfg \<omega>) (\<lambda>E. length E \<le> length D')"}, since @{term "length D' \<le> length D"}
+  by definition of @{term partially_completed}, using once again all of our assumptions. This in turn implies
+  @{term "partially_completed j cfg \<omega> (Earley k cfg \<omega>) (\<lambda>E. length E \<le> length D')"} since
+  @{term "j \<le> k"} by definition of @{term partially_completed}. Now we can use lemma @{thm[source] partially_completed_upto}, and the statement follows
+  from the definition of a bin.
+
+  Finally, we prove @{term "inc_item x j \<in> Earley k cfg \<omega>"} by lemma @{thm[source] Complete_Earley}:
+  once again we have @{term "i \<le> j"}, @{term "j \<le> k"}, and @{term "x \<in> bin (Earley k cfg \<omega>) i"} by assumption.
+  We also know that @{term "next_symbol x = Some N"}, due to our assumption @{term "next_symbol x = Some a"}
+  and @{term "a = N"}. Moreover, we have @{term "(N, \<alpha>) \<in> set (\<RR> cfg)"} and most importantly
+  @{term "Item (N,\<alpha>) (length \<alpha>) i j \<in> bin (Earley k cfg \<omega>) j"}, which concludes this proof.
+  
 \end{itemize}
 
 \end{proof}
 \<close>
 
-lemma partially_completed_earley:
+text\<open>
+Lemma @{term partially_completed_\<E>arley} follows trivially from @{thm[source] partially_completed_Earley}
+by definition of @{term \<E>arley}.
+\<close>
+
+lemma partially_completed_\<E>arley:
   assumes "wf_cfg cfg"
-  shows "partially_completed (length \<omega>) cfg \<omega> (earley cfg \<omega>) (\<lambda>_. True)"
+  shows "partially_completed (length \<omega>) cfg \<omega> (\<E>arley cfg \<omega>) (\<lambda>_. True)"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
-
-lemma Derivation_\<SS>1:
-  assumes "wf_cfg cfg"
-  assumes "is_sentence cfg \<omega>" 
-  assumes "Derivation cfg [\<SS> cfg] D \<omega>" 
-  shows "\<exists>\<alpha> E. Derivation cfg \<alpha> E \<omega> \<and> (\<SS> cfg,\<alpha>) \<in> set (\<RR> cfg)"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
+text\<open>And finally, we can proof completeness of Earley's algorithm, obtaining corollary @{term correctness_\<E>arley}
+due to lemma @{thm[source] soundness}.\<close>
 
 theorem completeness:
   assumes "wf_cfg cfg"
   assumes "is_sentence cfg \<omega>"
   assumes "derives cfg [\<SS> cfg] \<omega>"
-  shows "recognizing (earley cfg \<omega>) cfg \<omega>"
+  shows "recognizing (\<E>arley cfg \<omega>) cfg \<omega>"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-corollary correctness:
+We know that there exists an $\alpha$ and a derivation $D$ such that @{term "(\<SS> cfg, \<alpha>) \<in> set (\<RR> cfg)"} and @{term "Derivation cfg \<alpha> D \<omega>"},
+since @{term "derives cfg [\<SS> cfg] \<omega>"}. Let $x$ denote the item @{term "Item (\<SS> cfg, \<alpha>) 0 0 0"}. By definition
+of $x$ and the @{term Init} operation and @{term \<E>arley} function, and the fact that @{term "Init cfg \<subseteq> Earley k cfg \<omega>"}, 
+we have @{term "x \<in> \<E>arley cfg \<omega>"}, moreover we have @{term "partially_completed (length \<omega>) cfg \<omega> (\<E>arley cfg \<omega>) (\<lambda>_. True)"}
+using lemma @{thm[source] partially_completed_\<E>arley} and assumption @{term "wf_cfg cfg"}, and thus have
+@{term "Item (\<SS> cfg,\<alpha>) (length \<alpha>) 0 (length \<omega>) \<in> \<E>arley cfg \<omega>"} by lemmas @{thm[source] partially_completed_upto} and
+@{thm[source] wf_\<E>arley} and the definition of @{term partially_completed}. The statement @{term "recognizing (\<E>arley cfg \<omega>) cfg \<omega>"}
+follows immediately by the definition of @{term recognizing}, @{term is_finished}, and @{term is_complete}.
+
+\end{proof}
+\<close>
+
+corollary correctness_\<E>arley:
   assumes "wf_cfg cfg"
   assumes "is_sentence cfg \<omega>"
-  shows "recognizing (earley cfg inp) cfg \<omega> \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
+  shows "recognizing (\<E>arley cfg inp) cfg \<omega> \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
 (*<*)
   sorry
 (*>*)
 
 section \<open>Finiteness\<close>
 
-text\<open>At last, we prove that the generated set of Earley items is finite. In Chapter \ref{chap:04}
+text\<open>At last, we prove that the set of Earley items is finite. In Chapter \ref{chap:04}
 we are using this result to prove the termination of an executable version of the algorithm.
 
-Since @{term "earley cfg \<omega>"} only generates well-formed items (lemma @{thm[source] wf_earley}) it suffices
+Since @{term "\<E>arley cfg \<omega>"} only generates well-formed items (lemma @{thm[source] wf_\<E>arley}) it suffices
 to prove that there only exists a finite number of well-formed items. Define 
   $$@{term "T = (set (\<RR> cfg) \<times> {0::nat..m} \<times> {0..length \<omega>} \<times> {0..length \<omega>}) "} $$
-where @{term "m = Max { length (rule_body r) | r. r \<in> set (\<RR> cfg) }"}. The set $T$ is finite and
+where @{term "m = Max { length (rule_body r) | r. r \<in> set (\<RR> cfg) }"}. The set $T$ is finite since there
+exists only a finite number of production rules and
 @{term "{ x | x. wf_item cfg \<omega> x }"} is a subset of mapping the @{term Item} constructor over $T$ (strictly speaking
 we need to first unpack the quadruple).
 \<close>
@@ -946,7 +1000,7 @@ lemma finiteness_UNIV_wf_item:
 text\<open>\<close>
 
 theorem finiteness:
-  shows "finite (earley cfg \<omega>)"
+  shows "finite (\<E>arley cfg \<omega>)"
 (*<*)
   sorry
 (*>*)

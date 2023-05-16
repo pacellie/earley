@@ -47,17 +47,23 @@ lemma wf_cfg:
   sorry  
 (*>*)
 
+text\<open>\<close>
+
 lemma is_sentence_inp:
   shows "is_sentence cfg inp"
 (*<*)
   sorry  
 (*>*)
 
+text\<open>\<close>
+
 lemma nonempty_derives:
   shows "nonempty_derives cfg"
 (*<*)
   sorry  
 (*>*)
+
+text\<open>\<close>
 
 lemma correctness:
   shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
