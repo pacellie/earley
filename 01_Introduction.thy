@@ -5,6 +5,9 @@ theory "01_Introduction"
 begin
 (*>*)
 
+notation (latex output)
+  nth  ("_\<^latex>\<open>\\ensuremath{_{[\\mathit{\<close>_\<^latex>\<open>}]}}\<close>" [1000,0] 1000)
+
 chapter\<open>Questions:\<close>
 
 text\<open>
