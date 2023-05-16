@@ -8,8 +8,6 @@ begin
 
 chapter\<open>Earley Parser Implementation\<close>
 
-section \<open>Draft\<close>
-
 section \<open>Pointer lemmas\<close>
 
 definition predicts :: "'a item \<Rightarrow> bool" where
