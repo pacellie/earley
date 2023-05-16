@@ -151,7 +151,7 @@ fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Right
 definition \<E>arley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
   "\<E>arley_list cfg \<omega> = Earley_list (length \<omega>) cfg \<omega>"
 
-section \<open>Sets or bins as list\<close>
+section \<open>Sets or Bins as list\<close>
 
 lemma set_items_bin_upd:
   "set (items (bin_upd e b)) = set (items b) \<union> {item e}"
@@ -178,7 +178,7 @@ lemma bins_items_bins_upd:
 
 text\<open>Similar lemmas about @{term bins_items_upto}\<close>
 
-section \<open>Wellformedness\<close>
+section \<open>Well-formedness\<close>
 
 text\<open>Just note that @{term bin_upd}, @{term bin_upds}, @{term bins_upd}, @{term Init_list},
 @{term Scan_list}, @{term Predict_list}, @{term Complete_list} only generate @{term wf_bin} or

@@ -14,27 +14,34 @@ definition predicts :: "'a item \<Rightarrow> bool" where
   "predicts x \<equiv> item_origin x = item_end x \<and> item_bullet x = 0"
 
 definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "scans inp k x y \<equiv> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> inp!(k-1) = a)"
+  "scans \<omega> k x y \<equiv> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> \<omega>!(k-1) = a)"
 
 definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "completes k x y z \<equiv> y = inc_item x k \<and> is_complete z \<and> item_origin z = item_end x \<and>
+  "completes k x y z \<equiv> y = inc_item x k \<and>
+    is_complete z \<and>
+    item_origin z = item_end x \<and>
     (\<exists>N. next_symbol x = Some N \<and> N = item_rule_head z)"
 
 definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
   "sound_null_ptr e \<equiv> pointer e = Null \<longrightarrow> predicts (item e)"
 
 definition sound_pre_ptr :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
-  "sound_pre_ptr inp bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
-    k > 0 \<and> pre < length (bs!(k-1)) \<and> scans inp k (item (bs!(k-1)!pre)) (item e)"
+  "sound_pre_ptr \<omega> bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
+    k > 0 \<and>
+    pre < length (bs!(k-1)) \<and>
+    scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
 
 definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_prered_ptr bs k e \<equiv> \<forall>p ps k' pre red. pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
-    k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k) \<and> completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
+    k' < k \<and>
+    pre < length (bs!k') \<and> 
+    red < length (bs!k) \<and>
+    completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
 
 definition sound_ptrs :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "sound_ptrs inp bs \<equiv> \<forall>k < length bs. \<forall>e \<in> set (bs!k).
+  "sound_ptrs \<omega> bs \<equiv> \<forall>k < length bs. \<forall>e \<in> set (bs!k).
     sound_null_ptr e \<and>
-    sound_pre_ptr inp bs k e \<and>
+    sound_pre_ptr \<omega> bs k e \<and>
     sound_prered_ptr bs k e"
 
 definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
@@ -42,9 +49,13 @@ definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
     \<forall>k' pre red ps. pointer (bs!k!i) = PreRed (k', pre, red) ps \<longrightarrow> red < i"
 
 lemma sound_ptrs_bin_upd:
-  assumes "sound_ptrs inp bs" "k < length bs" "es = bs!k" "distinct (items es)"
-  assumes "sound_null_ptr e" "sound_pre_ptr inp bs k e" "sound_prered_ptr bs k e"
-  shows "sound_ptrs inp (bs[k := bin_upd e es])"
+  assumes "k < length bs"
+  assumes "distinct (items (bs!k))"
+  assumes "sound_ptrs \<omega> bs"
+  assumes "sound_null_ptr e"
+  assumes "sound_pre_ptr \<omega> bs k e"
+  assumes "sound_prered_ptr bs k e"
+  shows "sound_ptrs \<omega> (bs[k := bin_upd e (bs!k)])"
 (*<*)
   sorry
 (*>*)
@@ -52,9 +63,11 @@ lemma sound_ptrs_bin_upd:
 text\<open>\<close>
 
 lemma mono_red_ptr_bin_upd:
-  assumes "mono_red_ptr bs" "k < length bs" "es = bs!k" "distinct (items es)"
-  assumes "\<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < length es"
-  shows "mono_red_ptr (bs[k := bin_upd e es])"
+  assumes "k < length bs"
+  assumes "distinct (items (bs!k))"
+  assumes "mono_red_ptr bs"
+  assumes "\<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < length (bs!k)"
+  shows "mono_red_ptr (bs[k := bin_upd e (bs!k)])"
 (*<*)
   sorry
 (*>*)
@@ -62,34 +75,40 @@ lemma mono_red_ptr_bin_upd:
 text\<open>\<close>
 
 lemma sound_mono_ptrs_bin_upds:
-  assumes "sound_ptrs inp bs" "mono_red_ptr bs" "k < length bs" "b = bs!k" "distinct (items b)" "distinct (items es)"
+  assumes "k < length bs"
+  assumes "distinct (items (bs!k))"
+  assumes "distinct (items es)"
+  assumes "sound_ptrs inp bs"
   assumes "\<forall>e \<in> set es. sound_null_ptr e \<and> sound_pre_ptr inp bs k e \<and> sound_prered_ptr bs k e"
-  assumes "\<forall>e \<in> set es. \<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < length b"
-  shows "sound_ptrs inp (bs[k := bin_upds es b]) \<and> mono_red_ptr (bs[k := bin_upds es b])"
+  assumes "mono_red_ptr bs"
+  assumes "\<forall>e \<in> set es. \<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < length (bs!k)"
+  shows "sound_ptrs inp (bs[k := bin_upds es (bs!k)]) \<and> mono_red_ptr (bs[k := bin_upds es (bs!k)])"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_E_list':
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "sound_ptrs inp bs" "sound_items cfg inp (bins_items bs)"
+lemma sound_mono_ptrs_Earley_bin_list': \<comment>\<open>Detailed\<close>
+  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
+  assumes "nonempty_derives cfg"
+  assumes "sound_items cfg \<omega> (bins_items bs)"
+  assumes "sound_ptrs \<omega> bs" 
   assumes "mono_red_ptr bs"
-  assumes "nonempty_derives cfg" "wf_cfg cfg"
-  shows "sound_ptrs inp (E_list' k cfg inp bs i) \<and> mono_red_ptr (E_list' k cfg inp bs i)"
+  shows "sound_ptrs \<omega> (Earley_bin_list' k cfg \<omega> bs i) \<and> mono_red_ptr (Earley_bin_list' k cfg \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_E_list:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "sound_ptrs inp bs" "sound_items cfg inp (bins_items bs)"
+lemma sound_mono_ptrs_Earley_bin_list:
+  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
+  assumes "nonempty_derives cfg"
+  assumes "sound_items cfg \<omega> (bins_items bs)"
+  assumes "sound_ptrs \<omega> bs"
   assumes "mono_red_ptr bs"
-  assumes "nonempty_derives cfg" "wf_cfg cfg"
-  shows "sound_ptrs inp (E_list k cfg inp bs) \<and> mono_red_ptr (E_list k cfg inp bs)"
+  shows "sound_ptrs \<omega> (Earley_bin_list k cfg \<omega> bs) \<and> mono_red_ptr (Earley_bin_list k cfg \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -97,7 +116,7 @@ lemma sound_mono_ptrs_E_list:
 text\<open>\<close>
 
 lemma sound_ptrs_Init_list:
-  shows "sound_ptrs inp (Init_list cfg inp)"
+  shows "sound_ptrs \<omega> (Init_list cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -105,25 +124,28 @@ lemma sound_ptrs_Init_list:
 text\<open>\<close>
 
 lemma mono_red_ptr_Init_list:
-  shows "mono_red_ptr (Init_list cfg inp)"
+  shows "mono_red_ptr (Init_list cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_\<E>_list:
-  assumes "k \<le> length inp" "wf_cfg cfg" "nonempty_derives cfg" "wf_cfg cfg"
-  shows "sound_ptrs inp (\<E>_list k cfg inp) \<and> mono_red_ptr (\<E>_list k cfg inp)"
+lemma sound_mono_ptrs_Earley_list:
+  assumes "wf_cfg cfg"
+  assumes "nonempty_derives cfg"
+  assumes "k \<le> length \<omega>"
+  shows "sound_ptrs \<omega> (Earley_list k cfg \<omega>) \<and> mono_red_ptr (Earley_list k cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_earley_list:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
-  shows "sound_ptrs inp (earley_list cfg inp) \<and> mono_red_ptr (earley_list cfg inp)"
+lemma sound_mono_ptrs_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "nonempty_derives cfg"
+  shows "sound_ptrs \<omega> (\<E>arley_list cfg \<omega>) \<and> mono_red_ptr (\<E>arley_list cfg \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -151,11 +173,12 @@ fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
 fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
   "wf_item_tree cfg _ (Leaf a) \<longleftrightarrow> True"
 | "wf_item_tree cfg x (Branch N ts) \<longleftrightarrow> (
-    N = item_rule_head x \<and> map root_tree ts = take (item_bullet x) (item_rule_body x) \<and>
+    N = item_rule_head x \<and>
+    map root_tree ts = take (item_bullet x) (item_rule_body x) \<and>
     (\<forall>t \<in> set ts. wf_rule_tree cfg t))"
 
 definition wf_yield_tree :: "'a sentential \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
-  "wf_yield_tree inp x t \<equiv> yield_tree t = slice (item_origin x) (item_end x) inp"
+  "wf_yield_tree \<omega> x t \<equiv> yield_tree t = slice (item_origin x) (item_end x) \<omega>"
 
 datatype 'a forest =
   FLeaf 'a
@@ -175,24 +198,24 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
 section \<open>A Single Parse Tree\<close>
 
 partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree option" where
-  "build_tree' bs inp k i = (
+  "build_tree' bs \<omega> k i = (
     let e = bs!k!i in (
     case pointer e of
       Null \<Rightarrow> Some (Branch (item_rule_head (item e)) [])
     | Pre pre \<Rightarrow> (
         do {
-          t \<leftarrow> build_tree' bs inp (k-1) pre;
+          t \<leftarrow> build_tree' bs \<omega> (k-1) pre;
           case t of
-            Branch N ts \<Rightarrow> Some (Branch N (ts @ [Leaf (inp!(k-1))]))
+            Branch N ts \<Rightarrow> Some (Branch N (ts @ [Leaf (\<omega>!(k-1))]))
           | _ \<Rightarrow> None
         })
     | PreRed (k', pre, red) _ \<Rightarrow> (
         do {
-          t \<leftarrow> build_tree' bs inp k' pre;
+          t \<leftarrow> build_tree' bs \<omega> k' pre;
           case t of
             Branch N ts \<Rightarrow>
               do {
-                t \<leftarrow> build_tree' bs inp k red;
+                t \<leftarrow> build_tree' bs \<omega> k red;
                 Some (Branch N (ts @ [t]))
               }
           | _ \<Rightarrow> None
@@ -200,28 +223,28 @@ partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<
   ))"
 
 definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a tree option" where
-  "build_tree cfg inp bs \<equiv>
+  "build_tree cfg \<omega> bs \<equiv>
     let k = length bs - 1 in (
-    case filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) of
+    case filter_with_index (\<lambda>x. is_finished cfg \<omega> x) (items (bs!k)) of
       [] \<Rightarrow> None
-    | (_, i)#_ \<Rightarrow> build_tree' bs inp k i)"
+    | (_, i)#_ \<Rightarrow> build_tree' bs \<omega> k i)"
 
 fun build_tree'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) \<Rightarrow> nat" where
-  "build_tree'_measure (bs, inp, k, i) = foldl (+) 0 (map length (take k bs)) + i"
+  "build_tree'_measure (bs, \<omega>, k, i) = foldl (+) 0 (map length (take k bs)) + i"
 
 definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) set" where
   "wf_tree_input = {
-    (bs, inp, k, i) | bs inp k i.
-      sound_ptrs inp bs \<and>
+    (bs, \<omega>, k, i) | bs \<omega> k i.
+      sound_ptrs \<omega> bs \<and>
       mono_red_ptr bs \<and>
       k < length bs \<and>
       i < length (bs!k)
   }"
 
 lemma wf_tree_input_pre:
-  assumes "(bs, inp, k, i) \<in> wf_tree_input"
-  assumes "e = bs!k!i" "pointer e = Pre pre"
-  shows "(bs, inp, (k-1), pre) \<in> wf_tree_input"
+  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
+  assumes "pointer (bs!k!i) = Pre pre"
+  shows "(bs, \<omega>, (k-1), pre) \<in> wf_tree_input"
 (*<*)
   sorry
 (*>*)
@@ -229,9 +252,9 @@ lemma wf_tree_input_pre:
 text\<open>\<close>
 
 lemma wf_tree_input_prered_pre:
-  assumes "(bs, inp, k, i) \<in> wf_tree_input"
-  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
-  shows "(bs, inp, k', pre) \<in> wf_tree_input"
+  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
+  assumes "pointer (bs!k!i) = PreRed (k', pre, red) ps"
+  shows "(bs, \<omega>, k', pre) \<in> wf_tree_input"
 (*<*)
   sorry
 (*>*)
@@ -239,9 +262,9 @@ lemma wf_tree_input_prered_pre:
 text\<open>\<close>
 
 lemma wf_tree_input_prered_red:
-  assumes "(bs, inp, k, i) \<in> wf_tree_input"
-  assumes "e = bs!k!i" "pointer e = PreRed (k', pre, red) ps"
-  shows "(bs, inp, k, red) \<in> wf_tree_input"
+  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
+  assumes "pointer (bs!k!i) = PreRed (k', pre, red) ps"
+  shows "(bs, \<omega>, k, red) \<in> wf_tree_input"
 (*<*)
   sorry
 (*>*)
@@ -249,8 +272,8 @@ lemma wf_tree_input_prered_red:
 text\<open>\<close>
 
 lemma build_tree'_termination:
-  assumes "(bs, inp, k, i) \<in> wf_tree_input"
-  shows "\<exists>N ts. build_tree' bs inp k i = Some (Branch N ts)"
+  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
+  shows "\<exists>N ts. build_tree' bs \<omega> k i = Some (Branch N ts)"
 (*<*)
   sorry
 (*>*)
@@ -258,10 +281,11 @@ lemma build_tree'_termination:
 text\<open>\<close>
 
 lemma wf_item_tree_build_tree':
-  assumes "(bs, inp, k, i) \<in> wf_tree_input"
+  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
   assumes "wf_bins cfg inp bs"
-  assumes "k < length bs" "i < length (bs!k)"
-  assumes "build_tree' bs inp k i = Some t"
+  assumes "k < length bs"
+  assumes "i < length (bs!k)"
+  assumes "build_tree' bs \<omega> k i = Some t"
   shows "wf_item_tree cfg (item (bs!k!i)) t"
 (*<*)
   sorry
@@ -270,11 +294,13 @@ lemma wf_item_tree_build_tree':
 text\<open>\<close>
 
 lemma wf_yield_tree_build_tree':
-  assumes "(bs, inp, k, i) \<in> wf_tree_input"
-  assumes "wf_bins cfg inp bs"
-  assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
-  assumes "build_tree' bs inp k i = Some t"
-  shows "wf_yield_tree inp (item (bs!k!i)) t"
+  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
+  assumes "wf_bins cfg \<omega> bs"
+  assumes "k < length bs"
+  assumes "k \<le> length \<omega>"
+  assumes "i < length (bs!k)"
+  assumes "build_tree' bs \<omega> k i = Some t"
+  shows "wf_yield_tree \<omega> (item (bs!k!i)) t"
 (*<*)
   sorry
 (*>*)
@@ -282,28 +308,34 @@ lemma wf_yield_tree_build_tree':
 text\<open>\<close>
 
 theorem wf_rule_root_yield_tree_build_tree:
-  assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "mono_red_ptr bs" "length bs = length inp + 1"
-  assumes "build_tree cfg inp bs = Some t"
-  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
+  assumes "wf_bins cfg \<omega> bs"
+  assumes "sound_ptrs \<omega> bs"
+  assumes "mono_red_ptr bs"
+  assumes "length bs = length \<omega> + 1"
+  assumes "build_tree cfg \<omega> bs = Some t"
+  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-corollary wf_rule_root_yield_tree_build_tree_earley_list:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
-  assumes "build_tree cfg inp (earley_list cfg inp) = Some t"
-  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
+corollary wf_rule_root_yield_tree_build_tree_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "nonempty_derives cfg"
+  assumes "build_tree cfg \<omega> (\<E>arley_list cfg \<omega>) = Some t"
+  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-theorem correctness_build_tree_earley_list:
-  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  shows "(\<exists>t. build_tree cfg inp (earley_list cfg inp) = Some t) \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+theorem correctness_build_tree_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "is_sentence cfg \<omega>"
+  assumes "nonempty_derives cfg"
+  shows "(\<exists>t. build_tree cfg \<omega> (\<E>arley_list cfg \<omega>) = Some t) \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -333,16 +365,16 @@ lemma [partial_function_mono]:
 (*>*)
 
 partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest list option" where
-  "build_trees' bs inp k i I = (
+  "build_trees' bs \<omega> k i I = (
     let e = bs!k!i in (
     case pointer e of
       Null \<Rightarrow> Some ([FBranch (item_rule_head (item e)) []])
     | Pre pre \<Rightarrow> (
         do {
-          pres \<leftarrow> build_trees' bs inp (k-1) pre {pre};
+          pres \<leftarrow> build_trees' bs \<omega> (k-1) pre {pre};
           those (map (\<lambda>f.
             case f of
-              FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (inp!(k-1))]]))
+              FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (\<omega>!(k-1))]]))
             | _ \<Rightarrow> None
           ) pres)
         })
@@ -351,8 +383,8 @@ partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentential \
         let gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps' in
         map_option concat (those (map (\<lambda>((k', pre), reds).
           do {
-            pres \<leftarrow> build_trees' bs inp k' pre {pre};
-            rss \<leftarrow> those (map (\<lambda>red. build_trees' bs inp k red (I \<union> {red})) reds);
+            pres \<leftarrow> build_trees' bs \<omega> k' pre {pre};
+            rss \<leftarrow> those (map (\<lambda>red. build_trees' bs \<omega> k red (I \<union> {red})) reds);
             those (map (\<lambda>f.
               case f of
                 FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))
@@ -364,18 +396,18 @@ partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentential \
   ))"
 
 definition build_trees :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
-  "build_trees cfg inp bs \<equiv>
+  "build_trees cfg \<omega> bs \<equiv>
     let k = length bs - 1 in
-    let finished = filter_with_index (\<lambda>x. is_finished cfg inp x) (items (bs!k)) in
-    map_option concat (those (map (\<lambda>(_, i). build_trees' bs inp k i {i}) finished))"
+    let finished = filter_with_index (\<lambda>x. is_finished cfg \<omega> x) (items (bs!k)) in
+    map_option concat (those (map (\<lambda>(_, i). build_trees' bs \<omega> k i {i}) finished))"
 
 fun build_forest'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
-  "build_forest'_measure (bs, inp, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
+  "build_forest'_measure (bs, \<omega>, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
 definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) set" where
   "wf_trees_input = {
-    (bs, inp, k, i, I) | bs inp k i I.
-      sound_ptrs inp bs \<and>
+    (bs, \<omega>, k, i, I) | bs \<omega> k i I.
+      sound_ptrs \<omega> bs \<and>
       k < length bs \<and>
       i < length (bs!k) \<and>
       I \<subseteq> {0..<length (bs!k)} \<and>
@@ -383,9 +415,9 @@ definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<tim
   }"
 
 lemma wf_trees_input_pre:
-  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
-  assumes "e = bs!k!i" "pointer e = Pre pre"
-  shows "(bs, inp, (k-1), pre, {pre}) \<in> wf_trees_input"
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+  assumes "pointer (bs!k!i) = Pre pre"
+  shows "(bs, \<omega>, (k-1), pre, {pre}) \<in> wf_trees_input"
 (*<*)
   sorry
 (*>*)
@@ -393,12 +425,12 @@ lemma wf_trees_input_pre:
 text\<open>\<close>
 
 lemma wf_trees_input_prered_pre:
-  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
-  assumes "e = bs!k!i" "pointer e = PreRed p ps"
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+  assumes "pointer (bs!k!i) = PreRed p ps"
   assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
   assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
   assumes "((k', pre), reds) \<in> set gs"
-  shows "(bs, inp, k', pre, {pre}) \<in> wf_trees_input"
+  shows "(bs, \<omega>, k', pre, {pre}) \<in> wf_trees_input"
 (*<*)
   sorry
 (*>*)
@@ -406,12 +438,12 @@ lemma wf_trees_input_prered_pre:
 text\<open>\<close>
 
 lemma wf_trees_input_prered_red:
-  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
-  assumes "e = bs!k!i" "pointer e = PreRed p ps"
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+  assumes "pointer (bs!k!i) = PreRed p ps"
   assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
   assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
   assumes "((k', pre), reds) \<in> set gs" "red \<in> set reds"
-  shows "(bs, inp, k, red, I \<union> {red}) \<in> wf_trees_input"
+  shows "(bs, \<omega>, k, red, I \<union> {red}) \<in> wf_trees_input"
 (*<*)
   sorry
 (*>*)
@@ -419,8 +451,8 @@ lemma wf_trees_input_prered_red:
 text\<open>\<close>
 
 lemma build_trees'_termination:
-  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
-  shows "\<exists>fs. build_trees' bs inp k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+  shows "\<exists>fs. build_trees' bs \<omega> k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
 (*<*)
   sorry
 (*>*)
@@ -428,10 +460,11 @@ lemma build_trees'_termination:
 text\<open>\<close>
 
 lemma wf_item_tree_build_trees':
-  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
-  assumes "wf_bins cfg inp bs"
-  assumes "k < length bs" "i < length (bs!k)"
-  assumes "build_trees' bs inp k i I = Some fs"
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+  assumes "wf_bins cfg \<omega> bs"
+  assumes "k < length bs"
+  assumes "i < length (bs!k)"
+  assumes "build_trees' bs \<omega> k i I = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "wf_item_tree cfg (item (bs!k!i)) t"
@@ -442,13 +475,15 @@ lemma wf_item_tree_build_trees':
 text\<open>\<close>
 
 lemma wf_yield_tree_build_trees':
-  assumes "(bs, inp, k, i, I) \<in> wf_trees_input"
-  assumes "wf_bins cfg inp bs"
-  assumes "k < length bs" "i < length (bs!k)" "k \<le> length inp"
-  assumes "build_trees' bs inp k i I = Some fs"
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+  assumes "wf_bins cfg \<omega> bs"
+  assumes "k < length bs"
+  assumes "k \<le> length \<omega>"
+  assumes "i < length (bs!k)"
+  assumes "build_trees' bs \<omega> k i I = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
-  shows "wf_yield_tree inp (item (bs!k!i)) t"
+  shows "wf_yield_tree \<omega> (item (bs!k!i)) t"
 (*<*)
   sorry
 (*>*)
@@ -456,38 +491,51 @@ lemma wf_yield_tree_build_trees':
 text\<open>\<close>
 
 theorem wf_rule_root_yield_tree_build_trees:
-  assumes "wf_bins cfg inp bs" "sound_ptrs inp bs" "length bs = length inp + 1"
-  assumes "build_trees cfg inp bs = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
+  assumes "wf_bins cfg \<omega> bs"
+  assumes "sound_ptrs \<omega> bs"
+  assumes "length bs = length \<omega> + 1"
+  assumes "build_trees cfg \<omega> bs = Some fs"
+  assumes "f \<in> set fs"
+  assumes "t \<in> set (trees f)"
+  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-corollary wf_rule_root_yield_tree_build_trees_earley_list:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
-  assumes "build_trees cfg inp (earley_list cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
+corollary wf_rule_root_yield_tree_build_trees_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "nonempty_derives cfg"
+  assumes "build_trees cfg \<omega> (\<E>arley_list cfg \<omega>) = Some fs"
+  assumes "f \<in> set fs"
+  assumes "t \<in> set (trees f)"
+  shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-theorem soundness_build_trees_earley_list:
-  assumes "wf_cfg cfg" "is_sentence cfg inp" "nonempty_derives cfg"
-  assumes "build_trees cfg inp (earley_list cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "derives cfg [\<SS> cfg] inp"
+theorem soundness_build_trees_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "is_sentence cfg \<omega>"
+  assumes "nonempty_derives cfg"
+  assumes "build_trees cfg \<omega> (\<E>arley_list cfg \<omega>) = Some fs"
+  assumes "f \<in> set fs"
+  assumes "t \<in> set (trees f)"
+  shows "derives cfg [\<SS> cfg] \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-theorem termination_build_tree_earley_list:
-  assumes "wf_cfg cfg" "nonempty_derives cfg" "derives cfg [\<SS> cfg] inp"
-  shows "\<exists>fs. build_trees cfg inp (earley_list cfg inp) = Some fs"
+theorem termination_build_tree_\<E>arley_list:
+  assumes "wf_cfg cfg"
+  assumes "nonempty_derives cfg"
+  assumes "derives cfg [\<SS> cfg] \<omega>"
+  shows "\<exists>fs. build_trees cfg \<omega> (\<E>arley_list cfg \<omega>) = Some fs"
 (*<*)
   sorry
 (*>*)

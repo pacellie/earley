@@ -38,8 +38,8 @@ definition start_symbol :: s where
 definition cfg :: "s cfg" where
   "cfg = CFG nonterminals terminals rules start_symbol"
 
-definition inp :: "s list" where
-  "inp = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
+definition \<omega> :: "s list" where
+  "\<omega> = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
 
 lemma wf_cfg:
   shows "wf_cfg cfg"
@@ -49,8 +49,8 @@ lemma wf_cfg:
 
 text\<open>\<close>
 
-lemma is_sentence_inp:
-  shows "is_sentence cfg inp"
+lemma is_sentence_\<omega>:
+  shows "is_sentence cfg \<omega>"
 (*<*)
   sorry  
 (*>*)
@@ -66,7 +66,7 @@ lemma nonempty_derives:
 text\<open>\<close>
 
 lemma correctness:
-  shows "recognizing_list (earley_list cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
+  shows "recognizing_list (\<E>arley_list cfg \<omega>) cfg \<omega> \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
 (*<*)
   sorry  
 (*>*)

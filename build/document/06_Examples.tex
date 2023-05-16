@@ -82,8 +82,8 @@
 \ \ {\isachardoublequoteopen}cfg\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals\ terminals\ rules\ start{\isacharunderscore}{\kern0pt}symbol{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
-\ inp\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}inp\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ {\isasymomega}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymomega}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}cfg{\isacharcolon}{\kern0pt}\isanewline
@@ -105,8 +105,8 @@
 %
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
-\ is{\isacharunderscore}{\kern0pt}sentence{\isacharunderscore}{\kern0pt}inp{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}sentence\ cfg\ inp{\isachardoublequoteclose}%
+\ is{\isacharunderscore}{\kern0pt}sentence{\isacharunderscore}{\kern0pt}{\isasymomega}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}sentence\ cfg\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -144,7 +144,7 @@
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ correctness{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing{\isacharunderscore}{\kern0pt}list\ {\isacharparenleft}{\kern0pt}earley{\isacharunderscore}{\kern0pt}list\ cfg\ inp{\isacharparenright}{\kern0pt}\ cfg\ inp\ {\isasymlongleftrightarrow}\ derives\ cfg\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ cfg{\isacharbrackright}{\kern0pt}\ inp{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing{\isacharunderscore}{\kern0pt}list\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ cfg\ {\isasymomega}{\isacharparenright}{\kern0pt}\ cfg\ {\isasymomega}\ {\isasymlongleftrightarrow}\ derives\ cfg\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ cfg{\isacharbrackright}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof

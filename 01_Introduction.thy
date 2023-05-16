@@ -12,7 +12,7 @@ text\<open>
   \item How long? Min/Max?
   \item How to define Earley inductively?
   \item Nicer notation for all the different kinds of derivations?
-  \item Fix bibliography???
+  \item Fix bibliography and Isabelle style???
 \end{itemize}
 \<close>
 
@@ -25,7 +25,7 @@ earley's recogniser, the benefits of formal methods, LocalLexing and the Bachelo
 
 section\<open>Related Work\<close>
 
-text\<open>Tomita \cite{Tomita:1987} presents an generalized LR parsing algorithm for augmented
+text\<open>Tomita @{cite "Tomita:1987"} presents an generalized LR parsing algorithm for augmented
 context-free grammars that can handle arbitrary context-free grammars.
 
 Izmaylova \textit{et al} \cite{Izmaylova:2016} develop a general parser 
