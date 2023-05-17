@@ -5,20 +5,6 @@ theory "01_Introduction"
 begin
 (*>*)
 
-notation (latex output)
-  nth  ("_\<^latex>\<open>\\ensuremath{_{[\\mathit{\<close>_\<^latex>\<open>}]}}\<close>" [1000,0] 1000)
-
-chapter\<open>Questions:\<close>
-
-text\<open>
-\begin{itemize}
-  \item How long? Min/Max?
-  \item How to define Earley inductively?
-  \item Nicer notation for all the different kinds of derivations?
-  \item Fix bibliography and Isabelle style???
-\end{itemize}
-\<close>
-
 chapter\<open>Introduction\<close>
 
 section\<open>Motivation\<close>

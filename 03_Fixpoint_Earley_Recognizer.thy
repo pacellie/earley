@@ -110,6 +110,12 @@ definition wf_sentential :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bo
 definition is_sentence :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
   "is_sentence cfg s \<equiv> \<forall>x \<in> set s. is_terminal cfg x"
 
+\<comment>\<open>TODO\<close>
+(*<*)
+notation (latex output)
+  nth  ("_\<^latex>\<open>\\ensuremath{_{[\\mathit{\<close>_\<^latex>\<open>}]}}\<close>" [1000,0] 1000)
+(*>*)
+
 definition derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a sentential \<Rightarrow> bool" where
   "derives1 cfg u v \<equiv>
      \<exists> \<alpha> \<beta> N \<gamma>. 

@@ -512,7 +512,7 @@ Aho \textit{et al} \cite{Aho:1972} propose the stay clam and keep running the Pr
 in turn until neither has anything more to add. Earley himself suggest to have the Completer note that
 the dot needed to be moved over A, then looking for this whenever future items were added to $S_i$.
 For efficiency's sake the collection of on-terminals to watch for should be stored in a data structure
-which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycoack:2002}
+which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycock:2002}
 is a simple modification of the Predictor based on the idea of nullability. A non-terminal A is said to be
 nullable if A derives star epsilon. Terminal symbols of course can never be nullable. The nullability of
 non-terminals in a grammar may be precomputed using well-known techniques \cite{Appel:2003} \cite{Fischer:2009}
