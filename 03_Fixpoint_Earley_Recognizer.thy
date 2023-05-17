@@ -495,9 +495,6 @@ fun Derivation :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a derivatio
 
 (*<*)
 notation (latex output)
-  Derives1 ("_ \<turnstile> _ \<Rightarrow>(_, _) _" [1000,0] 1000)
-
-notation (latex output)
   Derivation ("_ \<turnstile> _ \<Rightarrow>\<^sup>_ _" [1000,0] 1000)
 (*>*)
 
@@ -788,10 +785,10 @@ item $N \rightarrow \, \bullet A_0 A_1 \dots A_n$ in a \textit{complete} (we def
 Furthermore, assume there exist the following derivations for $i_0 \le i_1 \le \dots \le i_n \le i_{n+1}$:
 \begin{equation*}
 \begin{split}
-  & A_0 \xRightarrow{\ast} \, \omega[i_0 .. i_1) \\
-  & A_1 \xRightarrow{\ast} \, \omega[i_1 .. i_2) \\
+  & @{term "\<G> \<turnstile> A\<^sub>0 \<Rightarrow>\<^sup>* \<omega>[i\<^sub>0..i\<^sub>1\<rangle>"} \\
+  & @{term "\<G> \<turnstile> A\<^sub>1 \<Rightarrow>\<^sup>* \<omega>[i\<^sub>1..i\<^sub>2\<rangle>"} \\
   & \dots \\
-  & A_n \xRightarrow{\ast} \, \omega[i_n .. i_{n+1}) \\
+  & @{term \<G>} \vdash A_n \Rightarrow^{\ast} \, \omega[i_n .. i_{n+1}\rangle \\
 \end{split}
 \end{equation*}
 
@@ -804,7 +801,7 @@ that can be obtained by moving the bullet over the next symbol of $x$, is also p
 The full definition of @{term partially_completed} below is slightly more involved since we need to
 keep track of the validity of the indices. Note that the definition also requires that an arbitrary
 predicate $P$ holds for the derivation $D$. This predicate is necessary since the completeness proof
-requires a proof on the length of the derivation $D$, and thus we limit the @{term partially_completed}
+requires a proof on the length of the derivation $D$, and thus we sometimes need to limit the @{term partially_completed}
 property to derivations that don't exceed a certain length.
 
 Lemma @{term partially_completed_upto} then formalizes the core idea: if the item
@@ -818,13 +815,10 @@ $I$ must be @{term partially_completed} up to the length of the derivation $D$.
 definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
   "partially_completed k \<G> \<omega> I P \<equiv>
     \<forall>i j x a D.
-      i \<le> j \<and>
-      j \<le> k \<and>
-      k \<le> |\<omega>| \<and>
+      i \<le> j \<and> j \<le> k \<and> k \<le> |\<omega>| \<and>
       x \<in> bin I i \<and>
       next_symbol x = Some a \<and>
-      \<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle> \<and>
-      P D \<longrightarrow>
+      \<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle> \<and> P D \<longrightarrow>
       inc_item x j \<in> I"
 
 text\<open>

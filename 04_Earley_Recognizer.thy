@@ -5,7 +5,28 @@ theory "04_Earley_Recognizer"
 begin
 (*>*)
 
-chapter\<open>Earley Recognizer Implementation \label{chap:04}\<close> 
+chapter\<open>Earley Recognizer Implementation \label{chap:04}\<close>
+
+section\<open>The Executable Algorithm\<close>
+
+datatype pointer =
+  Null
+  | Pre nat
+  | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list"
+
+datatype 'a entry =
+  Entry         
+  (item : "'a item")
+  (pointer : pointer)
+
+type_synonym 'a bin = "'a entry list"
+type_synonym 'a bins = "'a bin list"
+
+definition items :: "'a bin \<Rightarrow> 'a item list" where
+  "items b = map item b"
+
+definition pointers :: "'a bin \<Rightarrow> pointer list" where
+  "pointers b = map pointer b"
 
 text\<open>
   \begin{table}[htpb]
@@ -32,27 +53,6 @@ text\<open>
   \end{table}
 \<close>
 
-section\<open>Definitions\<close>
-
-datatype pointer =
-  Null
-  | Pre nat
-  | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list"
-
-datatype 'a entry =
-  Entry         
-  (item : "'a item")
-  (pointer : pointer)
-
-type_synonym 'a bin = "'a entry list"
-type_synonym 'a bins = "'a bin list"
-
-definition items :: "'a bin \<Rightarrow> 'a item list" where
-  "items b = map item b"
-
-definition pointers :: "'a bin \<Rightarrow> pointer list" where
-  "pointers b = map pointer b"
-
 definition bins_items :: "'a bins \<Rightarrow> 'a items" where
   "bins_items bs = \<Union> { set (items (bs!k)) | k. k < |bs| }"
 
@@ -70,9 +70,6 @@ definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rig
 
 definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < |bs|. wf_bin \<G> \<omega> k (bs!k)"
-
-definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
-  "nonempty_derives \<G> \<equiv> \<forall>N. N \<in> set (\<NN> \<G>) \<longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 
 definition Init_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
   "Init_list \<G> \<omega> \<equiv> 
@@ -322,6 +319,9 @@ lemma \<E>arley_list_sub_\<E>arley:
 (*>*)
 
 section \<open>Completeness\<close>
+
+definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
+  "nonempty_derives \<G> \<equiv> \<forall>N. N \<in> set (\<NN> \<G>) \<longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 
 lemma impossible_complete_item: \<comment>\<open>Detailed\<close>
   assumes "wf_\<G> \<G>"
