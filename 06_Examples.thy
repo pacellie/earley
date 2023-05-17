@@ -8,10 +8,10 @@ begin
 chapter \<open>Usage\<close>
 
 definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
-  "\<epsilon>_free cfg \<longleftrightarrow> (\<forall>r \<in> set (\<RR> cfg). rule_body r \<noteq> [])"
+  "\<epsilon>_free \<G> \<longleftrightarrow> (\<forall>r \<in> set (\<RR> \<G>). rule_body r \<noteq> [])"
 
 lemma \<epsilon>_free_impl_non_empty_deriv:
-  "\<epsilon>_free cfg \<Longrightarrow> N \<in> set (\<NN> cfg) \<Longrightarrow> \<not> derives cfg [N] []"
+  "\<epsilon>_free \<G> \<Longrightarrow> N \<in> set (\<NN> \<G>) \<Longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 (*<*)
   sorry  
 (*>*)
@@ -35,14 +35,14 @@ definition rules :: "s rule list" where
 definition start_symbol :: s where
   "start_symbol = Nonterminal S"
 
-definition cfg :: "s cfg" where
-  "cfg = CFG nonterminals terminals rules start_symbol"
+definition \<G> :: "s cfg" where
+  "\<G> = CFG nonterminals terminals rules start_symbol"
 
 definition \<omega> :: "s list" where
   "\<omega> = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
 
-lemma wf_cfg:
-  shows "wf_cfg cfg"
+lemma wf_\<G>:
+  shows "wf_\<G> \<G>"
 (*<*)
   sorry  
 (*>*)
@@ -50,7 +50,7 @@ lemma wf_cfg:
 text\<open>\<close>
 
 lemma is_sentence_\<omega>:
-  shows "is_sentence cfg \<omega>"
+  shows "is_sentence \<G> \<omega>"
 (*<*)
   sorry  
 (*>*)
@@ -58,7 +58,7 @@ lemma is_sentence_\<omega>:
 text\<open>\<close>
 
 lemma nonempty_derives:
-  shows "nonempty_derives cfg"
+  shows "nonempty_derives \<G>"
 (*<*)
   sorry  
 (*>*)
@@ -66,7 +66,7 @@ lemma nonempty_derives:
 text\<open>\<close>
 
 lemma correctness:
-  shows "recognizing_list (\<E>arley_list cfg \<omega>) cfg \<omega> \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
+  shows "recognizing_list (\<E>arley_list \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
 (*<*)
   sorry  
 (*>*)

@@ -37,7 +37,7 @@ We present a slightly simplified version of Earley's original recognizer algorit
 omitting Earley's proposed look-ahead since its primary purpose is to increase the efficiency of the
 resulting recognizer. Throughout this thesis we are working with a running example. The considered grammar is a tiny excerpt of a toy
 arithmetic expression grammar: \isa{{\isasymG}} $::= S \rightarrow \, x \, \vert \, S \rightarrow \, S + S$ and
-the input is \isa{{\isasymomega}} $= x + x + x$.
+the, rather trivial, input is \isa{{\isasymomega}} $= x + x + x$.
 
 Intuitively, Earley's recognizer works in principle like a top-down parser carrying along all possible
 parses simultaneously in an efficient manner.
@@ -45,7 +45,7 @@ In detail, the algorithm works as follows: it scans the input \isa{{\isasymomega
 $n+1$ Earley bins $B_i$ that are sets of Earley items. An inital bin $B_0$ and one bin $B_{i+1}$ for
 each symbol $a_i$ of the input.
 In general, an Earley item $A \rightarrow \, \alpha \bullet \beta, i, j$ consists of four parts: a production rule of the grammar that we are currently
-considering, a bullet signalling how much of the production's right-hand side we have recognized so far,
+considering, a bullet signalling how much of the productions right-hand side we have recognized so far,
 an origin $i$ describing the position in \isa{{\isasymomega}} where we started scanning, and an end $j$ indicating
 the position in \isa{{\isasymomega}} we are currently considering next for the remaining right-hand side of the production rule.
 Note that there will be only one set of earley items or only one bin $B$ and we say an item is conceptually part of bin $B_j$ if it's end is the index $j$.
@@ -81,7 +81,7 @@ in detail:
     have not scanned anything so far.
   \item The \textit{Complete} operation applies if we process an item with the bullet at the end of the
     right-hand side of its production rule. For an item $B \rightarrow \, \gamma \bullet, j, k$ we have successfully scanned the substring
-    \omega[j..k) and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
+    $\omega [ j..k \rangle$ and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
     $A \rightarrow \, \alpha \bullet B \beta, i, j$ containing a bullet in front of the non-terminal we completed, or the reason we
     predicted it on the first place. Since we scanned the predicted non-terminal successfully, we are allowed to
     move over the bullet, resulting in one new item $A \rightarrow \, \alpha B \bullet \beta, i, k$. Note in particular
@@ -95,7 +95,7 @@ in detail:
     which corresponds to recognizing the input as $x + (x + x)$.
 \end{enumerate}
 
-If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, \isa{{\isacharbar}{\kern0pt}{\isasymomega}{\isacharbar}{\kern0pt}\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}}$,
+If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, \isa{length\ {\isasymomega}\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}}$,
 it returns \textit{true}, otherwise it returns \textit{false}. For the tiny arithmetic expression grammar
 we generate the item $S \rightarrow \, S + S \bullet, 0, 5$ and return the correct answer \textit{true},
 since there exist derivations for $\omega = x + x + x$, e.g.
@@ -104,15 +104,15 @@ $S \Rightarrow S + S \Rightarrow S + x \Rightarrow S + S + x \xRightarrow{\ast} 
 
 To proof the correctness of Earley's recognizer algorithm we need to show the following theorem:
 
-$$S \rightarrow \, \alpha \bullet, 0, \isa{{\isacharbar}{\kern0pt}{\isasymomega}{\isacharbar}{\kern0pt}\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}} \in B \,\,\, \textrm{iff} \,\,\, S \, \xRightarrow{\ast} \, \isa{{\isasymomega}}$$
+$$S \rightarrow \, \alpha \bullet, 0, \isa{length\ {\isasymomega}\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}} \in B \,\,\, \textrm{iff} \,\,\, S \, \Rightarrow^{\ast} \, \isa{{\isasymomega}}$$
 
 It follows from the following three lemmas:
 
 \begin{enumerate}
   \item Soundness: for every generated item there exists an according derivation: \\
-     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, \isa{{\isasymomega}}[i..j) \beta$
+     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \Rightarrow^{\ast} \, \omega [ i..j \rangle \beta$
   \item Completeness: for every derivation we generate an according item: \\
-     $A \, \xRightarrow{\ast} \, \isa{{\isasymomega}}[i..j) \beta \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
+     $A \, \Rightarrow^{\ast} \, \omega [ i..j \rangle \beta \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
   \item Finiteness: there only exist a finite number of Earley items
 \end{enumerate}%
 \end{isamarkuptext}\isamarkuptrue%
@@ -185,132 +185,132 @@ It follows from the following three lemmas:
 \end{isabellebody}%
 \endinput
 %:%file=02_Earleys_Algorithm.tex%:%
-%:%24=8%:%
-%:%36=11%:%
-%:%37=12%:%
-%:%38=13%:%
-%:%39=14%:%
-%:%40=15%:%
-%:%41=16%:%
-%:%42=17%:%
-%:%43=18%:%
-%:%44=19%:%
-%:%45=20%:%
-%:%46=21%:%
-%:%47=22%:%
-%:%48=23%:%
-%:%49=24%:%
-%:%50=25%:%
-%:%51=26%:%
-%:%52=27%:%
-%:%53=28%:%
-%:%54=29%:%
-%:%55=30%:%
-%:%56=31%:%
-%:%57=32%:%
-%:%58=33%:%
-%:%59=34%:%
-%:%60=35%:%
-%:%61=36%:%
-%:%62=37%:%
-%:%63=38%:%
-%:%64=39%:%
-%:%65=40%:%
-%:%66=41%:%
-%:%67=42%:%
-%:%68=43%:%
-%:%69=44%:%
-%:%70=45%:%
-%:%71=46%:%
-%:%72=47%:%
-%:%73=48%:%
-%:%74=49%:%
-%:%75=50%:%
-%:%76=51%:%
-%:%77=52%:%
-%:%78=53%:%
-%:%79=54%:%
-%:%80=55%:%
-%:%81=56%:%
-%:%82=57%:%
-%:%83=58%:%
-%:%84=59%:%
-%:%85=60%:%
-%:%86=61%:%
-%:%87=62%:%
-%:%88=63%:%
-%:%89=64%:%
-%:%90=65%:%
-%:%91=66%:%
-%:%92=67%:%
-%:%93=68%:%
-%:%94=69%:%
-%:%95=70%:%
-%:%96=71%:%
-%:%97=72%:%
-%:%98=73%:%
-%:%99=74%:%
-%:%100=75%:%
-%:%101=76%:%
-%:%102=77%:%
-%:%103=78%:%
-%:%104=79%:%
-%:%105=80%:%
-%:%106=81%:%
-%:%107=82%:%
-%:%108=83%:%
-%:%109=84%:%
-%:%110=85%:%
-%:%111=86%:%
-%:%112=87%:%
-%:%113=88%:%
-%:%114=89%:%
-%:%115=90%:%
-%:%116=91%:%
-%:%117=92%:%
-%:%121=96%:%
-%:%122=97%:%
-%:%123=98%:%
-%:%124=99%:%
-%:%125=100%:%
-%:%126=101%:%
-%:%127=102%:%
-%:%128=103%:%
-%:%129=104%:%
-%:%130=105%:%
-%:%131=106%:%
-%:%132=107%:%
-%:%133=108%:%
-%:%134=109%:%
-%:%135=110%:%
-%:%136=111%:%
-%:%137=112%:%
-%:%138=113%:%
-%:%139=114%:%
-%:%140=115%:%
-%:%141=116%:%
-%:%142=117%:%
-%:%143=118%:%
-%:%147=122%:%
-%:%148=123%:%
-%:%149=124%:%
-%:%150=125%:%
-%:%151=126%:%
-%:%152=127%:%
-%:%153=128%:%
-%:%154=129%:%
-%:%155=130%:%
-%:%156=131%:%
-%:%157=132%:%
-%:%158=133%:%
-%:%159=134%:%
-%:%160=135%:%
-%:%161=136%:%
-%:%162=137%:%
-%:%163=138%:%
-%:%164=139%:%
-%:%165=140%:%
-%:%166=141%:%
-%:%167=142%:%
-%:%168=143%:%
-%:%169=144%:%
+%:%24=13%:%
+%:%36=16%:%
+%:%37=17%:%
+%:%38=18%:%
+%:%39=19%:%
+%:%40=20%:%
+%:%41=21%:%
+%:%42=22%:%
+%:%43=23%:%
+%:%44=24%:%
+%:%45=25%:%
+%:%46=26%:%
+%:%47=27%:%
+%:%48=28%:%
+%:%49=29%:%
+%:%50=30%:%
+%:%51=31%:%
+%:%52=32%:%
+%:%53=33%:%
+%:%54=34%:%
+%:%55=35%:%
+%:%56=36%:%
+%:%57=37%:%
+%:%58=38%:%
+%:%59=39%:%
+%:%60=40%:%
+%:%61=41%:%
+%:%62=42%:%
+%:%63=43%:%
+%:%64=44%:%
+%:%65=45%:%
+%:%66=46%:%
+%:%67=47%:%
+%:%68=48%:%
+%:%69=49%:%
+%:%70=50%:%
+%:%71=51%:%
+%:%72=52%:%
+%:%73=53%:%
+%:%74=54%:%
+%:%75=55%:%
+%:%76=56%:%
+%:%77=57%:%
+%:%78=58%:%
+%:%79=59%:%
+%:%80=60%:%
+%:%81=61%:%
+%:%82=62%:%
+%:%83=63%:%
+%:%84=64%:%
+%:%85=65%:%
+%:%86=66%:%
+%:%87=67%:%
+%:%88=68%:%
+%:%89=69%:%
+%:%90=70%:%
+%:%91=71%:%
+%:%92=72%:%
+%:%93=73%:%
+%:%94=74%:%
+%:%95=75%:%
+%:%96=76%:%
+%:%97=77%:%
+%:%98=78%:%
+%:%99=79%:%
+%:%100=80%:%
+%:%101=81%:%
+%:%102=82%:%
+%:%103=83%:%
+%:%104=84%:%
+%:%105=85%:%
+%:%106=86%:%
+%:%107=87%:%
+%:%108=88%:%
+%:%109=89%:%
+%:%110=90%:%
+%:%111=91%:%
+%:%112=92%:%
+%:%113=93%:%
+%:%114=94%:%
+%:%115=95%:%
+%:%116=96%:%
+%:%117=97%:%
+%:%121=101%:%
+%:%122=102%:%
+%:%123=103%:%
+%:%124=104%:%
+%:%125=105%:%
+%:%126=106%:%
+%:%127=107%:%
+%:%128=108%:%
+%:%129=109%:%
+%:%130=110%:%
+%:%131=111%:%
+%:%132=112%:%
+%:%133=113%:%
+%:%134=114%:%
+%:%135=115%:%
+%:%136=116%:%
+%:%137=117%:%
+%:%138=118%:%
+%:%139=119%:%
+%:%140=120%:%
+%:%141=121%:%
+%:%142=122%:%
+%:%143=123%:%
+%:%147=127%:%
+%:%148=128%:%
+%:%149=129%:%
+%:%150=130%:%
+%:%151=131%:%
+%:%152=132%:%
+%:%153=133%:%
+%:%154=134%:%
+%:%155=135%:%
+%:%156=136%:%
+%:%157=137%:%
+%:%158=138%:%
+%:%159=139%:%
+%:%160=140%:%
+%:%161=141%:%
+%:%162=142%:%
+%:%163=143%:%
+%:%164=144%:%
+%:%165=145%:%
+%:%166=146%:%
+%:%167=147%:%
+%:%168=148%:%
+%:%169=149%:%

@@ -54,31 +54,31 @@ definition pointers :: "'a bin \<Rightarrow> pointer list" where
   "pointers b = map pointer b"
 
 definition bins_items :: "'a bins \<Rightarrow> 'a items" where
-  "bins_items bs = \<Union> { set (items (bs!k)) | k. k < length bs }"
+  "bins_items bs = \<Union> { set (items (bs!k)) | k. k < |bs| }"
 
 definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "bin_items_upto b i = { items b ! j | j. j < i \<and> j < length (items b) }"
+  "bin_items_upto b i = { items b ! j | j. j < i \<and> j < |items b| }"
 
 definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
   "bins_items_upto bs k i = \<Union> { set (items (bs!l)) | l. l < k } \<union> bin_items_upto (bs!k) i"
 
 definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
-  "wf_bin_items cfg \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item cfg \<omega> x \<and> item_end x = k"
+  "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item \<G> \<omega> x \<and> item_end x = k"
 
 definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
-  "wf_bin cfg \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items cfg \<omega> k (items b)"
+  "wf_bin \<G> \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items \<G> \<omega> k (items b)"
 
 definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "wf_bins cfg \<omega> bs \<equiv> \<forall>k < length bs. wf_bin cfg \<omega> k (bs!k)"
+  "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < |bs|. wf_bin \<G> \<omega> k (bs!k)"
 
 definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
-  "nonempty_derives cfg \<equiv> \<forall>N. N \<in> set (\<NN> cfg) \<longrightarrow> \<not> derives cfg [N] []"
+  "nonempty_derives \<G> \<equiv> \<forall>N. N \<in> set (\<NN> \<G>) \<longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 
 definition Init_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
-  "Init_list cfg \<omega> \<equiv> 
-    let rs = filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg) in
+  "Init_list \<G> \<omega> \<equiv> 
+    let rs = filter (\<lambda>r. rule_head r = \<SS> \<G>) (\<RR> \<G>) in
     let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
-    let bs = replicate (length \<omega> + 1) ([]) in
+    let bs = replicate ( |\<omega>| + 1) ([]) in
     bs[0 := b0]"
 
 definition Scan_list :: "nat \<Rightarrow> 'a sentential \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry list" where
@@ -89,8 +89,8 @@ definition Scan_list :: "nat \<Rightarrow> 'a sentential \<Rightarrow> 'a  \<Rig
     else []"
 
 definition Predict_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
-  "Predict_list k cfg X \<equiv>
-    let rs = filter (\<lambda>r. rule_head r = X) (\<RR> cfg) in
+  "Predict_list k \<G> X \<equiv>
+    let rs = filter (\<lambda>r. rule_head r = X) (\<RR> \<G>) in
     map (\<lambda>r. (Entry (init_item r k) Null)) rs"
 
 fun filter_with_index' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
@@ -127,29 +127,29 @@ definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<
   "bins_upd bs k es = bs[k := bin_upds es (bs!k)]"
 
 partial_function (tailrec) Earley_bin_list' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
-  "Earley_bin_list' k cfg \<omega> bs i = (
-    if i \<ge> length (items (bs!k)) then bs
+  "Earley_bin_list' k \<G> \<omega> bs i = (
+    if i \<ge> |items (bs!k)| then bs
     else
       let x = items (bs!k) ! i in
       let bs' =
         case next_symbol x of
           Some a \<Rightarrow>
-            if is_terminal cfg a then
-              if k < length \<omega> then bins_upd bs (k+1) (Scan_list k \<omega> a x i)
+            if is_terminal \<G> a then
+              if k < |\<omega>| then bins_upd bs (k+1) (Scan_list k \<omega> a x i)
               else bs
-            else bins_upd bs k (Predict_list k cfg a)
+            else bins_upd bs k (Predict_list k \<G> a)
         | None \<Rightarrow> bins_upd bs k (Complete_list k x bs i)
-      in Earley_bin_list' k cfg \<omega> bs' (i+1))"
+      in Earley_bin_list' k \<G> \<omega> bs' (i+1))"
 
 definition Earley_bin_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
-  "Earley_bin_list k cfg \<omega> bs = Earley_bin_list' k cfg \<omega> bs 0"
+  "Earley_bin_list k \<G> \<omega> bs = Earley_bin_list' k \<G> \<omega> bs 0"
 
 fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
-  "Earley_list 0 cfg \<omega> = Earley_bin_list 0 cfg \<omega> (Init_list cfg \<omega>)"
-| "Earley_list (Suc n) cfg \<omega> = Earley_bin_list (Suc n) cfg \<omega> (Earley_list n cfg \<omega>)"
+  "Earley_list 0 \<G> \<omega> = Earley_bin_list 0 \<G> \<omega> (Init_list \<G> \<omega>)"
+| "Earley_list (Suc n) \<G> \<omega> = Earley_bin_list (Suc n) \<G> \<omega> (Earley_list n \<G> \<omega>)"
 
 definition \<E>arley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
-  "\<E>arley_list cfg \<omega> = Earley_list (length \<omega>) cfg \<omega>"
+  "\<E>arley_list \<G> \<omega> = Earley_list |\<omega>| \<G> \<omega>"
 
 section \<open>Sets or Bins as list\<close>
 
@@ -170,7 +170,7 @@ lemma set_items_bin_upds:
 text\<open>\<close>
 
 lemma bins_items_bins_upd:
-  assumes "k < length bs"
+  assumes "k < |bs|"
   shows "bins_items (bins_upd bs k es) = bins_items bs \<union> set (items es)"
 (*<*)
   sorry
@@ -187,20 +187,20 @@ text\<open>Just note that @{term bin_upd}, @{term bin_upds}, @{term bins_upd}, @
 text\<open>Explain termination, how it is proved in Isabelle and custom induction schema.\<close>
 
 fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
-  "earley_measure (k, cfg, \<omega>, bs) i = card { x | x. wf_item cfg \<omega> x \<and> item_end x = k } - i"
+  "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_item \<G> \<omega> x \<and> item_end x = k } - i"
 
 definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
   "wf_earley_input = { 
-    (k, cfg, \<omega>, bs) | k cfg \<omega> bs.
-      k \<le> length \<omega> \<and>
-      length bs = length \<omega> + 1 \<and>
-      wf_cfg cfg \<and>
-      wf_bins cfg \<omega> bs
+    (k, \<G>, \<omega>, bs) | k \<G> \<omega> bs.
+      k \<le> |\<omega>| \<and>
+      |bs| = |\<omega>| + 1 \<and>
+      wf_\<G> \<G> \<and>
+      wf_bins \<G> \<omega> bs
   }"
 
 lemma wf_earley_input_Earley_bin_list':
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input" 
-  shows "(k, cfg, \<omega>, Earley_bin_list' k cfg \<omega> bs i) \<in> wf_earley_input"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input" 
+  shows "(k, \<G>, \<omega>, Earley_bin_list' k \<G> \<omega> bs i) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
@@ -208,8 +208,8 @@ lemma wf_earley_input_Earley_bin_list':
 text\<open>\<close>
 
 lemma wf_earley_input_Earley_bin_list:
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input" 
-  shows "(k, cfg, \<omega>, Earley_bin_list k cfg \<omega> bs) \<in> wf_earley_input"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input" 
+  shows "(k, \<G>, \<omega>, Earley_bin_list k \<G> \<omega> bs) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
@@ -217,9 +217,9 @@ lemma wf_earley_input_Earley_bin_list:
 text\<open>\<close>
 
 lemma wf_earley_input_Earley_list:
-  assumes "wf_cfg cfg"
-  assumes "k \<le> length \<omega>"
-  shows "(k, cfg, \<omega>, Earley_list k cfg \<omega>) \<in> wf_earley_input"
+  assumes "wf_\<G> \<G>"
+  assumes "k \<le> |\<omega>|"
+  shows "(k, \<G>, \<omega>, Earley_list k \<G> \<omega>) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
@@ -227,9 +227,9 @@ lemma wf_earley_input_Earley_list:
 text\<open>\<close>
 
 lemma wf_earley_input_\<E>arley_list:
-  assumes "wf_cfg cfg"
-  assumes "k \<le> length \<omega>"
-  shows "(k, cfg, \<omega>, \<E>arley_list cfg \<omega>) \<in> wf_earley_input"
+  assumes "wf_\<G> \<G>"
+  assumes "k \<le> |\<omega>|"
+  shows "(k, \<G>, \<omega>, \<E>arley_list \<G> \<omega>) \<in> wf_earley_input"
 (*<*)
   sorry
 (*>*)
@@ -237,7 +237,7 @@ lemma wf_earley_input_\<E>arley_list:
 section \<open>Soundness\<close>
 
 lemma Init_list_eq_Init:
-  shows "bins_items (Init_list cfg \<omega>) = Init cfg"
+  shows "bins_items (Init_list \<G> \<omega>) = Init \<G>"
 (*<*)
   sorry
 (*>*)
@@ -245,10 +245,10 @@ lemma Init_list_eq_Init:
 text\<open>\<close>
 
 lemma Scan_list_sub_Scan:
-  assumes "wf_bins cfg \<omega> bs"
+  assumes "wf_bins \<G> \<omega> bs"
   assumes "bins_items bs \<subseteq> I"
-  assumes "k < length bs"
-  assumes "k < length \<omega>"
+  assumes "k < |bs|"
+  assumes "k < |\<omega>|"
   assumes "x \<in> set (items (bs!k))"
   assumes "next_symbol x = Some a"
   shows "set (items (Scan_list k \<omega> a x pre)) \<subseteq> Scan k \<omega> I"
@@ -259,12 +259,12 @@ lemma Scan_list_sub_Scan:
 text\<open>\<close>
 
 lemma Predict_list_sub_Predict:
-  assumes "wf_bins cfg \<omega> bs"
+  assumes "wf_bins \<G> \<omega> bs"
   assumes "bins_items bs \<subseteq> I"
-  assumes "k < length bs"
+  assumes "k < |bs|"
   assumes "x \<in> set (items (bs!k))"
   assumes "next_symbol x = Some X"
-  shows "set (items (Predict_list k cfg X)) \<subseteq> Predict k cfg I"
+  shows "set (items (Predict_list k \<G> X)) \<subseteq> Predict k \<G> I"
 (*<*)
   sorry
 (*>*)
@@ -272,9 +272,9 @@ lemma Predict_list_sub_Predict:
 text\<open>\<close>
 
 lemma Complete_list_sub_Complete:
-  assumes "wf_bins cfg \<omega> bs"
+  assumes "wf_bins \<G> \<omega> bs"
   assumes "bins_items bs \<subseteq> I"
-  assumes "k < length bs"
+  assumes "k < |bs|"
   assumes "x \<in> set (items (bs!k))"
   assumes "next_symbol x = None"
   shows "set (items (Complete_list k x bs red)) \<subseteq> Complete k I"
@@ -285,9 +285,9 @@ lemma Complete_list_sub_Complete:
 text\<open>\<close>
 
 lemma Earley_bin_list'_sub_Earley_bin:
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (Earley_bin_list' k cfg \<omega> bs i) \<subseteq> Earley_bin k cfg \<omega> I"
+  shows "bins_items (Earley_bin_list' k \<G> \<omega> bs i) \<subseteq> Earley_bin k \<G> \<omega> I"
 (*<*)
   sorry
 (*>*)
@@ -295,9 +295,9 @@ lemma Earley_bin_list'_sub_Earley_bin:
 text\<open>\<close>
 
 lemma Earley_bin_list_sub_Earley_bin:
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (Earley_bin_list k cfg \<omega> bs) \<subseteq> Earley_bin k cfg \<omega> I"
+  shows "bins_items (Earley_bin_list k \<G> \<omega> bs) \<subseteq> Earley_bin k \<G> \<omega> I"
 (*<*)
   sorry
 (*>*)
@@ -305,9 +305,9 @@ lemma Earley_bin_list_sub_Earley_bin:
 text\<open>\<close>
 
 lemma Earley_list_sub_\<E>:
-  assumes "wf_cfg cfg"
-  assumes "k \<le> length \<omega>"
-  shows "bins_items (Earley_list k cfg \<omega>) \<subseteq> Earley k cfg \<omega>"
+  assumes "wf_\<G> \<G>"
+  assumes "k \<le> |\<omega>|"
+  shows "bins_items (Earley_list k \<G> \<omega>) \<subseteq> Earley k \<G> \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -315,8 +315,8 @@ lemma Earley_list_sub_\<E>:
 text\<open>\<close>
 
 lemma \<E>arley_list_sub_\<E>arley:
-  assumes "wf_cfg cfg" 
-  shows "bins_items (\<E>arley_list cfg \<omega>) \<subseteq> \<E>arley cfg \<omega>"
+  assumes "wf_\<G> \<G>" 
+  shows "bins_items (\<E>arley_list \<G> \<omega>) \<subseteq> \<E>arley \<G> \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -324,10 +324,10 @@ lemma \<E>arley_list_sub_\<E>arley:
 section \<open>Completeness\<close>
 
 lemma impossible_complete_item: \<comment>\<open>Detailed\<close>
-  assumes "wf_cfg cfg"
-  assumes "nonempty_derives cfg"
-  assumes "wf_item cfg \<omega> x"
-  assumes "sound_item cfg \<omega> x"
+  assumes "wf_\<G> \<G>"
+  assumes "nonempty_derives \<G>"
+  assumes "wf_item \<G> \<omega> x"
+  assumes "sound_item \<G> \<omega> x"
   assumes "is_complete x" 
   assumes "item_origin x = k"
   assumes "item_end x = k"
@@ -339,11 +339,11 @@ lemma impossible_complete_item: \<comment>\<open>Detailed\<close>
 text\<open>\<close>
 
 lemma Complete_Un_eq_terminal: \<comment>\<open>Detailed?\<close>
-  assumes "wf_cfg cfg"
-  assumes "wf_items cfg \<omega> I"
-  assumes "wf_item cfg \<omega> x"
+  assumes "wf_\<G> \<G>"
+  assumes "wf_items \<G> \<omega> I"
+  assumes "wf_item \<G> \<omega> x"
   assumes "next_symbol z = Some a"
-  assumes "is_terminal cfg a"
+  assumes "is_terminal \<G> a"
   shows "Complete k (I \<union> {x}) = Complete k I"
 (*<*)
   sorry
@@ -352,14 +352,14 @@ lemma Complete_Un_eq_terminal: \<comment>\<open>Detailed?\<close>
 text\<open>\<close>
 
 lemma Complete_Un_eq_nonterminal: \<comment>\<open>Detailed?\<close>
-  assumes "wf_cfg cfg"
-  assumes "wf_items cfg \<omega> I"
-  assumes "sound_items cfg \<omega> I"
-  assumes "nonempty_derives cfg"
-  assumes "wf_item cfg \<omega> x"
+  assumes "wf_\<G> \<G>"
+  assumes "wf_items \<G> \<omega> I"
+  assumes "sound_items \<G> \<omega> I"
+  assumes "nonempty_derives \<G>"
+  assumes "wf_item \<G> \<omega> x"
   assumes "item_end x = k"
   assumes "next_symbol z = Some a"
-  assumes "is_nonterminal cfg a"
+  assumes "is_nonterminal \<G> a"
   shows "Complete k (I \<union> {x}) = Complete k I"
 (*<*)
   sorry
@@ -368,8 +368,8 @@ lemma Complete_Un_eq_nonterminal: \<comment>\<open>Detailed?\<close>
 text\<open>\<close>
 
 lemma Complete_sub_bins_Un_Complete_list: \<comment>\<open>Detailed?\<close>
-  assumes "wf_bins cfg \<omega> bs"
-  assumes "wf_item cfg \<omega> x"
+  assumes "wf_bins \<G> \<omega> bs"
+  assumes "wf_item \<G> \<omega> x"
   assumes "is_complete z"
   assumes "Complete k I \<subseteq> bins_items bs"
   assumes "I \<subseteq> bins_items bs"
@@ -381,8 +381,8 @@ lemma Complete_sub_bins_Un_Complete_list: \<comment>\<open>Detailed?\<close>
 text\<open>\<close>
 
 lemma Earley_bin_list'_mono: \<comment>\<open>Omit?\<close>
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
-  shows "bins_items bs \<subseteq> bins_items (Earley_bin_list' k cfg \<omega> bs i)"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  shows "bins_items bs \<subseteq> bins_items (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -390,12 +390,12 @@ lemma Earley_bin_list'_mono: \<comment>\<open>Omit?\<close>
 text\<open>\<close>
 
 lemma Earley_step_sub_Earley_bin_list': \<comment>\<open>Detailed: START WITH THIS\<close>
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items cfg \<omega> (bins_items bs)"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  assumes "Earley_step k cfg \<omega> (bins_items_upto bs k i) \<subseteq> bins_items bs"
-  shows "Earley_step k cfg \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list' k cfg \<omega> bs i)"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k i) \<subseteq> bins_items bs"
+  shows "Earley_step k \<G> \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -403,12 +403,12 @@ lemma Earley_step_sub_Earley_bin_list': \<comment>\<open>Detailed: START WITH TH
 text\<open>\<close>
 
 lemma Earley_step_sub_Earley_bin_list:
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items cfg \<omega> (bins_items bs)"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  assumes "Earley_step k cfg \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
-  shows "Earley_step k cfg \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list k cfg \<omega> bs)"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
+  shows "Earley_step k \<G> \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -416,11 +416,11 @@ lemma Earley_step_sub_Earley_bin_list:
 text\<open>\<close>
 
 lemma Earley_bin_list'_idem: \<comment>\<open>Detailed: SECOND IS THIS\<close>
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items cfg \<omega> (bins_items bs)"
-  assumes "nonempty_derives cfg"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "nonempty_derives \<G>"
   assumes "i \<le> j"
-  shows "bins_items (Earley_bin_list' k cfg \<omega> (Earley_bin_list' k cfg \<omega> bs i) j) = bins_items (Earley_bin_list' k cfg \<omega> bs i)"
+  shows "bins_items (Earley_bin_list' k \<G> \<omega> (Earley_bin_list' k \<G> \<omega> bs i) j) = bins_items (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -428,10 +428,10 @@ lemma Earley_bin_list'_idem: \<comment>\<open>Detailed: SECOND IS THIS\<close>
 text\<open>\<close>
 
 lemma Earley_bin_list_idem:
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items cfg \<omega> (bins_items bs)"
-  assumes "nonempty_derives cfg"
-  shows "bins_items (Earley_bin_list k cfg \<omega> (Earley_bin_list k cfg \<omega> bs)) = bins_items (Earley_bin_list k cfg \<omega> bs)"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "nonempty_derives \<G>"
+  shows "bins_items (Earley_bin_list k \<G> \<omega> (Earley_bin_list k \<G> \<omega> bs)) = bins_items (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -439,12 +439,12 @@ lemma Earley_bin_list_idem:
 text\<open>\<close>
 
 lemma Earley_bin_sub_Earley_bin_list:
-  assumes "(k, cfg, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items cfg \<omega> (bins_items bs)"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  assumes "Earley_step k cfg \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
-  shows "Earley_bin k cfg \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list k cfg \<omega> bs)"
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
+  shows "Earley_bin k \<G> \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -452,11 +452,11 @@ lemma Earley_bin_sub_Earley_bin_list:
 text\<open>\<close>
 
 lemma Earley_sub_Earley_list:
-  assumes "wf_cfg cfg"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  assumes "k \<le> length \<omega>"
-  shows "Earley k cfg \<omega> \<subseteq> bins_items (Earley_list k cfg \<omega>)"
+  assumes "wf_\<G> \<G>"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  assumes "k \<le> |\<omega>|"
+  shows "Earley k \<G> \<omega> \<subseteq> bins_items (Earley_list k \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -464,10 +464,10 @@ lemma Earley_sub_Earley_list:
 text\<open>\<close>
 
 lemma \<E>arley_sub_\<E>arley_list:
-  assumes "wf_cfg cfg"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  shows "\<E>arley cfg \<omega> \<subseteq> bins_items (\<E>arley_list cfg \<omega>)"
+  assumes "wf_\<G> \<G>"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  shows "\<E>arley \<G> \<omega> \<subseteq> bins_items (\<E>arley_list \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -475,13 +475,13 @@ lemma \<E>arley_sub_\<E>arley_list:
 section \<open>Main Theorems\<close>
 
 definition recognizing_list :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
-  "recognizing_list I cfg \<omega> \<equiv> \<exists>x \<in> set (items (I ! length \<omega>)). is_finished cfg \<omega> x"
+  "recognizing_list I \<G> \<omega> \<equiv> \<exists>x \<in> set (items (I ! |\<omega>| )). is_finished \<G> \<omega> x"
 
 theorem recognizing_list_iff_recognizing:
-  assumes "wf_cfg cfg"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  shows "recognizing_list (\<E>arley_list cfg \<omega>) cfg \<omega> \<longleftrightarrow> recognizing (\<E>arley cfg \<omega>) cfg \<omega>"
+  assumes "wf_\<G> \<G>"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  shows "recognizing_list (\<E>arley_list \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> recognizing (\<E>arley \<G> \<omega>) \<G> \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -489,10 +489,10 @@ theorem recognizing_list_iff_recognizing:
 text\<open>\<close>
 
 corollary correctness_list:
-  assumes "wf_cfg cfg"
-  assumes "is_sentence cfg \<omega>"
-  assumes "nonempty_derives cfg"
-  shows "recognizing_list (\<E>arley_list cfg \<omega>) cfg \<omega> \<longleftrightarrow> derives cfg [\<SS> cfg] \<omega>"
+  assumes "wf_\<G> \<G>"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  shows "recognizing_list (\<E>arley_list \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
 (*<*)
   sorry
 (*>*)

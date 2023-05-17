@@ -33,11 +33,11 @@
 \endisadelimdocument
 \isacommand{definition}\isamarkupfalse%
 \ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ cfg\ {\isasymlongleftrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymforall}r\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ cfg{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ rule{\isacharunderscore}{\kern0pt}body\ r\ {\isasymnoteq}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}\ {\isasymlongleftrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymforall}r\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ {\isasymG}{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ rule{\isacharunderscore}{\kern0pt}body\ r\ {\isasymnoteq}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
 \ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}impl{\isacharunderscore}{\kern0pt}non{\isacharunderscore}{\kern0pt}empty{\isacharunderscore}{\kern0pt}deriv{\isacharcolon}{\kern0pt}\isanewline
-\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ cfg\ {\isasymLongrightarrow}\ N\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymNN}\ cfg{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymnot}\ derives\ cfg\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}\ {\isasymLongrightarrow}\ N\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymNN}\ {\isasymG}{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymnot}\ {\isacharparenleft}{\kern0pt}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -78,16 +78,16 @@
 \ \ {\isachardoublequoteopen}start{\isacharunderscore}{\kern0pt}symbol\ {\isacharequal}{\kern0pt}\ Nonterminal\ S{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
-\ cfg\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ cfg{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}cfg\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals\ terminals\ rules\ start{\isacharunderscore}{\kern0pt}symbol{\isachardoublequoteclose}\isanewline
+\ {\isasymG}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ cfg{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymG}\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals\ terminals\ rules\ start{\isacharunderscore}{\kern0pt}symbol{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ {\isasymomega}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}{\isasymomega}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}cfg{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}cfg\ cfg{\isachardoublequoteclose}%
+\ wf{\isacharunderscore}{\kern0pt}{\isasymG}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -106,7 +106,7 @@
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ is{\isacharunderscore}{\kern0pt}sentence{\isacharunderscore}{\kern0pt}{\isasymomega}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}sentence\ cfg\ {\isasymomega}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}sentence\ {\isasymG}\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -125,7 +125,7 @@
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ nonempty{\isacharunderscore}{\kern0pt}derives{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ cfg{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -144,7 +144,7 @@
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ correctness{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing{\isacharunderscore}{\kern0pt}list\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ cfg\ {\isasymomega}{\isacharparenright}{\kern0pt}\ cfg\ {\isasymomega}\ {\isasymlongleftrightarrow}\ derives\ cfg\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ cfg{\isacharbrackright}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing{\isacharunderscore}{\kern0pt}list\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isasymG}\ {\isasymomega}\ {\isasymlongleftrightarrow}\ {\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof

@@ -5,6 +5,11 @@ theory "02_Earleys_Algorithm"
 begin
 (*>*)
 
+(*<*)
+syntax
+  "length" :: "'a list \<Rightarrow> nat"  ("|_|")
+(*>*)
+
 chapter \<open>Earley's Algorithm \label{chapter:2}\<close>
 
 text\<open>
@@ -12,7 +17,7 @@ We present a slightly simplified version of Earley's original recognizer algorit
 omitting Earley's proposed look-ahead since its primary purpose is to increase the efficiency of the
 resulting recognizer. Throughout this thesis we are working with a running example. The considered grammar is a tiny excerpt of a toy
 arithmetic expression grammar: @{term "\<G>"} $::= S \rightarrow \, x \, \vert \, S \rightarrow \, S + S$ and
-the input is @{term \<omega>} $= x + x + x$.
+the, rather trivial, input is @{term \<omega>} $= x + x + x$.
 
 Intuitively, Earley's recognizer works in principle like a top-down parser carrying along all possible
 parses simultaneously in an efficient manner.
@@ -20,7 +25,7 @@ In detail, the algorithm works as follows: it scans the input @{term \<omega>} $
 $n+1$ Earley bins $B_i$ that are sets of Earley items. An inital bin $B_0$ and one bin $B_{i+1}$ for
 each symbol $a_i$ of the input.
 In general, an Earley item $A \rightarrow \, \alpha \bullet \beta, i, j$ consists of four parts: a production rule of the grammar that we are currently
-considering, a bullet signalling how much of the production's right-hand side we have recognized so far,
+considering, a bullet signalling how much of the productions right-hand side we have recognized so far,
 an origin $i$ describing the position in @{term \<omega>} where we started scanning, and an end $j$ indicating
 the position in @{term \<omega>} we are currently considering next for the remaining right-hand side of the production rule.
 Note that there will be only one set of earley items or only one bin $B$ and we say an item is conceptually part of bin $B_j$ if it's end is the index $j$.
@@ -56,7 +61,7 @@ in detail:
     have not scanned anything so far.
   \item The \textit{Complete} operation applies if we process an item with the bullet at the end of the
     right-hand side of its production rule. For an item $B \rightarrow \, \gamma \bullet, j, k$ we have successfully scanned the substring
-    \omega[j..k) and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
+    $\omega [ j..k \rangle$ and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
     $A \rightarrow \, \alpha \bullet B \beta, i, j$ containing a bullet in front of the non-terminal we completed, or the reason we
     predicted it on the first place. Since we scanned the predicted non-terminal successfully, we are allowed to
     move over the bullet, resulting in one new item $A \rightarrow \, \alpha B \bullet \beta, i, k$. Note in particular
@@ -70,7 +75,7 @@ in detail:
     which corresponds to recognizing the input as $x + (x + x)$.
 \end{enumerate}
 
-If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, @{term "length \<omega> + 1"}$,
+If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, @{term "|\<omega>| + 1"}$,
 it returns \textit{true}, otherwise it returns \textit{false}. For the tiny arithmetic expression grammar
 we generate the item $S \rightarrow \, S + S \bullet, 0, 5$ and return the correct answer \textit{true},
 since there exist derivations for $\omega = x + x + x$, e.g.
@@ -79,15 +84,15 @@ $S \Rightarrow S + S \Rightarrow S + x \Rightarrow S + S + x \xRightarrow{\ast} 
 
 To proof the correctness of Earley's recognizer algorithm we need to show the following theorem:
 
-$$S \rightarrow \, \alpha \bullet, 0, @{term "length \<omega> + 1"} \in B \,\,\, \textrm{iff} \,\,\, S \, \xRightarrow{\ast} \, @{term \<omega>}$$
+$$S \rightarrow \, \alpha \bullet, 0, @{term "|\<omega>| + 1"} \in B \,\,\, \textrm{iff} \,\,\, S \, \Rightarrow^{\ast} \, @{term \<omega>}$$
 
 It follows from the following three lemmas:
 
 \begin{enumerate}
   \item Soundness: for every generated item there exists an according derivation: \\
-     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \beta$
+     $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \Rightarrow^{\ast} \, \omega [ i..j \rangle \beta$
   \item Completeness: for every derivation we generate an according item: \\
-     $A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \beta \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
+     $A \, \Rightarrow^{\ast} \, \omega [ i..j \rangle \beta \,\,\, \textrm{implies} \,\,\, A \rightarrow \, \alpha \bullet \beta, i, j \in B$
   \item Finiteness: there only exist a finite number of Earley items
 \end{enumerate}
 \<close>
