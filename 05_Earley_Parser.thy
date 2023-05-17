@@ -115,16 +115,8 @@ lemma sound_mono_ptrs_Earley_bin_list:
 
 text\<open>\<close>
 
-lemma sound_ptrs_Init_list:
-  shows "sound_ptrs \<omega> (Init_list \<G> \<omega>)"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma mono_red_ptr_Init_list:
-  shows "mono_red_ptr (Init_list \<G> \<omega>)"
+lemma sound_mono_ptrs_Init_list:
+  shows "sound_ptrs \<omega> (Init_list \<G> \<omega>) \<and> mono_red_ptr (Init_list \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -240,36 +232,6 @@ definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<time
       k < |bs| \<and>
       i < |bs!k|
   }"
-
-lemma wf_tree_input_pre:
-  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
-  assumes "pointer (bs!k!i) = Pre pre"
-  shows "(bs, \<omega>, (k-1), pre) \<in> wf_tree_input"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma wf_tree_input_prered_pre:
-  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
-  assumes "pointer (bs!k!i) = PreRed (k', pre, red) ps"
-  shows "(bs, \<omega>, k', pre) \<in> wf_tree_input"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma wf_tree_input_prered_red:
-  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
-  assumes "pointer (bs!k!i) = PreRed (k', pre, red) ps"
-  shows "(bs, \<omega>, k, red) \<in> wf_tree_input"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
 
 lemma build_tree'_termination:
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
@@ -413,42 +375,6 @@ definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<tim
       I \<subseteq> {0..<|bs!k|} \<and>
       i \<in> I
   }"
-
-lemma wf_trees_input_pre:
-  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
-  assumes "pointer (bs!k!i) = Pre pre"
-  shows "(bs, \<omega>, (k-1), pre, {pre}) \<in> wf_trees_input"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma wf_trees_input_prered_pre:
-  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
-  assumes "pointer (bs!k!i) = PreRed p ps"
-  assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
-  assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
-  assumes "((k', pre), reds) \<in> set gs"
-  shows "(bs, \<omega>, k', pre, {pre}) \<in> wf_trees_input"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma wf_trees_input_prered_red:
-  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
-  assumes "pointer (bs!k!i) = PreRed p ps"
-  assumes "ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps)"
-  assumes "gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps'"
-  assumes "((k', pre), reds) \<in> set gs" "red \<in> set reds"
-  shows "(bs, \<omega>, k, red, I \<union> {red}) \<in> wf_trees_input"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
 
 lemma build_trees'_termination:
   assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"

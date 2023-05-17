@@ -101,7 +101,7 @@ definition filter_with_index :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \
 
 definition Complete_list :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
   "Complete_list k y bs red \<equiv>
-    let orig = bs ! (item_origin y) in
+    let orig = bs ! item_origin y in
     let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
     map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is"
 
