@@ -10,10 +10,10 @@ chapter \<open>Earley's Algorithm Formalization \label{chapter:3}\<close>
 text\<open>
 In this chapter we shortly introduce the interactive theorem prover Isabelle/HOL \cite{Nipkow:2002} used as
 the tool for verification in this thesis and recap some of the formalism of context-free grammars and their representation
-in Isabelle. Finally we formalize the simplified Earley recognizer algorithm presented in Chapter
+in Isabelle. Then we formalize the simplified Earley recognizer algorithm presented in Chapter
 \ref{chapter:2}; discussing the implementation and the proofs for soundness, completeness, and finiteness.
 Note that most of the basic definitions of Sections \ref{sec:cfg} and \ref{sec:earley} are not our own work
-but only slightly adapted from \cite{Obua:2017} \cite{LocalLexing-AFP}. All of the proofs in this chapter are
+but only slightly adapted from Obua's work on \textit{Local Lexing} \cite{Obua:2017} \cite{LocalLexing-AFP}. All of the proofs in this chapter are
 our own work. 
 \<close>
 
@@ -32,7 +32,7 @@ Non-recursive definitions are introduced with the \textit{definition} keyword.
 
 It is standard to define a language as a set of strings over a finite set of symbols. We deviate slightly by introducing a type variable $'a$
 for the type of symbols. Thus a string corresponds to a list of symbols and a language is formalized as
-a set of lists of symbols. We represent a context-free grammar as the datatype @{term CFG}. An instance @{term \<G>} consists of (1) a list of
+a set of lists of symbols, a symbol being either a terminal or a non-terminal. We represent a context-free grammar as the datatype @{term CFG}. An instance @{term \<G>} consists of (1) a list of
 non-terminals (@{term "\<NN> \<G>"}), (2) a list of terminals (@{term "\<TT> \<G>"}), (3) a list of production rules
 (@{term "\<RR> \<G>"}), and a start symbol (@{term "\<SS> \<G>"}) where @{term \<NN>}, @{term \<TT>}, @{term \<RR>} and @{term \<SS>} are
 projections accessing the specific part of an instance @{term \<G>} of the datatype @{term CFG}. Each rule consists of a left-hand side or @{term rule_head}, a single symbol,
@@ -76,17 +76,6 @@ definition wf_\<G> :: "'a cfg \<Rightarrow> bool" where
   "wf_\<G> \<G> \<equiv> disjunct_symbols \<G> \<and> wf_startsymbol \<G> \<and> wf_rules \<G> \<and> distinct_rules \<G>"
 
 (*<*)
-(*
-notation
-  derives1 ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
-
-notation
-  derives ("_ \<turnstile> _ \<^latex>\<open>\\ensuremath{\\xRightarrow{\\ast}}\<close> _" [1000,0] 1000)
-
-notation
-  slice ("_\<^latex>\<open>[\<close>_\<^latex>\<open>..\<close>_\<^latex>\<open>)\<close>" [1000,0] 1000)
-*)
-
 syntax
   "derives1" :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
 
@@ -109,10 +98,10 @@ $A$, $B$, $C$ denote non-terminals; lists of symbols are represented by greek le
 The empty list in the context of a language is \epsilon. A sentential is a list consisting of only symbols. A sentence
 is a sentential if it only contains terminal symbols. We first define a predicate @{term "derives1 \<G> u v"} which expresses that
 we can derive $v$ from $u$ in a single step or the predicate holds if there exist $\alpha$, $\beta$, $N$ and $\gamma$ such that @{term "u = \<alpha> @ [N] @ \<beta>"},
-@{term "v = \<alpha> @ \<gamma> @ \<beta>"} and @{term "(N, \<gamma>)"} is a production rule. We also introduce more convenient notation: @{term "derives1 \<G> u v"} is written @{term \<G>} $\vdash u \Rightarrow v$ We then can define the set of single-step derivations using @{term derives1},
+@{term "v = \<alpha> @ \<gamma> @ \<beta>"} and @{term "(N, \<gamma>)"} is a production rule. We also introduce some slightly more convenient notation: @{term "derives1 \<G> u v"} is written @{term \<G>} $\vdash u \Rightarrow v$ in the following. We then can define the set of single-step derivations using @{term derives1},
 and subsequently the set of all derivations given a particular grammar is the reflexive-transitive closure of the set of
 single-step derivations. Finally, we say $v$ can be derived from $u$ given a grammar @{term \<G>} or @{term "derives \<G> u v"} if
-@{term "(u, v) \<in> derivations \<G>"}. The more convenient notation is again: @{term "derives \<G> u v"} $=$ @{term \<G>} $\vdash u \Rightarrow^{\ast} v$
+@{term "(u, v) \<in> derivations \<G>"}. A slightly more convenient notation is again: @{term "derives \<G> u v"} $=$ @{term \<G>} $\vdash u \Rightarrow^{\ast} v$
 \<close>
 
 type_synonym 'a sentential = "'a list"
@@ -139,7 +128,6 @@ definition derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a sent
        \<and> v = \<alpha> @ \<gamma> @ \<beta>
        \<and> (N, \<gamma>) \<in> set (\<RR> \<G>)"
 
-
 definition derivations1 :: "'a cfg \<Rightarrow> ('a sentential \<times> 'a sentential) set" where
   "derivations1 \<G> = { (u,v) | u v. \<G> \<turnstile> u \<Rightarrow> v }"
 
@@ -154,7 +142,7 @@ Potentially recursive but provably total functions that may make use of pattern 
 the \textit{fun} and \textit{function} keywords; partial functions are defined via \textit{partial\_function}.
 Take for example the function @{term slice} defined below. Term @{term "slice xs i j"} computes the slice of a list @{term xs}
 between indices $i$ (inclusive) and $j$ (exclusive), e.g. @{term "slice [a, b, c, d, e] (2::nat) (4::nat)"} evaluates to @{term "[c, d]"}.
-We also introduce a shorthand notation: e.g. @{term "slice xs i j"} is written @{term "xs"}$[ i..j \rangle$.
+We also introduce a shorthand notation: e.g. @{term "slice xs i j"} is written @{term "xs"}$[ i..j \rangle$ in the following.
 \<close>
 
 fun slice :: "'a list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a list" where
@@ -162,6 +150,17 @@ fun slice :: "'a list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a list"
 | "slice (x#xs) _ 0  = []"
 | "slice (x#xs) 0 (Suc b) = x # slice xs 0 b"
 | "slice (x#xs) (Suc a) (Suc b) = slice xs a b"
+
+(*<*)
+notation (latex output)
+  derives1 ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
+
+notation (latex output)
+  derives ("_ \<turnstile> _ \<^latex>\<open>\\ensuremath{\\Rightarrow^{\\ast}}\<close> _" [1000,0] 1000)
+
+notation (latex output)
+  slice ("_[_.._\<rangle>" [1000,0] 1000)
+(*>*)
 
 text\<open>
 Lemmas, theorems and corollaries are presented using the keywords \textit{lemma}, \textit{theorem}, \textit{corollary} respectively, followed
@@ -171,26 +170,27 @@ and the append operator @{term "(@)"}, stating the conditions under which we can
 \<close>
 
 lemma slice_append:
-  assumes "i \<le> j" "j \<le> k"
+  assumes "i \<le> j"
+  assumes "j \<le> k"
   shows "xs[i..j\<rangle> @ xs[j..k\<rangle> = xs[i..k\<rangle>"
 (*<*)
   sorry
 (*>*)
 
-section \<open>The Algorithm \label{sec:earley}\<close>
+section \<open>The Formalized Algorithm \label{sec:earley}\<close>
 
 text\<open>
 Next we formalize the algorithm presented in Chapter \ref{chapter:2}. First we define the datatype @{term item}
 representing Earley items. For example, the item $S \rightarrow \, S + \bullet S, 2, 4$ consists of four parts:
 a production rule (@{term item_rule}), a natural number (@{term item_bullet}) indicating the position of the bullet in
 the production rule, and two natural numbers (@{term item_origin} inclusive, @{term item_end} exclusive) representing the portion
-of the input string @{term \<omega>} that has been scanned by the item. Additionally we introduce a few useful abbreviations:
+of the input string @{term \<omega>} that has been parsed by the item. Additionally, we introduce a few useful abbreviations:
 the functions @{term item_rule_head} and @{term item_rule_body} access the @{term rule_head} respectively @{term rule_body}
 of an item. Functions @{term item_\<alpha>} and @{term item_\<beta>} split the production rule body at the bullet, e.g. $S \rightarrow \, \alpha \bullet \beta$.
 We call an item @{term complete} if the bullet is at the end of the production rule body. The next symbol (@{term next_symbol}) of
 an item is either @{term None} if it is complete, or @{term "Some s"} where $s$ is the symbol in the production
 rule body following the bullet. An item is finished if the item rule head is the start symbol, the item is complete, and
-the whole input has been scanned or @{term "item_origin item = (0::nat)"} and @{term "item_end item = |\<omega>|"}. Finally, we call a set of
+the whole input has been parsed or @{term "item_origin item = (0::nat)"} and @{term "item_end item = |\<omega>|"}. Finally, we call a set of
 items @{term recognizing} if it contains at least one finished item, indicating that this set of items recognizes the input $\omega$.
 \<close>
 
@@ -255,15 +255,15 @@ decision end the end of this section.
 
 Note that, as mentioned previously, even though we are only constructing one set of Earley items, conceptually all items with the same item end
 form one Earley bin. Our operational approach is then the following: we generate Earley items bin by bin in ascending order,
-starting from the $0$-th bin which contains all initial items computed by the @{term Init} operation. The three operations @{term Scan}, @{term Predict}, and @{term Complete}
+starting from the $0$-th bin that contains all initial items computed by the @{term Init} operation. The three operations @{term Scan}, @{term Predict}, and @{term Complete}
 all take as arguments the index of the current bin and the current set of Earley items. For the $k$-th bin
-the @{term Scan} operation initializes the $k+1$-th bin, whereas the @{term Predict} and @{term Complete} operations
-only generate items belonging to the $k$-th bin. We then define a function @{term Earley_step} (short for Earley step) that
+the @{term Scan} operation initializes the $k+1$-st bin, whereas the @{term Predict} and @{term Complete} operations
+only generate items belonging to the $k$-th bin. We then define a function @{term Earley_step} that
 returns the union of the set itself and applying the three operations to a set of Earley items. We complete the $k$-th
-bin and initialize the $k+1$-th bin by iterating @{term Earley_step} until the set of items stabilizes, captured by the @{term Earley_bin}
+bin and initialize the $k+1$-th bin by iterating @{term Earley_step} until the set of items converges, captured by the @{term Earley_bin}
 definition. The function @{term Earley} then generates the bins up to the $n$-th bin by applying the @{term Earley_bin}
 function first to the initial set of items @{term Init} and continuing in ascending order bin by bin. Finally, we compute
-the set of Earley items by applying @{term Earley} to the length of the input.
+the set of Earley items by applying function @{term Earley} to the length of the input.
 \<close>
 
 definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
@@ -321,21 +321,23 @@ definition \<E>arley :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a ite
 text\<open>
 We follow the operational approach of defining the set of Earley items primarily for two reasons: first of all, we reuse and only slightly adapt
 most of the basic definitions of this chapter from the work of Obua on \textit{Local Lexing} \cite{Obua:2017} \cite{LocalLexing-AFP},
-which takes the more operational approach and already defines useful lemmas, for example on function iteration.
+who takes the more operational approach and already defines useful lemmas, for example on function iteration.
 Secondly, the operational approach maps more easily to the list-based implementation of the next chapter that
 necessarily takes an ordered approach to generating Earley items. Nonetheless, in hindsight, defining the set
 of Earley items inductively seems to be not only the more elegant approach but also might simplify some of the proofs of
 this chapter, and is consequently future work worth considering.
 \<close>
 
+\<comment>\<open>TODO: illustrate inductive definition here\<close>
+
 section \<open>Well-formedness\<close>
 
 text\<open>
 Due to the operational view of generating the set of Earley items, the proofs of, not only, well-formedness, but
 also soundness and completeness follow a similar structure: we first proof a property about the basic building
-blocks, the @{term Init}, @{term Scan}, @{term Predict}, and @{term Complete} operations. Then, we proof that
+blocks, the @{term Init}, @{term Scan}, @{term Predict}, and @{term Complete} operations. Then we proof that
 this property is maintained iterating the function @{term Earley_step}, and thus holds for the @{term Earley_bin} operation.
-Finally, we show that the function @{term Earley} maintains this property for all conceptual bins and thus for the @{term \<E>arley} definition, or
+Finally, we show that the function @{term Earley} maintains this property for all bins and thus for the @{term \<E>arley} definition, or
 the set of Earley items.
 
 Before we start to proof soundness and completeness of the generated set of Earley items, especially the
@@ -439,7 +441,7 @@ and @{thm[source] wf_Earley_bin0}; lemma @{thm[source] wf_\<E>arley} follows by 
 section \<open>Soundness\<close>
 
 text\<open>
-Next, we proof the soundness of the generated items, or: $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \beta$
+Next we proof the soundness of the generated items, or: $A \rightarrow \, \alpha \bullet \beta, i, j \in B \,\,\, \textrm{implies} \,\,\, A \, \xRightarrow{\ast} \, @{term \<omega>}[i..j) \beta$
 which is stated in terms of our formalization by the @{term sound_item} definition below. As mentioned previously, the general proof structure
 follows the proof for well-formedness. Thus, we only highlight one slightly more involved lemma stating the
 soundness of the @{term Complete} operation while stating the remaining lemmas without explicit proof.
@@ -460,7 +462,6 @@ The second representation is again more operational. He defines a predicate @{te
 that is conceptually analogous to the predicate @{term "\<G> \<turnstile> u \<Rightarrow> v"} but also captures the rule $r$
 used for a single rewriting step and the position $i$ in $u$ where the rewriting occurs.
 \<close>
-
 (*<*)
 syntax
   "Derives1" :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a rule \<Rightarrow> 'a sentential \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow>(_, _) _" [1000,0] 1000)
@@ -478,7 +479,7 @@ text\<open>
 He then defines the type of a \textit{derivation} as a list of pairs representing precisely the positions and rules
 used to apply each rewrite step. The predicate @{term Derivation} is defined recursively as follows: @{term "Derivation \<alpha> [] \<beta>"} holds only if @{term "\<alpha> = \<beta>"}. If the derivation consists of at least one rewrite pair $(i, r)$, or
 @{term "Derivation \<G> \<alpha> ((i, r)#D) \<beta>"}, then there must exist a $\gamma$ such that @{term "Derives1 \<G> \<alpha> i r \<gamma>"} and
-@{term "Derivation \<G> \<gamma> D \<beta>"}. Note that we introduce a more convenient notation: e.g. @{term "Derivation \<alpha> D \<beta>"} is written  (@{term \<G>} $\vdash \alpha \Rightarrow^{\mathit{D}} \beta$). Obua then proves that both notions of a derivation are equivalent (lemma @{term derives_equiv_Derivation})
+@{term "Derivation \<G> \<gamma> D \<beta>"}. Note that we introduce once again a more convenient notation: e.g. @{term "Derivation \<alpha> D \<beta>"} is written @{term \<G>} $\vdash \alpha \Rightarrow^{\mathit{D}} \beta$ in the following. Obua then proves that both notions of a derivation are equivalent (lemma @{term derives_equiv_Derivation})
 \<close>
 
 type_synonym 'a derivation = "(nat \<times> 'a rule) list"
@@ -493,13 +494,11 @@ fun Derivation :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a derivatio
 | "Derivation \<G> \<alpha> (d#D) \<beta> = (\<exists>\<gamma>. Derives1 \<G> \<alpha> (fst d) (snd d) \<gamma> \<and> Derivation \<G> \<gamma> D \<beta>)"
 
 (*<*)
-(*
-notation
-  Derives1 ("_ \<turnstile> _ \<^latex>\<open>\\ensuremath{\\xRightarrow{\<close>(_, _) \<^latex>\<open>}}\<close> _" [1000,0] 1000)
+notation (latex output)
+  Derives1 ("_ \<turnstile> _ \<Rightarrow>(_, _) _" [1000,0] 1000)
 
-notation
-  Derivation ("_ \<turnstile> _ \<^latex>\<open>\\ensuremath{\\xRightarrow{\<close>_ \<^latex>\<open>}}\<close> _" [1000,0] 1000)
-*)
+notation (latex output)
+  Derivation ("_ \<turnstile> _ \<Rightarrow>\<^sup>_ _" [1000,0] 1000)
 (*>*)
 
 lemma derives_equiv_Derivation:
@@ -509,14 +508,14 @@ lemma derives_equiv_Derivation:
 (*>*)
 
 text\<open>
-Next, we state a small but useful lemma about rewriting derivations using the more operational
+Next we state a small but useful lemma about rewriting derivations using the more operational
 definition of derivations defined above without explicit proof.
 \<close>
 
 lemma Derivation_append_rewrite:
-  assumes "\<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>D (\<beta> @ \<gamma> @ \<delta>) "
+  assumes "\<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>D \<beta> @ \<gamma> @ \<delta>"
   assumes "\<G> \<turnstile> \<gamma> \<Rightarrow>\<^sup>E \<gamma>'"
-  shows "\<exists>F. \<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>F (\<beta> @ \<gamma>' @ \<delta>)"
+  shows "\<exists>F. \<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>F \<beta> @ \<gamma>' @ \<delta>"
 (*<*)
   sorry
 (*>*)
@@ -667,8 +666,8 @@ theorem soundness:
 section \<open>Completeness\<close>
 
 text\<open>
-Next, we prove completeness and consequently obtain a concluded correctness proof using theorem
-@{thm[source] soundness}. The completeness proof is by far the most involved proof of this chapter. Thus,
+Next we prove completeness and consequently obtain a concluded correctness proof using theorem
+@{thm[source] soundness}. The completeness proof is by far the most involved proof of this chapter. Thus
 we present it in greater detail, and also slightly deviate from the proof structure of the well-formedness
 and soundness proofs presented previously. We directly start to prove three properties of the @{term Earley}
 function that correspond conceptually to the three different operations that can occur while generating
@@ -784,7 +783,7 @@ to the proof of lemma @{thm[source] Scan_Earley} with the exception of the base 
 but can be proven with the help of lemmas @{thm[source] Earley_step_sub_Earley_bin} and @{thm[source] Earley_bin_idem}, the
 definition of @{term Earley_bin} and the definitions of @{term Predict} and @{term Complete}, respectively.
 
-Next, we give some intuition about the core idea of the completeness proof. Assume there exists an
+Next we give some intuition about the core idea of the completeness proof. Assume there exists an
 item $N \rightarrow \, \bullet A_0 A_1 \dots A_n$ in a \textit{complete} (we define what exactly this means) set of items $I$ where $A_i$ are either terminal or non-terminal symbols.
 Furthermore, assume there exist the following derivations for $i_0 \le i_1 \le \dots \le i_n \le i_{n+1}$:
 \begin{equation*}
@@ -796,7 +795,7 @@ Furthermore, assume there exist the following derivations for $i_0 \le i_1 \le \
 \end{split}
 \end{equation*}
 
-Then, we have one derivation to move the bullet over each terminal or non-terminal $A_i$ then the
+We have one derivation to move the bullet over each terminal or non-terminal $A_i$ and consequently the
 item $N \rightarrow \, A_0 A_1 \dots A_n \bullet$ should be in $I$ if $I$ is a \textit{complete} set of items.
 
 We formalize this idea as follows: a set $I$ is @{term partially_completed} if for each non-complete
@@ -808,8 +807,8 @@ predicate $P$ holds for the derivation $D$. This predicate is necessary since th
 requires a proof on the length of the derivation $D$, and thus we limit the @{term partially_completed}
 property to derivations that don't exceed a certain length.
 
-Lemma @{term partially_completed_upto} then formalizes the core idea: if 
-$N \rightarrow \, \alpha \bullet \beta, i, j$ in a set of items $I$ and there exists a derivation
+Lemma @{term partially_completed_upto} then formalizes the core idea: if the item
+$N \rightarrow \, \alpha \bullet \beta, i, j$ exists in a set of items $I$ and there exists a derivation
 $\beta \xRightarrow{D} \omega[j..k)$, then $I$ also contains the complete item 
 $N \rightarrow \, \alpha \beta \bullet, i, k$. Note that this
 holds only if @{term "j \<le> k"}, @{term "k \<le> |\<omega>|"}, all items of $I$ are well-formed and most importantly
@@ -819,9 +818,13 @@ $I$ must be @{term partially_completed} up to the length of the derivation $D$.
 definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a items \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
   "partially_completed k \<G> \<omega> I P \<equiv>
     \<forall>i j x a D.
-      i \<le> j \<and> j \<le> k \<and> k \<le> |\<omega>| \<and>
-      x \<in> bin I i \<and> next_symbol x = Some a \<and>
-      \<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle> \<and> P D \<longrightarrow>
+      i \<le> j \<and>
+      j \<le> k \<and>
+      k \<le> |\<omega>| \<and>
+      x \<in> bin I i \<and>
+      next_symbol x = Some a \<and>
+      \<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle> \<and>
+      P D \<longrightarrow>
       inc_item x j \<in> I"
 
 text\<open>

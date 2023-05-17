@@ -51,10 +51,8 @@ notation (latex)
 *)
 
 (* length *)
-(*
 notation (latex output)
   length  ("|_|")
-*)
 
 (* nth *)
 (*

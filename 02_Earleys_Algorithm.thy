@@ -21,17 +21,17 @@ the, rather trivial, input is @{term \<omega>} $= x + x + x$.
 
 Intuitively, Earley's recognizer works in principle like a top-down parser carrying along all possible
 parses simultaneously in an efficient manner.
-In detail, the algorithm works as follows: it scans the input @{term \<omega>} $=a_0,\dots,a_n$, constructing
+In detail, the algorithm works as follows: it parses the input @{term \<omega>} $=a_0,\dots,a_n$, constructing
 $n+1$ Earley bins $B_i$ that are sets of Earley items. An inital bin $B_0$ and one bin $B_{i+1}$ for
 each symbol $a_i$ of the input.
 In general, an Earley item $A \rightarrow \, \alpha \bullet \beta, i, j$ consists of four parts: a production rule of the grammar that we are currently
 considering, a bullet signalling how much of the productions right-hand side we have recognized so far,
-an origin $i$ describing the position in @{term \<omega>} where we started scanning, and an end $j$ indicating
+an origin $i$ describing the position in @{term \<omega>} where we started parsing, and an end $j$ indicating
 the position in @{term \<omega>} we are currently considering next for the remaining right-hand side of the production rule.
-Note that there will be only one set of earley items or only one bin $B$ and we say an item is conceptually part of bin $B_j$ if it's end is the index $j$.
+Note that there will be only one set of earley items or only one bin $B$ and we say an item is conceptually part of bin $B_j$ if its end is the index $j$.
 Table \ref{tab:earley_bins} lists the items for our example grammar. Bin $B_4$ contains for example the item $S \rightarrow \, S + \bullet S, 2, 4$.
 Or, we are considering the rule $S \rightarrow \, S + S$, have recognized the substring from $2$ to $4$ (the first index being
-inclusive the second one exclusive) of @{term \<omega>} by $\alpha = S +$, and are trying to scan $\beta = S$ from position 4 in \omega. 
+inclusive the second one exclusive) of @{term \<omega>} by $\alpha = S +$, and are trying to parse $\beta = S$ from position 4 in \omega. 
 
 The algorithm initializes $B$ by applying the \textit{Init} operation. It then proceeds to execute
 the \textit{Scan}, \textit{Predict} and \textit{Complete} operations listed in Figure \ref{fig:inference_rules}
@@ -45,7 +45,7 @@ in detail:
     For our example \textit{Init} adds the items $S \rightarrow \, \bullet x, 0, 0$ and $S \rightarrow \, \bullet S + S, 0 , 0$.
   \item The \textit{Scan} operation applies if there is a terminal to the right-hand side of the bullet, or items of the form $A \rightarrow \, \alpha \bullet a \beta, i, j$,
     and the $j$-th symbol of @{term \<omega>} matches the terminal symbol following the bullet. We add one new item $A \rightarrow \, \alpha a \bullet \beta, i, j+1$
-    to $B$ moving the bullet over the scanned terminal symbol.
+    to $B$ moving the bullet over the parsed terminal symbol.
 
     Considering our example, bin $B_3$ contains
     the item $S \rightarrow \, S \bullet + S, 2, 3$, the third symbol of @{term \<omega>} is the terminal $+$, so we add the
@@ -57,13 +57,13 @@ in detail:
     E.g. for the item  $S \rightarrow \, S + \bullet S, 0, 2$ in $B_2$
     we add the two items $S \rightarrow \, \bullet x, 2, 2$ and $S \rightarrow \, \bullet S + S, 2, 2$ corresponding
     to the two alternates of $S$. The bullet is set to the beginning of the right-hand side of the production
-    rule, the origin and end are set to $j = 2$ to indicate that we are starting to scan in the current bin and
-    have not scanned anything so far.
+    rule, the origin and end are set to $j = 2$ to indicate that we are starting to parse in the current bin and
+    have not parsed anything so far.
   \item The \textit{Complete} operation applies if we process an item with the bullet at the end of the
-    right-hand side of its production rule. For an item $B \rightarrow \, \gamma \bullet, j, k$ we have successfully scanned the substring
-    $\omega [ j..k \rangle$ and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
+    right-hand side of its production rule. For an item $B \rightarrow \, \gamma \bullet, j, k$ we have successfully parsed the substring
+    $\omega [ j..k \rangle$, as mentioned before indices $j$ and $k$ being inclusive respectively exclusive, and are now going back to the origin bin $B_j$ where we predicted this non-terminal. There we look for any item of the form
     $A \rightarrow \, \alpha \bullet B \beta, i, j$ containing a bullet in front of the non-terminal we completed, or the reason we
-    predicted it on the first place. Since we scanned the predicted non-terminal successfully, we are allowed to
+    predicted it on the first place. Since we parsed the predicted non-terminal successfully, we are allowed to
     move over the bullet, resulting in one new item $A \rightarrow \, \alpha B \bullet \beta, i, k$. Note in particular
     the origin and end indices.
 
@@ -75,7 +75,7 @@ in detail:
     which corresponds to recognizing the input as $x + (x + x)$.
 \end{enumerate}
 
-If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, @{term "|\<omega>| + 1"}$,
+If the algorithm encounters an item of the form $S \rightarrow \, \alpha, 0, \lvert \omega \rvert + 1$,
 it returns \textit{true}, otherwise it returns \textit{false}. For the tiny arithmetic expression grammar
 we generate the item $S \rightarrow \, S + S \bullet, 0, 5$ and return the correct answer \textit{true},
 since there exist derivations for $\omega = x + x + x$, e.g.
@@ -84,7 +84,7 @@ $S \Rightarrow S + S \Rightarrow S + x \Rightarrow S + S + x \xRightarrow{\ast} 
 
 To proof the correctness of Earley's recognizer algorithm we need to show the following theorem:
 
-$$S \rightarrow \, \alpha \bullet, 0, @{term "|\<omega>| + 1"} \in B \,\,\, \textrm{iff} \,\,\, S \, \Rightarrow^{\ast} \, @{term \<omega>}$$
+$$S \rightarrow \, \alpha \bullet, 0, \lvert \omega \rvert + 1 \in B \,\,\, \textrm{iff} \,\,\, S \, \Rightarrow^{\ast} \, @{term \<omega>}$$
 
 It follows from the following three lemmas:
 
