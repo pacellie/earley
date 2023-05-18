@@ -5,7 +5,7 @@ theory "03_Fixpoint_Earley_Recognizer"
 begin
 (*>*)
 
-chapter \<open>Earley's Algorithm Formalization \label{chapter:3}\<close>
+chapter \<open>Earley's Recognizer Formalization \label{chapter:3}\<close>
 
 text\<open>
 In this chapter we shortly introduce the interactive theorem prover Isabelle/HOL \cite{Nipkow:2002} used as
@@ -48,11 +48,7 @@ type_synonym 'a rule = "'a \<times> 'a list"
 type_synonym 'a rules = "'a rule list"
 
 datatype 'a cfg = 
-  CFG 
-    (\<NN> : "'a list") 
-    (\<TT> : "'a list") 
-    (\<RR> : "'a rules")
-    (\<SS> : "'a")
+  CFG (\<NN> : "'a list") (\<TT> : "'a list") (\<RR> : "'a rules") (\<SS> : "'a")
 
 definition rule_head :: "'a rule \<Rightarrow> 'a" where
   "rule_head = fst"
@@ -195,11 +191,7 @@ items @{term recognizing} if it contains at least one finished item, indicating 
 \<close>
 
 datatype 'a item = 
-  Item 
-    (item_rule: "'a rule") 
-    (item_bullet : nat) 
-    (item_origin : nat)
-    (item_end : nat)
+  Item (item_rule: "'a rule") (item_bullet : nat) (item_origin : nat) (item_end : nat)
 
 type_synonym 'a items = "'a item set"
 
@@ -327,8 +319,6 @@ necessarily takes an ordered approach to generating Earley items. Nonetheless, i
 of Earley items inductively seems to be not only the more elegant approach but also might simplify some of the proofs of
 this chapter, and is consequently future work worth considering.
 \<close>
-
-\<comment>\<open>TODO: illustrate inductive definition here\<close>
 
 section \<open>Well-formedness\<close>
 
@@ -533,18 +523,24 @@ text\<open>
 \begin{proof}
 
 Let $z$ denote an arbitrary but fixed item of @{term "Complete k I"}. By the definition of the
-@{term Complete} operation there exist items $x$ and $y$ such that: @{term "x \<in> bin I (item_origin y)"},
-@{term "y \<in> bin I k"}, @{term "is_complete y"}, @{term "next_symbol x = Some (item_rule_head y)"}, and
-@{term "z = inc_item x k"}.
+@{term Complete} operation there exist items $x$ and $y$ such that:
 
-Since $y$ is in bin $k$, it is complete and the set $I$ is sound (assumption \textit{sound}),
+\begin{equation*}
+\begin{alignedat}{2}
+  @{term "x \<in> bin I (item_origin y)"} \qquad (1) & \qquad @{term "next_symbol x = Some (item_rule_head y)"} \qquad & (2) \\
+  @{term "y \<in> bin I k"}               \qquad (3) & \qquad @{term "is_complete y"} \qquad & (4) \\
+  @{term "z = inc_item x k"}          \qquad (5) & &
+\end{alignedat}
+\end{equation*}
+
+Since $y$ is in bin $k$ (3), it is complete (4) and the set $I$ is sound (assumption \textit{sound}),
 there exists a derivation $E$ such that 
-  $$@{term "\<G> \<turnstile> [item_rule_head y] \<Rightarrow>\<^sup>E \<omega>[item_origin y..item_end y\<rangle>"}$$
-by lemma @{thm[source] derives_equiv_Derivation}. Similarly, since $x$ is in bin @{term "item_origin y"} and due to assumption \textit{sound},
+  $$@{term "\<G> \<turnstile> [item_rule_head y] \<Rightarrow>\<^sup>E \<omega>[item_origin y..item_end y\<rangle>"} \qquad (6)$$
+by lemma @{thm[source] derives_equiv_Derivation}. Similarly, since $x$ is in bin @{term "item_origin y"} (1) and due to assumption \textit{sound},
 there exists a derivation $D$ such that
-  $$ @{term "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>D \<omega>[item_origin x..item_origin y\<rangle> @ item_\<beta> x"}$$
+  $$@{term "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>D \<omega>[item_origin x..item_origin y\<rangle> @ item_\<beta> x"} \qquad (7) $$
 Note that @{term "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"} since the next symbol of $x$ is equal to
-the item rule head of $y$. Thus, by lemma @{thm[source] Derivation_append_rewrite}, and the definition of $D$ and $E$,
+the item rule head of $y$ (2). Thus, by lemma @{thm[source] Derivation_append_rewrite}, and the definition of $D$ (7) and $E$ (6),
 there exists a derivation $F$ such that
 
 \begin{equation*}
@@ -554,15 +550,15 @@ there exists a derivation $F$ such that
 \end{split}
 \end{equation*}
 
-Additionally, we know that $x$ and $y$ are well-formed items due to the facts that $x$ is in bin @{term "item_origin y"},
-$y$ is in bin $k$, and the assumption @{term "wf_items \<G> \<omega> I"}. Thus, we can discharge the assumptions of
+Additionally, we know that $x$ and $y$ are well-formed items due to the facts that $x$ is in bin @{term "item_origin y"} (1),
+$y$ is in bin $k$ (3), and the assumption @{term "wf_items \<G> \<omega> I"}. Thus, we can discharge the assumptions of
 lemma @{thm[source] slice_append} (@{term "item_origin x \<le> item_origin y"} and @{term "item_origin y \<le> item_end y"})
 and have 
   $$@{term "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>F \<omega>[item_origin x..item_end y\<rangle> @ tl (item_\<beta> x)"}$$
 
-Moreover, since @{term "z = inc_item x k"} and the next symbol of x is the item rule head of y, it follows
+Moreover, since @{term "z = inc_item x k"} (5) and the next symbol of x is the item rule head of y (2), it follows
 that @{term "tl (item_\<beta> x) = item_\<beta> z"}, and ultimately @{term "sound_item \<G> \<omega> z"}, again by the definition
-of $z$ and lemma @{thm[source] derives_equiv_Derivation}.
+of $z$ (5) and lemma @{thm[source] derives_equiv_Derivation}.
 
 \end{proof}
 \<close>
@@ -722,22 +718,27 @@ The proof is by induction in $k$ for arbitrary $i$, $x$, and $a$:
 
 The base case @{term "k = (0::nat)"} is trivial, since we have the assumption @{term "i+(1::nat) \<le> 0"}.
 
-For the induction step we can assume @{term "i+(1::nat) \<le> k+1"}, @{term "k+(1::nat) \<le> |\<omega>|"},
-@{term "x \<in> bin (Earley (k+1) \<G> \<omega>) i"} , @{term "next_symbol x = Some a"}, and @{term "\<omega>!i = a"}.
-Assumptions @{term "x \<in> bin (Earley (k+1) \<G> \<omega>) i"} and @{term "i+(1::nat) \<le> k+1"} imply that
-@{term "x \<in> bin (Earley k \<G> \<omega>) i"} by lemma @{thm[source] Earley_bin_bin_idem}.
+For the induction step we can assume 
+
+\begin{equation*}
+\begin{alignedat}{2}
+  @{term "i+(1::nat) \<le> k+1"}             \qquad & (1) \qquad @{term "k+(1::nat) \<le> |\<omega>|"} \qquad & (2) \\
+  @{term "x \<in> bin (Earley (k+1) \<G> \<omega>) i"} \qquad & (3) \qquad @{term "next_symbol x = Some a"} \qquad & (4) \\
+  @{term "\<omega>!i = a"} \qquad & (5) &
+\end{alignedat}
+\end{equation*}
+
+Assumptions (1) and (3) imply that @{term "x \<in> bin (Earley k \<G> \<omega>) i"} by lemma @{thm[source] Earley_bin_bin_idem}.
 
 We then consider two cases: 
 \begin{itemize}
   \item @{term "i+(1::nat) \<le> k"}: We can apply the induction hypothesis using assumptions
-    @{term "k+(1::nat) \<le> |\<omega>|"}, @{term "next_symbol x = Some a"}, @{term "\<omega>!i = a"} and 
-    additionally @{term "x \<in> bin (Earley k \<G> \<omega>) i"} and have @{term "inc_item x (i+1) \<in> Earley k \<G> \<omega>"}.
+    (2), (4), (5), and fact @{term "x \<in> bin (Earley k \<G> \<omega>) i"} and have @{term "inc_item x (i+1) \<in> Earley k \<G> \<omega>"}.
     The statement to proof follows by lemma @{thm[source] Earley_step_sub_Earley_bin} and the definition of
     @{term Earley_step}.
-  \item @{term "i+(1::nat) > k"}: We have @{term "i = k"}, since @{term "i+(1::nat) \<le> k+1"}.
+  \item @{term "i+(1::nat) > k"}: hence we have @{term "i = k"} by assumption (1).
     Thus, we have @{term "inc_item x (i+1) \<in> Scan k \<omega> (Earley k \<G> \<omega>)"} using assumptions
-    @{term "k+(1::nat) \<le> |\<omega>|"}, @{term "next_symbol x = Some a"}, @{term "\<omega>!i = a"}, and additionally
-    @{term "x \<in> bin (Earley k \<G> \<omega>) i"} by the definition of the @{term Scan} operation.
+    (2), (4), (5), and fact @{term "x \<in> bin (Earley k \<G> \<omega>) i"} by the definition of the @{term Scan} operation.
     This in turn implies @{term "inc_item x (i+1) \<in> Earley_step k \<G> \<omega> (Earley k \<G> \<omega>)"} by lemma @{thm[source] Earley_step_sub_Earley_bin}
     and the definition of @{term Earley_step}. Since the function @{term Earley_bin} is idempotent
     (lemma @{thm[source] Earley_bin_idem}), we have @{term "inc_item x (i+1) \<in> Earley k \<G> \<omega>"} by definition of
@@ -879,34 +880,43 @@ bullet must be equal to the length of $\alpha$, which implies @{term "x = Item (
 is a well-formed item and @{term "item_\<beta> x = []"}.
 
 We also know that $j = k$: we have @{term "\<G> \<turnstile> (item_\<beta> x) \<Rightarrow>\<^sup>D \<omega>[j..k\<rangle>"} and
-@{term "item_\<beta> x = []"} which in turn implies that @{term "\<omega>[j..k\<rangle> = []"}, and thus $j = k$.
+@{term "item_\<beta> x = []"} which in turn implies that @{term "\<omega>[j..k\<rangle> = []"}, and thus $j = k$ as trivial fact about the
+function @{term slice} follows.
 
 Hence, the statement follows from the assumption @{term "x \<in> I"} and the fact that @{term "x = Item (N,\<alpha>) |\<alpha>| i j"}.
 
-For the induction step we have @{term "item_\<beta> x = a#as"} and need to show that @{term "Item (N, \<alpha>) |\<alpha>| i k \<in> I"}:
-
-Using lemmas @{thm[source] Derivation_append_split} and @{thm[source] slice_append_split}
-there exists an index $j'$ and derivations $E$ and $F$ such that
+For the induction step we need to show that @{term "Item (N, \<alpha>) |\<alpha>| i k \<in> I"} using assumptions:
 
 \begin{equation*}
-\begin{split}
- @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>E \<omega>[j..j'\<rangle>"} \qquad & @{term "|E| \<le> |D|"} \\
- @{term "\<G> \<turnstile> as \<Rightarrow>\<^sup>F \<omega>[j'..k\<rangle>"} \qquad & @{term "|F| \<le> |D|"} \\
- @{term "j \<le> j'"} \qquad @{term "j' \<le> k"} &
-\end{split}
+\begin{alignedat}{2}
+  @{term "a # as = item_\<beta> x"} \qquad & (1) \qquad @{term "wf_items \<G> \<omega> I"} \qquad & (2) \\
+  @{term "j \<le> k"} \qquad & (3) \qquad @{term "k \<le> |\<omega>|"} \qquad & (4) \\ 
+  @{term "x = Item (N, \<alpha>) b i j"} \qquad & (5) \qquad @{term "x \<in> I"} \qquad & (6) \\
+  @{term "\<G> \<turnstile> item_\<beta> x \<Rightarrow>\<^sup>D \<omega>[j..k\<rangle>"} \qquad & (7) & \\
+  @{term "partially_completed k \<G> \<omega> I (\<lambda>D'. |D'| \<le> |D| )"} \qquad & (8) & \\
+\end{alignedat}
 \end{equation*}
 
-Using the facts about derivation $E$, @{term "j \<le> j'"}, @{term "j' \<le> k"} and the assumptions
-@{term "k \<le> |\<omega>|"}, @{term "x = Item (N, \<alpha>) b i j"}, @{term "x \<in> I"}, @{term "next_symbol x = Some a"}
-(since @{term "item_\<beta> x = a#as"}) and @{term "x \<in> bin I j"}, we have @{term "inc_item x j' \<in> I"} by the
-assumption @{term "partially_completed k \<G> \<omega> I (\<lambda>D'. |D'| \<le> |D| )"}.
+Using assumptions (1), (3), and (7) there exists an index $j'$ and derivations $E$ and $F$ by
+lemmas @{thm[source] Derivation_append_split} and @{thm[source] slice_append_split} such that
+
+\begin{equation*}
+\begin{alignedat}{2}
+ @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>E \<omega>[j..j'\<rangle>"} \qquad & (9) \qquad @{term "|E| \<le> |D|"} \qquad & (10) \\
+ @{term "\<G> \<turnstile> as \<Rightarrow>\<^sup>F \<omega>[j'..k\<rangle>"} \qquad & (11) \qquad @{term "|F| \<le> |D|"} \qquad & (12) \\
+ @{term "j \<le> j'"} \qquad & (13) \qquad @{term "j' \<le> k"} \qquad & (14) &
+\end{alignedat}
+\end{equation*}
+
+We have @{term "next_symbol x = Some a"} due to assumption (1), consequently we have
+@{term "inc_item x j' \<in> I"} using additionally the facts about derivation $E$ (9-10),
+the bounds on $j'$ (13-14) and the assumptions (4-7) by the definition of @{term partially_completed}.
 Note that @{term "inc_item x j' = Item (N, \<alpha>) (b+1) i j'"}, which we will from now on refer to as item $x'$.
 
-From @{term "partially_completed k \<G> \<omega> I (\<lambda>D'. |D'| \<le> |D| )"} and @{term "|F| \<le> |D|"}
-follows @{term "partially_completed k \<G> \<omega> I (\<lambda>D'. |D'| \<le> |F| )"}. We also have @{term "as = item_\<beta> x'"}
-and @{term "x' \<in> I"}. Hence, we can apply the induction hypothesis for $x'$ using additionally the assumptions
-@{term "wf_items \<G> \<omega> I"}, @{term "k \<le> |\<omega>|"}, and the facts about derivation $F$ from above, and
-have @{term "Item (N, \<alpha>) |\<alpha>| i k \<in> I"}, what we intended to show.
+From assumption (8) and fact (12) follows @{term "partially_completed k \<G> \<omega> I (\<lambda>D'. |D'| \<le> |F| )"}.
+We also have @{term "as = item_\<beta> x'"} and @{term "x' \<in> I"} by the definition of $x'$ and $x$ and the
+assumptions (1,5,6). Hence, we can apply the induction hypothesis for $x'$ using additionally the assumptions
+(2,4), and the facts about derivation $F$ (11-12) from above, and have @{term "Item (N, \<alpha>) |\<alpha>| i k \<in> I"}, what we intended to show.
 
 \end{proof}
 \<close>
@@ -923,9 +933,15 @@ text\<open>
 
 Let $x$, $i$, $a$, $D$, and $j$ be arbitrary but fixed.
 
-By definition of @{term partially_completed} we can assume @{term "i \<le> j"}, @{term "j \<le> k"},
-@{term "k \<le> |\<omega>|"}, @{term "x \<in> bin (Earley k \<G> \<omega>) i"}, @{term "next_symbol x = Some a"},
-@{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle>"}, and need to show @{term "inc_item x j \<in> Earley k \<G> \<omega>"}.
+By definition of @{term partially_completed} we need to show @{term "inc_item x j \<in> Earley k \<G> \<omega>"} and can assume
+
+\begin{equation*}
+\begin{alignedat}{2}
+  @{term "i \<le> j"} \qquad & (1) \qquad @{term "j \<le> k"} \qquad & (2) \\
+  @{term "k \<le> |\<omega>|"} \qquad & (3) \qquad @{term "x \<in> bin (Earley k \<G> \<omega>) i"} \qquad & (4) \\
+  @{term "next_symbol x = Some a"} \qquad & (5) \qquad @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle>"} \qquad & (6)
+\end{alignedat}
+\end{equation*}
 
 We proof this by complete induction on @{term "|D|"} for arbitrary $x$, $i$, $a$, $j$, and $D$,
 and split the proof into two different cases:
@@ -933,25 +949,25 @@ and split the proof into two different cases:
 \begin{itemize}
 
   \item @{term "D = []"}: Since @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle>"}, we have @{term "[a] = \<omega>[i..j\<rangle>"},
-  and consequently @{term "\<omega>!i = a"} and @{term "j = i+(1::nat)"}. Now we discharge the assumptions of lemma @{thm[source] Scan_Earley},
-  using additionally @{term "x \<in> bin (Earley k \<G> \<omega>) i"}, @{term "next_symbol x = Some a"}, and @{term "j \<le> |\<omega>|"},
+  and consequently @{term "mbox0 (\<omega>!i = a)"} and @{term "j = i+(1::nat)"}. Now we discharge the assumptions of lemma @{thm[source] Scan_Earley},
+  by assumptions (4,5) and the fact @{term "j \<le> |\<omega>|"} (that follows from assumptions (2,3)),
   and have @{term "inc_item x (i+1) \<in> Earley k \<G> \<omega>"} which finishes the proof since @{term "j = i+(1::nat)"}.
   
-  \item @{term "D = d#\<D>"}: Since @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle>"}, there exists an $\alpha$ such that
-  @{term "Derives1 \<G> [a] (fst d) (snd d) \<alpha>"} and @{term "\<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"}. From the definition
+  \item @{term "D = d#\<D>"}: Due to assumption @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>D \<omega>[i..j\<rangle>"}, there exists an $\alpha$ such that
+  @{term "Derives1 \<G> [a] (mbox0 (fst d)) (snd d) \<alpha>"} and @{term "\<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"} by the definition of @{term Derivation}. From the definition
   of @{term "Derives1"} we see that there exists a non-terminal $N$ such that @{term "a = N"},
   @{term "(N, \<alpha>) \<in> set (\<RR> \<G>)"}, @{term "fst d = (0::nat)"}, and @{term "snd d = (N, \<alpha>)"}.
 
-  Let $y$ denote @{term "Item (N,\<alpha>) 0 i i"}. Since we have @{term "i \<le> k"}, @{term "x \<in> bin (Earley k \<G> \<omega>) i"},
-  and @{term "next_symbol x = Some a"} by assumption, we showed that @{term "a = N"} and @{term "(N, \<alpha>) \<in> set (\<RR> \<G>)"},
+  Let $y$ denote @{term "Item (N,\<alpha>) 0 i i"}. Since we have @{term "i \<le> k"} (assumptions (1,2)), and assumptions (4,5),
+  and we showed that @{term "a = N"} and @{term "(N, \<alpha>) \<in> set (\<RR> \<G>)"},
   and $y$ is an initial item, we have @{term "y \<in> Earley k \<G> \<omega>"} by lemma @{thm[source] Predict_Earley}.
 
   Next, we use lemma @{thm[source] partially_completed_upto} to show that we the completed version
   of item $y$ is also present in the $j$-th bin of @{term "Earley k \<G> \<omega>"} since we have a derivation
   @{term "\<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"}, or @{term "Item (N,\<alpha>) |\<alpha>| i j \<in> bin (Earley k \<G> \<omega>) j"}:
-  we have @{term "i \<le> j"}, @{term "j \<le> |\<omega>|"} by assumption; have proven @{term "y \<in> Earley k \<G> \<omega>"};
+  we use assumptions (1-3); have proven @{term "y \<in> Earley k \<G> \<omega>"};
   and have @{term "wf_items \<G> \<omega> (Earley k \<G> \<omega>)"} by lemma @{thm[source] wf_Earley}. Additionally, we know
-  @{term "\<G> \<turnstile> (item_\<beta> y) \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"} since @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"} and
+  @{term "\<G> \<turnstile> item_\<beta> y \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"} since @{term "\<G> \<turnstile> [a] \<Rightarrow>\<^sup>\<D> \<omega>[i..j\<rangle>"} and
   @{term "a = N"}, by the definition of item $y$. Finally, we use the induction hypothesis to show
   @{term "partially_completed k \<G> \<omega> (Earley k \<G> \<omega>) (\<lambda>E. |E| \<le> |\<D>| )"}, since @{term "|\<D>| \<le> |D|"}
   by definition of @{term partially_completed}, using once again all of our assumptions. This in turn implies
@@ -960,10 +976,9 @@ and split the proof into two different cases:
   from the definition of a bin.
 
   Finally, we prove @{term "inc_item x j \<in> Earley k \<G> \<omega>"} by lemma @{thm[source] Complete_Earley}:
-  once again we have @{term "i \<le> j"}, @{term "j \<le> k"}, and @{term "x \<in> bin (Earley k \<G> \<omega>) i"} by assumption.
-  We also know that @{term "next_symbol x = Some N"}, due to our assumption @{term "next_symbol x = Some a"}
-  and @{term "a = N"}. Moreover, we have @{term "(N, \<alpha>) \<in> set (\<RR> \<G>)"} and most importantly
-  @{term "Item (N,\<alpha>) |\<alpha>| i j \<in> bin (Earley k \<G> \<omega>) j"}, which concludes this proof.
+  Once again we use assumptions (1,2,4), we also know that @{term "next_symbol x = Some N"},
+  due to assumption (5) and the fact @{term "a = N"}. Moreover, we have @{term "(N, \<alpha>) \<in> set (\<RR> \<G>)"}
+  and most importantly @{term "Item (N,\<alpha>) |\<alpha>| i j \<in> bin (Earley k \<G> \<omega>) j"}, which concludes this proof.
   
 \end{itemize}
 
@@ -999,9 +1014,9 @@ text\<open>
 
 We know that there exists an $\alpha$ and a derivation $D$ such that @{term "(\<SS> \<G>, \<alpha>) \<in> set (\<RR> \<G>)"} and @{term "\<G> \<turnstile> \<alpha> \<Rightarrow>\<^sup>D \<omega>"},
 since @{term "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"}. Let $x$ denote the item @{term "Item (\<SS> \<G>, \<alpha>) 0 0 0"}. By definition
-of $x$ and the @{term Init} operation and @{term \<E>arley} function, and the fact that @{term "Init \<G> \<subseteq> Earley k \<G> \<omega>"}, 
+of $x$ and the @{term Init} operation and @{term \<E>arley} function, and the fact that @{term "mbox0 (Init \<G> \<subseteq> Earley k \<G> \<omega>)"}, 
 we have @{term "x \<in> \<E>arley \<G> \<omega>"}, moreover we have @{term "partially_completed |\<omega>| \<G> \<omega> (\<E>arley \<G> \<omega>) (\<lambda>_. True)"}
-using lemma @{thm[source] partially_completed_\<E>arley} and assumption @{term "wf_\<G> \<G>"}, and thus have
+using lemma @{thm[source] partially_completed_\<E>arley} and assumption @{term "mbox0 (wf_\<G> \<G>)"}, and thus have
 @{term "Item (\<SS> \<G>,\<alpha>) |\<alpha>| 0 |\<omega>| \<in> \<E>arley \<G> \<omega>"} by lemmas @{thm[source] partially_completed_upto} and
 @{thm[source] wf_\<E>arley} and the definition of @{term partially_completed}. The statement @{term "recognizing (\<E>arley \<G> \<omega>) \<G> \<omega>"}
 follows immediately by the definition of @{term recognizing}, @{term is_finished}, and @{term is_complete}.

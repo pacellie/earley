@@ -912,12 +912,13 @@ proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
     using \<open>x = Item (N, \<alpha>) (length \<alpha>) i j\<close> Nil.prems(4) by blast
 next
   case (Cons b bs)
-  then obtain j' E F where *: 
+  obtain j' E F where *: 
     "Derivation cfg [b] E (slice j j' inp)"
     "Derivation cfg bs F (slice j' k inp)"
     "j \<le> j'" "j' \<le> k" "length E \<le> length D" "length F \<le> length D"
     using Derivation_concat_split[of cfg "[b]" bs D "slice j k inp"] slice_concat_Ex
-    by (metis append_Cons append_Nil Cons.prems(1))
+    using Cons.hyps(2) Cons.prems(1,6)
+    by (smt (verit, ccfv_threshold) Cons_eq_appendI append_self_conv2)
   have "x \<in> bin I j"
     using Cons.prems(3,4) by (auto simp: bin_def)
   moreover have "next_symbol x = Some b"

@@ -420,7 +420,7 @@ proof (induction b arbitrary: e)
 qed (auto simp: items_def)
 
 lemma distinct_bin_upds:
-  "distinct (items b)  \<Longrightarrow> distinct (items (bin_upds es b))"
+  "distinct (items b) \<Longrightarrow> distinct (items (bin_upds es b))"
   by (induction es arbitrary: b) (auto simp: distinct_bin_upd)
 
 lemma distinct_bins_upd:

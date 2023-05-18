@@ -10,7 +10,7 @@ syntax
   "length" :: "'a list \<Rightarrow> nat"  ("|_|")
 (*>*)
 
-chapter \<open>Earley's Algorithm \label{chapter:2}\<close>
+chapter \<open>Earley's Recognizer \label{chapter:2}\<close>
 
 text\<open>
 We present a slightly simplified version of Earley's original recognizer algorithm \cite{Earley:1970},

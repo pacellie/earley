@@ -15,9 +15,7 @@ datatype pointer =
   | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list"
 
 datatype 'a entry =
-  Entry         
-  (item : "'a item")
-  (pointer : pointer)
+  Entry (item : "'a item") (pointer : pointer)
 
 type_synonym 'a bin = "'a entry list"
 type_synonym 'a bins = "'a bin list"
@@ -52,24 +50,6 @@ text\<open>
     \end{tabular}
   \end{table}
 \<close>
-
-definition bins_items :: "'a bins \<Rightarrow> 'a items" where
-  "bins_items bs = \<Union> { set (items (bs!k)) | k. k < |bs| }"
-
-definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "bin_items_upto b i = { items b ! j | j. j < i \<and> j < |items b| }"
-
-definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "bins_items_upto bs k i = \<Union> { set (items (bs!l)) | l. l < k } \<union> bin_items_upto (bs!k) i"
-
-definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
-  "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item \<G> \<omega> x \<and> item_end x = k"
-
-definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
-  "wf_bin \<G> \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items \<G> \<omega> k (items b)"
-
-definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
-  "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < |bs|. wf_bin \<G> \<omega> k (bs!k)"
 
 definition Init_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
   "Init_list \<G> \<omega> \<equiv> 
@@ -148,10 +128,28 @@ fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Right
 definition \<E>arley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
   "\<E>arley_list \<G> \<omega> = Earley_list |\<omega>| \<G> \<omega>"
 
-section \<open>Sets or Bins as list\<close>
+section \<open>Sets or Bins as Lists\<close>
+
+definition bins_items :: "'a bins \<Rightarrow> 'a items" where
+  "bins_items bs = \<Union> { set (items (bs!k)) | k. k < |bs| }"
+
+definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bin_items_upto b i = { items b ! j | j. j < i \<and> j < |items b| }"
+
+definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bins_items_upto bs k i = \<Union> { set (items (bs!l)) | l. l < k } \<union> bin_items_upto (bs!k) i"
 
 lemma set_items_bin_upd:
   "set (items (bin_upd e b)) = set (items b) \<union> {item e}"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma distinct_bin_upd:
+  assumes "distinct (items b)"
+  shows "distinct (items (bin_upd e b))"
 (*<*)
   sorry
 (*>*)
@@ -166,9 +164,27 @@ lemma set_items_bin_upds:
 
 text\<open>\<close>
 
+lemma distinct_bin_upds:
+  assumes "distinct (items b)"
+  shows "distinct (items (bin_upds es b))"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
 lemma bins_items_bins_upd:
   assumes "k < |bs|"
   shows "bins_items (bins_upd bs k es) = bins_items bs \<union> set (items es)"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma distinct_bins_upd:
+  assumes "distinct (items (bs ! k))"
+  shows "distinct (items (bins_upd bs k es ! k))"
 (*<*)
   sorry
 (*>*)
@@ -177,9 +193,46 @@ text\<open>Similar lemmas about @{term bins_items_upto}\<close>
 
 section \<open>Well-formedness\<close>
 
-text\<open>Just note that @{term bin_upd}, @{term bin_upds}, @{term bins_upd}, @{term Init_list},
-@{term Scan_list}, @{term Predict_list}, @{term Complete_list} only generate @{term wf_bin} or
-@{term wf_bins}\<close>
+definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
+  "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item \<G> \<omega> x \<and> item_end x = k"
+
+definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
+  "wf_bin \<G> \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items \<G> \<omega> k (items b)"
+
+definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
+  "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < |bs|. wf_bin \<G> \<omega> k (bs!k)"
+
+lemma wf_bin_bin_upd:
+  assumes "wf_bin \<G> \<omega> k b"
+  assumes "wf_item \<G> \<omega> (item e) \<and> item_end (item e) = k"
+  shows "wf_bin \<G> \<omega> k (bin_upd e b)"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma wf_bin_bin_upds:
+  assumes "wf_bin \<G> \<omega>  k b"
+  assumes "distinct (items es)"
+  assumes "\<forall>x \<in> set (items es). wf_item \<G> \<omega>  x \<and> item_end x = k"
+  shows "wf_bin \<G> \<omega> k (bin_upds es b)"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma wf_bins_bins_upd:
+  assumes "wf_bins \<G> \<omega>  bs"
+  assumes "distinct (items es)"
+  assumes "\<forall>x \<in> set (items es). wf_item \<G> \<omega>  x \<and> item_end x = k"
+  shows "wf_bins \<G> \<omega> (bins_upd bs k es)"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
 
 text\<open>Explain termination, how it is proved in Isabelle and custom induction schema.\<close>
 
@@ -338,20 +391,7 @@ lemma impossible_complete_item: \<comment>\<open>Detailed\<close>
 
 text\<open>\<close>
 
-lemma Complete_Un_eq_terminal: \<comment>\<open>Detailed?\<close>
-  assumes "wf_\<G> \<G>"
-  assumes "wf_items \<G> \<omega> I"
-  assumes "wf_item \<G> \<omega> x"
-  assumes "next_symbol z = Some a"
-  assumes "is_terminal \<G> a"
-  shows "Complete k (I \<union> {x}) = Complete k I"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma Complete_Un_eq_nonterminal: \<comment>\<open>Detailed?\<close>
+lemma Complete_Un_eq_nonterminal: \<comment>\<open>Detailed\<close>
   assumes "wf_\<G> \<G>"
   assumes "wf_items \<G> \<omega> I"
   assumes "sound_items \<G> \<omega> I"
@@ -361,28 +401,6 @@ lemma Complete_Un_eq_nonterminal: \<comment>\<open>Detailed?\<close>
   assumes "next_symbol z = Some a"
   assumes "is_nonterminal \<G> a"
   shows "Complete k (I \<union> {x}) = Complete k I"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma Complete_sub_bins_Un_Complete_list: \<comment>\<open>Detailed?\<close>
-  assumes "wf_bins \<G> \<omega> bs"
-  assumes "wf_item \<G> \<omega> x"
-  assumes "is_complete z"
-  assumes "Complete k I \<subseteq> bins_items bs"
-  assumes "I \<subseteq> bins_items bs"
-  shows "Complete k (I \<union> {x}) \<subseteq> bins_items bs \<union> set (items (Complete_list k x bs red))"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma Earley_bin_list'_mono: \<comment>\<open>Omit?\<close>
-  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  shows "bins_items bs \<subseteq> bins_items (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -432,6 +450,19 @@ lemma Earley_bin_list_idem:
   assumes "sound_items \<G> \<omega> (bins_items bs)"
   assumes "nonempty_derives \<G>"
   shows "bins_items (Earley_bin_list k \<G> \<omega> (Earley_bin_list k \<G> \<omega> bs)) = bins_items (Earley_bin_list k \<G> \<omega> bs)"
+(*<*)
+  sorry
+(*>*)
+
+text\<open>\<close>
+
+lemma funpower_\<pi>_step_sub_\<pi>_it:
+  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
+  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "is_sentence \<G> \<omega>"
+  assumes "nonempty_derives \<G>"
+  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
+  shows "funpower (Earley_step k \<G> \<omega>) n (bins_items bs) \<subseteq> bins_items (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
