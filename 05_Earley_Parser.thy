@@ -6,7 +6,7 @@ theory "05_Earley_Parser"
 begin
 (*>*)
 
-chapter\<open>Earley Parser Implementation\<close>
+chapter\<open>Earley Parser Implementation \label{chap:05}\<close>
 
 section \<open>Pointer lemmas\<close>
 
