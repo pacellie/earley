@@ -92,7 +92,7 @@ text\<open>\<close>
 lemma sound_mono_ptrs_Earley_bin_list': \<comment>\<open>Detailed\<close>
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "nonempty_derives \<G>"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "sound_ptrs \<omega> bs" 
   assumes "mono_red_ptr bs"
   shows "sound_ptrs \<omega> (Earley_bin_list' k \<G> \<omega> bs i) \<and> mono_red_ptr (Earley_bin_list' k \<G> \<omega> bs i)"
@@ -105,7 +105,7 @@ text\<open>\<close>
 lemma sound_mono_ptrs_Earley_bin_list:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "nonempty_derives \<G>"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "sound_ptrs \<omega> bs"
   assumes "mono_red_ptr bs"
   shows "sound_ptrs \<omega> (Earley_bin_list k \<G> \<omega> bs) \<and> mono_red_ptr (Earley_bin_list k \<G> \<omega> bs)"

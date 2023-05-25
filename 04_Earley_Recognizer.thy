@@ -7,7 +7,7 @@ begin
 
 chapter\<open>Earley Recognizer Implementation \label{chap:04}\<close>
 
-section\<open>The Executable Algorithm\<close>
+section\<open>The Executable Algorithm \label{sec:alg}\<close>
 
 text\<open>
 In Chapter \ref{chapter:3} we proved correctness of an abstract set-based implementation of Earley's simplified recognizer algorithm. In this chapter we implement
@@ -315,29 +315,39 @@ to the list and using natural numbers as pointers, maps more easily to the imper
 idea was to refine the algorithm once more to an imperative version. But this exceeded the scope of this thesis.
 \<close>
 
-section \<open>Sets or Bins as Lists\<close>
+section \<open>Sets or Bins as Lists \label{sec:sets}\<close>
 
 text\<open>
-Draft:
-Explain abstraction function and how they will be used.
+In this section we prove that the list representation of bins, in particular updating a bin or bins with the
+functions @{term bin_upd}, @{term bin_upds}, and @{term bins_upd}, fulfills the required set semantics.
+We define a function @{term bins} that accumulates all bins into one set of Earley items.
+Note that a call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} iterates through the entries of
+the $k$-th bin or the current worklist in ascending order starting at index $i$. All items at indices
+@{term "j \<ge> i"} are untouched and thus can be considered future work. We make two further definitions capturing
+the set of items which are already 'done'. The term @{term "bin_upto b i"} represents the items of a bin $b$
+up to but not including the $i$-th index. Similarly, function @{term bins_upto} computes the set of
+items consisting $k$-th bin up to but not including the $i$-th index and the items of all previous bins. 
 \<close>
 
-definition bins_items :: "'a bins \<Rightarrow> 'a items" where
-  "bins_items bs = \<Union> { set (items (bs!k)) | k. k < |bs| }"
+definition bins :: "'a bins \<Rightarrow> 'a items" where
+  "bins bs = \<Union> { set (items (bs!k)) | k. k < |bs| }"
 
-definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "bin_items_upto b i = { items b ! j | j. j < i \<and> j < |items b| }"
+definition bin_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bin_upto b i = { items b ! j | j. j < i \<and> j < |items b| }"
 
-definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
-  "bins_items_upto bs k i = \<Union> { set (items (bs!l)) | l. l < k } \<union> bin_items_upto (bs!k) i"
+definition bins_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
+  "bins_upto bs k i = \<Union> { set (items (bs!l)) | l. l < k } \<union> bin_upto (bs!k) i"
 
 text\<open>
-Draft:
-Explain sets as lists and note upto similar lemmas but omitted.
+The next six lemmas then proof the set semantics of updating one bin with one item (@{term bin_upd}),
+multiple items (@{term bin_upds}), or updating a particular bin with multiple items (@{term bins_upd}).
+The proofs are straightforward and respectively by induction on the bin $b$ for an arbitrary item $e$,
+by induction on the items @{term es} to be inserted for an arbitrary bin $b$, or by definition of
+@{term bin_upds} and @{term bins} using the previously proven lemmas.
 \<close>
 
 lemma set_items_bin_upd:
-  "set (items (bin_upd e b)) = set (items b) \<union> {item e}"
+  "set (items (bin_upd e b)) = set (items b) \<union> { item e }"
 (*<*)
   sorry
 (*>*)
@@ -370,9 +380,9 @@ lemma distinct_bin_upds:
 
 text\<open>\<close>
 
-lemma bins_items_bins_upd:
+lemma bins_bins_upd:
   assumes "k < |bs|"
-  shows "bins_items (bins_upd bs k es) = bins_items bs \<union> set (items es)"
+  shows "bins (bins_upd bs k es) = bins bs \<union> set (items es)"
 (*<*)
   sorry
 (*>*)
@@ -386,10 +396,28 @@ lemma distinct_bins_upd:
   sorry
 (*>*)
 
-section \<open>Well-formedness \label{sec:04-wellformedness}\<close>
+text\<open>
+In our formalization we prove further basic lemmas about functions @{term bin_upd}, @{term bin_upds},
+and @{term bins_upd}. In particular how updating bins changes the length of a bin, interacts with
+indexing into a bin or does not change the ordering of the items in a bin. Furthermore, we prove
+similar lemmas about functions @{term bin_upto} and @{term bins_upto} and their interplay with bin(s)
+updates. We omit them for brevity.
+\<close>
+
+section \<open>Well-formedness and Termination \label{sec:04-wellformedness}\<close>
+
+text\<open>
+We also refine the notion of well-formed items to well-formed bin items. An item is a well-formed bin
+item for a the $k$-th bin if it is a well-formed item and its end index coincides with $k$. We call
+a bin well-formed if it only contains well-formed bin items and its items are distinct, and lift this
+notion of well-formedness to the toplevel list of bins.
+\<close>
+
+definition wf_bin_item :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "wf_bin_item \<G> \<omega> k x \<equiv> wf_item \<G> \<omega> x \<and> item_end x = k"
 
 definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
-  "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item \<G> \<omega> x \<and> item_end x = k"
+  "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_bin_item \<G> \<omega> k x"
 
 definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
   "wf_bin \<G> \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items \<G> \<omega> k (items b)"
@@ -397,9 +425,14 @@ definition wf_bin :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rig
 definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < |bs|. wf_bin \<G> \<omega> k (bs!k)"
 
+text\<open>
+Next we prove that inserting well-formed bin items maintains the well-formedness of a bin or bins.
+The proofs are structurally analogous to those of Section \ref{sec:sets}.
+\<close>
+
 lemma wf_bin_bin_upd:
   assumes "wf_bin \<G> \<omega> k b"
-  assumes "wf_item \<G> \<omega> (item e) \<and> item_end (item e) = k"
+  assumes "wf_bin_item \<G> \<omega> k (item e)"
   shows "wf_bin \<G> \<omega> k (bin_upd e b)"
 (*<*)
   sorry
@@ -408,9 +441,9 @@ lemma wf_bin_bin_upd:
 text\<open>\<close>
 
 lemma wf_bin_bin_upds:
-  assumes "wf_bin \<G> \<omega>  k b"
+  assumes "wf_bin \<G> \<omega> k b"
+  assumes "\<forall>x \<in> set (items es). wf_bin_item \<G> \<omega> k x"
   assumes "distinct (items es)"
-  assumes "\<forall>x \<in> set (items es). wf_item \<G> \<omega>  x \<and> item_end x = k"
   shows "wf_bin \<G> \<omega> k (bin_upds es b)"
 (*<*)
   sorry
@@ -419,20 +452,22 @@ lemma wf_bin_bin_upds:
 text\<open>\<close>
 
 lemma wf_bins_bins_upd:
-  assumes "wf_bins \<G> \<omega>  bs"
+  assumes "wf_bins \<G> \<omega> bs"
+  assumes "\<forall>x \<in> set (items es). wf_bin_item \<G> \<omega> k x"
   assumes "distinct (items es)"
-  assumes "\<forall>x \<in> set (items es). wf_item \<G> \<omega>  x \<and> item_end x = k"
   shows "wf_bins \<G> \<omega> (bins_upd bs k es)"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
-
-text\<open>Explain termination, how it is proved in Isabelle and custom induction schema.\<close>
+text\<open>
+In Section \ref{sec:alg} we had to define the function @{term Earley_bin_list'} as a partial function
+since a call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} might never terminate if the function
+keeps appending new items to the $k$-th bin it currently operates on.
+\<close>
 
 fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
-  "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_item \<G> \<omega> x \<and> item_end x = k } - i"
+  "earley_measure (k, \<G>, \<omega>, bs) i = |{ x | x. wf_bin_item \<G> \<omega> k x }| - i"
 
 definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
   "wf_earley_input = { 
@@ -482,7 +517,7 @@ lemma wf_earley_input_\<E>arley_list:
 section \<open>Soundness\<close>
 
 lemma Init_list_eq_Init:
-  shows "bins_items (Init_list \<G> \<omega>) = Init \<G>"
+  shows "bins (Init_list \<G> \<omega>) = Init \<G>"
 (*<*)
   sorry
 (*>*)
@@ -491,7 +526,7 @@ text\<open>\<close>
 
 lemma Scan_list_sub_Scan:
   assumes "wf_bins \<G> \<omega> bs"
-  assumes "bins_items bs \<subseteq> I"
+  assumes "bins bs \<subseteq> I"
   assumes "k < |bs|"
   assumes "k < |\<omega>|"
   assumes "x \<in> set (items (bs!k))"
@@ -505,11 +540,11 @@ text\<open>\<close>
 
 lemma Predict_list_sub_Predict:
   assumes "wf_bins \<G> \<omega> bs"
-  assumes "bins_items bs \<subseteq> I"
+  assumes "bins bs \<subseteq> I"
   assumes "k < |bs|"
   assumes "x \<in> set (items (bs!k))"
-  assumes "next_symbol x = Some X"
-  shows "set (items (Predict_list k \<G> X)) \<subseteq> Predict k \<G> I"
+  assumes "next_symbol x = Some N"
+  shows "set (items (Predict_list k \<G> N)) \<subseteq> Predict k \<G> I"
 (*<*)
   sorry
 (*>*)
@@ -518,10 +553,10 @@ text\<open>\<close>
 
 lemma Complete_list_sub_Complete:
   assumes "wf_bins \<G> \<omega> bs"
-  assumes "bins_items bs \<subseteq> I"
+  assumes "bins bs \<subseteq> I"
   assumes "k < |bs|"
   assumes "x \<in> set (items (bs!k))"
-  assumes "next_symbol x = None"
+  assumes "is_complete x"
   shows "set (items (Complete_list k x bs red)) \<subseteq> Complete k I"
 (*<*)
   sorry
@@ -531,8 +566,8 @@ text\<open>\<close>
 
 lemma Earley_bin_list'_sub_Earley_bin:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (Earley_bin_list' k \<G> \<omega> bs i) \<subseteq> Earley_bin k \<G> \<omega> I"
+  assumes "bins bs \<subseteq> I"
+  shows "bins (Earley_bin_list' k \<G> \<omega> bs i) \<subseteq> Earley_bin k \<G> \<omega> I"
 (*<*)
   sorry
 (*>*)
@@ -541,8 +576,8 @@ text\<open>\<close>
 
 lemma Earley_bin_list_sub_Earley_bin:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "bins_items bs \<subseteq> I"
-  shows "bins_items (Earley_bin_list k \<G> \<omega> bs) \<subseteq> Earley_bin k \<G> \<omega> I"
+  assumes "bins bs \<subseteq> I"
+  shows "bins (Earley_bin_list k \<G> \<omega> bs) \<subseteq> Earley_bin k \<G> \<omega> I"
 (*<*)
   sorry
 (*>*)
@@ -552,7 +587,7 @@ text\<open>\<close>
 lemma Earley_list_sub_\<E>:
   assumes "wf_\<G> \<G>"
   assumes "k \<le> |\<omega>|"
-  shows "bins_items (Earley_list k \<G> \<omega>) \<subseteq> Earley k \<G> \<omega>"
+  shows "bins (Earley_list k \<G> \<omega>) \<subseteq> Earley k \<G> \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -561,7 +596,7 @@ text\<open>\<close>
 
 lemma \<E>arley_list_sub_\<E>arley:
   assumes "wf_\<G> \<G>" 
-  shows "bins_items (\<E>arley_list \<G> \<omega>) \<subseteq> \<E>arley \<G> \<omega>"
+  shows "bins (\<E>arley_list \<G> \<omega>) \<subseteq> \<E>arley \<G> \<omega>"
 (*<*)
   sorry
 (*>*)
@@ -604,11 +639,11 @@ text\<open>\<close>
 
 lemma Earley_step_sub_Earley_bin_list': \<comment>\<open>Detailed: START WITH THIS\<close>
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
-  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k i) \<subseteq> bins_items bs"
-  shows "Earley_step k \<G> \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list' k \<G> \<omega> bs i)"
+  assumes "Earley_step k \<G> \<omega> (bins_upto bs k i) \<subseteq> bins bs"
+  shows "Earley_step k \<G> \<omega> (bins bs) \<subseteq> bins (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -617,11 +652,11 @@ text\<open>\<close>
 
 lemma Earley_step_sub_Earley_bin_list:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
-  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
-  shows "Earley_step k \<G> \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list k \<G> \<omega> bs)"
+  assumes "Earley_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs"
+  shows "Earley_step k \<G> \<omega> (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -630,10 +665,10 @@ text\<open>\<close>
 
 lemma Earley_bin_list'_idem: \<comment>\<open>Detailed: SECOND IS THIS\<close>
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "nonempty_derives \<G>"
   assumes "i \<le> j"
-  shows "bins_items (Earley_bin_list' k \<G> \<omega> (Earley_bin_list' k \<G> \<omega> bs i) j) = bins_items (Earley_bin_list' k \<G> \<omega> bs i)"
+  shows "bins (Earley_bin_list' k \<G> \<omega> (Earley_bin_list' k \<G> \<omega> bs i) j) = bins (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -642,9 +677,9 @@ text\<open>\<close>
 
 lemma Earley_bin_list_idem:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "nonempty_derives \<G>"
-  shows "bins_items (Earley_bin_list k \<G> \<omega> (Earley_bin_list k \<G> \<omega> bs)) = bins_items (Earley_bin_list k \<G> \<omega> bs)"
+  shows "bins (Earley_bin_list k \<G> \<omega> (Earley_bin_list k \<G> \<omega> bs)) = bins (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -653,11 +688,11 @@ text\<open>\<close>
 
 lemma funpower_\<pi>_step_sub_\<pi>_it:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
-  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
-  shows "funpower (Earley_step k \<G> \<omega>) n (bins_items bs) \<subseteq> bins_items (Earley_bin_list k \<G> \<omega> bs)"
+  assumes "Earley_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs"
+  shows "funpower (Earley_step k \<G> \<omega>) n (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -666,11 +701,11 @@ text\<open>\<close>
 
 lemma Earley_bin_sub_Earley_bin_list:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins_items bs)"
+  assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
-  assumes "Earley_step k \<G> \<omega> (bins_items_upto bs k 0) \<subseteq> bins_items bs"
-  shows "Earley_bin k \<G> \<omega> (bins_items bs) \<subseteq> bins_items (Earley_bin_list k \<G> \<omega> bs)"
+  assumes "Earley_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs"
+  shows "Earley_bin k \<G> \<omega> (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -682,7 +717,7 @@ lemma Earley_sub_Earley_list:
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
   assumes "k \<le> |\<omega>|"
-  shows "Earley k \<G> \<omega> \<subseteq> bins_items (Earley_list k \<G> \<omega>)"
+  shows "Earley k \<G> \<omega> \<subseteq> bins (Earley_list k \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -693,7 +728,7 @@ lemma \<E>arley_sub_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
-  shows "\<E>arley \<G> \<omega> \<subseteq> bins_items (\<E>arley_list \<G> \<omega>)"
+  shows "\<E>arley \<G> \<omega> \<subseteq> bins (\<E>arley_list \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)

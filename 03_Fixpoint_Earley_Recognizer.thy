@@ -5,7 +5,7 @@ theory "03_Fixpoint_Earley_Recognizer"
 begin
 (*>*)
 
-chapter \<open>Earley's Recognizer Formalization \label{chapter:3}\<close>
+chapter \<open>Earley Recognizer Formalization \label{chapter:3}\<close>
 
 text\<open>
 In this chapter we shortly introduce the interactive theorem prover Isabelle/HOL \cite{Nipkow:2002} used as
