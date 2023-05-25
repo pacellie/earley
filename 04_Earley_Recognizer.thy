@@ -326,7 +326,7 @@ the $k$-th bin or the current worklist in ascending order starting at index $i$.
 @{term "j \<ge> i"} are untouched and thus can be considered future work. We make two further definitions capturing
 the set of items which are already 'done'. The term @{term "bin_upto b i"} represents the items of a bin $b$
 up to but not including the $i$-th index. Similarly, function @{term bins_upto} computes the set of
-items consisting $k$-th bin up to but not including the $i$-th index and the items of all previous bins. 
+items consisting of the $k$-th bin up to but not including the $i$-th index and the items of all previous bins. 
 \<close>
 
 definition bins :: "'a bins \<Rightarrow> 'a items" where
@@ -343,7 +343,7 @@ The next six lemmas then proof the set semantics of updating one bin with one it
 multiple items (@{term bin_upds}), or updating a particular bin with multiple items (@{term bins_upd}).
 The proofs are straightforward and respectively by induction on the bin $b$ for an arbitrary item $e$,
 by induction on the items @{term es} to be inserted for an arbitrary bin $b$, or by definition of
-@{term bin_upds} and @{term bins} using the previously proven lemmas.
+@{term bin_upds} and @{term bins} using previously proven lemmas in the appropriate proofs.
 \<close>
 
 lemma set_items_bin_upd:
@@ -461,13 +461,38 @@ lemma wf_bins_bins_upd:
 (*>*)
 
 text\<open>
+Intuitively, a recursive function terminates if for every recursive call the 'size' of its input strictly decreases.
+All functions defined in Isabelle must be total. There are different ways to define a recursive function depending on the complexity of its termination:
+(1) with the \textit{fun} keyword. Isabelle then tries to find a measure of the input which proves
+termination. If successful we obtain an induction schema corresponding to the function definition.
+(2) via the \textit{function} keyword. We then need to define and prove a suitable measure by hand.
+(3) if the function is a partial function we need to define it with the keyword @{term partial_function}.
+For tail-recursive functions the definition is straightforward, otherwise we have to wrap the
+return type in an option to signal possible non-termination. But contrary to total functions we do
+\textit{not} obtain the usual induction schema. To prove anything useful about a partial function we
+have to define the set of inputs and a corresponding measure for which the function terminates and
+subsequently prove an appropriate induction schema by hand.
+
 In Section \ref{sec:alg} we had to define the function @{term Earley_bin_list'} as a partial function
 since a call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} might never terminate if the function
-keeps appending new items to the $k$-th bin it currently operates on.
-\<close>
+keeps appending arbitrary new items to the $k$-th bin it currently operates on. But we know that the
+newly generated are not arbitrary but well-formed bin items. From lemma @{term finiteness} we also
+know that the set of well-formed items is finite. Since we made sure to only add each item once to
+a bin, the function @{term Earley_bin_list'} will eventually run out of fresh items to insert into
+the bin it currently operates on and terminate.
 
-fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
-  "earley_measure (k, \<G>, \<omega>, bs) i = |{ x | x. wf_bin_item \<G> \<omega> k x }| - i"
+In Isabelle we define the set of well-formed earley input as a set of quadruples consisting of the
+index $k$ of the current bin, the grammar @{term \<G>}, the input @{term \<omega>}, and the bins @{term bs}.
+Note that we not only require the bins to be well-formed but also suitable bounds on $k$ and the length
+of the bins to make sure that we are not indexing outside the input or the bins as well as a well-formed
+grammar to ensure we only generate well-formed bin items. We then define a suitable measure for the
+termination of @{term "Earley_bin_list' k \<G> \<omega> bs i"} which intuitively corresponds to the number of well-formed bin
+items that are still possible to generate from index $i$ onwards. Finally we prove an induction schema
+for the function by complete induction on the measure of the input. We omit showing the schema explicitly
+since it is rather verbose. It partitions the function into five cases: the base case where we have
+run out of items to operate on; one case for completion and prediction each; and two cases for scanning
+covering the normal and the special case where $k$ exceeds the length of the input.
+\<close>
 
 definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
   "wf_earley_input = { 
@@ -477,6 +502,17 @@ definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<tim
       wf_\<G> \<G> \<and>
       wf_bins \<G> \<omega> bs
   }"
+
+fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
+  "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_bin_item \<G> \<omega> k x } - i"
+
+text\<open>
+Concluding this section, we prove that we maintain the well-formedness of the input for functions @{term Earley_bin_list'},
+by induction using our new induction schema using lemma @{term wf_bins_bins_upd} and straightforward and thus ommitted auxiliary lemmas
+stating that the scanning, predicting and completing only generates well-formed bin items,
+@{term Earley_bin_list}, by definition, @{term Earley_list}, by induction on $k$ using additionally the fact that the initial bins are well-formed, and @{term \<E>arley_list},
+by definition, using previously proven lemmas appropriately.
+\<close>
 
 lemma wf_earley_input_Earley_bin_list':
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input" 
@@ -515,6 +551,14 @@ lemma wf_earley_input_\<E>arley_list:
 (*>*)
 
 section \<open>Soundness\<close>
+
+text\<open>
+TODO:
+
+we prove subsumption in the easy direction, why is the direction easy? in this direction we look
+at only one item in each function call whereas in the set based approach we apply the earley step
+function for all items in the bin at once. 
+\<close>
 
 lemma Init_list_eq_Init:
   shows "bins (Init_list \<G> \<omega>) = Init \<G>"
@@ -733,10 +777,10 @@ lemma \<E>arley_sub_\<E>arley_list:
   sorry
 (*>*)
 
-section \<open>Main Theorems\<close>
+section \<open>Correctness\<close>
 
 definition recognizing_list :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool" where
-  "recognizing_list I \<G> \<omega> \<equiv> \<exists>x \<in> set (items (I ! |\<omega>| )). is_finished \<G> \<omega> x"
+  "recognizing_list I \<G> \<omega> \<equiv> \<exists>x \<in> set (items (I!|\<omega>| )). is_finished \<G> \<omega> x"
 
 theorem recognizing_list_iff_recognizing:
   assumes "wf_\<G> \<G>"

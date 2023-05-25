@@ -84,7 +84,7 @@ syntax
 
 text\<open>
 Furthermore, in Isabelle, lists are constructed from the empty list @{term "[]"} via the infix cons-operator @{term "(#)"};
-the operator @{term "(@)"} appends two lists; @{term "|xs|"} denotes the length and @{term "xs!n"} returns the $n$-th item of the list @{term xs}.
+the operator @{term "(@)"} appends two lists; @{term "length xs"} denotes the length and @{term "xs!n"} returns the $n$-th item of the list @{term xs}.
 Sets follow the standard mathematical notation including
 the commonly found set builder notation or set comprehensions @{term "{ x | x. P x}"}. Sets can also be defined
 inductively using the keyword \textit{inductive\_set}.

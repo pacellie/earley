@@ -8,9 +8,6 @@ begin
 (*<*)
 syntax
   "length" :: "'a list \<Rightarrow> nat"  ("|_|")
-
-syntax
-  "card" ::  "'a set \<Rightarrow> nat" ("|_|")
 (*>*)
 
 chapter \<open>Earley's Recognizer \label{chapter:2}\<close>
