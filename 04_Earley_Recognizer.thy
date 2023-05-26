@@ -10,7 +10,7 @@ chapter\<open>Earley Recognizer Implementation \label{chap:04}\<close>
 section\<open>The Executable Algorithm \label{sec:alg}\<close>
 
 text\<open>
-In Chapter \ref{chapter:3} we proved correctness of an abstract set-based implementation of Earley's simplified recognizer algorithm. In this chapter we implement
+In Chapter \ref{chapter:3} we proved correctness of a set-based implementation of Earley's simplified recognizer algorithm. In this chapter we implement
 an executable version. But instead of re-proving soundness and completeness
 for the executable algorithm, we follow the approach of Jones \cite{Jones:1972}. We refine our set-based
 approach from Chapter \ref{chapter:3} to a \textit{functional} list-based implementation and prove subsumption in both
@@ -34,7 +34,7 @@ corresponding to the three basic operations, for the existence of an entry with 
     from which this item was computed. Hence, we keep a predecessor pointer @{term "mbox0 (Pre pre)"}
     where @{term pre} is a natural number indicating the index of item $x'$ in bin $k-1$. Table \ref{tab:earley-items-pointers} contains
     the entry $S \rightarrow \, x \bullet, 2, 3; 1$ in bin $B_3$, the predecessor pointer is $1$ (we omit the @{term Pre} constructor for readability) since this item
-    was created by the the item $S \rightarrow \, x \bullet, 2, 2$ of the entry at index $1$ in $B_2$.
+    was created by the item $S \rightarrow \, x \bullet, 2, 2$ of the entry at index $1$ in $B_2$.
   \item It was completed. Note that an item might be completed in more than one way. In each case the
     item $x$ has a complete reduction item $y$ in the current bin and a predecessor item $x'$ in the
     origin bin of $y$. We track this information by at least one reduction pointer
@@ -157,7 +157,7 @@ text\<open>
 In our data representation a bin is just a simple list but it implements a set. Hence we need to make sure
 that updating a bin (@{term bin_upd}) or inserting an additional entry into a bin maintains its set properties. Additionally, since it is possible to generate multiple
 reduction pointers for the same item, we have to take care to update the pointer information accordingly, in particular merge reduction triples,
-if the item of the entry to be inserted matches the item of an already present item. Function @{term bin_upds} inserts
+if the item of the entry to be inserted matches the item of an already present entry. Function @{term bin_upds} inserts
 multiple entries into a specific bin. Note that an alternative but equivalent implementation of @{term bin_upds} is @{term "fold bin_upd es b"}.
 We primarily choose the explicit definition since it simplified some of the proofs, but overall the choice is
 stylistic in nature. Finally, function @{term bins_upd} updates the $k$-th bin by inserting the given
@@ -183,13 +183,15 @@ definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<
   "bins_upd bs k es = bs[k := bin_upds es (bs!k)]"
 
 text\<open>
-The central piece for the list-based implementation is the function @{term Earley_bin_list'} completes the $k$-th bin starting from index $i$. It updates the
-bins @{term bs} using function @{term bins_upd} and the appropriate operation depending on the next symbol of
-the current item under consideration which can either be some terminal or
-non-terminal symbol or @{term None}. We have to define the function as a @{term partial_function},
-since it might never terminate if it keeps appending newly generated items to the $k$-th bin it operates
+The central piece for the list-based implementation is the function @{term Earley_bin_list'}. A
+function call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} completes the $k$-th bin starting from index $i$.
+For the current item $x$ under consideration it first computes the new entries depending on the next
+symbol of $x$ which can either be some terminal, we scan, or non-terminal symbol, we predict, or @{term None}, we complete.
+And then updates the bins @{term bs} appropriately using the function @{term bins_upd}.
+We have to define the function as a @{term partial_function},
+since it might never terminate if it keeps appending newly generated items to the $k$-th bin it currently operates
 on. We prove termination and highlight the relevant Isabelle specific details in Section \ref{sec:04-wellformedness}.
-The function @{term Earley_bin_list} fully completes the $k$-th bin and thus corresponds to the function @{term Earley_bin}.
+The function @{term Earley_bin_list} then fully completes the $k$-th bin, or starts its computation at index $0$, and thus corresponds to the function @{term Earley_bin} of Chapter \ref{chapter:3}.
 \<close>
 
 partial_function (tailrec) Earley_bin_list' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
@@ -212,8 +214,8 @@ definition Earley_bin_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentent
 
 text\<open>
 Finally, functions @{term Earley_list} and @{term \<E>arley_list} are structurally identical to functions
-@{term Earley} respectively @{term \<E>arley}, differing only in the type of the used operations and the
-return type.
+@{term Earley} respectively @{term \<E>arley} of Chapter \ref{chapter:3}, differing only in the type of the used operations and the
+return type: bins or lists instead of set of items.
 \<close>
 
 fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
@@ -227,13 +229,13 @@ section \<open>A Word on Performance\<close>
 
 text\<open>
 Earley \cite{Earley:1970} implements his recognizer algorithm in the imperative programming paradigm and provides an informal
-argument for the running time which is $\mathcal{O}(n^3)$ where @{term "n = |\<omega>|"}. Our implementation
+argument for the running time $\mathcal{O}(n^3)$ where @{term "n = |\<omega>|"}. Our implementation
 is purely functional, and one might expect a quite significant decrease in performance. In this section we
 provide an informal argument showing that, although we cannot quite achieve the time complexity of an imperative
 implementation, we are 'only' one order of magnitude slower or the running time of our implementation is
 $\mathcal{O}(n^4)$. Then we summarize Earley's imperative implementation approach and the additional steps
 that are needed to achieve the desired running time. Additionally, we sketch a slightly different and more complicated functional
-implementation which achieves a theoretical running time of $\mathcal{O}(n^3 \log{n})$, and highlight possible further
+implementation that achieves a theoretical running time of $\mathcal{O}(n^3 \log{n})$, and highlight possible further
 performance improvements. Finally, we discuss the choice for our particular implementation.
 
 We state the running time of our implementation of the algorithm in terms of the length $n$ of the input @{term \<omega>},
@@ -241,24 +243,24 @@ and provide an informal argument that its running time is $\mathcal{O}(n^4)$.
 Each bin $B_j$ ($0 \le j \le n$) contains only items of the form @{term "Item r b i j"}.
 The number of possible production rules $r$, and possible bullet positions $b$ are both independent
 of $n$ and can thus be considered (possible large) constants. The origin $i$ is bounded by $0 \le i \le j$ and thus
-depends on $j$ which is in turn dependent by $n$. Overall the number of items in each bin $B_j$ is in $\mathcal{O}(n)$.
+depends on $j$ which is in turn dependent by $n$. Overall the number of items in each bin $B_j$ is $\mathcal{O}(n)$.
 
-We have @{term Init_list} $\in \mathcal{O}(n)$ since the function @{term replicate} takes time linear in the length of @{term \<omega>},
-and functions @{term filter} and @{term map} operate at most on the size of the grammar @{term \<G>}.
+We also have @{term Init_list} $\in \mathcal{O}(n)$ since the function @{term replicate} takes time linear in the length of @{term \<omega>},
+and functions @{term filter} and @{term map} operate at most on the size of the grammar @{term \<G>} or constant time.
 We also know @{term Scan_list} $\in \mathcal{O}(n)$. The dominating term is surprisingly (@{term "\<omega>!k"}), since $0 \le k \le n$, and it computes
-at most one new entry. Function @{term Predict_list} take time in the the size of the grammar @{term \<G>},
-due to the @{term filter} and @{term map} functions, and computes at most @{term "|\<G>|"} new items.
+at most one new entry. Function @{term Predict_list} takes time in the the size of the grammar @{term \<G>},
+due to the @{term filter} and @{term map} functions, or constant time, and computes at most @{term "|\<G>|"} new items.
 Function @{term Complete_list} again takes linear time, since finding the origin bin of the given item
-$x$ (@{term "bs!item_origin x"}) takes linear time, and functions @{term items}, @{term filter_with_index}, and @{term map}
+$x$ takes linear time, and functions @{term items}, @{term filter_with_index}, and @{term map}
 operate on the origin bin which is of at most linear size. Consequently, the function also computes at most
 $\mathcal{O}(n)$ new items. 
 
 Updating a bin (@{term bin_upd}) with a single entry takes at most linear time, inserting $e$ new entries
 (@{term bin_upds}) thus takes time $e \cdot \mathcal{O}(n)$, and hence function @{term bins_upd}
 also runs in time $e \cdot \mathcal{O}(n)$. The analysis of function @{term Earley_bin_list'} is slightly
-more involved. It computes the contents of a bin $B_j$, or it calls itself recursively at most $n$ times, since the number of items in any bin is in $\mathcal{O}(n)$.
+more involved. It computes the contents of a bin $B_j$, or it calls itself recursively at most $n$ times, since the number of items in any bin is $\mathcal{O}(n)$.
 The time for one function execution is dominated by the time it takes to update the bins with the newly
-created items whose number depends on in turn on the operation we applied but is bounded in the worst case by $n$ (@{term Complete_list}).
+created items whose number in turn depends on the operation we applied but is bounded in the worst case by $n$ during the @{term Complete_list} operation.
 All the other operations of the function body run in at most linear time. Overall we have for the body of @{term Earley_bin_list'}: $\mathcal{O}(n) + e \cdot \mathcal{O}(n) = \mathcal{O}(n^2)$.
 And thus @{term Earley_bin_list'} $\in \mathcal{O}(n^3)$. The same bound holds trivially for @{term Earley_bin_list}.
 Since functions @{term \<E>arley_list} or @{term Earley_list} call @{term Earley_bin_list} once for each bin $B_j$ and $0 \le j \le n$,
@@ -267,30 +269,30 @@ the overall running time is $\mathcal{O}(n^4)$.
 One might be tempted to think that the decrease in performance compared to an imperative implementation
 is due to the fact that we are representing bins as functional lists and appending to and indexing into
 bins which takes linear time and not constant time. This is not the case. Earley implements the algorithm as
-follows. On the top-level bins are no longer a list but an array. Each bin is a single linked list, and
-pointers are no longer represented by the type @{term pointer} but by actual pointers between Earley items.
+follows. On the top-level bins are no longer a list but an array. Each bin is a singly-linked list, and
+pointers are no longer represented by the type @{term pointer} but by actual pointers between entries.
 The worst case running time of the algorithm is still $\mathcal{O}(n^4)$. The algorithm still iterates over
 $n$ bins, traverses in the worst case $\mathcal{O}(n)$ items in each bin and for each item, the worst case
-operation, completion still generates $\mathcal{O}(n)$ new items that all have to be inserted into the
+operation, completion, still generates $\mathcal{O}(n)$ new items that all have to be inserted into the
 current bin which takes linear time for \textit{each} new item. To achieve the running time of $\mathcal{O}(n^3)$
 we need to find a way to add a new item into a bin in constant time. In an imperative setting one obvious
 way is to not only keep a singly-linked list of items and pointers but additionally a map. The keys are the items of the
-list and the map stores for a specific item a pointer to its position in the list. Insertion of a new item
-into a bin works then as follows: if the item is already present in the map, we follow the pointer and
-update the pointers in the list accordingly depending on the kind of item, otherwise we just append the
-item and its corresponding pointers to the list. Finally, we insert the item and a pointer to its position
+list and the map stores as value for a specific item a pointer to itself or its position in the list. Insertion of a new item
+into a bin then works as follows: if the item is already present in the map, we follow the pointer to the item and
+update the pointers of the item in the list accordingly depending on the kind of item. Otherwise we just append the
+item and its corresponding pointers to the list and insert the item and a pointer to its position
 in the linked list into the map.
 
 Sadly, this approach does not work in a functional setting. Appending an item to a list takes linear and
 not constant time. But even if we preprend the new item onto the list there is another problem. We cannot
-simply store pointers in the map which we can follow in constant time to the location of the item
+simply store pointers in the map that we can chase in constant time to the location of the item
 in the list, but still have to store the index of the corresponding item. And consequently updating the pointer information
 takes again linear time due to the indexing. One possible solution is to change one's point of view.
 In the imperative approach the list serves two purposes: it represents the bin and is at the same time
 a worklist for the algorithm. The map only optimizes performance. We can obtain a $\mathcal{O}(n^3 \log{n})$ functional
 implementation if we consider the list only a worklist and the map (or its keys) the bin. We also need to adapt the
 pointer datatype. Instead of wrapping indices representing predecessor or reduction items in the list,
-a pointer contains the actual items. E.g. a pointer is either @{term Null}, or @{term "Pre x'"}, or @{term "PreRed (x', y) xys"}.
+a pointer should contain the actual items. E.g. a pointer is either @{term Null}, or @{term "Pre x'"}, or @{term "PreRed (x', y) xys"}.
 Overall the running time for inserting a new item into a bin consists of prepending the item onto the worklist, or constant time,
 and inserting the item into the map which can be done in logarithmic time. Thus, the overall running
 time of this approach is $\mathcal{O}(n^3 \log{n})$.
@@ -302,17 +304,17 @@ first performance improvement is to group the production rules by their left-han
 We can also complete more efficiently. The @{term Complete} operation scans through the origin bin of
 an complete item, searching for items where the next symbol matches the rule head of the production rule
 of the complete item. We can optimize this search by keeping an additional map from 'next symbol' non-terminals to
-their items for each bin. Finally, as mentioned earlier, we omit implementing a lookahead terminal.
-Note that, although these performance improvements might speed the algorithm quite considerably, none of
+their corresponding items for each bin. Finally, as mentioned earlier, we omit implementing a lookahead terminal.
+Note that, although these performance improvements might speed up the algorithm quite considerably, none of
 them improve the worst case running time.
 
 We decided against implementing the map-based functional approach with a running time of $\mathcal{O}(n^3 \log{n})$
 and 'settle' for the current approach with a running time of $\mathcal{O}(n^4)$ due to two reasons.
-The map-based functional approach is more complicated and the improvement of the running time is
-significant but still does not reach the optimum. If we optimize our approach only to achieve better performance,
+The map-based functional approach is more complicated and the improvement of the running time, although
+significant, still does not reach the optimum. If we optimize our approach only to achieve better performance,
 we would like to achieve optimal performance, at least asymptotically. The current approach, appending items
 to the list and using natural numbers as pointers, maps more easily to the imperative approach. Our original
-idea was to refine the algorithm once more to an imperative version. But this exceeded the scope of this thesis.
+idea was to refine the algorithm once more to an imperative version. But this exceeded the scope of this thesis and is worthwhile future work.
 \<close>
 
 section \<open>Sets or Bins as Lists \label{sec:sets}\<close>
@@ -407,8 +409,8 @@ updates. We omit them for brevity.
 section \<open>Well-formedness and Termination \label{sec:04-wellformedness}\<close>
 
 text\<open>
-We also refine the notion of well-formed items to well-formed bin items. An item is a well-formed bin
-item for a the $k$-th bin if it is a well-formed item and its end index coincides with $k$. We call
+We also need to refine the notion of well-formed items to well-formed \textit{bin} items. An item is a well-formed bin
+item for the $k$-th bin if it is a well-formed item and its end index coincides with $k$. We call
 a bin well-formed if it only contains well-formed bin items and its items are distinct, and lift this
 notion of well-formedness to the toplevel list of bins.
 \<close>
@@ -461,9 +463,12 @@ lemma wf_bins_bins_upd:
 (*>*)
 
 text\<open>
-Intuitively, a recursive function terminates if for every recursive call the 'size' of its input strictly decreases.
-All functions defined in Isabelle must be total. There are different ways to define a recursive function depending on the complexity of its termination:
-(1) with the \textit{fun} keyword. Isabelle then tries to find a measure of the input which proves
+Next we would like to proof that function @{term Earley_bin_list'} also maintains the well-formedness of
+the bins. But since it is a partial function we first need to take a short excursion into function definitions
+in Isabelle.
+Intuitively, a recursive function terminates if for every recursive call the size of its input strictly decreases.
+And normally all functions defined in Isabelle must be total. There are different ways to define a recursive function depending on the complexity of its termination:
+(1) with the \textit{fun} keyword. Isabelle then tries to find a measure of the input that proves
 termination. If successful we obtain an induction schema corresponding to the function definition.
 (2) via the \textit{function} keyword. We then need to define and prove a suitable measure by hand.
 (3) if the function is a partial function we need to define it with the keyword @{term partial_function}.
@@ -473,15 +478,15 @@ return type in an option to signal possible non-termination. But contrary to tot
 have to define the set of inputs and a corresponding measure for which the function terminates and
 subsequently prove an appropriate induction schema by hand.
 
-In Section \ref{sec:alg} we had to define the function @{term Earley_bin_list'} as a partial function
+As previously explained, in Section \ref{sec:alg} we defined the function @{term Earley_bin_list'} as a partial function
 since a call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} might never terminate if the function
 keeps appending arbitrary new items to the $k$-th bin it currently operates on. But we know that the
-newly generated are not arbitrary but well-formed bin items. From lemma @{term finiteness} we also
+newly generated are not arbitrary but well-formed bin items. From lemma @{term finiteness} of Chapter \ref{chapter:3} we also
 know that the set of well-formed items is finite. Since we made sure to only add each item once to
-a bin, the function @{term Earley_bin_list'} will eventually run out of fresh items to insert into
+a bin, the function @{term Earley_bin_list'} will eventually run out of new items to insert into
 the bin it currently operates on and terminate.
 
-In Isabelle we define the set of well-formed earley input as a set of quadruples consisting of the
+In Isabelle we define the set of well-formed earley inputs as a set of quadruples consisting of the
 index $k$ of the current bin, the grammar @{term \<G>}, the input @{term \<omega>}, and the bins @{term bs}.
 Note that we not only require the bins to be well-formed but also suitable bounds on $k$ and the length
 of the bins to make sure that we are not indexing outside the input or the bins as well as a well-formed
@@ -489,7 +494,7 @@ grammar to ensure we only generate well-formed bin items. We then define a suita
 termination of @{term "Earley_bin_list' k \<G> \<omega> bs i"} which intuitively corresponds to the number of well-formed bin
 items that are still possible to generate from index $i$ onwards. Finally we prove an induction schema
 for the function by complete induction on the measure of the input. We omit showing the schema explicitly
-since it is rather verbose. It partitions the function into five cases: the base case where we have
+since it is rather verbose. But intuitively it partitions the function into five cases: the base case where we have
 run out of items to operate on; one case for completion and prediction each; and two cases for scanning
 covering the normal and the special case where $k$ exceeds the length of the input.
 \<close>
@@ -497,8 +502,7 @@ covering the normal and the special case where $k$ exceeds the length of the inp
 definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins) set" where
   "wf_earley_input = { 
     (k, \<G>, \<omega>, bs) | k \<G> \<omega> bs.
-      k \<le> |\<omega>| \<and>
-      |bs| = |\<omega>| + 1 \<and>
+      k \<le> |\<omega>| \<and> |bs| = |\<omega>| + 1 \<and>
       wf_\<G> \<G> \<and>
       wf_bins \<G> \<omega> bs
   }"
@@ -507,11 +511,12 @@ fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bi
   "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_bin_item \<G> \<omega> k x } - i"
 
 text\<open>
-Concluding this section, we prove that we maintain the well-formedness of the input for functions @{term Earley_bin_list'},
-by induction using our new induction schema using lemma @{term wf_bins_bins_upd} and straightforward and thus ommitted auxiliary lemmas
-stating that the scanning, predicting and completing only generates well-formed bin items,
-@{term Earley_bin_list}, by definition, @{term Earley_list}, by induction on $k$ using additionally the fact that the initial bins are well-formed, and @{term \<E>arley_list},
-by definition, using previously proven lemmas appropriately.
+Concluding this section, we prove that we maintain the well-formedness of the input for the function @{term Earley_bin_list'}.
+The proof is by induction using our new induction schema, lemma @{term wf_bins_bins_upd} and - straightforward and thus omitted - auxiliary lemmas
+stating that the scanning, predicting and completing only generates well-formed bin items. The proofs
+for functions @{term Earley_bin_list}, @{term Earley_list}, and @{term \<E>arley_list} are respectively
+by definition, by induction on $k$ using additionally the fact that the initial bins are well-formed,
+and once more by definition, using previously proven lemmas appropriately.
 \<close>
 
 lemma wf_earley_input_Earley_bin_list':
@@ -553,11 +558,15 @@ lemma wf_earley_input_\<E>arley_list:
 section \<open>Soundness\<close>
 
 text\<open>
-TODO:
-
-we prove subsumption in the easy direction, why is the direction easy? in this direction we look
-at only one item in each function call whereas in the set based approach we apply the earley step
-function for all items in the bin at once. 
+Now we are ready to prove subsumption in both directions. Since functions @{term Earley_list} and
+@{term \<E>arley_list} are structurally identical to @{term Earley} respectively @{term \<E>arley}, the
+main task for the next two sections is to show that function @{term Earley_bin_list} or @{term Earley_bin_list'}
+computes the same items as the function @{term Earley_bin} that computes in turn the fixpoint of @{term Earley_step}.
+We start with the easy direction: every item generated by the list-based approach is also present in the set-based
+approach which implies soundness of the list-based algorithm. This is the easier direction due to the fact that during execution of the body of
+@{term "Earley_bin_list'"} we only consider a single item $x$ in bin $k$ at position $i$
+and apply the appropriate operation. In contrast, one execution of function @{term Earley_step} applies the scan,
+predict and complete operations for all previously computed items.
 \<close>
 
 lemma Init_list_eq_Init:
