@@ -1291,7 +1291,6 @@ lemma Complete_it_sub_Complete:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "y \<in> set (items (bs ! k))" "k < length bs"
   assumes "next_symbol y = None"
   shows "set (items (Complete_it k y bs red)) \<subseteq> Complete k I"
-  thm Complete_it_def
 proof standard
   fix x
   assume *: "x \<in> set (items (Complete_it k y bs red))"
@@ -1344,8 +1343,10 @@ next
     using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
   ultimately have "bins_items (\<pi>_it' k cfg inp bs i) \<subseteq> \<pi> k cfg inp (I \<union> Complete k I)"
     using Complete.IH Complete.hyps by simp
-  thus ?case
-    using Complete_\<pi>_mono \<pi>_mono \<pi>_sub_mono \<pi>_idem by (metis le_supI order_trans)
+  also have "... \<subseteq> \<pi> k cfg inp (\<pi> k cfg inp I)"
+    using Complete_\<pi>_mono \<pi>_mono \<pi>_sub_mono by (metis Un_subset_iff)
+  finally show ?case
+    using \<pi>_idem by blast
 next
   case (Scan k cfg inp bs i x a)
   let ?bs' = "bins_upd bs (k+1) (Scan_it k inp a x i)"
@@ -1959,9 +1960,12 @@ next
   ultimately have "\<pi>_step k cfg inp (bins_items ?bs') \<subseteq> bins_items (\<pi>_it' k cfg inp ?bs' (i+1))"
     using Predict.IH Predict.prems sound wf \<pi>_step_def bins_items_upto_sub_bins_items 
       bins_bins_upd sound_items_def wellformed_bins_elim by (metis UnE le_supI)
-  thus ?case
-    using \<pi>_step_sub_mono \<pi>_it'_simps(5) Predict.hyps Predict.prems(1) wellformed_bins_elim
-    by (smt (verit, ccfv_SIG) bins_bins_upd sup.coboundedI2 sup.orderE sup_ge1)
+  hence "\<pi>_step k cfg inp (bins_items ?bs') \<subseteq> bins_items (\<pi>_it' k cfg inp bs i)"
+    using Predict.hyps \<pi>_it'_simps(5) by simp
+  moreover have "\<pi>_step k cfg inp (bins_items bs) \<subseteq> \<pi>_step k cfg inp (bins_items ?bs')"
+    using \<pi>_step_sub_mono Predict.prems(1) wellformed_bins_elim bins_bins_upd by (metis Un_upper1)
+  ultimately show ?case
+    by blast
 qed
 
 lemma \<pi>_step_sub_\<pi>_it:
