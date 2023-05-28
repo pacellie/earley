@@ -2291,7 +2291,7 @@ next
     using \<pi>_it'_mono bins_upto_k0_\<pi>_it'_eq \<pi>_it_def order_trans by (metis (no_types, lifting) assms(1,2))
 
   have "funpower (\<pi>_step k cfg inp) (Suc n) (bins_items bs) \<subseteq> \<pi>_step k cfg inp (bins_items (\<pi>_it k cfg inp bs))"
-    using \<pi>_step_sub_mono Suc by (metis funpower.simps(2))
+    using \<pi>_step_sub_mono Suc.IH[OF Suc.prems] by (metis funpower.simps(2))
   also have "... \<subseteq> bins_items (\<pi>_it k cfg inp (\<pi>_it k cfg inp bs))"
     using \<pi>_step_sub_\<pi>_it Suc.prems wf_bins_\<pi>_it sound_\<pi>_it 0 wellformed_bins_\<pi>_it by blast
   also have "... \<subseteq> bins_items (\<pi>_it k cfg inp bs)"

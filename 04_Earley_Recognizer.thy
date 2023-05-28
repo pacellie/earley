@@ -904,11 +904,11 @@ into these three cases:
     \begin{equation*}
     \begin{alignedat}{2}
       & @{term "Predict k \<G> (bins_upto bs' k (i+1))"} & \\
-        \qquad & = @{term "Predict k \<G> (bins_upto bs' k i \<union> { items (bs'!k)!i })"} \quad & (1) \\
-        \qquad & = @{term "Predict k \<G> (bins_upto bs k i \<union> {x})"} \quad & (2) \\
-        \qquad & \subseteq @{term "bins bs \<union> Predict k \<G> {x}"} \quad & (3) \\
-        \qquad & = @{term "bins bs \<union> set (items (Predict_list k \<G> N))"} \quad & (4) \\
-        \qquad & \subseteq @{term "bins bs'"} & \quad (5)
+      & \qquad =  @{term "Predict k \<G> (bins_upto bs' k i \<union> { items (bs'!k)!i })"} \quad & (1) \\
+      & \qquad = @{term "Predict k \<G> (bins_upto bs k i \<union> {x})"} \quad & (2) \\
+      & \qquad \subseteq @{term "bins bs \<union> Predict k \<G> {x}"} \quad & (3) \\
+      & \qquad = @{term "bins bs \<union> set (items (Predict_list k \<G> N))"} \quad & (4) \\
+      & \qquad \subseteq @{term "bins bs'"} & \quad (5)
     \end{alignedat}
     \end{equation*}
 
@@ -983,20 +983,12 @@ lemma Earley_bin_list_idem:
   sorry
 (*>*)
 
-text\<open>\<close>
-
-lemma funpower_\<pi>_step_sub_\<pi>_it: \<comment>\<open>Detailed\<close>
-  assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
-  assumes "sound_items \<G> \<omega> (bins bs)"
-  assumes "is_sentence \<G> \<omega>"
-  assumes "nonempty_derives \<G>"
-  assumes "Earley_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs"
-  shows "funpower (Earley_step k \<G> \<omega>) n (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
+text\<open>
+Lemma @{term Earley_bin_sub_Earley_bin_list} concludes the subsumption proof for a single bin.
+Since the function @{term Earley_bin} is defined as the fixpoint of the function
+@{term Earley_step} and the fact that @{term "x \<in> limit f X \<equiv> \<exists>n. x \<in> funpower f n X"} the core
+proof in by induction on the computation of @{term funpower}.
+\<close>
 
 lemma Earley_bin_sub_Earley_bin_list:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
@@ -1009,9 +1001,35 @@ lemma Earley_bin_sub_Earley_bin_list:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-lemma Earley_sub_Earley_list: \<comment>\<open>Detailed\<close>
+The goal is @{term "funpower (Earley_step k \<G> \<omega>) n (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"}.
+
+For the base case we have @{term "funpower (Earley_step k \<G> \<omega>) 0 (bins bs) = bins bs"}. And we conclude
+the proof due to the fact that the function @{term Earley_bin_list} is monotonic in the bins.
+
+For the induction step we have:
+
+\begin{equation*}
+  \begin{alignedat}{2}
+    & @{term "funpower (Earley_step k \<G> \<omega>) (Suc n) (bins bs)"} & \\
+      \qquad & = @{term "Earley_step k \<G> \<omega> (funpower (Earley_step k \<G> \<omega>) n (bins bs))"} \quad & (1) \\
+      \qquad & \subseteq @{term "Earley_step k \<G> \<omega> (bins (Earley_bin_list k \<G> \<omega> bs))"} \quad & (2) \\
+      \qquad & \subseteq @{term "bins (Earley_bin_list k \<G> \<omega> (Earley_bin_list k \<G> \<omega> bs))"} \quad & (3) \\
+      \qquad & \subseteq @{term "bins (Earley_bin_list k \<G> \<omega> bs)"} \quad & (4)
+\end{alignedat}
+\end{equation*}
+
+(1) by definition of @{term funpower}.
+(2) by induction hypothesis and fact that the function @{term Earley_step} is monotonic the set of items.
+(3) by lemma @{term Earley_step_sub_Earley_bin_list} using well-formedness, soundness, non-empty derivations assumptions.
+(4) by lemma @{term Earley_bin_list_idem} using once more the soundness and non-empty derivation assumptions.
+
+\end{proof}
+\<close>
+
+lemma Earley_sub_Earley_list:
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"

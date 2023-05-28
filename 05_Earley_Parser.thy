@@ -8,7 +8,38 @@ begin
 
 chapter\<open>Earley Parser Implementation \label{chap:05}\<close>
 
-section \<open>Pointer lemmas\<close>
+section \<open>A Single Parse Tree\<close>
+
+datatype 'a tree =
+  Leaf 'a
+  | Branch 'a "'a tree list"
+
+fun yield_tree :: "'a tree \<Rightarrow> 'a sentential" where
+  "yield_tree (Leaf a) = [a]"
+| "yield_tree (Branch _ ts) = concat (map yield_tree ts)"
+
+fun root_tree :: "'a tree \<Rightarrow> 'a" where
+  "root_tree (Leaf a) = a"
+| "root_tree (Branch N _) = N"
+
+fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
+  "wf_rule_tree _ (Leaf a) \<longleftrightarrow> True"
+| "wf_rule_tree \<G> (Branch N ts) \<longleftrightarrow> (
+    (\<exists>r \<in> set (\<RR> \<G>). N = rule_head r \<and> map root_tree ts = rule_body r) \<and>
+    (\<forall>t \<in> set ts. wf_rule_tree \<G> t))"
+
+fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
+  "wf_item_tree \<G> _ (Leaf a) \<longleftrightarrow> True"
+| "wf_item_tree \<G> x (Branch N ts) \<longleftrightarrow> (
+    N = item_rule_head x \<and>
+    map root_tree ts = take (item_bullet x) (item_rule_body x) \<and>
+    (\<forall>t \<in> set ts. wf_rule_tree \<G> t))"
+
+definition wf_yield_tree :: "'a sentential \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
+  "wf_yield_tree \<omega> x t \<equiv> yield_tree t = \<omega>[item_origin x..item_end x\<rangle>"
+
+
+subsection \<open>Pointer Lemmas\<close>
 
 definition predicts :: "'a item \<Rightarrow> bool" where
   "predicts x \<equiv> item_origin x = item_end x \<and> item_bullet x = 0"
@@ -48,26 +79,16 @@ definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
   "mono_red_ptr bs \<equiv> \<forall>k < |bs|. \<forall>i < |bs!k|.
     \<forall>k' pre red ps. pointer (bs!k!i) = PreRed (k', pre, red) ps \<longrightarrow> red < i"
 
-lemma sound_ptrs_bin_upd:
+lemma sound_mono_ptrs_bin_upd:
   assumes "k < |bs|"
   assumes "distinct (items (bs!k))"
   assumes "sound_ptrs \<omega> bs"
   assumes "sound_null_ptr e"
   assumes "sound_pre_ptr \<omega> bs k e"
   assumes "sound_prered_ptr bs k e"
-  shows "sound_ptrs \<omega> (bs[k := bin_upd e (bs!k)])"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-lemma mono_red_ptr_bin_upd:
-  assumes "k < |bs|"
-  assumes "distinct (items (bs!k))"
   assumes "mono_red_ptr bs"
   assumes "\<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < |bs!k|"
-  shows "mono_red_ptr (bs[k := bin_upd e (bs!k)])"
+  shows "sound_ptrs \<omega> (bs[k := bin_upd e (bs!k)])"
 (*<*)
   sorry
 (*>*)
@@ -142,52 +163,8 @@ lemma sound_mono_ptrs_\<E>arley_list:
   sorry
 (*>*)
 
-section \<open>Trees and Forests\<close>
 
-datatype 'a tree =
-  Leaf 'a
-  | Branch 'a "'a tree list"
-
-fun yield_tree :: "'a tree \<Rightarrow> 'a sentential" where
-  "yield_tree (Leaf a) = [a]"
-| "yield_tree (Branch _ ts) = concat (map yield_tree ts)"
-
-fun root_tree :: "'a tree \<Rightarrow> 'a" where
-  "root_tree (Leaf a) = a"
-| "root_tree (Branch N _) = N"
-
-fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
-  "wf_rule_tree _ (Leaf a) \<longleftrightarrow> True"
-| "wf_rule_tree \<G> (Branch N ts) \<longleftrightarrow> (
-    (\<exists>r \<in> set (\<RR> \<G>). N = rule_head r \<and> map root_tree ts = rule_body r) \<and>
-    (\<forall>t \<in> set ts. wf_rule_tree \<G> t))"
-
-fun wf_item_tree :: "'a cfg \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
-  "wf_item_tree \<G> _ (Leaf a) \<longleftrightarrow> True"
-| "wf_item_tree \<G> x (Branch N ts) \<longleftrightarrow> (
-    N = item_rule_head x \<and>
-    map root_tree ts = take (item_bullet x) (item_rule_body x) \<and>
-    (\<forall>t \<in> set ts. wf_rule_tree \<G> t))"
-
-definition wf_yield_tree :: "'a sentential \<Rightarrow> 'a item \<Rightarrow> 'a tree \<Rightarrow> bool" where
-  "wf_yield_tree \<omega> x t \<equiv> yield_tree t = \<omega>[item_origin x..item_end x\<rangle>"
-
-datatype 'a forest =
-  FLeaf 'a
-  | FBranch 'a "'a forest list list"
-
-fun combinations :: "'a list list \<Rightarrow> 'a list list" where
-  "combinations [] = [[]]"
-| "combinations (xs#xss) = [ x#cs . x <- xs, cs <- combinations xss ]"
-
-fun trees :: "'a forest \<Rightarrow> 'a tree list" where
-  "trees (FLeaf a) = [Leaf a]"
-| "trees (FBranch N fss) = (
-    let tss = (map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss) in
-    map (\<lambda>ts. Branch N ts) (combinations tss)
-  )"
-
-section \<open>A Single Parse Tree\<close>
+subsection \<open>The Parse Tree Algorithm\<close>
 
 partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree option" where
   "build_tree' bs \<omega> k i = (
@@ -221,6 +198,9 @@ definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bi
       [] \<Rightarrow> None
     | (_, i)#_ \<Rightarrow> build_tree' bs \<omega> k i)"
 
+
+subsection \<open>Termination\<close>
+
 fun build_tree'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) \<Rightarrow> nat" where
   "build_tree'_measure (bs, \<omega>, k, i) = foldl (+) 0 (map length (take k bs)) + i"
 
@@ -241,6 +221,8 @@ lemma build_tree'_termination:
 (*>*)
 
 text\<open>\<close>
+
+subsection \<open>Soundness\<close>
 
 lemma wf_item_tree_build_tree':
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
@@ -293,6 +275,8 @@ corollary wf_rule_root_yield_tree_build_tree_\<E>arley_list:
 
 text\<open>\<close>
 
+subsection \<open>Completeness\<close>
+
 theorem correctness_build_tree_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
@@ -302,7 +286,26 @@ theorem correctness_build_tree_\<E>arley_list:
   sorry
 (*>*)
 
-section \<open>All Parse Trees\<close>
+
+section \<open>A Parse Forest\<close>
+
+datatype 'a forest =
+  FLeaf 'a
+  | FBranch 'a "'a forest list list"
+
+fun combinations :: "'a list list \<Rightarrow> 'a list list" where
+  "combinations [] = [[]]"
+| "combinations (xs#xss) = [ x#cs . x <- xs, cs <- combinations xss ]"
+
+fun trees :: "'a forest \<Rightarrow> 'a tree list" where
+  "trees (FLeaf a) = [Leaf a]"
+| "trees (FBranch N fss) = (
+    let tss = (map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss) in
+    map (\<lambda>ts. Branch N ts) (combinations tss)
+  )"
+
+
+subsection \<open>The Parse Forest Algorithm\<close>
 
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
   "insert_group K V a [] = [(K a, [V a])]"
@@ -363,6 +366,9 @@ definition build_trees :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a b
     let finished = filter_with_index (\<lambda>x. is_finished \<G> \<omega> x) (items (bs!k)) in
     map_option concat (those (map (\<lambda>(_, i). build_trees' bs \<omega> k i {i}) finished))"
 
+
+subsection \<open>Termination\<close>
+
 fun build_forest'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
   "build_forest'_measure (bs, \<omega>, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
@@ -384,6 +390,18 @@ lemma build_trees'_termination:
 (*>*)
 
 text\<open>\<close>
+
+theorem termination_build_tree_\<E>arley_list:
+  assumes "wf_\<G> \<G>"
+  assumes "nonempty_derives \<G>"
+  assumes "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
+  shows "\<exists>fs. build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
+(*<*)
+  sorry
+(*>*)
+
+
+subsection \<open>Soundness\<close>
 
 lemma wf_item_tree_build_trees':
   assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
@@ -457,16 +475,8 @@ theorem soundness_build_trees_\<E>arley_list:
 
 text\<open>\<close>
 
-theorem termination_build_tree_\<E>arley_list:
-  assumes "wf_\<G> \<G>"
-  assumes "nonempty_derives \<G>"
-  assumes "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
-  shows "\<exists>fs. build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
-(*<*)
-  sorry
-(*>*)
 
-section \<open>A Word on Completeness\<close>
+subsection \<open>A Word on Completeness\<close>
 
 text\<open>
 SNIPPET:
