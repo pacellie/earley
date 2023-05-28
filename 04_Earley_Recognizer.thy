@@ -695,10 +695,73 @@ lemma \<E>arley_list_sub_\<E>arley:
 
 section \<open>Completeness\<close>
 
+text\<open>
+In this section we proof completeness of the list-based algorithm. The two main complications are
+the following. While completing a specific bin, the set-based approach of Chapter \ref{chapter:3}
+creates items faster than the list-based approach. Hence, we have to proof that the function @{term Earley_bin_list'}
+at some point 'catches up' to the function @{term Earley_bin}. The second problem is more severe: as stated
+the algorithm is incorrect, at least for some classes of grammars. In contrast to the fixpoint computation
+of the set-based approach the list-based implementation imposes an order on the creation of items,
+and sometimes order matters. Consider for example an item $A \rightarrow \, \bullet, i, j$,
+or an epsilon-rule $A \rightarrow \, \epsilon$, that the list-based implementation encounters during
+creation of bin $B_j$. Since the item is complete we apply the @{term Complete} operation. The algorithm first
+determines the origin bin $i$ of the item which always coincides with $j$ for epsilon rules. Consequently,
+we search the current bin $B_j$ for any items of the form $B \rightarrow \, \alpha \bullet A \beta, i', j$.
+But bin $B_j$ is only partially constructed at this point in time. Hence, we might be missing some of
+these items, either since they have not been predicted, or completed up to this point. Thus, if we apply
+the complete operation to item $A \rightarrow \, \bullet, i, j$ immediately we might not generate all
+items of the form $B \rightarrow \, \alpha A \bullet \beta, i', j$ and in turn not all items depending
+on those items. In essence, we might be missing potential derivation paths and cause correct input to
+be rejected.
+
+There exists various approaches to deal with this problem. Aho \textit{et al} @{cite "Aho:1972"} take
+a rather relaxed point of view and propose to keep interleaving the @{term Predict} and @{term Complete} operations
+until no more new items are being generated. Earley @{cite "Earley:1970"} suggests to have the @{term Complete}
+operation note that we actually need to move the bullet over the non-terminal $A$ when encountering
+the item $A \rightarrow \, \bullet, i, j$, and taking this information into account in the subsequent
+execution of the algorithm. Or, in essence, delaying the @{term Complete} operation for item $A \rightarrow \, \bullet, i, j$
+until we are sure that we have encountered all items of the form $B \rightarrow \, \alpha \bullet A \beta, i', j$.
+Earley suggests that the algorithm should keep an additional collection of non-terminals to look out for stored in an appropriate data structure.
+Aycock \textit{et al} @{cite "Aycock:2002"} propose yet another approach based on a slight modification
+of the @{term Predict} operation. Note that the problem during completion only arises if the non-terminal
+$A$ is nullable, or there exists a derivation such that @{term "\<G> \<turnstile> A \<Rightarrow>\<^sup>* \<epsilon>"}. The authors suggest the following
+approach. Pre-compute nullable non-terminals using well-know approaches @{cite "Appel:2003"}@{cite "Fischer:2009"}.
+If the algorithm encounters an item of the form $A \rightarrow \, \alpha \bullet B \beta, i, j$, predict
+items $B \rightarrow \, \bullet \gamma, j, j$ for each rule $B \rightarrow \, \gamma \in$ @{term \<G>}. But additionally
+add the item $A \rightarrow \, \alpha B \bullet \beta, j, j$ if the non-terminal $B$ is nullable.
+
+Interleaving prediction and completion until we generate no new items seems rather impractical in our opinion. Thus,
+we only considered the approaches of Earley and Aycock \textit{et al}. Both ideas are straightforward
+to implement in the context of a pure recognizer. But complications arise when we need to annotate the
+items with the needed information to construct parse trees. For the approach of Earley it is no longer sufficient
+to keep solely a list of nullable non-terminals to look out for but we need to maintain additional information
+of the origin of these non-terminals to update the reduction and predecessor pointers accordingly. The
+approach of Aycock \textit{et al} implies even more complications. For a pure recognizer they construct
+an LR(0) automaton for the modified @{term Predict} operation, but for an Earley parser they introduce
+a new type of automaton, a split-epsilon DFA, and also slightly rewrite the grammar into \textit{nihilist normal form}
+to encode the necessary information to reconstruct derivations.
+
+In the end, we decided against implementing any of the approaches above and follow the approach of
+Jones @{cite "Jones:1972"}. We restrict the grammar. If we disallow any non-terminal to derive $\epsilon$
+the problem does not arise in the first place. Our justification for this approach is that it is by
+far the simplest solution while still being practical and allowing a wide enough range of grammars to be supported.
+
+Overall, our obligation for the remainder of the section is to prove that restricting the grammar
+to not contain empty derivations ensures that the order of constructing items does not matter in the
+end, and that the list-based approach covers the fixpoint computation of Chapter \ref{chapter:3}.
+\<close>
+
 definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
   "nonempty_derives \<G> \<equiv> \<forall>N. N \<in> set (\<NN> \<G>) \<longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 
-lemma impossible_complete_item: \<comment>\<open>Detailed\<close>
+text\<open>
+The core lemma is the following: if the grammar is well-formed and does not allow empty derivations, and a given item is well-formed,
+sound and complete, then its item origin and item end cannot coincide, which implies that the origin of
+the item is strictly smaller than the item end due to the well-formedness of the item. Or, in simpler terms,
+there do not exist any items of the form $A \rightarrow \, \epsilon, i, j$ in any bin $B_j$.
+\<close>
+
+lemma impossible_complete_item:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   assumes "wf_item \<G> \<omega> x"
@@ -711,24 +774,85 @@ lemma impossible_complete_item: \<comment>\<open>Detailed\<close>
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-lemma Complete_Un_absorb: \<comment>\<open>Detailed\<close>
+From assumptions @{term "sound_item \<G> \<omega> x"}, @{term "is_complete x"}, @{term "item_origin x = k"},
+and @{term "mbox0 (item_end x = k)"} we have by definition of a sound and complete item that
+
+\begin{equation*}
+@{term "\<G> \<turnstile> item_rule_head x \<Rightarrow>\<^sup>* []"}
+\end{equation*}
+
+Since the grammar @{term \<G>} and the item $x$ are well-formed, we also know that the item rule head of $x$
+is indeed a non-terminal. The proof concludes by assumption @{term "mbox0 (nonempty_derives \<G>)"} by definition.
+
+\end{proof}
+\<close>
+
+text\<open>
+Lemma @{term Complete_Un_absorb} then captures the idea that it does not matter for the @{term Complete} operation if
+we add an additional item $z$ of the form $B \rightarrow \, \alpha \bullet A \beta, i, k$ to bin $B_k$
+while constructing the $k$-th bin under the assumption of well-formedness and non-empty derivations.
+\<close>
+
+lemma Complete_Un_absorb:
   assumes "wf_\<G> \<G>"
   assumes "wf_items \<G> \<omega> I"
   assumes "sound_items \<G> \<omega> I"
   assumes "nonempty_derives \<G>"
-  assumes "wf_item \<G> \<omega> x"
-  assumes "item_end x = k"
-  assumes "next_symbol x \<noteq> None"
-  shows "Complete k (I \<union> {x}) = Complete k I"
+  assumes "wf_item \<G> \<omega> z"
+  assumes "item_end z = k"
+  assumes "next_symbol z = Some A"
+  shows "Complete k (I \<union> {z}) = Complete k I"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-lemma Earley_step_sub_Earley_bin_list': \<comment>\<open>Detailed: START WITH THIS\<close>
+Assume for the sake of contradiction that @{term "Complete k (I \<union> {z}) \<noteq> Complete k I"}. Then we
+know that @{term "Complete k I \<subset> Complete k (I \<union> {z})"} since the @{term Complete} operation is
+monotonic in $I$. Hence, there exists by definition of @{term Complete} items $x$, $x'$, and $y$
+such that
+
+\begin{equation*}
+\begin{alignedat}{2}
+  @{term "x \<in> Complete k (I \<union> z)"} \quad & (1) \quad @{term "x \<notin> Complete k I"} \quad & (2) \\
+  @{term "x' \<in> bin (I \<union> {z}) (item_origin y)"} \quad & (3) \quad @{term "next_symbol x' = Some (item_rule_head y)"} \qquad & (4) \\
+  @{term "y \<in> bin (I \<union> {z}) k"} \quad & (5) \quad @{term "is_complete y"} \quad & (6) \\
+  @{term "x = inc_item x' k"} \quad & (7) & \\
+\end{alignedat}
+\end{equation*}
+
+From assumptions (2-7) and the definition of @{term Complete} we need to consider two cases:
+
+\begin{itemize}
+  \item @{term "z = x'"}: Due to assumption @{term "item_end z = k"} and (3,5) we know that the item origin
+    and end of item $y$ are $k$. Additionally the item is sound and well-formed due to assumptions (5,6) and
+    @{term "wf_items \<G> \<omega> I"}, @{term "wf_item \<G> \<omega> z"}, and @{term "sound_items \<G> \<omega> I"}, @{term "next_symbol z = Some A"}.
+    Moreover, using assumptions @{term "wf_\<G> \<G>"} and @{term "mbox0 (nonempty_derives \<G>)"} and the fact that
+    $y$ is complete (6), we can discharge the assumptions of lemma @{term impossible_complete_item} and
+    arrive at a contradiction.
+  \item @{term "z = y"}: Thus we know that $z$ must be complete since $y$ is complete by (6). But we
+    also know that @{term "next_symbol z = Some A"}, a contradiction.
+\end{itemize}
+
+\end{proof}
+\<close>
+
+text\<open>
+Next we prove that the items generated by function @{term Earley_bin_list'} cover the items
+generated by a single @{term Earley_step}. Note the assumption @{term "Earley_step k \<G> \<omega> (bins_upto bs k i) \<subseteq> bins bs"}
+stating that all items generated by a single @{term Earley_step} are already present in the bins.
+This assumption is necessary since a call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} intuitively
+skips the first $i$ items. The proof is by \textit{earley induction} and we only highlight the @{term Predict}
+case where we need lemma @{term Complete_Un_absorb}. The other cases are similar in overall structure.
+Lemma @{term Earley_step_sub_Earley_bin_list} then follows once more by definition.
+\<close>
+
+lemma Earley_step_sub_Earley_bin_list':
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "is_sentence \<G> \<omega>"
@@ -739,7 +863,80 @@ lemma Earley_step_sub_Earley_bin_list': \<comment>\<open>Detailed: START WITH TH
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
+
+We are only highlighting the @{term Predict} case. Hence, we are currently considering an item $x$
+in the $k$-th bin at index $i$ whose next symbol is some non-terminal $N$. Let @{term bs'} denote
+the updated bins or @{term "bins_upd bs k (Predict_list k \<G> N)"}. We know that the function @{term bins_upd}
+maintains well-formedness and soundness of the items, but to apply our induction hypothesis
+we need to proof one additional statement:
+
+\begin{equation*}
+@{term "Earley_step k \<G> \<omega> (bins_upto bs' k (i+1)) \<subseteq> bins bs'"}
+\end{equation*}
+
+Since @{term Earley_step} is defined as the union of the basic three operations we split this proof
+into these three cases:
+
+\begin{itemize}
+
+  \item @{term "Scan k \<omega> (bins_upto bs' k (i+1)) \<subseteq> bins bs'"}:
+    \begin{equation*}
+    \begin{alignedat}{2}
+      & @{term "Scan k \<omega> (bins_upto bs' k (i+1))"} & \\
+        \qquad & = @{term "Scan k \<omega> (bins_upto bs' k i \<union> { items (bs'!k)!i })"} \quad & (1) \\
+        \qquad & = @{term "Scan k \<omega> (bins_upto bs k i \<union> {x})"} \quad & (2) \\
+        \qquad & \subseteq @{term "bins bs \<union> Scan k \<omega> {x}"} \quad & (3) \\
+        \qquad & = @{term "bins bs"} \quad & (4) \\
+        \qquad & \subseteq @{term "bins bs'"} & \quad (5)
+    \end{alignedat}
+    \end{equation*}
+
+    (1) by definition of @{term bins_upto}.
+    (2) function @{term bins_upd} does not change the order of the items of bin $k$ upto index $i$.
+    (3) function @{term Scan} distributes over set union, assumption
+      @{term "Earley_step k \<G> \<omega> (bins_upto bs k i) \<subseteq> bins bs"} and the definition of @{term Earley_step}.
+    (4) the next symbol of $x$ is the non-terminal $N$ and thus the @{term Scan} operation yield an empty set.
+    (5) the set semantics of function @{term bins_upd}.
+
+  \item @{term "Predict k \<G> (bins_upto bs' k (i+1)) \<subseteq> bins bs'"}
+    \begin{equation*}
+    \begin{alignedat}{2}
+      & @{term "Predict k \<G> (bins_upto bs' k (i+1))"} & \\
+        \qquad & = @{term "Predict k \<G> (bins_upto bs' k i \<union> { items (bs'!k)!i })"} \quad & (1) \\
+        \qquad & = @{term "Predict k \<G> (bins_upto bs k i \<union> {x})"} \quad & (2) \\
+        \qquad & \subseteq @{term "bins bs \<union> Predict k \<G> {x}"} \quad & (3) \\
+        \qquad & = @{term "bins bs \<union> set (items (Predict_list k \<G> N))"} \quad & (4) \\
+        \qquad & \subseteq @{term "bins bs'"} & \quad (5)
+    \end{alignedat}
+    \end{equation*}
+
+    (1-3,5) are identical to the first case.
+    (4) the next symbol of $x$ is the non-terminal $N$ and thus the list-based implementation yields the
+      same items as the set-based implementation.
+
+  \item @{term "Complete k (bins_upto bs' k (i+1)) \<subseteq> bins bs'"}
+    \begin{equation*}
+    \begin{alignedat}{2}
+      & @{term "Complete k (bins_upto bs' k (i+1))"} & \\
+        \qquad & = @{term "Complete k (bins_upto bs' k i \<union> { items (bs'!k)!i })"} \quad & (1) \\
+        \qquad & = @{term "Complete k (bins_upto bs k i \<union> {x})"} \quad & (2) \\
+        \qquad & = @{term "Complete k (bins_upto bs k i)"} \quad & (3) \\
+        \qquad & \subseteq @{term "bins bs"} \quad & (4) \\
+        \qquad & \subseteq @{term "bins bs'"} & \quad (5)
+    \end{alignedat}
+    \end{equation*}
+
+    (1-2,5) are identical to the first case.
+    (3) by lemma @{term Complete_Un_absorb} using the well-formedness, soundness, non-empty derivation assumptions
+      and the fact that the item $x$ is in the $k$-th bin and its next symbol is the non-terminal $N$.
+    (4) by assumption @{term "Earley_step k \<G> \<omega> (bins_upto bs k i) \<subseteq> bins bs"} and the definition of @{term Earley_step}.
+
+\end{itemize}
+
+\end{proof}
+\<close>
 
 lemma Earley_step_sub_Earley_bin_list:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
@@ -752,9 +949,20 @@ lemma Earley_step_sub_Earley_bin_list:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+We have proven that the set of items generated by the execution of the list-based approach covers
+\textit{one} single step of the set-based approach. Our next objective is to generalize this statement
+to the whole fixpoint computation, or an arbitrary number of steps. We need two, albeit small, quite
+technical lemmas, proving that the function @{term Earley_bin_list} is idempotent. This follows from the
+next lemma which states that when we execute the function @{term Earley_bin_list'} two times, passing as
+the argument for the bins of the second round the result of the first round, and are starting the execution from
+possibly different initial indices the result of the smaller index prevails. The intuition is clear: if
+we run through the worklist starting from index $i \le j$, starting a second time from index $j$ does not
+yield any new items, since we already covered all items of the second execution in the first turn. The proof is by \textit{earley induction} for arbitrary $j$ and once more utilizes lemma
+@{term impossible_complete_item}.
+\<close>
 
-lemma Earley_bin_list'_idem: \<comment>\<open>Short summary but omit proof\<close>
+lemma Earley_bin_list'_idem:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "nonempty_derives \<G>"
@@ -766,7 +974,7 @@ lemma Earley_bin_list'_idem: \<comment>\<open>Short summary but omit proof\<clos
 
 text\<open>\<close>
 
-lemma Earley_bin_list_idem: \<comment>\<open>BY definition\<close>
+lemma Earley_bin_list_idem:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "nonempty_derives \<G>"
@@ -848,45 +1056,6 @@ corollary correctness_list:
 (*<*)
   sorry
 (*>*)
-
-text\<open>
-SNIPPET:
-
-It is this latter possibility, adding items to $S_i$ while representing sets as lists, which causes grief with epsilon-rules.
-When Completer processes an item A -> dot, j which corresponds to the epsilon-rule A -> epsiolon, it must
-look through $S_j$ for items with the dot before an A. Unfortunately, for epsilon-rule items, j is always
-equal to i. Completer is thus looking through the partially constructed set $S_i$. Since implementations
-process items in $S_i$ in order, if an item B -> alpha dot A beta, k is added to $S_i$ after Completer
-has processed A -> dot, j, Completer will never add B -> \alpha A dot \beta, k to $S_i$. In turn, items
-resulting directly and indirectly from B -> \alpha A dot \beta, k will be omitted too. This effectively
-prunes protential derivation paths which might cause correct input to be rejected. (EXAMPLE)
-Aho \textit{et al} \cite{Aho:1972} propose the stay clam and keep running the Predictor and Completer
-in turn until neither has anything more to add. Earley himself suggest to have the Completer note that
-the dot needed to be moved over A, then looking for this whenever future items were added to $S_i$.
-For efficiency's sake the collection of on-terminals to watch for should be stored in a data structure
-which allows fast access. Neither approach is very satisfactory. A third solution \cite{Aycock:2002}
-is a simple modification of the Predictor based on the idea of nullability. A non-terminal A is said to be
-nullable if A derives star epsilon. Terminal symbols of course can never be nullable. The nullability of
-non-terminals in a grammar may be precomputed using well-known techniques \cite{Appel:2003} \cite{Fischer:2009}
-Using this notion the Predictor can be stated as follows: if A -> \alpha dot B \beta, j is in $S_i$,
-add B -> dot \gamma, i to $S_i$ for all rules B -> \gamma. If B is nullable, also add A -> \alpha B dot \beta, j
-to $S_i$. Explanation why I decided against it. Involves every grammar can be rewritten to not contain epsilon
-productions. In other words we eagerly move the dot over a nonterminal if that non-terminal can derive epsilon
-and effectivley disappear. The source implements this precomputation by constructing a variant of 
-a LR(0) deterministic finite automata (DFA). But for an earley parser we must keep track of which parent
-pointers and LR(0) items belong together which leads to complex and inelegant implementations \cite{McLean:1996}.
-The source resolves this problem by constructing split epsilon DFAs, but still need to adjust the classical
-earley algorithm by adding not only predecessor links but also causal links, and to construct the split
-epsilon DFAs not the original grammar but a slightly adjusted equivalent grammar is used that encodes
-explicitly information that is crucial to reconstructing derivations, called a grammar in nihilist normal form (NNF)
-which might increase the size of the grammar whereas the authors note empirical results that the increase
-is quite modest (a factor of 2 at most).
-
-Example:
-S -> AAAA, A -> a, A -> E, E -> epsilon, input a
-$S_0$ S -> dot AAAA,0, A -> dot a, 0, A -> dot E, 0, E -> dot, 0, A -> E dot, 0, S -> A dot AAA, 0
-$S_1$ A -> a dot, 0, S -> A dot AAA, 0, S -> AA dot AA, 0, A -> dot a, 1, A -> dot E, 1, E -> dot, 1, A -> E dot, 1, S -> AAA dot A, 0
-\<close>
 
 (*<*)
 end

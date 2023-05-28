@@ -5,7 +5,7 @@ theory "06_Examples"
 begin
 (*>*)
 
-chapter \<open>The Example in Isabelle\<close>
+chapter \<open>The Running Example\<close>
 
 definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
   "\<epsilon>_free \<G> \<longleftrightarrow> (\<forall>r \<in> set (\<RR> \<G>). rule_body r \<noteq> [])"

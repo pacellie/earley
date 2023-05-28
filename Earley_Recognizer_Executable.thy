@@ -1542,41 +1542,38 @@ proof (rule ccontr)
 qed
 
 lemma Complete_Un_eq_nonterminal:
-  assumes "next_symbol z = Some a" "is_nonterminal cfg a" "sound_items cfg inp I" "item_end z = k"
-  assumes "wf_items cfg inp I" "wf_item cfg inp z" "wf_cfg cfg" "nonempty_derives cfg"
+  assumes "wf_cfg cfg" "wf_items cfg inp I" "sound_items cfg inp I"
+  assumes "nonempty_derives cfg" "wf_item cfg inp z"
+  assumes "item_end z = k" "next_symbol z \<noteq> None" 
   shows "Complete k (I \<union> {z}) = Complete k I"
 proof (rule ccontr)
   assume "Complete k (I \<union> {z}) \<noteq> Complete k I"
   hence "Complete k I \<subset> Complete k (I \<union> {z})"
     using Complete_sub_mono by blast
-  then obtain w x y where *:
-    "w \<in> Complete k (I \<union> {z})" "w \<notin> Complete k I" "w = inc_item x k"
-    "x \<in> bin (I \<union> {z}) (item_origin y)" "y \<in> bin (I \<union> {z}) k"
-    "is_complete y" "next_symbol x = Some (item_rule_head y)"
+  then obtain x x' y where *:
+    "x \<in> Complete k (I \<union> {z})" "x \<notin> Complete k I" "x = inc_item x' k"
+    "x' \<in> bin (I \<union> {z}) (item_origin y)" "y \<in> bin (I \<union> {z}) k"
+    "is_complete y" "next_symbol x' = Some (item_rule_head y)"
     unfolding Complete_def by fast
-  consider (A) "x = z" | (B) "y = z" | "\<not> (x = z \<or> y = z)"
-    by blast
+  consider (A) "x' = z" | (B) "y = z"
+    using *(2-7) Complete_def by (auto simp: bin_def; blast)
   thus False
   proof cases
     case A
     have "item_origin y = k"
-      using *(4) A assms(4) by (auto simp: bin_def)
+      using *(4) A bin_def assms(6) by (metis (mono_tags, lifting) mem_Collect_eq)
     moreover have "item_end y = k"
       using *(5) bin_def by blast
     moreover have "sound_item cfg inp y"
-      using *(5,6) assms(1,3) by (auto simp: bin_def next_symbol_def sound_items_def)
+      using *(5,6) assms(3,7) by (auto simp: bin_def next_symbol_def sound_items_def)
     moreover have "wf_item cfg inp y"
-      using *(5) assms(5,6) wf_items_def by (auto simp: bin_def)
+      using *(5) assms(2,5) wf_items_def by (auto simp: bin_def)
     ultimately show ?thesis
-      using impossible_complete_item *(6) assms(7,8) by blast
+      using impossible_complete_item *(6) assms(1,4) by blast
   next
     case B
     thus ?thesis
-      using *(6) assms(1) by (auto simp: next_symbol_def)
-  next
-    case 3
-    thus ?thesis
-      using *(2-7) Complete_def by (auto simp: bin_def; blast)
+      using *(6) assms(7) by (auto simp: next_symbol_def)
   qed
 qed
 
@@ -1904,14 +1901,6 @@ next
   have len: "i < length (items (?bs' ! k))"
     using length_nth_bin_bins_upd Predict.hyps(1)
     by (metis dual_order.strict_trans1 items_def length_map linorder_not_less)
-  have "item_rule x \<in> set (\<RR> cfg)"
-    using Predict.prems(1) wf_bins_kth_bin x wf_item_def wellformed_bins_elim by blast
-  hence "\<forall>s \<in> set (item_rule_body x). s \<in> set (\<NN> cfg) \<union> set (\<TT> cfg)"
-    using Predict.prems(1) wellformed_bins_elim by (auto simp: wf_cfg_defs item_rule_body_def rule_body_def; fastforce)
-  hence "is_terminal cfg a \<or> is_nonterminal cfg a"
-    using Predict.hyps(3) by (auto simp: next_symbol_def is_complete_def is_nonterminal_def is_terminal_def split: if_splits)
-  hence nonterm: "is_nonterminal cfg a"
-    using Predict.hyps(4) by blast
   have "Scan k inp (bins_items_upto ?bs' k (i + 1)) \<subseteq> bins_items ?bs'"
   proof -
     have "Scan k inp (bins_items_upto ?bs' k (i + 1)) = Scan k inp (bins_items_upto ?bs' k i \<union> {items (?bs' ! k) ! i})"
@@ -1950,12 +1939,13 @@ next
       using items_nth_idem_bins_upd Predict.hyps(1,2) Predict.prems(1) bins_items_upto_kth_nth_idem wellformed_bins_elim
       by (metis dual_order.refl items_def length_map not_le_imp_less)
     also have "... = Complete k (bins_items_upto bs k i)"
-      using Complete_Un_eq_nonterminal[OF Predict.hyps(3) nonterm] Predict.prems bins_items_upto_sub_bins_items
+      using Complete_Un_eq_nonterminal Predict.prems bins_items_upto_sub_bins_items Predict.hyps(3)
         sound_items_def subset_eq wf_bins_kth_bin x wf_bins_impl_wf_items wf_items_def wellformed_bins_elim
-      by metis
+      by (smt (verit, ccfv_SIG) option.simps(3))
+    also have "... \<subseteq> bins_items bs"
+      using Complete_\<pi>_step_mono Predict.prems(2) by blast
     finally show ?thesis
-      using bins_bins_upd Predict.prems(1,2,3) Complete_\<pi>_step_mono wellformed_bins_elim
-      by (metis Un_upper1 dual_order.trans)
+      using bins_bins_upd Predict.prems(1,2,3) wellformed_bins_elim by (metis Un_upper1 dual_order.trans)
   qed
   ultimately have "\<pi>_step k cfg inp (bins_items ?bs') \<subseteq> bins_items (\<pi>_it' k cfg inp ?bs' (i+1))"
     using Predict.IH Predict.prems sound wf \<pi>_step_def bins_items_upto_sub_bins_items 
@@ -2294,7 +2284,7 @@ lemma funpower_\<pi>_step_sub_\<pi>_it:
 proof (induction n)
   case 0
   thus ?case
-    by (simp add: \<pi>_it'_mono \<pi>_it_def)
+    using \<pi>_it'_mono \<pi>_it_def by (simp add: \<pi>_it'_mono \<pi>_it_def)
 next
   case (Suc n)
   have 0: "\<pi>_step k cfg inp (bins_items_upto (\<pi>_it k cfg inp bs) k 0) \<subseteq> bins_items (\<pi>_it k cfg inp bs)"
