@@ -45,28 +45,25 @@ definition predicts :: "'a item \<Rightarrow> bool" where
   "predicts x \<equiv> item_origin x = item_end x \<and> item_bullet x = 0"
 
 definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "scans \<omega> k x y \<equiv> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> \<omega>!(k-1) = a)"
+  "scans \<omega> k x' x \<equiv> x = inc_item x' k \<and> (\<exists>a. next_symbol x' = Some a \<and> \<omega>!(k-1) = a)"
 
 definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "completes k x y z \<equiv> y = inc_item x k \<and>
-    is_complete z \<and>
-    item_origin z = item_end x \<and>
-    (\<exists>N. next_symbol x = Some N \<and> N = item_rule_head z)"
+  "completes k x' x y \<equiv> x = inc_item x' k \<and>
+    is_complete y \<and>
+    item_origin y = item_end x' \<and>
+    (\<exists>N. next_symbol x' = Some N \<and> N = item_rule_head y)"
 
 definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
   "sound_null_ptr e \<equiv> pointer e = Null \<longrightarrow> predicts (item e)"
 
 definition sound_pre_ptr :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_pre_ptr \<omega> bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
-    k > 0 \<and>
-    pre < |bs!(k-1)| \<and>
+    k > 0 \<and> pre < |bs!(k-1)| \<and>
     scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
 
 definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_prered_ptr bs k e \<equiv> \<forall>p ps k' pre red. pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
-    k' < k \<and>
-    pre < |bs!k'| \<and> 
-    red < |bs!k| \<and>
+    k' < k \<and> pre < |bs!k'| \<and> red < |bs!k| \<and>
     completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
 
 definition sound_ptrs :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> bool" where
@@ -110,7 +107,7 @@ lemma sound_mono_ptrs_bin_upds:
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_Earley_bin_list': \<comment>\<open>Detailed\<close>
+lemma sound_mono_ptrs_Earley_bin_list':
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "nonempty_derives \<G>"
   assumes "sound_items \<G> \<omega> (bins bs)"
@@ -210,8 +207,7 @@ definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<time
       sound_ptrs \<omega> bs \<and>
       mono_red_ptr bs \<and>
       k < |bs| \<and>
-      i < |bs!k|
-  }"
+      i < |bs!k| }"
 
 lemma build_tree'_termination:
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
@@ -224,7 +220,7 @@ text\<open>\<close>
 
 subsection \<open>Soundness\<close>
 
-lemma wf_item_tree_build_tree':
+lemma wf_item_tree_build_tree': \<comment>\<open>Detailed\<close>
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
   assumes "wf_bins \<G> \<omega> bs"
   assumes "k < |bs|"
@@ -237,7 +233,7 @@ lemma wf_item_tree_build_tree':
 
 text\<open>\<close>
 
-lemma wf_yield_tree_build_tree':
+lemma wf_yield_tree_build_tree': \<comment>\<open>Detailed\<close>
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
   assumes "wf_bins \<G> \<omega> bs"
   assumes "k < |bs|"
