@@ -8,7 +8,79 @@ begin
 
 chapter\<open>Earley Parser Implementation \label{chap:05}\<close>
 
-section \<open>A Single Parse Tree\<close>
+text\<open>
+Although a recognizer is a useful tool, for most practical applications we would like to not only
+know if the language specified by the grammar accepts the input, but we also want to obtain additional information
+of how the input can be derived in the form of parse trees. In particular, for our running example, the
+grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$ we want to obtain the two possible parse
+trees illustrated in Figure \ref{fig:trees}. But constructing all possible parse trees at once is no
+trivial task.
+
+\begin{figure}[htpb]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \psframebox[linestyle=none,framesep=10pt]{%
+        \pstree{\LFTr{t}{\fontspec{Noto Sans}[Script=Latin]S}}{\pstree{\Tp[edge=none]}{%
+          \pstree{\LFTr{t}{\fontspec{Noto Sans}[Script=Latin]S}}{\pstree{\Tp[edge=none]}{%
+            \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}
+            \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
+            \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}}}
+          \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
+          \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]S}}}}
+        \caption{Parse Tree: $\omega = (x + x) + x$}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \psframebox[linestyle=none,framesep=10pt]{%
+        \pstree{\LFTr{t}{\fontspec{Noto Sans}[Script=Latin]S}}{\pstree{\Tp[edge=none]}{%
+          \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}
+          \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
+          \pstree{\LFTr{t}{\fontspec{Noto Sans}[Script=Latin]S}}{\pstree{\Tp[edge=none]}{%
+            \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}
+            \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
+            \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}}}}}}
+        \caption{Parse Tree: $\omega = x + (x + x)$}
+    \end{minipage}
+    \label{fig:trees}
+\end{figure}
+
+Earley @{cite "Earley:1970"} turns his recognizer into a parser by adding the following
+pointers. If the algorithm performs a completion and constructs an item $B \rightarrow \, \alpha A \bullet \beta, i, k$,
+it adds a pointer from the \textit{instance of the non-terminal} $A$ to the complete item
+$A \rightarrow \, \gamma \bullet, j, k$. If there exists more than one possible way to complete the non-terminal
+$A$ and obtain the item $B \rightarrow \, \alpha A \bullet \beta, i, k$, then multiple pointers originate
+from the instance of the non-terminal $A$. Annotating every non-terminal of the right-hand side of the item
+$A \rightarrow \, \gamma \bullet, j, k$ recursively with pointers thus represents the derivation trees for
+the non-terminal $A$. After termination of the algorithm, the non-terminal that represents the start symbol
+contains pointers representing all possible derivation trees.
+
+Note that Earley's pointers connect instances of non-terminals, but Tomita @{cite "Tomita:1985"} showed
+that this approach is incorrect and may lead to spurious derivations in certain cases. Scott @{cite "Scott:2008"}
+presents an example for the grammar $S ::= SS \, | \, x$ and the input $\omega = xxx$. Earley's parser
+correctly constructs the parse trees for the input but additionally returns erroneous parse trees representing
+derivations of $xx$ and $xxxx$. The problem lies in the fact that left- and rightmost derivations are
+intertwined when they should not be, since pointers originate from instances of non-terminals and don't
+connect Earley items.
+
+The most well-known data structure for representing all possible derivations, a shared packed parse
+forest (SPPF), was introduced by Tomita @{cite "Tomita:1985"}. But Johnson @{cite "Johnson:1991"} has
+shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
+would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott @{cite "Scott:2008"}
+adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
+are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
+very much imperative in nature, and thus not only exceed the scope of this thesis but are also
+very difficult to map to a functional approach.
+
+In this chapter we develop an efficient functional algorithm constructing a single parse
+tree in Section \ref{sec:parse-tree} and prove its correctness. In Section \ref{sec:parse-forest}
+we generalize this approach, introducing a data structure representing all possible parse trees
+as a parse forest, adjusting the parse tree algorithm to compute such a forest and prove termination
+and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the performance, the missing
+completeness proof of the algorithm and compare our approach to the algorithm of Scott in greater detail.
+\<close>
+
+section \<open>A Single Parse Tree \label{sec:parse-tree}\<close> 
 
 datatype 'a tree =
   Leaf 'a
@@ -218,7 +290,7 @@ lemma build_tree'_termination:
 
 text\<open>\<close>
 
-subsection \<open>Soundness\<close>
+subsection \<open>Correctness\<close>
 
 lemma wf_item_tree_build_tree': \<comment>\<open>Detailed\<close>
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
@@ -271,8 +343,6 @@ corollary wf_rule_root_yield_tree_build_tree_\<E>arley_list:
 
 text\<open>\<close>
 
-subsection \<open>Completeness\<close>
-
 theorem correctness_build_tree_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
@@ -283,7 +353,7 @@ theorem correctness_build_tree_\<E>arley_list:
 (*>*)
 
 
-section \<open>A Parse Forest\<close>
+section \<open>A Parse Forest \label{sec:parse-forest}\<close>
 
 datatype 'a forest =
   FLeaf 'a
@@ -375,8 +445,7 @@ definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<tim
       k < |bs| \<and>
       i < |bs!k| \<and>
       I \<subseteq> {0..<|bs!k|} \<and>
-      i \<in> I
-  }"
+      i \<in> I }"
 
 lemma build_trees'_termination:
   assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
@@ -472,7 +541,7 @@ theorem soundness_build_trees_\<E>arley_list:
 text\<open>\<close>
 
 
-subsection \<open>A Word on Performance and Completeness\<close>
+section \<open>A Word on Performance and Completeness \label{sec:word}\<close>
 
 text\<open>
 SNIPPET:

@@ -39,11 +39,19 @@
 \usepackage{stmaryrd}
 \usepackage{turnstile}
 % \usepackage[hidelinks]{hyperref} % hidelinks removes colored boxes around references and links
+\usepackage{varwidth,pst-tree,realscripts}
 
 % Isabelle specifics
 \usepackage{isabelle,isabellesym}
 % this should be the last package used
 \usepackage{pdfsetup}
+
+% Tree Figures
+\psset{showbbox=false,treemode=D,linewidth=0.5pt,treesep=4ex,levelsep=1cm}
+\newcommand{\LFTw}[2]{%
+\Tr[ref=#1]{\psframebox[linestyle=none,framesep=4pt]{%
+\begin{varwidth}{15ex}\center #2\end{varwidth}}}}
+\newcommand{\LFTr}[2]{\Tr[ref=#1]{\psframebox[linestyle=none,framesep=4pt]{#2}}}
 
 %\urlstyle{rm}
 \isabellestyle{it}
