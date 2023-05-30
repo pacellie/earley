@@ -376,7 +376,7 @@ lemma wf_Earley_step:
 
 text\<open>
 Lemmas @{thm[source] wf_Init}, @{thm[source] wf_Scan_Predict_Complete}, and @{thm[source] wf_Earley_step}
-follow trivially by definition of the respective operations.
+follow trivially by definition of the respective operations. \newpage
 \<close>
 
 lemma wf_funpower:
@@ -569,7 +569,7 @@ lemma sound_Init:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>\newpage\<close>
 
 lemma sound_Scan:
   assumes "wf_items \<G> \<omega> I"

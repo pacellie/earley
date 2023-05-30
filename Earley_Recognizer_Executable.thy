@@ -2288,7 +2288,8 @@ proof (induction n)
 next
   case (Suc n)
   have 0: "\<pi>_step k cfg inp (bins_items_upto (\<pi>_it k cfg inp bs) k 0) \<subseteq> bins_items (\<pi>_it k cfg inp bs)"
-    using \<pi>_it'_mono bins_upto_k0_\<pi>_it'_eq \<pi>_it_def order_trans by (metis (no_types, lifting) assms(1,2))
+    using \<pi>_it'_mono bins_upto_k0_\<pi>_it'_eq assms(1,2) \<pi>_it_def order_trans
+    by (metis (no_types, lifting))
 
   have "funpower (\<pi>_step k cfg inp) (Suc n) (bins_items bs) \<subseteq> \<pi>_step k cfg inp (bins_items (\<pi>_it k cfg inp bs))"
     using \<pi>_step_sub_mono Suc by (metis funpower.simps(2))

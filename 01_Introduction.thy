@@ -7,8 +7,6 @@ begin
 
 chapter\<open>Introduction\<close>
 
-section\<open>Motivation\<close>
-
 text\<open>some introduction about parsing, formal development of correct algorithms: an example based on
 earley's recogniser, the benefits of formal methods, LocalLexing and the Bachelor thesis.\<close>
 

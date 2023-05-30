@@ -476,7 +476,7 @@ theorem soundness_build_trees_\<E>arley_list:
 text\<open>\<close>
 
 
-subsection \<open>A Word on Completeness\<close>
+subsection \<open>A Word on Performance and Completeness\<close>
 
 text\<open>
 SNIPPET:
