@@ -470,7 +470,7 @@ lemma wf_yield_tree_build_tree': \<comment>\<open>Detailed\<close>
 
 text\<open>\<close>
 
-theorem wf_rule_root_yield_tree_build_tree:
+theorem wf_rule_root_yield_tree_build_tree: \<comment>\<open>Detailed\<close>
   assumes "wf_bins \<G> \<omega> bs"
   assumes "sound_ptrs \<omega> bs"
   assumes "mono_red_ptr bs"
@@ -494,7 +494,7 @@ corollary wf_rule_root_yield_tree_build_tree_\<E>arley_list:
 
 text\<open>\<close>
 
-theorem correctness_build_tree_\<E>arley_list:
+theorem correctness_build_tree_\<E>arley_list: \<comment>\<open>Detailed\<close>
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
