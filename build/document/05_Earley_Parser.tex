@@ -37,7 +37,7 @@ Although a recognizer is a useful tool, for most practical applications we would
 know if the language specified by the grammar accepts the input, but we also want to obtain additional information
 of how the input can be derived in the form of parse trees. In particular, for our running example, the
 grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$ we want to obtain the two possible parse
-trees illustrated in Figure \ref{fig:trees}. But constructing all possible parse trees at once is no
+trees illustrated in Figures \ref{fig:tree1} \ref{fig:tree2}. But constructing all possible parse trees at once is no
 trivial task.
 
 \begin{figure}[htpb]
@@ -52,7 +52,7 @@ trivial task.
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}}}
           \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
           \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]S}}}}
-        \caption{Parse Tree: $\omega = (x + x) + x$}
+        \caption{Parse Tree: $\omega = (x + x) + x$} \label{fig:tree1}
     \end{minipage}\hfill
     \begin{minipage}{0.45\textwidth}
         \centering
@@ -64,9 +64,8 @@ trivial task.
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}}}}}}
-        \caption{Parse Tree: $\omega = x + (x + x)$}
+        \caption{Parse Tree: $\omega = x + (x + x)$} \label{fig:tree2}
     \end{minipage}
-    \label{fig:trees}
 \end{figure}
 
 Earley \cite{Earley:1970} turns his recognizer into a parser by adding the following
@@ -120,21 +119,46 @@ completeness proof of the algorithm and compare our approach to the algorithm of
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+The data structure \isa{tree} represents parse trees as shown in Figures \ref{fig:tree1} \ref{fig:tree2}.
+A \isa{Leaf} always contains a single symbol (either terminal or non-terminal for partial derivation trees), a \isa{Branch} consists of one non-terminal
+symbol and a list of subtrees. The function \isa{root{\isacharunderscore}{\kern0pt}tree} returns the symbol of the root of the
+parse tree. The yield of a leaf is the single symbol; to compute the yield for a branch with
+subtrees \isa{ts} we apply the function \isa{yield{\isacharunderscore}{\kern0pt}tree} recursively and concatenate the results.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{datatype}\isamarkupfalse%
 \ {\isacharprime}{\kern0pt}a\ tree\ {\isacharequal}{\kern0pt}\isanewline
 \ \ Leaf\ {\isacharprime}{\kern0pt}a\isanewline
-\ \ {\isacharbar}{\kern0pt}\ Branch\ {\isacharprime}{\kern0pt}a\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ tree\ list{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{fun}\isamarkupfalse%
-\ yield{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ tree\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}yield{\isacharunderscore}{\kern0pt}tree\ {\isacharparenleft}{\kern0pt}Leaf\ a{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}a{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-{\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}yield{\isacharunderscore}{\kern0pt}tree\ {\isacharparenleft}{\kern0pt}Branch\ {\isacharunderscore}{\kern0pt}\ ts{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ concat\ {\isacharparenleft}{\kern0pt}map\ yield{\isacharunderscore}{\kern0pt}tree\ ts{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+{\isacharbar}{\kern0pt}\ Branch\ {\isacharprime}{\kern0pt}a\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ tree\ list{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{fun}\isamarkupfalse%
 \ root{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ tree\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}root{\isacharunderscore}{\kern0pt}tree\ {\isacharparenleft}{\kern0pt}Leaf\ a{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ a{\isachardoublequoteclose}\isanewline
 {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}root{\isacharunderscore}{\kern0pt}tree\ {\isacharparenleft}{\kern0pt}Branch\ N\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ N{\isachardoublequoteclose}\isanewline
 \isanewline
+\isacommand{fun}\isamarkupfalse%
+\ yield{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ tree\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}yield{\isacharunderscore}{\kern0pt}tree\ {\isacharparenleft}{\kern0pt}Leaf\ a{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}a{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+{\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}yield{\isacharunderscore}{\kern0pt}tree\ {\isacharparenleft}{\kern0pt}Branch\ {\isacharunderscore}{\kern0pt}\ ts{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ concat\ {\isacharparenleft}{\kern0pt}map\ yield{\isacharunderscore}{\kern0pt}tree\ ts{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+We introduce three notions of well-formedness for parse trees:
+\begin{itemize}
+  \item \isa{wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree}: A parse tree must represent a valid (partial) derivation tree according the the grammar \isa{{\isasymG}}.
+    A leaf of a parse tree is always well-formed by construction, for each branch \isa{Branch\ N\ ts}
+    there has to exists a corresponding rule of the grammar \isa{{\isasymG}} such that $N \rightarrow \, $
+    \isa{map\ root{\isacharunderscore}{\kern0pt}tree\ ts} and each subtree \isa{t\ {\isasymin}\ set\ ts} is well-formed.
+  \item \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree}: Each branch \isa{Branch\ N\ ts} corresponds to an Earley item
+    $N \rightarrow \, \alpha \bullet \beta, i, j$ such that the roots of the subtrees \isa{ts} and
+    \isa{{\isasymalpha}} coincide. Note that a branch is only well-formed according to the grammar if
+    the roots of the subtrees are a \textit{complete} right-hand side of a production rule of the grammar.
+    In contrast, a branch is well-formed according to an item if the roots of the subtrees are equal
+    to \isa{{\isasymalpha}}, or, since we assume that Earley items are themselves well-formed, a \textit{prefix}
+    of a right-hand side of a production rule.
+  \item \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree}: For an item $N \rightarrow \, \alpha \bullet \beta, i, j$, the yield
+    of a parse tree has to match the substring \isa{{\isasymomega}{\isacharbrackleft}{\kern0pt}i{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}j{\isasymrangle}} of the input.
+\end{itemize}%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{fun}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ tree\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isacharunderscore}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Leaf\ a{\isacharparenright}{\kern0pt}\ {\isasymlongleftrightarrow}\ True{\isachardoublequoteclose}\isanewline
@@ -169,14 +193,32 @@ completeness proof of the algorithm and compare our approach to the algorithm of
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ predicts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}predicts\ x\ {\isasymequiv}\ item{\isacharunderscore}{\kern0pt}origin\ x\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x\ {\isasymand}\ item{\isacharunderscore}{\kern0pt}bullet\ x\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
+\ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymequiv}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Null\ {\isasymlongrightarrow}\ predicts\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{definition}\isamarkupfalse%
 \ scans\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}scans\ {\isasymomega}\ k\ x{\isacharprime}{\kern0pt}\ x\ {\isasymequiv}\ x\ {\isacharequal}{\kern0pt}\ inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k\ {\isasymand}\ {\isacharparenleft}{\kern0pt}{\isasymexists}a{\isachardot}{\kern0pt}\ next{\isacharunderscore}{\kern0pt}symbol\ x{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ a\ {\isasymand}\ {\isasymomega}{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ a{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
+\isacommand{definition}\isamarkupfalse%
+\ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymequiv}\ {\isasymforall}pre{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Pre\ pre\ {\isasymlongrightarrow}\isanewline
+\ \ \ \ k\ {\isachargreater}{\kern0pt}\ {\isadigit{0}}\ {\isasymand}\ pre\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
+\ \ \ \ scans\ {\isasymomega}\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ completes\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}completes\ k\ x{\isacharprime}{\kern0pt}\ x\ y\ {\isasymequiv}\ x\ {\isacharequal}{\kern0pt}\ inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k\ {\isasymand}\isanewline
@@ -185,21 +227,13 @@ completeness proof of the algorithm and compare our approach to the algorithm of
 \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymexists}N{\isachardot}{\kern0pt}\ next{\isacharunderscore}{\kern0pt}symbol\ x{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ N\ {\isasymand}\ N\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}head\ y{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
-\ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymequiv}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Null\ {\isasymlongrightarrow}\ predicts\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymequiv}\ {\isasymforall}pre{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Pre\ pre\ {\isasymlongrightarrow}\isanewline
-\ \ \ \ k\ {\isachargreater}{\kern0pt}\ {\isadigit{0}}\ {\isasymand}\ pre\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ scans\ {\isasymomega}\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e\ {\isasymequiv}\ {\isasymforall}p\ ps\ k{\isacharprime}{\kern0pt}\ pre\ red{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ p\ ps\ {\isasymand}\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}p{\isacharhash}{\kern0pt}ps{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\isanewline
 \ \ \ \ k{\isacharprime}{\kern0pt}\ {\isacharless}{\kern0pt}\ k\ {\isasymand}\ pre\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbar}{\kern0pt}\ {\isasymand}\ red\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ completes\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}red{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
+\ \ \ \ completes\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}red{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymequiv}\ {\isasymforall}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymforall}e\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
@@ -210,8 +244,10 @@ completeness proof of the algorithm and compare our approach to the algorithm of
 \isacommand{definition}\isamarkupfalse%
 \ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs\ {\isasymequiv}\ {\isasymforall}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymforall}i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
-\ \ \ \ {\isasymforall}k{\isacharprime}{\kern0pt}\ pre\ red\ ps{\isachardot}{\kern0pt}\ pointer\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps\ {\isasymlongrightarrow}\ red\ {\isacharless}{\kern0pt}\ i{\isachardoublequoteclose}\isanewline
-\isanewline
+\ \ \ \ {\isasymforall}k{\isacharprime}{\kern0pt}\ pre\ red\ ps{\isachardot}{\kern0pt}\ pointer\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps\ {\isasymlongrightarrow}\ red\ {\isacharless}{\kern0pt}\ i{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}mono{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}upd{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardoublequoteclose}\isanewline
@@ -1050,307 +1086,319 @@ complicating the final algorithm.%
 %:%101=77%:%
 %:%102=78%:%
 %:%103=79%:%
-%:%104=80%:%
-%:%113=83%:%
-%:%123=85%:%
+%:%112=82%:%
 %:%124=85%:%
 %:%125=86%:%
 %:%126=87%:%
 %:%127=88%:%
 %:%128=89%:%
-%:%129=89%:%
-%:%130=90%:%
-%:%131=91%:%
-%:%132=92%:%
-%:%133=93%:%
-%:%134=93%:%
-%:%135=94%:%
-%:%136=95%:%
-%:%137=96%:%
-%:%138=97%:%
-%:%139=97%:%
-%:%140=98%:%
-%:%141=99%:%
-%:%143=101%:%
-%:%144=102%:%
-%:%145=103%:%
-%:%146=103%:%
-%:%147=104%:%
-%:%148=105%:%
-%:%151=108%:%
-%:%152=109%:%
-%:%153=110%:%
-%:%154=110%:%
-%:%155=111%:%
-%:%162=114%:%
-%:%172=116%:%
-%:%173=116%:%
-%:%174=117%:%
-%:%175=118%:%
-%:%176=119%:%
-%:%177=119%:%
-%:%178=120%:%
-%:%179=121%:%
-%:%180=122%:%
-%:%181=122%:%
-%:%182=123%:%
-%:%185=126%:%
-%:%186=127%:%
-%:%187=128%:%
-%:%188=128%:%
-%:%189=129%:%
-%:%190=130%:%
-%:%191=131%:%
-%:%192=131%:%
-%:%193=132%:%
-%:%195=134%:%
-%:%196=135%:%
-%:%197=136%:%
-%:%198=136%:%
-%:%199=137%:%
-%:%201=139%:%
-%:%202=140%:%
-%:%203=141%:%
-%:%204=141%:%
-%:%205=142%:%
-%:%208=145%:%
-%:%209=146%:%
-%:%210=147%:%
-%:%211=147%:%
-%:%212=148%:%
-%:%213=149%:%
-%:%214=150%:%
-%:%215=151%:%
-%:%216=151%:%
-%:%217=152%:%
-%:%218=153%:%
-%:%219=154%:%
-%:%220=155%:%
-%:%221=156%:%
-%:%222=157%:%
-%:%223=158%:%
-%:%224=159%:%
-%:%225=160%:%
-%:%242=167%:%
-%:%243=167%:%
-%:%244=168%:%
-%:%245=169%:%
-%:%246=170%:%
-%:%247=171%:%
-%:%248=172%:%
-%:%249=173%:%
-%:%250=174%:%
-%:%251=175%:%
-%:%268=182%:%
-%:%269=182%:%
-%:%270=183%:%
-%:%271=184%:%
-%:%272=185%:%
-%:%273=186%:%
-%:%274=187%:%
-%:%275=188%:%
-%:%292=195%:%
-%:%293=195%:%
-%:%294=196%:%
-%:%295=197%:%
-%:%296=198%:%
-%:%297=199%:%
-%:%298=200%:%
-%:%299=201%:%
-%:%316=208%:%
-%:%317=208%:%
-%:%318=209%:%
-%:%335=216%:%
-%:%336=216%:%
-%:%337=217%:%
-%:%338=218%:%
-%:%339=219%:%
-%:%340=220%:%
-%:%357=227%:%
-%:%358=227%:%
-%:%359=228%:%
-%:%360=229%:%
-%:%361=230%:%
-%:%381=236%:%
-%:%391=238%:%
-%:%392=238%:%
-%:%393=239%:%
-%:%415=261%:%
-%:%416=262%:%
-%:%417=263%:%
-%:%418=263%:%
-%:%419=264%:%
-%:%430=271%:%
-%:%440=273%:%
-%:%441=273%:%
-%:%442=274%:%
-%:%443=275%:%
-%:%444=276%:%
-%:%445=276%:%
-%:%446=277%:%
-%:%451=282%:%
-%:%452=283%:%
-%:%453=284%:%
-%:%454=284%:%
-%:%455=285%:%
-%:%456=286%:%
-%:%480=293%:%
-%:%490=295%:%
-%:%491=295%:%
-%:%492=295%:%
-%:%493=295%:%
-%:%494=296%:%
-%:%495=297%:%
-%:%496=298%:%
-%:%497=299%:%
-%:%498=300%:%
-%:%499=301%:%
-%:%516=308%:%
-%:%517=308%:%
-%:%518=308%:%
-%:%519=308%:%
-%:%520=309%:%
-%:%521=310%:%
-%:%522=311%:%
-%:%523=312%:%
-%:%524=313%:%
-%:%525=314%:%
-%:%526=315%:%
-%:%543=322%:%
-%:%544=322%:%
-%:%545=323%:%
-%:%546=324%:%
-%:%547=325%:%
-%:%548=326%:%
-%:%549=327%:%
-%:%550=328%:%
-%:%567=335%:%
-%:%568=335%:%
-%:%569=336%:%
-%:%570=337%:%
-%:%571=338%:%
-%:%572=339%:%
-%:%589=346%:%
-%:%590=346%:%
-%:%591=347%:%
-%:%592=348%:%
-%:%593=349%:%
-%:%594=350%:%
-%:%614=356%:%
-%:%624=358%:%
-%:%625=358%:%
-%:%626=359%:%
-%:%627=360%:%
-%:%628=361%:%
-%:%629=362%:%
-%:%630=362%:%
-%:%631=363%:%
-%:%632=364%:%
-%:%633=365%:%
-%:%634=366%:%
-%:%635=366%:%
-%:%636=367%:%
-%:%637=368%:%
-%:%647=374%:%
-%:%657=376%:%
-%:%658=376%:%
-%:%659=377%:%
-%:%660=378%:%
-%:%663=381%:%
-%:%664=382%:%
-%:%665=383%:%
-%:%666=383%:%
-%:%667=384%:%
-%:%668=385%:%
-%:%680=397%:%
-%:%683=398%:%
-%:%684=398%:%
-%:%685=399%:%
-%:%713=427%:%
-%:%714=428%:%
-%:%715=429%:%
-%:%716=429%:%
-%:%717=430%:%
-%:%727=436%:%
-%:%737=438%:%
-%:%738=438%:%
-%:%739=439%:%
-%:%740=440%:%
-%:%741=441%:%
-%:%742=441%:%
-%:%743=442%:%
-%:%749=448%:%
-%:%750=449%:%
-%:%751=450%:%
-%:%752=450%:%
-%:%753=451%:%
-%:%754=452%:%
-%:%771=459%:%
-%:%772=459%:%
-%:%773=460%:%
-%:%774=461%:%
-%:%775=462%:%
-%:%776=463%:%
-%:%796=469%:%
-%:%806=471%:%
-%:%807=471%:%
-%:%808=472%:%
-%:%809=473%:%
-%:%810=474%:%
-%:%811=475%:%
-%:%812=476%:%
-%:%813=477%:%
-%:%814=478%:%
-%:%815=479%:%
-%:%832=486%:%
-%:%833=486%:%
-%:%834=487%:%
-%:%835=488%:%
-%:%836=489%:%
-%:%837=490%:%
-%:%838=491%:%
-%:%839=492%:%
-%:%840=493%:%
-%:%841=494%:%
-%:%842=495%:%
-%:%859=502%:%
-%:%860=502%:%
-%:%861=503%:%
-%:%862=504%:%
-%:%863=505%:%
-%:%864=506%:%
-%:%865=507%:%
-%:%866=508%:%
-%:%867=509%:%
-%:%884=516%:%
-%:%885=516%:%
-%:%886=517%:%
-%:%887=518%:%
-%:%888=519%:%
-%:%889=520%:%
-%:%890=521%:%
-%:%891=522%:%
-%:%908=529%:%
-%:%909=529%:%
-%:%910=530%:%
-%:%911=531%:%
-%:%912=532%:%
-%:%913=533%:%
-%:%914=534%:%
-%:%915=535%:%
-%:%916=536%:%
-%:%940=544%:%
-%:%952=547%:%
-%:%953=548%:%
-%:%954=549%:%
-%:%955=550%:%
-%:%956=551%:%
-%:%957=552%:%
-%:%958=553%:%
-%:%959=554%:%
-%:%960=555%:%
-%:%961=556%:%
-%:%962=557%:%
-%:%963=558%:%
-%:%964=559%:%
-%:%965=560%:%
+%:%130=92%:%
+%:%131=92%:%
+%:%132=93%:%
+%:%133=94%:%
+%:%134=95%:%
+%:%135=96%:%
+%:%136=96%:%
+%:%137=97%:%
+%:%138=98%:%
+%:%139=99%:%
+%:%140=100%:%
+%:%141=100%:%
+%:%142=101%:%
+%:%143=102%:%
+%:%145=105%:%
+%:%146=106%:%
+%:%147=107%:%
+%:%148=108%:%
+%:%149=109%:%
+%:%150=110%:%
+%:%151=111%:%
+%:%152=112%:%
+%:%153=113%:%
+%:%154=114%:%
+%:%155=115%:%
+%:%156=116%:%
+%:%157=117%:%
+%:%158=118%:%
+%:%159=119%:%
+%:%160=120%:%
+%:%162=123%:%
+%:%163=123%:%
+%:%164=124%:%
+%:%165=125%:%
+%:%167=127%:%
+%:%168=128%:%
+%:%169=129%:%
+%:%170=129%:%
+%:%171=130%:%
+%:%172=131%:%
+%:%175=134%:%
+%:%176=135%:%
+%:%177=136%:%
+%:%178=136%:%
+%:%179=137%:%
+%:%186=140%:%
+%:%200=145%:%
+%:%201=145%:%
+%:%202=146%:%
+%:%203=147%:%
+%:%204=148%:%
+%:%205=148%:%
+%:%206=149%:%
+%:%210=154%:%
+%:%211=154%:%
+%:%212=155%:%
+%:%213=156%:%
+%:%214=157%:%
+%:%215=157%:%
+%:%216=158%:%
+%:%222=165%:%
+%:%223=165%:%
+%:%224=166%:%
+%:%227=169%:%
+%:%228=170%:%
+%:%229=171%:%
+%:%230=171%:%
+%:%231=172%:%
+%:%237=179%:%
+%:%238=179%:%
+%:%239=180%:%
+%:%242=183%:%
+%:%243=184%:%
+%:%244=185%:%
+%:%245=185%:%
+%:%246=186%:%
+%:%251=192%:%
+%:%252=192%:%
+%:%253=193%:%
+%:%254=194%:%
+%:%255=195%:%
+%:%256=196%:%
+%:%257=197%:%
+%:%258=198%:%
+%:%259=199%:%
+%:%260=200%:%
+%:%261=201%:%
+%:%278=208%:%
+%:%279=208%:%
+%:%280=209%:%
+%:%281=210%:%
+%:%282=211%:%
+%:%283=212%:%
+%:%284=213%:%
+%:%285=214%:%
+%:%286=215%:%
+%:%287=216%:%
+%:%304=223%:%
+%:%305=223%:%
+%:%306=224%:%
+%:%307=225%:%
+%:%308=226%:%
+%:%309=227%:%
+%:%310=228%:%
+%:%311=229%:%
+%:%328=236%:%
+%:%329=236%:%
+%:%330=237%:%
+%:%331=238%:%
+%:%332=239%:%
+%:%333=240%:%
+%:%334=241%:%
+%:%335=242%:%
+%:%352=249%:%
+%:%353=249%:%
+%:%354=250%:%
+%:%371=257%:%
+%:%372=257%:%
+%:%373=258%:%
+%:%374=259%:%
+%:%375=260%:%
+%:%376=261%:%
+%:%393=268%:%
+%:%394=268%:%
+%:%395=269%:%
+%:%396=270%:%
+%:%397=271%:%
+%:%417=277%:%
+%:%427=279%:%
+%:%428=279%:%
+%:%429=280%:%
+%:%451=302%:%
+%:%452=303%:%
+%:%453=304%:%
+%:%454=304%:%
+%:%455=305%:%
+%:%466=312%:%
+%:%476=314%:%
+%:%477=314%:%
+%:%478=315%:%
+%:%479=316%:%
+%:%480=317%:%
+%:%481=317%:%
+%:%482=318%:%
+%:%487=323%:%
+%:%488=324%:%
+%:%489=325%:%
+%:%490=325%:%
+%:%491=326%:%
+%:%492=327%:%
+%:%516=334%:%
+%:%526=336%:%
+%:%527=336%:%
+%:%528=336%:%
+%:%529=336%:%
+%:%530=337%:%
+%:%531=338%:%
+%:%532=339%:%
+%:%533=340%:%
+%:%534=341%:%
+%:%535=342%:%
+%:%552=349%:%
+%:%553=349%:%
+%:%554=349%:%
+%:%555=349%:%
+%:%556=350%:%
+%:%557=351%:%
+%:%558=352%:%
+%:%559=353%:%
+%:%560=354%:%
+%:%561=355%:%
+%:%562=356%:%
+%:%579=363%:%
+%:%580=363%:%
+%:%581=364%:%
+%:%582=365%:%
+%:%583=366%:%
+%:%584=367%:%
+%:%585=368%:%
+%:%586=369%:%
+%:%603=376%:%
+%:%604=376%:%
+%:%605=377%:%
+%:%606=378%:%
+%:%607=379%:%
+%:%608=380%:%
+%:%625=387%:%
+%:%626=387%:%
+%:%627=388%:%
+%:%628=389%:%
+%:%629=390%:%
+%:%630=391%:%
+%:%650=397%:%
+%:%660=399%:%
+%:%661=399%:%
+%:%662=400%:%
+%:%663=401%:%
+%:%664=402%:%
+%:%665=403%:%
+%:%666=403%:%
+%:%667=404%:%
+%:%668=405%:%
+%:%669=406%:%
+%:%670=407%:%
+%:%671=407%:%
+%:%672=408%:%
+%:%673=409%:%
+%:%683=415%:%
+%:%693=417%:%
+%:%694=417%:%
+%:%695=418%:%
+%:%696=419%:%
+%:%699=422%:%
+%:%700=423%:%
+%:%701=424%:%
+%:%702=424%:%
+%:%703=425%:%
+%:%704=426%:%
+%:%716=438%:%
+%:%719=439%:%
+%:%720=439%:%
+%:%721=440%:%
+%:%749=468%:%
+%:%750=469%:%
+%:%751=470%:%
+%:%752=470%:%
+%:%753=471%:%
+%:%763=477%:%
+%:%773=479%:%
+%:%774=479%:%
+%:%775=480%:%
+%:%776=481%:%
+%:%777=482%:%
+%:%778=482%:%
+%:%779=483%:%
+%:%785=489%:%
+%:%786=490%:%
+%:%787=491%:%
+%:%788=491%:%
+%:%789=492%:%
+%:%790=493%:%
+%:%807=500%:%
+%:%808=500%:%
+%:%809=501%:%
+%:%810=502%:%
+%:%811=503%:%
+%:%812=504%:%
+%:%832=510%:%
+%:%842=512%:%
+%:%843=512%:%
+%:%844=513%:%
+%:%845=514%:%
+%:%846=515%:%
+%:%847=516%:%
+%:%848=517%:%
+%:%849=518%:%
+%:%850=519%:%
+%:%851=520%:%
+%:%868=527%:%
+%:%869=527%:%
+%:%870=528%:%
+%:%871=529%:%
+%:%872=530%:%
+%:%873=531%:%
+%:%874=532%:%
+%:%875=533%:%
+%:%876=534%:%
+%:%877=535%:%
+%:%878=536%:%
+%:%895=543%:%
+%:%896=543%:%
+%:%897=544%:%
+%:%898=545%:%
+%:%899=546%:%
+%:%900=547%:%
+%:%901=548%:%
+%:%902=549%:%
+%:%903=550%:%
+%:%920=557%:%
+%:%921=557%:%
+%:%922=558%:%
+%:%923=559%:%
+%:%924=560%:%
+%:%925=561%:%
+%:%926=562%:%
+%:%927=563%:%
+%:%944=570%:%
+%:%945=570%:%
+%:%946=571%:%
+%:%947=572%:%
+%:%948=573%:%
+%:%949=574%:%
+%:%950=575%:%
+%:%951=576%:%
+%:%952=577%:%
+%:%976=585%:%
+%:%988=588%:%
+%:%989=589%:%
+%:%990=590%:%
+%:%991=591%:%
+%:%992=592%:%
+%:%993=593%:%
+%:%994=594%:%
+%:%995=595%:%
+%:%996=596%:%
+%:%997=597%:%
+%:%998=598%:%
+%:%999=599%:%
+%:%1000=600%:%
+%:%1001=601%:%

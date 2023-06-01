@@ -459,11 +459,11 @@ syntax
 
 definition Derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> 'a rule \<Rightarrow> 'a sentential \<Rightarrow> bool" where
   "Derives1 \<G> u i r v \<equiv> 
-     \<exists> \<alpha> \<beta> N \<gamma>. 
-          u = \<alpha> @ [N] @ \<beta>
-        \<and> v = \<alpha> @ \<gamma> @ \<beta>
-        \<and> (N, \<gamma>) \<in> set (\<RR> \<G>)
-        \<and> r = (N, \<gamma>) \<and> i = |\<alpha>|"
+     \<exists>\<alpha> \<beta> N \<gamma>. 
+         u = \<alpha> @ [N] @ \<beta>
+       \<and> v = \<alpha> @ \<gamma> @ \<beta>
+       \<and> (N, \<gamma>) \<in> set (\<RR> \<G>)
+       \<and> r = (N, \<gamma>) \<and> i = |\<alpha>|"
 
 text\<open>
 He then defines the type of a \textit{derivation} as a list of pairs representing precisely the positions and rules

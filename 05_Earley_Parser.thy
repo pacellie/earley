@@ -13,7 +13,7 @@ Although a recognizer is a useful tool, for most practical applications we would
 know if the language specified by the grammar accepts the input, but we also want to obtain additional information
 of how the input can be derived in the form of parse trees. In particular, for our running example, the
 grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$ we want to obtain the two possible parse
-trees illustrated in Figure \ref{fig:trees}. But constructing all possible parse trees at once is no
+trees illustrated in Figures \ref{fig:tree1} \ref{fig:tree2}. But constructing all possible parse trees at once is no
 trivial task.
 
 \begin{figure}[htpb]
@@ -28,7 +28,7 @@ trivial task.
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}}}
           \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
           \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]S}}}}
-        \caption{Parse Tree: $\omega = (x + x) + x$}
+        \caption{Parse Tree: $\omega = (x + x) + x$} \label{fig:tree1}
     \end{minipage}\hfill
     \begin{minipage}{0.45\textwidth}
         \centering
@@ -40,9 +40,8 @@ trivial task.
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]+}
             \LFTw{t}{\fontspec{Noto Sans}[Script=Latin]x}}}}}}
-        \caption{Parse Tree: $\omega = x + (x + x)$}
+        \caption{Parse Tree: $\omega = x + (x + x)$} \label{fig:tree2}
     \end{minipage}
-    \label{fig:trees}
 \end{figure}
 
 Earley @{cite "Earley:1970"} turns his recognizer into a parser by adding the following
@@ -82,17 +81,44 @@ completeness proof of the algorithm and compare our approach to the algorithm of
 
 section \<open>A Single Parse Tree \label{sec:parse-tree}\<close> 
 
+text\<open>
+The data structure @{term tree} represents parse trees as shown in Figures \ref{fig:tree1} \ref{fig:tree2}.
+A @{term Leaf} always contains a single symbol (either terminal or non-terminal for partial derivation trees), a @{term Branch} consists of one non-terminal
+symbol and a list of subtrees. The function @{term root_tree} returns the symbol of the root of the
+parse tree. The yield of a leaf is the single symbol; to compute the yield for a branch with
+subtrees @{term ts} we apply the function @{term yield_tree} recursively and concatenate the results. 
+\<close>
+
 datatype 'a tree =
   Leaf 'a
-  | Branch 'a "'a tree list"
+| Branch 'a "'a tree list"
+
+fun root_tree :: "'a tree \<Rightarrow> 'a" where
+  "root_tree (Leaf a) = a"
+| "root_tree (Branch N _) = N"
 
 fun yield_tree :: "'a tree \<Rightarrow> 'a sentential" where
   "yield_tree (Leaf a) = [a]"
 | "yield_tree (Branch _ ts) = concat (map yield_tree ts)"
 
-fun root_tree :: "'a tree \<Rightarrow> 'a" where
-  "root_tree (Leaf a) = a"
-| "root_tree (Branch N _) = N"
+text\<open>
+We introduce three notions of well-formedness for parse trees:
+\begin{itemize}
+  \item @{term wf_rule_tree}: A parse tree must represent a valid (partial) derivation tree according the the grammar @{term \<G>}.
+    A leaf of a parse tree is always well-formed by construction, for each branch @{term "Branch N ts"}
+    there has to exists a corresponding rule of the grammar @{term \<G>} such that $N \rightarrow \, $
+    @{term "map root_tree ts"} and each subtree @{term "t \<in> set ts"} is well-formed.
+  \item @{term wf_item_tree}: Each branch @{term "Branch N ts"} corresponds to an Earley item
+    $N \rightarrow \, \alpha \bullet \beta, i, j$ such that the roots of the subtrees @{term ts} and
+    @{term \<alpha>} coincide. Note that a branch is only well-formed according to the grammar if
+    the roots of the subtrees are a \textit{complete} right-hand side of a production rule of the grammar.
+    In contrast, a branch is well-formed according to an item if the roots of the subtrees are equal
+    to @{term \<alpha>}, or, since we assume that Earley items are themselves well-formed, a \textit{prefix}
+    of a right-hand side of a production rule.
+  \item @{term wf_yield_tree}: For an item $N \rightarrow \, \alpha \bullet \beta, i, j$, the yield
+    of a parse tree has to match the substring @{term "\<omega>[i..j\<rangle>"} of the input.
+\end{itemize}
+\<close>
 
 fun wf_rule_tree :: "'a cfg \<Rightarrow> 'a tree \<Rightarrow> bool" where
   "wf_rule_tree _ (Leaf a) \<longleftrightarrow> True"
@@ -113,30 +139,50 @@ definition wf_yield_tree :: "'a sentential \<Rightarrow> 'a item \<Rightarrow> '
 
 subsection \<open>Pointer Lemmas\<close>
 
+text\<open>
+In Chapter \ref{chap:04} we extended the algorithm of chapter \ref{{chapter:3} in two orthogonal
+ways: implementing sets as lists and adding the additional information to construct parse trees
+in the form null, predecessor, and predecessor/reduction pointers. But we did not formally define
+the semantics of these pointers nor prove anything about their construction.
+
+\begin{itemize}
+  \item 
+  \item
+  \item
+\end{itemize}
+\<close>
+
 definition predicts :: "'a item \<Rightarrow> bool" where
   "predicts x \<equiv> item_origin x = item_end x \<and> item_bullet x = 0"
 
-definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "scans \<omega> k x' x \<equiv> x = inc_item x' k \<and> (\<exists>a. next_symbol x' = Some a \<and> \<omega>!(k-1) = a)"
-
-definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "completes k x' x y \<equiv> x = inc_item x' k \<and>
-    is_complete y \<and>
-    item_origin y = item_end x' \<and>
-    (\<exists>N. next_symbol x' = Some N \<and> N = item_rule_head y)"
-
 definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
   "sound_null_ptr e \<equiv> pointer e = Null \<longrightarrow> predicts (item e)"
+
+text\<open>
+\<close>
+
+definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "scans \<omega> k x' x \<equiv> x = inc_item x' k \<and> (\<exists>a. next_symbol x' = Some a \<and> \<omega>!(k-1) = a)"
 
 definition sound_pre_ptr :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_pre_ptr \<omega> bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
     k > 0 \<and> pre < |bs!(k-1)| \<and>
     scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
 
+text\<open>
+\<close>
+
+definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
+  "completes k x' x y \<equiv> x = inc_item x' k \<and> is_complete y \<and> item_origin y = item_end x' \<and>
+    (\<exists>N. next_symbol x' = Some N \<and> N = item_rule_head y)"
+
 definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
-  "sound_prered_ptr bs k e \<equiv> \<forall>p ps k' pre red. pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
-    k' < k \<and> pre < |bs!k'| \<and> red < |bs!k| \<and>
+  "sound_prered_ptr bs k e \<equiv> \<forall>p ps k' pre red. pointer e = PreRed p ps \<and>
+    (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < |bs!k'| \<and> red < |bs!k| \<and>
     completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
+
+text\<open>
+\<close>
 
 definition sound_ptrs :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "sound_ptrs \<omega> bs \<equiv> \<forall>k < |bs|. \<forall>e \<in> set (bs!k).
@@ -148,6 +194,9 @@ definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
   "mono_red_ptr bs \<equiv> \<forall>k < |bs|. \<forall>i < |bs!k|.
     \<forall>k' pre red ps. pointer (bs!k!i) = PreRed (k', pre, red) ps \<longrightarrow> red < i"
 
+text\<open>
+\<close>
+
 lemma sound_mono_ptrs_bin_upd:
   assumes "k < |bs|"
   assumes "distinct (items (bs!k))"
@@ -157,22 +206,22 @@ lemma sound_mono_ptrs_bin_upd:
   assumes "sound_prered_ptr bs k e"
   assumes "mono_red_ptr bs"
   assumes "\<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < |bs!k|"
-  shows "sound_ptrs \<omega> (bs[k := bin_upd e (bs!k)])"
+  assumes "bs' = bs[k := bin_upd e (bs!k)]"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
-
-text\<open>\<close>
 
 lemma sound_mono_ptrs_bin_upds:
   assumes "k < |bs|"
   assumes "distinct (items (bs!k))"
   assumes "distinct (items es)"
-  assumes "sound_ptrs inp bs"
-  assumes "\<forall>e \<in> set es. sound_null_ptr e \<and> sound_pre_ptr inp bs k e \<and> sound_prered_ptr bs k e"
+  assumes "sound_ptrs \<omega> bs"
+  assumes "\<forall>e \<in> set es. sound_null_ptr e \<and> sound_pre_ptr \<omega> bs k e \<and> sound_prered_ptr bs k e"
   assumes "mono_red_ptr bs"
   assumes "\<forall>e \<in> set es. \<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < |bs!k|"
-  shows "sound_ptrs inp (bs[k := bin_upds es (bs!k)]) \<and> mono_red_ptr (bs[k := bin_upds es (bs!k)])"
+  assumes "bs' = bs[k := bin_upds es (bs!k)]"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
@@ -185,7 +234,8 @@ lemma sound_mono_ptrs_Earley_bin_list':
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "sound_ptrs \<omega> bs" 
   assumes "mono_red_ptr bs"
-  shows "sound_ptrs \<omega> (Earley_bin_list' k \<G> \<omega> bs i) \<and> mono_red_ptr (Earley_bin_list' k \<G> \<omega> bs i)"
+  assumes "bs' = Earley_bin_list' k \<G> \<omega> bs i"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
@@ -198,7 +248,8 @@ lemma sound_mono_ptrs_Earley_bin_list:
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "sound_ptrs \<omega> bs"
   assumes "mono_red_ptr bs"
-  shows "sound_ptrs \<omega> (Earley_bin_list k \<G> \<omega> bs) \<and> mono_red_ptr (Earley_bin_list k \<G> \<omega> bs)"
+  assumes "bs' = Earley_bin_list k \<G> \<omega> bs"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
@@ -206,7 +257,8 @@ lemma sound_mono_ptrs_Earley_bin_list:
 text\<open>\<close>
 
 lemma sound_mono_ptrs_Init_list:
-  shows "sound_ptrs \<omega> (Init_list \<G> \<omega>) \<and> mono_red_ptr (Init_list \<G> \<omega>)"
+  assumes "bs' = Init_list \<G> \<omega>"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
@@ -217,7 +269,8 @@ lemma sound_mono_ptrs_Earley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   assumes "k \<le> |\<omega>|"
-  shows "sound_ptrs \<omega> (Earley_list k \<G> \<omega>) \<and> mono_red_ptr (Earley_list k \<G> \<omega>)"
+  assumes "bs' = Earley_list k \<G> \<omega>"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
@@ -227,7 +280,8 @@ text\<open>\<close>
 lemma sound_mono_ptrs_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
-  shows "sound_ptrs \<omega> (\<E>arley_list \<G> \<omega>) \<and> mono_red_ptr (\<E>arley_list \<G> \<omega>)"
+  assumes "bs' = \<E>arley_list \<G> \<omega>"
+  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
 (*<*)
   sorry
 (*>*)
@@ -274,12 +328,8 @@ fun build_tree'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times
   "build_tree'_measure (bs, \<omega>, k, i) = foldl (+) 0 (map length (take k bs)) + i"
 
 definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) set" where
-  "wf_tree_input = {
-    (bs, \<omega>, k, i) | bs \<omega> k i.
-      sound_ptrs \<omega> bs \<and>
-      mono_red_ptr bs \<and>
-      k < |bs| \<and>
-      i < |bs!k| }"
+  "wf_tree_input = { (bs, \<omega>, k, i) | bs \<omega> k i.
+      sound_ptrs \<omega> bs \<and> mono_red_ptr bs \<and> k < |bs| \<and> i < |bs!k| }"
 
 lemma build_tree'_termination:
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
@@ -439,13 +489,8 @@ fun build_forest'_measure :: "('a bins \<times> 'a sentential \<times> nat \<tim
   "build_forest'_measure (bs, \<omega>, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
 definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) set" where
-  "wf_trees_input = {
-    (bs, \<omega>, k, i, I) | bs \<omega> k i I.
-      sound_ptrs \<omega> bs \<and>
-      k < |bs| \<and>
-      i < |bs!k| \<and>
-      I \<subseteq> {0..<|bs!k|} \<and>
-      i \<in> I }"
+  "wf_trees_input = { (bs, \<omega>, k, i, I) | bs \<omega> k i I.
+      sound_ptrs \<omega> bs \<and> k < |bs| \<and> i < |bs!k| \<and> I \<subseteq> {0..<|bs!k|} \<and> i \<in> I }"
 
 lemma build_trees'_termination:
   assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"

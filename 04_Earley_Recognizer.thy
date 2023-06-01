@@ -80,8 +80,8 @@ text\<open>
 
 datatype pointer =
   Null
-  | Pre nat \<comment>\<open>pre\<close>
-  | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list" \<comment>\<open>(k', pre, red) reds\<close>
+| Pre nat \<comment>\<open>pre\<close>
+| PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list" \<comment>\<open>(k', pre, red) reds\<close>
 
 datatype 'a entry =
   Entry (item : "'a item") (pointer : pointer)
