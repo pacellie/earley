@@ -195,18 +195,40 @@ We introduce three notions of well-formedness for parse trees:
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-%
+In Chapter \ref{chap:04} we extended the algorithm of Chapter \ref{chapter:3} in two orthogonal
+ways: implementing sets as lists and adding the additional information to construct parse trees
+in the form null, predecessor, and predecessor/reduction pointers. But we did not formally define
+the semantics of these pointers nor prove anything about their construction. In the following, we
+define and proof soundness of the pointers.
+
+\begin{itemize}
+  \item A null pointer \isa{Null} of an entry is sound if it \isa{predicts} the item $x$ of
+    the entry, or the bullet of $x$ is at the beginning of the right-hand side of its production rule
+    and we have not yet scanned any substring of the input.
+  \item A predecessor pointer \isa{Pre\ pre} of an entry $e$ is sound for the input \isa{{\isasymomega}}, bins \isa{bs},
+    and the index of the current bin $k$ if $k > 0$, the predecessor index does not exceed the length
+    of the predecessor bin at index $k-1$, and the predecessor item in bin $k-1$ at index $pre$ \isa{scans}
+    then item of the entry $e$. Item $x'$ \isa{scans} item $x$ for index $k$ if the next symbol of
+    $x'$ coincides with the terminal symbol at index $k-1$ in the input \isa{{\isasymomega}} and the item $x$ can be obtained
+    by \isa{inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k}. 
+  \item We define the soundness a pointer \isa{PreRed\ p\ ps} of an entry $e$ for each predecessor/reduction
+    triple \isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}p\ {\isacharhash}{\kern0pt}\ ps{\isacharparenright}{\kern0pt}}. The index $k'$ of the predecessor bin must be strictly
+    smaller than $k$, and both the predecessor and the reduction index must be within the bounds of their
+    respective bins, or bin $k'$ and $k$. Additionally, predicate \isa{completes} holds for $k$,
+    the predecessor item $x'$, the item $x$ of entry $e$ and the reduction item $y$, capturing the semantics of
+    the \isa{Complete} operation: The next symbol of $x'$ is the non-terminal $N$ which coincides
+    with the item rule head of $y$. Furthermore, the item $y$ is complete and the origin index of $y$
+    aligns with the end index of $x'$. Finally, item $x$ can be obtained once more by \isa{inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k}.
+\end{itemize}%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ predicts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}predicts\ x\ {\isasymequiv}\ item{\isacharunderscore}{\kern0pt}origin\ x\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x\ {\isasymand}\ item{\isacharunderscore}{\kern0pt}bullet\ x\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\ \ {\isachardoublequoteopen}predicts\ x\ {\isasymequiv}\ item{\isacharunderscore}{\kern0pt}bullet\ x\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}\ {\isasymand}\ item{\isacharunderscore}{\kern0pt}origin\ x\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymequiv}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Null\ {\isasymlongrightarrow}\ predicts\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
-\begin{isamarkuptext}%
-%
-\end{isamarkuptext}\isamarkuptrue%
+\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymequiv}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Null\ {\isasymlongrightarrow}\ predicts\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
 \isacommand{definition}\isamarkupfalse%
 \ scans\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}scans\ {\isasymomega}\ k\ x{\isacharprime}{\kern0pt}\ x\ {\isasymequiv}\ x\ {\isacharequal}{\kern0pt}\ inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k\ {\isasymand}\ {\isacharparenleft}{\kern0pt}{\isasymexists}a{\isachardot}{\kern0pt}\ next{\isacharunderscore}{\kern0pt}symbol\ x{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ a\ {\isasymand}\ {\isasymomega}{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ a{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
@@ -215,49 +237,43 @@ We introduce three notions of well-formedness for parse trees:
 \ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymequiv}\ {\isasymforall}pre{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ Pre\ pre\ {\isasymlongrightarrow}\isanewline
 \ \ \ \ k\ {\isachargreater}{\kern0pt}\ {\isadigit{0}}\ {\isasymand}\ pre\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ scans\ {\isasymomega}\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
-\begin{isamarkuptext}%
-%
-\end{isamarkuptext}\isamarkuptrue%
+\ \ \ \ scans\ {\isasymomega}\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
 \isacommand{definition}\isamarkupfalse%
 \ completes\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ item\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}completes\ k\ x{\isacharprime}{\kern0pt}\ x\ y\ {\isasymequiv}\ x\ {\isacharequal}{\kern0pt}\ inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k\ {\isasymand}\isanewline
-\ \ \ \ is{\isacharunderscore}{\kern0pt}complete\ y\ {\isasymand}\isanewline
-\ \ \ \ item{\isacharunderscore}{\kern0pt}origin\ y\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x{\isacharprime}{\kern0pt}\ {\isasymand}\isanewline
+\ \ {\isachardoublequoteopen}completes\ k\ x{\isacharprime}{\kern0pt}\ x\ y\ {\isasymequiv}\ x\ {\isacharequal}{\kern0pt}\ inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k\ {\isasymand}\ is{\isacharunderscore}{\kern0pt}complete\ y\ {\isasymand}\ item{\isacharunderscore}{\kern0pt}origin\ y\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}end\ x{\isacharprime}{\kern0pt}\ {\isasymand}\isanewline
 \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymexists}N{\isachardot}{\kern0pt}\ next{\isacharunderscore}{\kern0pt}symbol\ x{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ N\ {\isasymand}\ N\ {\isacharequal}{\kern0pt}\ item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}head\ y{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ entry\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e\ {\isasymequiv}\ {\isasymforall}p\ ps\ k{\isacharprime}{\kern0pt}\ pre\ red{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ p\ ps\ {\isasymand}\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}p{\isacharhash}{\kern0pt}ps{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\isanewline
-\ \ \ \ k{\isacharprime}{\kern0pt}\ {\isacharless}{\kern0pt}\ k\ {\isasymand}\ pre\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbar}{\kern0pt}\ {\isasymand}\ red\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ completes\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}red{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
-\begin{isamarkuptext}%
-%
-\end{isamarkuptext}\isamarkuptrue%
+\ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e\ {\isasymequiv}\ {\isasymforall}p\ ps\ k{\isacharprime}{\kern0pt}\ pre\ red{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ p\ ps\ {\isasymand}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}p{\isacharhash}{\kern0pt}ps{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ k{\isacharprime}{\kern0pt}\ {\isacharless}{\kern0pt}\ k\ {\isasymand}\ pre\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbar}{\kern0pt}\ {\isasymand}\ red\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
+\ \ \ \ completes\ k\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharbang}{\kern0pt}pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}red{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
 \isacommand{definition}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymequiv}\ {\isasymforall}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymforall}e\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
-\ \ \ \ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymand}\isanewline
-\ \ \ \ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymand}\isanewline
-\ \ \ \ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs\ {\isasymequiv}\ {\isasymforall}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymforall}i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
-\ \ \ \ {\isasymforall}k{\isacharprime}{\kern0pt}\ pre\ red\ ps{\isachardot}{\kern0pt}\ pointer\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps\ {\isasymlongrightarrow}\ red\ {\isacharless}{\kern0pt}\ i{\isachardoublequoteclose}%
+\ \ \ \ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e{\isachardoublequoteclose}%
 \begin{isamarkuptext}%
-%
+We then prove the semantics of the pointers. The structure of the proofs is as always: we first
+proof pointer soundness for the basic operations \isa{bin{\isacharunderscore}{\kern0pt}upd}, \isa{bin{\isacharunderscore}{\kern0pt}upds}, and \isa{bins{\isacharunderscore}{\kern0pt}upd}.
+Followed by the corresponding proofs for the computation of a single bin or functions \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}}
+and \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list}. Finally, we prove that the initial bins are sound, and functions \isa{Earley{\isacharunderscore}{\kern0pt}list}
+and \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} maintain this property. Although it should be intuitively clear that the
+semantics of pointers hold, the proofs are surprisingly not trivial at all, especially the soundness
+proofs for functions \isa{bin{\isacharunderscore}{\kern0pt}upd} and \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}}. The complexity mostly stems from
+the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and depending
+on the type of the newly inserted items. Nonetheless, since the proofs are very technical but do not
+reveal anything new in structure, we only state them and omit going into detail.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
-\ sound{\isacharunderscore}{\kern0pt}mono{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}upd{\isacharcolon}{\kern0pt}\isanewline
+\ sound{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}upd{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}distinct\ {\isacharparenleft}{\kern0pt}items\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymforall}k{\isacharprime}{\kern0pt}\ pre\ red\ ps{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps\ {\isasymlongrightarrow}\ red\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}bs{\isacharbrackleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ bin{\isacharunderscore}{\kern0pt}upd\ e\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
@@ -280,11 +296,9 @@ We introduce three notions of well-formedness for parse trees:
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}distinct\ {\isacharparenleft}{\kern0pt}items\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}distinct\ {\isacharparenleft}{\kern0pt}items\ es{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ inp\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymforall}e\ {\isasymin}\ set\ es{\isachardot}{\kern0pt}\ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ inp\ bs\ k\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymforall}e\ {\isasymin}\ set\ es{\isachardot}{\kern0pt}\ {\isasymforall}k{\isacharprime}{\kern0pt}\ pre\ red\ ps{\isachardot}{\kern0pt}\ pointer\ e\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps\ {\isasymlongrightarrow}\ red\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ inp\ {\isacharparenleft}{\kern0pt}bs{\isacharbrackleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ bin{\isacharunderscore}{\kern0pt}upds\ es\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharparenleft}{\kern0pt}bs{\isacharbrackleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ bin{\isacharunderscore}{\kern0pt}upds\ es\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymforall}e\ {\isasymin}\ set\ es{\isachardot}{\kern0pt}\ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}bs{\isacharbrackleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ bin{\isacharunderscore}{\kern0pt}upds\ es\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -307,8 +321,7 @@ We introduce three notions of well-formedness for parse trees:
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}items\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}bins\ bs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs{\isachardoublequoteclose}\ \isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}\ k\ {\isasymG}\ {\isasymomega}\ bs\ i{\isacharparenright}{\kern0pt}\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}\ k\ {\isasymG}\ {\isasymomega}\ bs\ i{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}\ k\ {\isasymG}\ {\isasymomega}\ bs\ i{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -331,8 +344,7 @@ We introduce three notions of well-formedness for parse trees:
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}items\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}bins\ bs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list\ k\ {\isasymG}\ {\isasymomega}\ bs{\isacharparenright}{\kern0pt}\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list\ k\ {\isasymG}\ {\isasymomega}\ bs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list\ k\ {\isasymG}\ {\isasymomega}\ bs{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -351,7 +363,7 @@ We introduce three notions of well-formedness for parse trees:
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}mono{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}Init{\isacharunderscore}{\kern0pt}list{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Init{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharparenleft}{\kern0pt}Init{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Init{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -373,7 +385,7 @@ We introduce three notions of well-formedness for parse trees:
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}k\ {\isasymle}\ {\isacharbar}{\kern0pt}{\isasymomega}{\isacharbar}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}list\ k\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}list\ k\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}Earley{\isacharunderscore}{\kern0pt}list\ k\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -394,7 +406,7 @@ We introduce three notions of well-formedness for parse trees:
 \ sound{\isacharunderscore}{\kern0pt}mono{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -424,6 +436,36 @@ We introduce three notions of well-formedness for parse trees:
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+After execution of the \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} algorithm we obtain bins representing the complete set
+of Earley items. The null, predecessor, and predecessor/reduction pointers provide a way to navigate
+between items or through these bins, and, since they are sound, a way to construct derivation trees.
+The function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} constructs the \textit{single} parse tree corresponding to the
+derivation tree represented by the item $x$ of entry $e$ at index $i$ at the $k$-th bin according to the
+well-formedness definitions of the beginning of this section.
+
+If the pointer of entry $e$ is a null pointer, the algorithm starts building the tree rooted at
+the left-hand side non-terminal $N$ of the production rule of the item $x$ by constructing an initially
+empty branch containing the non-terminal $N$ and an empty list of subtrees. If the algorithm encounters
+a predecessor pointer \isa{Pre\ pre}, it first recursively calls itself, for bin $B_{k-1}$ and the
+predecessor index \isa{pre}, obtaining a partial parse tree \isa{Branch\ N\ ts}. Since the predecessor pointer is sound,
+in particular the \isa{scans} predicate holds, we append a Leaf containing the terminal symbol at index
+$k-1$ of the input \isa{{\isasymomega}} to the list of substrees \isa{ts}. In the case that
+the pointer contains predecessor/reduction triples the algorithm only considers the first triple
+\isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}} since we are only constructing a single derivation tree. As for the predecessor
+case, it recursively calls itself obtaining a partial derivation tree \isa{Branch\ N\ ts} for the predecessor index \isa{pre}
+and bin $k'$, followed by yet another recursive call for the reduction item at the reduction index \isa{red}
+in the current bin $k$, constructing a complete derivation tree $t$. This time the \isa{completes}
+predicate holds, thus the next symbol of the predecessor item coincides with the item rule head of
+the reduction item, or we are allowed to append the complete tree $t$ to the list of substrees \isa{ts}.
+
+Some minor implementation details to note are: the function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} is a partial function,
+and not tail recursive, hence we it has to return an optional value, as explained in Section \ref{sec:04-wellformedness}.
+We are using the monadic do-notation commonly found in functional programming languages for the option
+monad. An alternative but equivalent implementation would use explicit case distinctions. Finally, if
+the function computes some value it is always a branch, never a single leaf.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{partial{\isacharunderscore}{\kern0pt}function}\isamarkupfalse%
 \ {\isacharparenleft}{\kern0pt}option{\isacharparenright}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ tree\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
@@ -435,8 +477,7 @@ We introduce three notions of well-formedness for parse trees:
 \ \ \ \ \ \ \ \ \ \ t\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ pre{\isacharsemicolon}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ case\ t\ of\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ Branch\ N\ ts\ {\isasymRightarrow}\ Some\ {\isacharparenleft}{\kern0pt}Branch\ N\ {\isacharparenleft}{\kern0pt}ts\ {\isacharat}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Leaf\ {\isacharparenleft}{\kern0pt}{\isasymomega}{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
-\ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isasymRightarrow}\ None\isanewline
-\ \ \ \ \ \ \ \ {\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isasymRightarrow}\ None\ {\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
 \ \ \ \ {\isacharbar}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ do\ {\isacharbraceleft}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ t\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k{\isacharprime}{\kern0pt}\ pre{\isacharsemicolon}{\kern0pt}\isanewline
@@ -446,10 +487,15 @@ We introduce three notions of well-formedness for parse trees:
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ red{\isacharsemicolon}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Some\ {\isacharparenleft}{\kern0pt}Branch\ N\ {\isacharparenleft}{\kern0pt}ts\ {\isacharat}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}t{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharbraceright}{\kern0pt}\isanewline
-\ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isasymRightarrow}\ None\isanewline
-\ \ \ \ \ \ \ \ {\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
-\ \ {\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isasymRightarrow}\ None\ {\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Finally, function \isa{build{\isacharunderscore}{\kern0pt}tree} computes a complete derivation tree if there exists one. It searches the last bin for any finished items or items of the form
+$S \rightarrow \gamma, 0, n$ where $S$ is the start symbol of the grammar \isa{{\isasymG}} and $n$ denotes
+the length of the input \isa{{\isasymomega}}. If there exists such an item it calls function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}}
+obtaining some parse tree representing the derivation \isa{{\isasymG}\ {\isasymturnstile}\ S\ \ensuremath{\Rightarrow^{\ast}}\ {\isasymomega}} (we will have to proof that it never returns \isa{None}),
+otherwise it returns \isa{None} since there cannot exist a valid parse tree due to the correctness
+proof of Chapter \ref{chapter:3}.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ tree\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ {\isasymomega}\ bs\ {\isasymequiv}\isanewline
@@ -473,19 +519,80 @@ We introduce three notions of well-formedness for parse trees:
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+The function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} uses the null, predecessor and predecessor/reduction pointers to
+navigate through the given bins by calling itself recursively. Sound pointers ensure that we are not
+indexing outside of the bins, but this does not imply that the algorithm terminates. In the following
+we outline when it always terminates with some parse tree. Lets assume the
+function starts its computation at index $i$ of the $k$-th bin. If it encounters a null pointer, it
+terminates immediately. If the pointer is a simple predecessor pointer, it calls itself recursively
+for the previous bin. Due to the soundness of the predecessor pointer the index $k-1$ of this bin
+is strictly smaller than $k$. A similar argument holds for the first recursive call if the pointer
+is a predecessor/reduction pointer for the predecessor case (\isa{k{\isacharprime}{\kern0pt}\ {\isacharless}{\kern0pt}\ k}). Or, we are following
+the pointers \textit{strictly} back to the origin bin and thus must terminate at some point. But for
+the reduction pointer we run into a problem: the recursive call is for item at index $i$ is in the same
+bin $k$ for a different index $red$, which in turn might contain again reduction triples and so on.
+Hence, it is possible that we end up in a cycle of reductions and never terminate. Take for example the
+grammer $A ::= x \, | \, B \qquad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
+illustrates the bins computed by the algorithm of Chapter \ref{chapter:3}. Bin $B_1$ contains the entry
+$B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ at index $1$ and its second reduction triple
+$(0, 2, 2)$ a reduction pointer to index $2$ of the same bin. There we find the entry
+$A \rightarrow \, B \bullet, 0, 1; (0, 0, 1)$ with a reduction pointer to index $1$ completing the
+cycle. This is indeed valid since the grammar itself is cyclic, allowing for derivations of the form
+$A \rightarrow \, B \rightarrow \, A \rightarrow \dots \rightarrow \, A \rightarrow \, x$.
+
+  \begin{table}[htpb]
+    \caption[Cyclic reduction pointers]{Cyclic reduction pointers} \label{tab:cyclic-pointers}
+    \centering
+    \begin{tabular}{| l | l | l |}
+          & $B_0$                                     & $B_1$ \\
+      \midrule
+        0 & $A \rightarrow \, \bullet B, 0, 0; \bot$  & $A \rightarrow \, x \bullet, 0, 1; 1$ \\
+        1 & $A \rightarrow \, \bullet x, 0, 0; \bot$  & $B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ \\
+        2 & $B \rightarrow \, \bullet A, 0, 0; \bot$  & $A \rightarrow \, B \bullet, 0, 1; (0, 0, 1)$ \\
+    \end{tabular}
+  \end{table}
+
+We need to address this problem when constructing all possible parse trees in Section \ref{sec:parse-forest},
+but for now we are lucky. While constructing a single parse tree the algorithm always follows the
+first reduction triple that is created when the entry is constructed initially. Since we only
+append new entries to bins, the complete reduction item necessarily appears before the new entry with
+the reduction triple. Furthermore, the implementation of function \isa{bin{\isacharunderscore}{\kern0pt}upd} also makes sure to not change this
+triple. Thus, we know for each item in the $k$-th bin at index $i$ that the reduction pointer $red$,
+that we follow while constructing a single parse tree, is strictly smaller than $i$. To summarize:
+if the algorithm encounters a null pointer it terminates immediately, for predecessor pointers it
+calls itself recursively in a bin with a strictly smaller index, and for reduction pointers it calls
+itself in the same bin but for a strictly smaller index. The proofs for the monotonicity of the first
+reduction pointer for functions \isa{bin{\isacharunderscore}{\kern0pt}upd}, \isa{bin{\isacharunderscore}{\kern0pt}upds}, \isa{bins{\isacharunderscore}{\kern0pt}upd}, \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}},
+\isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list}, \isa{Earley{\isacharunderscore}{\kern0pt}list}, and \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} are completely analogous to
+the soundness proof of the pointers. We omit them.%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{definition}\isamarkupfalse%
+\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs\ {\isasymequiv}\ {\isasymforall}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymforall}i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
+\ \ \ \ {\isasymforall}k{\isacharprime}{\kern0pt}\ pre\ red\ ps{\isachardot}{\kern0pt}\ pointer\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ PreRed\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps\ {\isasymlongrightarrow}\ red\ {\isacharless}{\kern0pt}\ i{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Similarly to Chapter \ref{chapter:3} we define a suitable measure and a notion of well-formedness
+for the input of the function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} and proof an induction schema, in
+the following referred to as \textit{tree induction}, by complete induction on the measure.
+For the input quadruple \isa{{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}} the measure corresponds to the number of entries
+in the first $k-1$ bins plus $i$. The call the input well-formed it must satisfy the following
+conditions: sound and monotonic pointers, index $k$ does not exceed the length of the bins, and
+index $i$ is within the bounds of the $k$-th bin.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{fun}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}measure\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat{\isacharparenright}{\kern0pt}\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}measure\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ foldl\ {\isacharparenleft}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}map\ length\ {\isacharparenleft}{\kern0pt}take\ k\ bs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharplus}{\kern0pt}\ i{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\isanewline
-\ \ \ \ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ {\isasymomega}\ k\ i{\isachardot}{\kern0pt}\isanewline
-\ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymand}\isanewline
-\ \ \ \ \ \ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs\ {\isasymand}\isanewline
-\ \ \ \ \ \ k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ \ \ i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ {\isasymomega}\ k\ i{\isachardot}{\kern0pt}\isanewline
+\ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymand}\ mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptr\ bs\ {\isasymand}\ k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isasymand}\ i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Ton conclude this subsection, we then prove termination of the function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}}, or for
+well-formed input it always terminates with some branch, by \textit{tree induction}.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}termination{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}tree{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
@@ -502,10 +609,6 @@ We introduce three notions of well-formedness for parse trees:
 \isadelimproof
 %
 \endisadelimproof
-%
-\begin{isamarkuptext}%
-%
-\end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
 %
@@ -641,6 +744,13 @@ We introduce three notions of well-formedness for parse trees:
 %
 \endisadelimproof
 %
+\begin{isamarkuptext}%
+To conclude this section, We give an informal argument for the running time of $\mathcal{O}(n^4)$.
+We assume that the bins (or argument \isa{bs}) are valid according to Chapter \ref{chapter:3} and
+contain only sound and monotonic pointers. The algorithm \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} calls itself at most
+once for each entry in the bins.%
+\end{isamarkuptext}\isamarkuptrue%
+%
 \isadelimdocument
 %
 \endisadelimdocument
@@ -657,6 +767,11 @@ We introduce three notions of well-formedness for parse trees:
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+why not simply generate all parse trees integrated top down? yes for single parse tree, no for
+all since exponential blow up%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{datatype}\isamarkupfalse%
 \ {\isacharprime}{\kern0pt}a\ forest\ {\isacharequal}{\kern0pt}\isanewline
 \ \ FLeaf\ {\isacharprime}{\kern0pt}a\isanewline
@@ -776,13 +891,8 @@ We introduce three notions of well-formedness for parse trees:
 \isanewline
 \isacommand{definition}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ set{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\isanewline
-\ \ \ \ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I{\isachardot}{\kern0pt}\isanewline
-\ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymand}\isanewline
-\ \ \ \ \ \ k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ \ \ i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ \ \ I\ {\isasymsubseteq}\ {\isacharbraceleft}{\kern0pt}{\isadigit{0}}{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}{\isacharless}{\kern0pt}{\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ \ \ i\ {\isasymin}\ I\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I{\isachardot}{\kern0pt}\isanewline
+\ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymand}\ k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isasymand}\ i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\ I\ {\isasymsubseteq}\ {\isacharbraceleft}{\kern0pt}{\isadigit{0}}{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}{\isacharless}{\kern0pt}{\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isasymand}\ i\ {\isasymin}\ I\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}termination{\isacharcolon}{\kern0pt}\isanewline
@@ -1138,267 +1248,389 @@ complicating the final algorithm.%
 %:%178=136%:%
 %:%179=137%:%
 %:%186=140%:%
+%:%198=143%:%
+%:%199=144%:%
 %:%200=145%:%
-%:%201=145%:%
-%:%202=146%:%
-%:%203=147%:%
-%:%204=148%:%
-%:%205=148%:%
-%:%206=149%:%
-%:%210=154%:%
-%:%211=154%:%
-%:%212=155%:%
-%:%213=156%:%
-%:%214=157%:%
-%:%215=157%:%
-%:%216=158%:%
-%:%222=165%:%
-%:%223=165%:%
-%:%224=166%:%
-%:%227=169%:%
-%:%228=170%:%
-%:%229=171%:%
-%:%230=171%:%
-%:%231=172%:%
+%:%201=146%:%
+%:%202=147%:%
+%:%203=148%:%
+%:%204=149%:%
+%:%205=150%:%
+%:%206=151%:%
+%:%207=152%:%
+%:%208=153%:%
+%:%209=154%:%
+%:%210=155%:%
+%:%211=156%:%
+%:%212=157%:%
+%:%213=158%:%
+%:%214=159%:%
+%:%215=160%:%
+%:%216=161%:%
+%:%217=162%:%
+%:%218=163%:%
+%:%219=164%:%
+%:%220=165%:%
+%:%221=166%:%
+%:%222=167%:%
+%:%224=170%:%
+%:%225=170%:%
+%:%226=171%:%
+%:%227=172%:%
+%:%228=173%:%
+%:%229=173%:%
+%:%230=174%:%
+%:%231=175%:%
+%:%232=176%:%
+%:%233=176%:%
+%:%234=177%:%
+%:%235=178%:%
+%:%236=179%:%
 %:%237=179%:%
-%:%238=179%:%
-%:%239=180%:%
-%:%242=183%:%
+%:%238=180%:%
+%:%240=182%:%
+%:%241=183%:%
+%:%242=184%:%
 %:%243=184%:%
 %:%244=185%:%
-%:%245=185%:%
-%:%246=186%:%
-%:%251=192%:%
+%:%245=186%:%
+%:%246=187%:%
+%:%247=188%:%
+%:%248=188%:%
+%:%249=189%:%
+%:%251=191%:%
 %:%252=192%:%
 %:%253=193%:%
-%:%254=194%:%
-%:%255=195%:%
-%:%256=196%:%
-%:%257=197%:%
+%:%254=193%:%
+%:%255=194%:%
 %:%258=198%:%
 %:%259=199%:%
 %:%260=200%:%
 %:%261=201%:%
-%:%278=208%:%
-%:%279=208%:%
-%:%280=209%:%
-%:%281=210%:%
-%:%282=211%:%
-%:%283=212%:%
-%:%284=213%:%
-%:%285=214%:%
-%:%286=215%:%
-%:%287=216%:%
-%:%304=223%:%
-%:%305=223%:%
-%:%306=224%:%
-%:%307=225%:%
-%:%308=226%:%
-%:%309=227%:%
-%:%310=228%:%
-%:%311=229%:%
-%:%328=236%:%
-%:%329=236%:%
-%:%330=237%:%
-%:%331=238%:%
-%:%332=239%:%
-%:%333=240%:%
-%:%334=241%:%
-%:%335=242%:%
-%:%352=249%:%
-%:%353=249%:%
-%:%354=250%:%
-%:%371=257%:%
-%:%372=257%:%
-%:%373=258%:%
-%:%374=259%:%
-%:%375=260%:%
-%:%376=261%:%
-%:%393=268%:%
-%:%394=268%:%
-%:%395=269%:%
-%:%396=270%:%
-%:%397=271%:%
-%:%417=277%:%
-%:%427=279%:%
-%:%428=279%:%
-%:%429=280%:%
+%:%262=202%:%
+%:%263=203%:%
+%:%264=204%:%
+%:%265=205%:%
+%:%266=206%:%
+%:%267=207%:%
+%:%269=210%:%
+%:%270=210%:%
+%:%271=211%:%
+%:%272=212%:%
+%:%273=213%:%
+%:%274=214%:%
+%:%275=215%:%
+%:%276=216%:%
+%:%277=217%:%
+%:%294=224%:%
+%:%295=224%:%
+%:%296=225%:%
+%:%297=226%:%
+%:%298=227%:%
+%:%299=228%:%
+%:%300=229%:%
+%:%301=230%:%
+%:%318=237%:%
+%:%319=237%:%
+%:%320=238%:%
+%:%321=239%:%
+%:%322=240%:%
+%:%323=241%:%
+%:%324=242%:%
+%:%341=249%:%
+%:%342=249%:%
+%:%343=250%:%
+%:%344=251%:%
+%:%345=252%:%
+%:%346=253%:%
+%:%347=254%:%
+%:%364=261%:%
+%:%365=261%:%
+%:%366=262%:%
+%:%383=269%:%
+%:%384=269%:%
+%:%385=270%:%
+%:%386=271%:%
+%:%387=272%:%
+%:%388=273%:%
+%:%405=280%:%
+%:%406=280%:%
+%:%407=281%:%
+%:%408=282%:%
+%:%409=283%:%
+%:%429=289%:%
+%:%441=292%:%
+%:%442=293%:%
+%:%443=294%:%
+%:%444=295%:%
+%:%445=296%:%
+%:%446=297%:%
+%:%447=298%:%
+%:%448=299%:%
+%:%449=300%:%
+%:%450=301%:%
 %:%451=302%:%
 %:%452=303%:%
 %:%453=304%:%
-%:%454=304%:%
-%:%455=305%:%
-%:%466=312%:%
-%:%476=314%:%
-%:%477=314%:%
-%:%478=315%:%
-%:%479=316%:%
-%:%480=317%:%
-%:%481=317%:%
-%:%482=318%:%
-%:%487=323%:%
-%:%488=324%:%
-%:%489=325%:%
-%:%490=325%:%
-%:%491=326%:%
-%:%492=327%:%
-%:%516=334%:%
-%:%526=336%:%
-%:%527=336%:%
-%:%528=336%:%
-%:%529=336%:%
-%:%530=337%:%
-%:%531=338%:%
-%:%532=339%:%
-%:%533=340%:%
-%:%534=341%:%
-%:%535=342%:%
-%:%552=349%:%
-%:%553=349%:%
-%:%554=349%:%
-%:%555=349%:%
-%:%556=350%:%
-%:%557=351%:%
-%:%558=352%:%
-%:%559=353%:%
-%:%560=354%:%
-%:%561=355%:%
-%:%562=356%:%
-%:%579=363%:%
-%:%580=363%:%
-%:%581=364%:%
-%:%582=365%:%
-%:%583=366%:%
-%:%584=367%:%
-%:%585=368%:%
-%:%586=369%:%
-%:%603=376%:%
-%:%604=376%:%
-%:%605=377%:%
-%:%606=378%:%
-%:%607=379%:%
-%:%608=380%:%
-%:%625=387%:%
-%:%626=387%:%
-%:%627=388%:%
-%:%628=389%:%
-%:%629=390%:%
-%:%630=391%:%
-%:%650=397%:%
-%:%660=399%:%
-%:%661=399%:%
-%:%662=400%:%
-%:%663=401%:%
-%:%664=402%:%
-%:%665=403%:%
-%:%666=403%:%
-%:%667=404%:%
-%:%668=405%:%
-%:%669=406%:%
-%:%670=407%:%
-%:%671=407%:%
-%:%672=408%:%
-%:%673=409%:%
-%:%683=415%:%
-%:%693=417%:%
-%:%694=417%:%
-%:%695=418%:%
-%:%696=419%:%
-%:%699=422%:%
-%:%700=423%:%
-%:%701=424%:%
-%:%702=424%:%
-%:%703=425%:%
-%:%704=426%:%
-%:%716=438%:%
-%:%719=439%:%
-%:%720=439%:%
-%:%721=440%:%
-%:%749=468%:%
-%:%750=469%:%
-%:%751=470%:%
-%:%752=470%:%
-%:%753=471%:%
-%:%763=477%:%
-%:%773=479%:%
-%:%774=479%:%
-%:%775=480%:%
-%:%776=481%:%
-%:%777=482%:%
-%:%778=482%:%
-%:%779=483%:%
-%:%785=489%:%
-%:%786=490%:%
-%:%787=491%:%
-%:%788=491%:%
-%:%789=492%:%
-%:%790=493%:%
-%:%807=500%:%
-%:%808=500%:%
-%:%809=501%:%
-%:%810=502%:%
-%:%811=503%:%
-%:%812=504%:%
-%:%832=510%:%
-%:%842=512%:%
-%:%843=512%:%
-%:%844=513%:%
-%:%845=514%:%
-%:%846=515%:%
-%:%847=516%:%
-%:%848=517%:%
-%:%849=518%:%
-%:%850=519%:%
-%:%851=520%:%
-%:%868=527%:%
-%:%869=527%:%
-%:%870=528%:%
-%:%871=529%:%
-%:%872=530%:%
-%:%873=531%:%
-%:%874=532%:%
-%:%875=533%:%
-%:%876=534%:%
-%:%877=535%:%
-%:%878=536%:%
-%:%895=543%:%
-%:%896=543%:%
-%:%897=544%:%
-%:%898=545%:%
-%:%899=546%:%
-%:%900=547%:%
-%:%901=548%:%
-%:%902=549%:%
-%:%903=550%:%
-%:%920=557%:%
-%:%921=557%:%
-%:%922=558%:%
-%:%923=559%:%
-%:%924=560%:%
-%:%925=561%:%
-%:%926=562%:%
-%:%927=563%:%
-%:%944=570%:%
-%:%945=570%:%
-%:%946=571%:%
-%:%947=572%:%
-%:%948=573%:%
-%:%949=574%:%
-%:%950=575%:%
-%:%951=576%:%
-%:%952=577%:%
-%:%976=585%:%
-%:%988=588%:%
-%:%989=589%:%
-%:%990=590%:%
-%:%991=591%:%
-%:%992=592%:%
-%:%993=593%:%
-%:%994=594%:%
-%:%995=595%:%
-%:%996=596%:%
-%:%997=597%:%
-%:%998=598%:%
-%:%999=599%:%
-%:%1000=600%:%
-%:%1001=601%:%
+%:%454=305%:%
+%:%455=306%:%
+%:%456=307%:%
+%:%457=308%:%
+%:%458=309%:%
+%:%459=310%:%
+%:%460=311%:%
+%:%461=312%:%
+%:%462=313%:%
+%:%463=314%:%
+%:%464=315%:%
+%:%465=316%:%
+%:%466=317%:%
+%:%467=318%:%
+%:%469=321%:%
+%:%470=321%:%
+%:%471=322%:%
+%:%492=344%:%
+%:%493=345%:%
+%:%494=346%:%
+%:%495=347%:%
+%:%496=348%:%
+%:%497=349%:%
+%:%499=352%:%
+%:%500=352%:%
+%:%501=353%:%
+%:%512=360%:%
+%:%524=363%:%
+%:%525=364%:%
+%:%526=365%:%
+%:%527=366%:%
+%:%528=367%:%
+%:%529=368%:%
+%:%530=369%:%
+%:%531=370%:%
+%:%532=371%:%
+%:%533=372%:%
+%:%534=373%:%
+%:%535=374%:%
+%:%536=375%:%
+%:%537=376%:%
+%:%538=377%:%
+%:%539=378%:%
+%:%540=379%:%
+%:%541=380%:%
+%:%542=381%:%
+%:%543=382%:%
+%:%544=383%:%
+%:%545=384%:%
+%:%546=385%:%
+%:%547=386%:%
+%:%548=387%:%
+%:%549=388%:%
+%:%550=389%:%
+%:%551=390%:%
+%:%552=391%:%
+%:%553=392%:%
+%:%554=393%:%
+%:%555=394%:%
+%:%556=395%:%
+%:%557=396%:%
+%:%558=397%:%
+%:%559=398%:%
+%:%560=399%:%
+%:%561=400%:%
+%:%562=401%:%
+%:%563=402%:%
+%:%564=403%:%
+%:%565=404%:%
+%:%566=405%:%
+%:%567=406%:%
+%:%568=407%:%
+%:%569=408%:%
+%:%571=411%:%
+%:%572=411%:%
+%:%573=412%:%
+%:%576=416%:%
+%:%577=417%:%
+%:%578=418%:%
+%:%579=419%:%
+%:%580=420%:%
+%:%581=421%:%
+%:%582=422%:%
+%:%584=425%:%
+%:%585=425%:%
+%:%586=426%:%
+%:%587=427%:%
+%:%588=428%:%
+%:%589=428%:%
+%:%590=429%:%
+%:%593=433%:%
+%:%594=434%:%
+%:%596=437%:%
+%:%597=437%:%
+%:%598=438%:%
+%:%599=439%:%
+%:%619=444%:%
+%:%629=446%:%
+%:%630=446%:%
+%:%631=446%:%
+%:%632=446%:%
+%:%633=447%:%
+%:%634=448%:%
+%:%635=449%:%
+%:%636=450%:%
+%:%637=451%:%
+%:%638=452%:%
+%:%655=459%:%
+%:%656=459%:%
+%:%657=459%:%
+%:%658=459%:%
+%:%659=460%:%
+%:%660=461%:%
+%:%661=462%:%
+%:%662=463%:%
+%:%663=464%:%
+%:%664=465%:%
+%:%665=466%:%
+%:%682=473%:%
+%:%683=473%:%
+%:%684=474%:%
+%:%685=475%:%
+%:%686=476%:%
+%:%687=477%:%
+%:%688=478%:%
+%:%689=479%:%
+%:%706=486%:%
+%:%707=486%:%
+%:%708=487%:%
+%:%709=488%:%
+%:%710=489%:%
+%:%711=490%:%
+%:%728=497%:%
+%:%729=497%:%
+%:%730=498%:%
+%:%731=499%:%
+%:%732=500%:%
+%:%733=501%:%
+%:%748=507%:%
+%:%749=508%:%
+%:%750=509%:%
+%:%751=510%:%
+%:%760=514%:%
+%:%772=517%:%
+%:%773=518%:%
+%:%775=521%:%
+%:%776=521%:%
+%:%777=522%:%
+%:%778=523%:%
+%:%779=524%:%
+%:%780=525%:%
+%:%781=525%:%
+%:%782=526%:%
+%:%783=527%:%
+%:%784=528%:%
+%:%785=529%:%
+%:%786=529%:%
+%:%787=530%:%
+%:%788=531%:%
+%:%798=537%:%
+%:%808=539%:%
+%:%809=539%:%
+%:%810=540%:%
+%:%811=541%:%
+%:%814=544%:%
+%:%815=545%:%
+%:%816=546%:%
+%:%817=546%:%
+%:%818=547%:%
+%:%819=548%:%
+%:%831=560%:%
+%:%834=561%:%
+%:%835=561%:%
+%:%836=562%:%
+%:%864=590%:%
+%:%865=591%:%
+%:%866=592%:%
+%:%867=592%:%
+%:%868=593%:%
+%:%878=599%:%
+%:%888=601%:%
+%:%889=601%:%
+%:%890=602%:%
+%:%891=603%:%
+%:%892=604%:%
+%:%893=604%:%
+%:%894=605%:%
+%:%895=606%:%
+%:%896=607%:%
+%:%897=608%:%
+%:%898=608%:%
+%:%899=609%:%
+%:%900=610%:%
+%:%917=617%:%
+%:%918=617%:%
+%:%919=618%:%
+%:%920=619%:%
+%:%921=620%:%
+%:%922=621%:%
+%:%942=627%:%
+%:%952=629%:%
+%:%953=629%:%
+%:%954=630%:%
+%:%955=631%:%
+%:%956=632%:%
+%:%957=633%:%
+%:%958=634%:%
+%:%959=635%:%
+%:%960=636%:%
+%:%961=637%:%
+%:%978=644%:%
+%:%979=644%:%
+%:%980=645%:%
+%:%981=646%:%
+%:%982=647%:%
+%:%983=648%:%
+%:%984=649%:%
+%:%985=650%:%
+%:%986=651%:%
+%:%987=652%:%
+%:%988=653%:%
+%:%1005=660%:%
+%:%1006=660%:%
+%:%1007=661%:%
+%:%1008=662%:%
+%:%1009=663%:%
+%:%1010=664%:%
+%:%1011=665%:%
+%:%1012=666%:%
+%:%1013=667%:%
+%:%1030=674%:%
+%:%1031=674%:%
+%:%1032=675%:%
+%:%1033=676%:%
+%:%1034=677%:%
+%:%1035=678%:%
+%:%1036=679%:%
+%:%1037=680%:%
+%:%1054=687%:%
+%:%1055=687%:%
+%:%1056=688%:%
+%:%1057=689%:%
+%:%1058=690%:%
+%:%1059=691%:%
+%:%1060=692%:%
+%:%1061=693%:%
+%:%1062=694%:%
+%:%1086=702%:%
+%:%1098=705%:%
+%:%1099=706%:%
+%:%1100=707%:%
+%:%1101=708%:%
+%:%1102=709%:%
+%:%1103=710%:%
+%:%1104=711%:%
+%:%1105=712%:%
+%:%1106=713%:%
+%:%1107=714%:%
+%:%1108=715%:%
+%:%1109=716%:%
+%:%1110=717%:%
+%:%1111=718%:%

@@ -140,26 +140,38 @@ definition wf_yield_tree :: "'a sentential \<Rightarrow> 'a item \<Rightarrow> '
 subsection \<open>Pointer Lemmas\<close>
 
 text\<open>
-In Chapter \ref{chap:04} we extended the algorithm of chapter \ref{{chapter:3} in two orthogonal
+In Chapter \ref{chap:04} we extended the algorithm of Chapter \ref{chapter:3} in two orthogonal
 ways: implementing sets as lists and adding the additional information to construct parse trees
 in the form null, predecessor, and predecessor/reduction pointers. But we did not formally define
-the semantics of these pointers nor prove anything about their construction.
+the semantics of these pointers nor prove anything about their construction. In the following, we
+define and proof soundness of the pointers.
 
 \begin{itemize}
-  \item 
-  \item
-  \item
+  \item A null pointer @{term Null} of an entry is sound if it @{term predicts} the item $x$ of
+    the entry, or the bullet of $x$ is at the beginning of the right-hand side of its production rule
+    and we have not yet scanned any substring of the input.
+  \item A predecessor pointer @{term "Pre pre"} of an entry $e$ is sound for the input @{term \<omega>}, bins @{term bs},
+    and the index of the current bin $k$ if $k > 0$, the predecessor index does not exceed the length
+    of the predecessor bin at index $k-1$, and the predecessor item in bin $k-1$ at index $pre$ @{term scans}
+    then item of the entry $e$. Item $x'$ @{term scans} item $x$ for index $k$ if the next symbol of
+    $x'$ coincides with the terminal symbol at index $k-1$ in the input @{term \<omega>} and the item $x$ can be obtained
+    by @{term "inc_item x' k"}. 
+  \item We define the soundness a pointer @{term "PreRed p ps"} of an entry $e$ for each predecessor/reduction
+    triple @{term "(k', pre, red) \<in> set (p#ps)"}. The index $k'$ of the predecessor bin must be strictly
+    smaller than $k$, and both the predecessor and the reduction index must be within the bounds of their
+    respective bins, or bin $k'$ and $k$. Additionally, predicate @{term completes} holds for $k$,
+    the predecessor item $x'$, the item $x$ of entry $e$ and the reduction item $y$, capturing the semantics of
+    the @{term Complete} operation: The next symbol of $x'$ is the non-terminal $N$ which coincides
+    with the item rule head of $y$. Furthermore, the item $y$ is complete and the origin index of $y$
+    aligns with the end index of $x'$. Finally, item $x$ can be obtained once more by @{term "inc_item x' k"}.
 \end{itemize}
 \<close>
 
 definition predicts :: "'a item \<Rightarrow> bool" where
-  "predicts x \<equiv> item_origin x = item_end x \<and> item_bullet x = 0"
+  "predicts x \<equiv> item_bullet x = 0 \<and> item_origin x = item_end x"
 
 definition sound_null_ptr :: "'a entry \<Rightarrow> bool" where
   "sound_null_ptr e \<equiv> pointer e = Null \<longrightarrow> predicts (item e)"
-
-text\<open>
-\<close>
 
 definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "scans \<omega> k x' x \<equiv> x = inc_item x' k \<and> (\<exists>a. next_symbol x' = Some a \<and> \<omega>!(k-1) = a)"
@@ -168,9 +180,6 @@ definition sound_pre_ptr :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> n
   "sound_pre_ptr \<omega> bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
     k > 0 \<and> pre < |bs!(k-1)| \<and>
     scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
-
-text\<open>
-\<close>
 
 definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "completes k x' x y \<equiv> x = inc_item x' k \<and> is_complete y \<and> item_origin y = item_end x' \<and>
@@ -181,36 +190,36 @@ definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry
     (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < |bs!k'| \<and> red < |bs!k| \<and>
     completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
 
-text\<open>
-\<close>
-
 definition sound_ptrs :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "sound_ptrs \<omega> bs \<equiv> \<forall>k < |bs|. \<forall>e \<in> set (bs!k).
-    sound_null_ptr e \<and>
-    sound_pre_ptr \<omega> bs k e \<and>
-    sound_prered_ptr bs k e"
-
-definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
-  "mono_red_ptr bs \<equiv> \<forall>k < |bs|. \<forall>i < |bs!k|.
-    \<forall>k' pre red ps. pointer (bs!k!i) = PreRed (k', pre, red) ps \<longrightarrow> red < i"
+    sound_null_ptr e \<and> sound_pre_ptr \<omega> bs k e \<and> sound_prered_ptr bs k e"
 
 text\<open>
+We then prove the semantics of the pointers. The structure of the proofs is as always: we first
+proof pointer soundness for the basic operations @{term bin_upd}, @{term bin_upds}, and @{term bins_upd}.
+Followed by the corresponding proofs for the computation of a single bin or functions @{term Earley_bin_list'}
+and @{term Earley_bin_list}. Finally, we prove that the initial bins are sound, and functions @{term Earley_list}
+and @{term \<E>arley_list} maintain this property. Although it should be intuitively clear that the
+semantics of pointers hold, the proofs are surprisingly not trivial at all, especially the soundness
+proofs for functions @{term bin_upd} and @{term Earley_bin_list'}. The complexity mostly stems from
+the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and depending
+on the type of the newly inserted items. Nonetheless, since the proofs are very technical but do not
+reveal anything new in structure, we only state them and omit going into detail.
 \<close>
 
-lemma sound_mono_ptrs_bin_upd:
+lemma sound_ptrs_bin_upd:
   assumes "k < |bs|"
   assumes "distinct (items (bs!k))"
   assumes "sound_ptrs \<omega> bs"
   assumes "sound_null_ptr e"
   assumes "sound_pre_ptr \<omega> bs k e"
   assumes "sound_prered_ptr bs k e"
-  assumes "mono_red_ptr bs"
-  assumes "\<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < |bs!k|"
-  assumes "bs' = bs[k := bin_upd e (bs!k)]"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (bs[k := bin_upd e (bs!k)])"
 (*<*)
   sorry
 (*>*)
+
+text\<open>\<close>
 
 lemma sound_mono_ptrs_bin_upds:
   assumes "k < |bs|"
@@ -218,10 +227,7 @@ lemma sound_mono_ptrs_bin_upds:
   assumes "distinct (items es)"
   assumes "sound_ptrs \<omega> bs"
   assumes "\<forall>e \<in> set es. sound_null_ptr e \<and> sound_pre_ptr \<omega> bs k e \<and> sound_prered_ptr bs k e"
-  assumes "mono_red_ptr bs"
-  assumes "\<forall>e \<in> set es. \<forall>k' pre red ps. pointer e = PreRed (k', pre, red) ps \<longrightarrow> red < |bs!k|"
-  assumes "bs' = bs[k := bin_upds es (bs!k)]"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (bs[k := bin_upds es (bs!k)])"
 (*<*)
   sorry
 (*>*)
@@ -233,9 +239,7 @@ lemma sound_mono_ptrs_Earley_bin_list':
   assumes "nonempty_derives \<G>"
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "sound_ptrs \<omega> bs" 
-  assumes "mono_red_ptr bs"
-  assumes "bs' = Earley_bin_list' k \<G> \<omega> bs i"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (Earley_bin_list' k \<G> \<omega> bs i)"
 (*<*)
   sorry
 (*>*)
@@ -247,9 +251,7 @@ lemma sound_mono_ptrs_Earley_bin_list:
   assumes "nonempty_derives \<G>"
   assumes "sound_items \<G> \<omega> (bins bs)"
   assumes "sound_ptrs \<omega> bs"
-  assumes "mono_red_ptr bs"
-  assumes "bs' = Earley_bin_list k \<G> \<omega> bs"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (Earley_bin_list k \<G> \<omega> bs)"
 (*<*)
   sorry
 (*>*)
@@ -257,8 +259,7 @@ lemma sound_mono_ptrs_Earley_bin_list:
 text\<open>\<close>
 
 lemma sound_mono_ptrs_Init_list:
-  assumes "bs' = Init_list \<G> \<omega>"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (Init_list \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -269,8 +270,7 @@ lemma sound_mono_ptrs_Earley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   assumes "k \<le> |\<omega>|"
-  assumes "bs' = Earley_list k \<G> \<omega>"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (Earley_list k \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
@@ -280,14 +280,43 @@ text\<open>\<close>
 lemma sound_mono_ptrs_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
-  assumes "bs' = \<E>arley_list \<G> \<omega>"
-  shows "sound_ptrs \<omega> bs' \<and> mono_red_ptr bs'"
+  shows "sound_ptrs \<omega> (\<E>arley_list \<G> \<omega>)"
 (*<*)
   sorry
 (*>*)
 
 
 subsection \<open>The Parse Tree Algorithm\<close>
+
+text\<open>
+After execution of the @{term \<E>arley_list} algorithm we obtain bins representing the complete set
+of Earley items. The null, predecessor, and predecessor/reduction pointers provide a way to navigate
+between items or through these bins, and, since they are sound, a way to construct derivation trees.
+The function @{term build_tree'} constructs the \textit{single} parse tree corresponding to the
+derivation tree represented by the item $x$ of entry $e$ at index $i$ at the $k$-th bin according to the
+well-formedness definitions of the beginning of this section.
+
+If the pointer of entry $e$ is a null pointer, the algorithm starts building the tree rooted at
+the left-hand side non-terminal $N$ of the production rule of the item $x$ by constructing an initially
+empty branch containing the non-terminal $N$ and an empty list of subtrees. If the algorithm encounters
+a predecessor pointer @{term "Pre pre"}, it first recursively calls itself, for bin $B_{k-1}$ and the
+predecessor index @{term pre}, obtaining a partial parse tree @{term "Branch N ts"}. Since the predecessor pointer is sound,
+in particular the @{term scans} predicate holds, we append a Leaf containing the terminal symbol at index
+$k-1$ of the input @{term \<omega>} to the list of substrees @{term ts}. In the case that
+the pointer contains predecessor/reduction triples the algorithm only considers the first triple
+@{term "(k', pre, red)"} since we are only constructing a single derivation tree. As for the predecessor
+case, it recursively calls itself obtaining a partial derivation tree @{term "Branch N ts"} for the predecessor index @{term pre}
+and bin $k'$, followed by yet another recursive call for the reduction item at the reduction index @{term red}
+in the current bin $k$, constructing a complete derivation tree $t$. This time the @{term completes}
+predicate holds, thus the next symbol of the predecessor item coincides with the item rule head of
+the reduction item, or we are allowed to append the complete tree $t$ to the list of substrees @{term ts}.
+
+Some minor implementation details to note are: the function @{term build_tree'} is a partial function,
+and not tail recursive, hence we it has to return an optional value, as explained in Section \ref{sec:04-wellformedness}.
+We are using the monadic do-notation commonly found in functional programming languages for the option
+monad. An alternative but equivalent implementation would use explicit case distinctions. Finally, if
+the function computes some value it is always a branch, never a single leaf.
+\<close>
 
 partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a tree option" where
   "build_tree' bs \<omega> k i = (
@@ -299,8 +328,7 @@ partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<
           t \<leftarrow> build_tree' bs \<omega> (k-1) pre;
           case t of
             Branch N ts \<Rightarrow> Some (Branch N (ts @ [Leaf (\<omega>!(k-1))]))
-          | _ \<Rightarrow> None
-        })
+          | _ \<Rightarrow> None })
     | PreRed (k', pre, red) _ \<Rightarrow> (
         do {
           t \<leftarrow> build_tree' bs \<omega> k' pre;
@@ -310,9 +338,16 @@ partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<
                 t \<leftarrow> build_tree' bs \<omega> k red;
                 Some (Branch N (ts @ [t]))
               }
-          | _ \<Rightarrow> None
-        })
-  ))"
+          | _ \<Rightarrow> None })))"
+
+text\<open>
+Finally, function @{term build_tree} computes a complete derivation tree if there exists one. It searches the last bin for any finished items or items of the form
+$S \rightarrow \gamma, 0, n$ where $S$ is the start symbol of the grammar @{term \<G>} and $n$ denotes
+the length of the input @{term \<omega>}. If there exists such an item it calls function @{term build_tree'}
+obtaining some parse tree representing the derivation @{term "\<G> \<turnstile> S \<Rightarrow>\<^sup>* \<omega>"} (we will have to proof that it never returns @{term None}),
+otherwise it returns @{term None} since there cannot exist a valid parse tree due to the correctness
+proof of Chapter \ref{chapter:3}.
+\<close>
 
 definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a tree option" where
   "build_tree \<G> \<omega> bs \<equiv>
@@ -324,6 +359,69 @@ definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bi
 
 subsection \<open>Termination\<close>
 
+text\<open>
+The function @{term build_tree'} uses the null, predecessor and predecessor/reduction pointers to
+navigate through the given bins by calling itself recursively. Sound pointers ensure that we are not
+indexing outside of the bins, but this does not imply that the algorithm terminates. In the following
+we outline when it always terminates with some parse tree. Lets assume the
+function starts its computation at index $i$ of the $k$-th bin. If it encounters a null pointer, it
+terminates immediately. If the pointer is a simple predecessor pointer, it calls itself recursively
+for the previous bin. Due to the soundness of the predecessor pointer the index $k-1$ of this bin
+is strictly smaller than $k$. A similar argument holds for the first recursive call if the pointer
+is a predecessor/reduction pointer for the predecessor case (@{term "k' < k"}). Or, we are following
+the pointers \textit{strictly} back to the origin bin and thus must terminate at some point. But for
+the reduction pointer we run into a problem: the recursive call is for item at index $i$ is in the same
+bin $k$ for a different index $red$, which in turn might contain again reduction triples and so on.
+Hence, it is possible that we end up in a cycle of reductions and never terminate. Take for example the
+grammer $A ::= x \, | \, B \qquad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
+illustrates the bins computed by the algorithm of Chapter \ref{chapter:3}. Bin $B_1$ contains the entry
+$B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ at index $1$ and its second reduction triple
+$(0, 2, 2)$ a reduction pointer to index $2$ of the same bin. There we find the entry
+$A \rightarrow \, B \bullet, 0, 1; (0, 0, 1)$ with a reduction pointer to index $1$ completing the
+cycle. This is indeed valid since the grammar itself is cyclic, allowing for derivations of the form
+$A \rightarrow \, B \rightarrow \, A \rightarrow \dots \rightarrow \, A \rightarrow \, x$.
+
+  \begin{table}[htpb]
+    \caption[Cyclic reduction pointers]{Cyclic reduction pointers} \label{tab:cyclic-pointers}
+    \centering
+    \begin{tabular}{| l | l | l |}
+          & $B_0$                                     & $B_1$ \\
+      \midrule
+        0 & $A \rightarrow \, \bullet B, 0, 0; \bot$  & $A \rightarrow \, x \bullet, 0, 1; 1$ \\
+        1 & $A \rightarrow \, \bullet x, 0, 0; \bot$  & $B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ \\
+        2 & $B \rightarrow \, \bullet A, 0, 0; \bot$  & $A \rightarrow \, B \bullet, 0, 1; (0, 0, 1)$ \\
+    \end{tabular}
+  \end{table}
+
+We need to address this problem when constructing all possible parse trees in Section \ref{sec:parse-forest},
+but for now we are lucky. While constructing a single parse tree the algorithm always follows the
+first reduction triple that is created when the entry is constructed initially. Since we only
+append new entries to bins, the complete reduction item necessarily appears before the new entry with
+the reduction triple. Furthermore, the implementation of function @{term bin_upd} also makes sure to not change this
+triple. Thus, we know for each item in the $k$-th bin at index $i$ that the reduction pointer $red$,
+that we follow while constructing a single parse tree, is strictly smaller than $i$. To summarize:
+if the algorithm encounters a null pointer it terminates immediately, for predecessor pointers it
+calls itself recursively in a bin with a strictly smaller index, and for reduction pointers it calls
+itself in the same bin but for a strictly smaller index. The proofs for the monotonicity of the first
+reduction pointer for functions @{term bin_upd}, @{term bin_upds}, @{term bins_upd}, @{term Earley_bin_list'},
+@{term Earley_bin_list}, @{term Earley_list}, and @{term \<E>arley_list} are completely analogous to
+the soundness proof of the pointers. We omit them.
+\<close>
+
+definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
+  "mono_red_ptr bs \<equiv> \<forall>k < |bs|. \<forall>i < |bs!k|.
+    \<forall>k' pre red ps. pointer (bs!k!i) = PreRed (k', pre, red) ps \<longrightarrow> red < i"
+
+text\<open>
+Similarly to Chapter \ref{chapter:3} we define a suitable measure and a notion of well-formedness
+for the input of the function @{term build_tree'} and proof an induction schema, in
+the following referred to as \textit{tree induction}, by complete induction on the measure.
+For the input quadruple @{term "(bs, \<omega>, k, i)"} the measure corresponds to the number of entries
+in the first $k-1$ bins plus $i$. The call the input well-formed it must satisfy the following
+conditions: sound and monotonic pointers, index $k$ does not exceed the length of the bins, and
+index $i$ is within the bounds of the $k$-th bin.
+\<close>
+
 fun build_tree'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) \<Rightarrow> nat" where
   "build_tree'_measure (bs, \<omega>, k, i) = foldl (+) 0 (map length (take k bs)) + i"
 
@@ -331,14 +429,17 @@ definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<time
   "wf_tree_input = { (bs, \<omega>, k, i) | bs \<omega> k i.
       sound_ptrs \<omega> bs \<and> mono_red_ptr bs \<and> k < |bs| \<and> i < |bs!k| }"
 
+text\<open>
+To conclude this subsection, we then prove termination of the function @{term build_tree'}, or for
+well-formed input it always terminates with some branch, by \textit{tree induction}.
+\<close>
+
 lemma build_tree'_termination:
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
   shows "\<exists>N ts. build_tree' bs \<omega> k i = Some (Branch N ts)"
 (*<*)
   sorry
 (*>*)
-
-text\<open>\<close>
 
 subsection \<open>Correctness\<close>
 
@@ -402,8 +503,20 @@ theorem correctness_build_tree_\<E>arley_list:
   sorry
 (*>*)
 
+text\<open>
+To conclude this section, We give an informal argument for the running time of $\mathcal{O}(n^4)$.
+We assume that the bins (or argument @{term bs}) are valid according to Chapter \ref{chapter:3} and
+contain only sound and monotonic pointers. The algorithm @{term build_tree'} calls itself at most
+once for each entry in the bins.
+\<close>
+
 
 section \<open>A Parse Forest \label{sec:parse-forest}\<close>
+
+text\<open>
+why not simply generate all parse trees integrated top down? yes for single parse tree, no for
+all since exponential blow up
+\<close>
 
 datatype 'a forest =
   FLeaf 'a
