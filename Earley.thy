@@ -312,7 +312,7 @@ proof (induction "length D" arbitrary: a D rule: nat_less_induct)
 qed
 
 lemma \<epsilon>_free_impl_non_empty_deriv:
-  "\<epsilon>_free cfg \<Longrightarrow> N \<in> set (\<NN> cfg) \<Longrightarrow> \<not> derives cfg [N] []"
+  "\<epsilon>_free cfg \<Longrightarrow> \<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []"
   using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation by (metis not_Cons_self2)
 
 

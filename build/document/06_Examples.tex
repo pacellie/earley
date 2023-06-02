@@ -37,7 +37,8 @@
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
 \ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}impl{\isacharunderscore}{\kern0pt}non{\isacharunderscore}{\kern0pt}empty{\isacharunderscore}{\kern0pt}deriv{\isacharcolon}{\kern0pt}\isanewline
-\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}\ {\isasymLongrightarrow}\ N\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymNN}\ {\isasymG}{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymnot}\ {\isacharparenleft}{\kern0pt}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymforall}N\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymNN}\ {\isasymG}{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymnot}\ {\isacharparenleft}{\kern0pt}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -48,9 +49,12 @@
 {\isafoldproof}%
 %
 \isadelimproof
-\isanewline
 %
 \endisadelimproof
+%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{datatype}\isamarkupfalse%
 \ t\ {\isacharequal}{\kern0pt}\ x\ {\isacharbar}{\kern0pt}\ plus\isanewline
 \isacommand{datatype}\isamarkupfalse%
@@ -144,7 +148,7 @@
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ correctness{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing{\isacharunderscore}{\kern0pt}list\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isasymG}\ {\isasymomega}\ {\isasymlongleftrightarrow}\ {\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing\ {\isacharparenleft}{\kern0pt}bins\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymG}\ {\isasymomega}\ {\isasymlongleftrightarrow}\ {\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -182,16 +186,12 @@
 %:%38=13%:%
 %:%39=13%:%
 %:%40=14%:%
-%:%51=18%:%
-%:%54=19%:%
-%:%55=19%:%
-%:%56=20%:%
-%:%57=20%:%
-%:%58=21%:%
-%:%59=21%:%
-%:%60=22%:%
+%:%41=15%:%
+%:%58=22%:%
+%:%59=22%:%
+%:%60=23%:%
 %:%61=23%:%
-%:%62=23%:%
+%:%62=24%:%
 %:%63=24%:%
 %:%64=25%:%
 %:%65=26%:%
@@ -201,10 +201,10 @@
 %:%69=29%:%
 %:%70=29%:%
 %:%71=30%:%
-%:%74=33%:%
-%:%75=34%:%
-%:%76=35%:%
-%:%77=35%:%
+%:%72=31%:%
+%:%73=32%:%
+%:%74=32%:%
+%:%75=33%:%
 %:%78=36%:%
 %:%79=37%:%
 %:%80=38%:%
@@ -218,12 +218,16 @@
 %:%88=44%:%
 %:%89=44%:%
 %:%90=45%:%
-%:%107=52%:%
-%:%108=52%:%
-%:%109=53%:%
-%:%126=60%:%
-%:%127=60%:%
-%:%128=61%:%
-%:%145=68%:%
-%:%146=68%:%
-%:%147=69%:%
+%:%91=46%:%
+%:%92=47%:%
+%:%93=47%:%
+%:%94=48%:%
+%:%111=55%:%
+%:%112=55%:%
+%:%113=56%:%
+%:%130=63%:%
+%:%131=63%:%
+%:%132=64%:%
+%:%149=71%:%
+%:%150=71%:%
+%:%151=72%:%

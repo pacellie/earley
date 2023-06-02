@@ -1046,7 +1046,7 @@ exists only a finite number of production rules and
 we need to first unpack the quadruple).
 \<close>
 
-lemma finiteness_UNIV_wf_item:
+lemma finite_wf_item:
   shows "finite { x | x. wf_item \<G> \<omega> x }"
 (*<*)
   sorry
@@ -1054,7 +1054,7 @@ lemma finiteness_UNIV_wf_item:
 
 text\<open>\<close>
 
-theorem finiteness:
+theorem finite_\<E>arley:
   shows "finite (\<E>arley \<G> \<omega>)"
 (*<*)
   sorry

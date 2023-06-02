@@ -221,7 +221,7 @@ lemma sound_ptrs_bin_upd:
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_bin_upds:
+lemma sound_ptrs_bin_upds:
   assumes "k < |bs|"
   assumes "distinct (items (bs!k))"
   assumes "distinct (items es)"
@@ -234,7 +234,7 @@ lemma sound_mono_ptrs_bin_upds:
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_Earley_bin_list':
+lemma sound_ptrs_Earley_bin_list':
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "nonempty_derives \<G>"
   assumes "sound_items \<G> \<omega> (bins bs)"
@@ -246,7 +246,7 @@ lemma sound_mono_ptrs_Earley_bin_list':
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_Earley_bin_list:
+lemma sound_ptrs_Earley_bin_list:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "nonempty_derives \<G>"
   assumes "sound_items \<G> \<omega> (bins bs)"
@@ -258,7 +258,7 @@ lemma sound_mono_ptrs_Earley_bin_list:
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_Init_list:
+lemma sound_ptrs_Init_list:
   shows "sound_ptrs \<omega> (Init_list \<G> \<omega>)"
 (*<*)
   sorry
@@ -266,7 +266,7 @@ lemma sound_mono_ptrs_Init_list:
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_Earley_list:
+lemma sound_ptrs_Earley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   assumes "k \<le> |\<omega>|"
@@ -277,7 +277,7 @@ lemma sound_mono_ptrs_Earley_list:
 
 text\<open>\<close>
 
-lemma sound_mono_ptrs_\<E>arley_list:
+lemma sound_ptrs_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   shows "sound_ptrs \<omega> (\<E>arley_list \<G> \<omega>)"
@@ -408,8 +408,8 @@ reduction pointer for functions @{term bin_upd}, @{term bin_upds}, @{term bins_u
 the soundness proof of the pointers. We omit them.
 \<close>
 
-definition mono_red_ptr :: "'a bins \<Rightarrow> bool" where
-  "mono_red_ptr bs \<equiv> \<forall>k < |bs|. \<forall>i < |bs!k|.
+definition mono_red_ptrs :: "'a bins \<Rightarrow> bool" where
+  "mono_red_ptrs bs \<equiv> \<forall>k < |bs|. \<forall>i < |bs!k|.
     \<forall>k' pre red ps. pointer (bs!k!i) = PreRed (k', pre, red) ps \<longrightarrow> red < i"
 
 text\<open>
@@ -427,10 +427,10 @@ fun build_tree'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times
 
 definition wf_tree_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat) set" where
   "wf_tree_input = { (bs, \<omega>, k, i) | bs \<omega> k i.
-      sound_ptrs \<omega> bs \<and> mono_red_ptr bs \<and> k < |bs| \<and> i < |bs!k| }"
+      sound_ptrs \<omega> bs \<and> mono_red_ptrs bs \<and> k < |bs| \<and> i < |bs!k| }"
 
 text\<open>
-To conclude this subsection, we then prove termination of the function @{term build_tree'}, or for
+To conclude this subsection, we prove termination of the function @{term build_tree'}, or for
 well-formed input it always terminates with some branch, by \textit{tree induction}.
 \<close>
 
@@ -443,37 +443,138 @@ lemma build_tree'_termination:
 
 subsection \<open>Correctness\<close>
 
-lemma wf_item_tree_build_tree': \<comment>\<open>Detailed\<close>
+text\<open>
+We know that for well-formed input a call of the form @{term "build_tree' bs \<omega> k i"} always terminates
+and yields some parse tree $t$. The following lemma proves that, for well-formed bins @{term bs},
+$t$ represents a parse tree according to the semantics of the Earley item $N \rightarrow \, \alpha \bullet \beta, j, k$
+at index $i$ in the $k$-th bin. The parse tree is rooted at the item rule head $N$, each of its subtrees is a complete derivation
+tree following the rules of the grammar, and the list of roots of the subtrees themselves coincide with
+@{term \<alpha>}. Moreover, the yield of $t$ matches the subsequence from $j$ to $k$ of the input @{term \<omega>}. 
+\<close>
+
+lemma wf_item_yield_build_tree':
   assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
   assumes "wf_bins \<G> \<omega> bs"
-  assumes "k < |bs|"
-  assumes "i < |bs!k|"
   assumes "build_tree' bs \<omega> k i = Some t"
-  shows "wf_item_tree \<G> (item (bs!k!i)) t"
+  shows "wf_item_tree \<G> (item (bs!k!i)) t \<and> wf_yield_tree \<omega> (item (bs!k!i)) t"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-lemma wf_yield_tree_build_tree': \<comment>\<open>Detailed\<close>
-  assumes "(bs, \<omega>, k, i) \<in> wf_tree_input"
-  assumes "wf_bins \<G> \<omega> bs"
-  assumes "k < |bs|"
-  assumes "k \<le> |\<omega>|"
-  assumes "i < |bs!k|"
-  assumes "build_tree' bs \<omega> k i = Some t"
-  shows "wf_yield_tree \<omega> (item (bs!k!i)) t"
-(*<*)
-  sorry
-(*>*)
+The proof is by \textit{tree induction} and we split it into three cases according to the kind
+of pointer the algorithm encounters. Let $e$ denote the entry at index $i$ in bin $k$, and $x$
+be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
 
-text\<open>\<close>
+\begin{itemize}
 
-theorem wf_rule_root_yield_tree_build_tree: \<comment>\<open>Detailed\<close>
+  \item @{term "pointer e = Null"}: 
+    We have @{term "t = Branch (item_rule_head x) []"}. The root of $t$ coincides
+    with the item rule head of $x$ by construction. Since the list of subtrees is empty, each of
+    the subtrees is trivially well-formed according to the grammar. Moreover, we know @{term "predicts x"},
+    due to the null pointer, or the bullet of $x$ is at position $0$. Thus, we have @{term "\<alpha> = []"} and
+    the list of subtrees @{term "[]"} matches. In summary, we have @{term "wf_item_tree \<G> x t"}.
+    From @{term "predicts x"}, we also know that @{term "j = k"}, or @{term "\<omega>[j..k\<rangle> = []"} by definition
+    of the @{term slice} function. Since the yield of $t$ is empty, we have @{term "wf_yield_tree \<omega> x t"}
+    and conclude the proof for the null pointer.
+
+  \item @{term "pointer e = Pre pre"}:
+    Let $x'$ denote the predecessor @{term "item (bs!(k-1)!pre)"} of the recursive function call for
+    bin $k-1$ and index @{term pre}. The function always terminates with some branch for well-formed input.
+    Hence, there exists a tree @{term "Branch N ts"} corresponding to the predecessor item $x'$, and we have:
+    $$@{term "t = Branch N (ts @ [Leaf (inp!(k-1))])"}$$
+
+    We also have @{term "(bs, \<omega>, k-1, pre) \<in> wf_tree_input"} by assumption since the predecessor pointer
+    is sound and the the algorithm does not change the bins. Thus we can use the induction hypothesis and obtain:
+    
+    \begin{equation*}
+      \begin{alignedat}{2}
+        & @{term "wf_item_tree \<G> x' (Branch N ts)"} \qquad & @{term "IH1"} \\
+        & @{term "wf_yield_tree \<omega> x' (Branch N ts)"} \qquad & @{term "IH2"} 
+      \end{alignedat}
+    \end{equation*}
+
+    Since the pointer is a simple predecessor pointer, @{term "scans \<omega> k x' x"} holds and $x$ as well
+    as $x'$ are well-formed bin items, we have:
+
+    \begin{equation*}
+      \begin{alignedat}{2}
+        & @{term "item_rule_head x' = item_rule_head x"} \qquad & (a) \\
+        & @{term "item_rule_body x' = item_rule_body x"} \qquad & (b) \\
+        & @{term "item_bullet x' + 1 = item_bullet x"} \qquad & (c) \\
+        & @{term "next_symbol x' = Some (\<omega>!(k-1))"} \qquad & (d) \\
+        & @{term "item_origin x' = item_origin x"} \qquad & (e) \\
+        & @{term "item_end x = k"} \qquad & (f) \\
+        & @{term "item_end x' = k-1"} \qquad & (g)
+      \end{alignedat}
+    \end{equation*}
+
+    We first proof @{term "wf_item_tree \<G> x t"}:
+
+    \begin{equation*}
+      \begin{alignedat}{2}
+        & @{term "map root_tree (ts @ [Leaf (\<omega>!(k-1))])"} & \\
+        & \qquad = @{term "map root_tree ts @ [\<omega>!(k-1)]"} \qquad & (1) \\
+        & \qquad = @{term "take (item_bullet x') (item_rule_body x') @ [\<omega>!(k-1)]"} \qquad & (2) \\
+        & \qquad = @{term "take (item_bullet x') (item_rule_body x) @ [\<omega>!(k-1)]"} \qquad & (3) \\
+        & \qquad = @{term "take (item_bullet x) (item_rule_body x)"} \qquad & (4)
+      \end{alignedat}
+    \end{equation*}
+
+    (1) by definition.
+    (2) by @{term "IH1"}.
+    (3) by (b).
+    (4) by (b,c,d).
+    The statement @{term "wf_item_tree \<G> x t"} follows by (a), using once more @{term "IH1"} to
+    prove that all subtrees are complete according to the grammar by definition of @{term wf_item_tree}.
+
+    To conclude the proof for the simple predecessor pointer, we prove the statement @{term "mbox0 (wf_yield_tree \<omega> x t)"}:
+
+    \begin{equation*}
+      \begin{alignedat}{2}
+        & @{term "yield_tree (Branch N (ts @ [Leaf (\<omega>!(k-1))]))"} & \\
+        & \qquad = @{term "concat (map yield_tree ts) @ [\<omega>!(k-1)]"} \qquad & (1) \\
+        & \qquad = @{term "\<omega>[item_origin x'..item_end x'\<rangle> @ [\<omega>!(k-1)]"} \qquad & (2) \\
+        & \qquad = @{term "\<omega>[item_origin x'..item_end x' + 1\<rangle>"} \qquad & (3) \\
+        & \qquad = @{term "\<omega>[item_origin x..item_end x' + 1\<rangle>"}  \qquad & (4) \\
+        & \qquad = @{term "\<omega>[item_origin x..item_end x\<rangle>"} \qquad & (5)
+      \end{alignedat}
+    \end{equation*}
+
+    (1) by definition.
+    (2) by @{term "IH2"}. 
+    (3) by (g) and the definition of @{term slice}.
+    (4) by (e).
+    (5) by (f,g).
+
+  \item @{term "pointer e = PreRed (k', pre, red) ps"}:
+    The proof is similar in structure to the proof of the simple predecessor case. We only highlight
+    the main differences. In contrast to only one recursive call for the predecessor item $x'$, we
+    have another recursive call for the complete reduction item $y$. But we have also have an additional
+    induction hypothesis. The proofs of @{term "wf_item_tree \<G> x t"} and @{term "wf_yield_tree \<omega> x t"}
+    are analogous to the case above replacing @{term "Leaf (\<omega>!(k-1))"} with the branch obtained from
+    the second recursive call. Statements similar to (a-g) hold since all items are well-formed and
+    the predicate @{term "completes k x' x y"} is true.
+
+\end{itemize}
+
+\end{proof}
+\<close>
+
+text\<open>
+Next we prove that, if the function @{term build_tree} returns a parse tree, it is a complete and
+well-formed tree according to the grammar, the root of the tree is the start symbol of the grammar,
+and the yield of the tree corresponds to the input. The following corollary proves that the theorem
+in particular holds if we generate the bins using the algorithm of Chapter \ref{chap:04} if we adjust
+the assumptions accordingly.
+\<close>
+
+theorem wf_rule_root_yield_build_tree: \<comment>\<open>Detailed\<close>
   assumes "wf_bins \<G> \<omega> bs"
   assumes "sound_ptrs \<omega> bs"
-  assumes "mono_red_ptr bs"
+  assumes "mono_red_ptrs bs"
   assumes "|bs| = |\<omega>| + 1"
   assumes "build_tree \<G> \<omega> bs = Some t"
   shows "wf_rule_tree \<G> t \<and> root_tree t = \<SS> \<G> \<and> yield_tree t = \<omega>"
@@ -481,9 +582,26 @@ theorem wf_rule_root_yield_tree_build_tree: \<comment>\<open>Detailed\<close>
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+\begin{proof}
 
-corollary wf_rule_root_yield_tree_build_tree_\<E>arley_list:
+The function @{term build_tree} searches the last bin for any finished items. Since it returns
+a tree by assumption it is successful, or finds a finished item $x$ at index $i$, and calls
+the function @{term "build_tree' bs \<omega> ( |bs| - 1) i"}. By assumption the input and the bins are
+well-formed, we can discharge the assumptions of the previous two lemmas, obtain @{term "t = Branch N ts"} and have:
+
+$$@{term "wf_item_tree \<G> x t \<and> wf_yield_tree \<omega> x t"}$$
+
+The item $x$ is finished or its rule head is the start symbol of the grammar, it is complete, and
+its origin and end respectively are $0$ and @{term "|\<omega>|"}. Due to the completeness and well-formedness
+of the item @{term "wf_item_tree \<G> x t"} implies @{term "wf_rule_tree \<G> t"} and @{term "root_tree t = \<SS> \<G>"}.
+From @{term "wf_yield_tree \<omega> x t"} we have @{term "yield_tree t = \<omega>[item_origin x..item_end x\<rangle>"} by definition
+, and consequently @{term "yield_tree t = \<omega>"}.
+
+\end{proof}
+\<close>
+
+corollary wf_rule_root_yield_build_tree_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   assumes "build_tree \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some t"
@@ -492,9 +610,14 @@ corollary wf_rule_root_yield_tree_build_tree_\<E>arley_list:
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+We conclude this section with the final theorem stating that the function @{term build_tree}
+returns some parse tree if and only if there exists a derivation of the input from the start symbol
+of the grammar, provided we generated the bins with the algorithm of Chapter \ref{chap:04} and grammar
+and input are well-formed.
+\<close>
 
-theorem correctness_build_tree_\<E>arley_list: \<comment>\<open>Detailed\<close>
+theorem correctness_build_tree_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
@@ -504,23 +627,31 @@ theorem correctness_build_tree_\<E>arley_list: \<comment>\<open>Detailed\<close>
 (*>*)
 
 text\<open>
-To conclude this section, We give an informal argument for the running time of $\mathcal{O}(n^4)$.
-We assume that the bins (or argument @{term bs}) are valid according to Chapter \ref{chapter:3} and
-contain only sound and monotonic pointers. The algorithm @{term build_tree'} calls itself at most
-once for each entry in the bins.
-\<close>
+\begin{proof}
 
+The function @{term build_tree} searches the last bin for a finished item $x$.
+It finds such an item and returns a parse tree if and only if the bins generated
+by @{term "\<E>arley_list \<G> \<omega>"} are @{term recognizing} which in turn holds if and only if
+there exists a derivation of the input from the start symbol of the grammar by
+lemma @{thm[source] correctness_\<E>arley_list} using our assumptions.
+
+\end{proof}
+\<close>
 
 section \<open>A Parse Forest \label{sec:parse-forest}\<close>
 
 text\<open>
 why not simply generate all parse trees integrated top down? yes for single parse tree, no for
-all since exponential blow up
+all since exponential blow up. One option for more sharing is: different reduction item same predecessor.
+We sketch a simple unoptimized algorithm:
+
+The idea was: generalize the functional algorithm which generates a single tree to all trees
+by introducing as much structural sharing as possible. 
 \<close>
 
 datatype 'a forest =
   FLeaf 'a
-  | FBranch 'a "'a forest list list"
+| FBranch 'a "'a forest list list"
 
 fun combinations :: "'a list list \<Rightarrow> 'a list list" where
   "combinations [] = [[]]"
@@ -614,50 +745,22 @@ lemma build_trees'_termination:
 
 text\<open>\<close>
 
-theorem termination_build_tree_\<E>arley_list:
-  assumes "wf_\<G> \<G>"
-  assumes "nonempty_derives \<G>"
-  assumes "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
-  shows "\<exists>fs. build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
-(*<*)
-  sorry
-(*>*)
-
-
 subsection \<open>Soundness\<close>
 
-lemma wf_item_tree_build_trees':
+lemma wf_item_yield_build_trees':
   assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
   assumes "wf_bins \<G> \<omega> bs"
-  assumes "k < |bs|"
-  assumes "i < |bs!k|"
   assumes "build_trees' bs \<omega> k i I = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
-  shows "wf_item_tree \<G> (item (bs!k!i)) t"
+  shows "wf_item_tree \<G> (item (bs!k!i)) t \<and> wf_yield_tree \<omega> (item (bs!k!i)) t"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
-lemma wf_yield_tree_build_trees':
-  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
-  assumes "wf_bins \<G> \<omega> bs"
-  assumes "k < |bs|"
-  assumes "k \<le> |\<omega>|"
-  assumes "i < |bs!k|"
-  assumes "build_trees' bs \<omega> k i I = Some fs"
-  assumes "f \<in> set fs"
-  assumes "t \<in> set (trees f)"
-  shows "wf_yield_tree \<omega> (item (bs!k!i)) t"
-(*<*)
-  sorry
-(*>*)
-
-text\<open>\<close>
-
-theorem wf_rule_root_yield_tree_build_trees:
+theorem wf_rule_root_yield_build_trees:
   assumes "wf_bins \<G> \<omega> bs"
   assumes "sound_ptrs \<omega> bs"
   assumes "|bs| = |\<omega>| + 1"
@@ -671,7 +774,7 @@ theorem wf_rule_root_yield_tree_build_trees:
 
 text\<open>\<close>
 
-corollary wf_rule_root_yield_tree_build_trees_\<E>arley_list:
+corollary wf_rule_root_yield_build_trees_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
   assumes "build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
@@ -691,15 +794,28 @@ theorem soundness_build_trees_\<E>arley_list:
   assumes "build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
-  shows "derives \<G> [\<SS> \<G>] \<omega>"
+  shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
 (*<*)
   sorry
 (*>*)
 
 text\<open>\<close>
 
+section \<open>A Word on Completeness and Performance \label{sec:word}\<close>
 
-section \<open>A Word on Performance and Completeness \label{sec:word}\<close>
+text\<open>
+How to proof completeness sketch.
+
+Our approach is slow, exponentially slow.
+(1) simple improvement for more structural sharing: cons instead of append for complete items reverse
+(2) need memoization: even though only one recursive call for different reduction items and same
+  predecessor what about different items and same reduction item. But memoization is extremly awkward
+  due to the cyclic calls, need to set a dummy.
+(3) still not enough sharing see snippet: nodes which have the same tree below them are shared with
+  simple improvement and memoization, but packed nodes are not shared.
+
+Overall approach is not very promising, completeness proof very involved, we stop here.
+\<close>
 
 text\<open>
 SNIPPET:

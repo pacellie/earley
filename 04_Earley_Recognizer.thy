@@ -482,7 +482,7 @@ subsequently prove an appropriate induction schema by hand.
 As previously explained, in Section \ref{sec:alg} we defined the function @{term Earley_bin_list'} as a partial function
 since a call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} might never terminate if the function
 keeps appending arbitrary new items to the $k$-th bin it currently operates on. But we know that the
-newly generated items are not arbitrary but well-formed bin items. From lemma @{term finiteness} of Chapter \ref{chapter:3} we also
+newly generated items are not arbitrary but well-formed bin items. From lemma @{thm[source] finite_\<E>arley} of Chapter \ref{chapter:3} we also
 know that the set of well-formed items is finite. Since we made sure to only add each item once to
 a bin, the function @{term Earley_bin_list'} will eventually run out of new items to insert into
 the bin it currently operates on and terminate.
@@ -619,7 +619,7 @@ cases follow the same structure and we only highlight the @{term Complete} case.
 follows from @{term Earley_bin_list'_sub_Earley_bin} by definition.
 \<close>
 
-lemma Earley_bin_list'_sub_Earley_bin: \<comment>\<open>Detailed: only complete\<close>
+lemma Earley_bin_list'_sub_Earley_bin:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "bins bs \<subseteq> I"
   shows "bins (Earley_bin_list' k \<G> \<omega> bs i) \<subseteq> Earley_bin k \<G> \<omega> I"
@@ -751,7 +751,7 @@ end, and that the list-based approach covers the fixpoint computation of Chapter
 \<close>
 
 definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
-  "nonempty_derives \<G> \<equiv> \<forall>N. N \<in> set (\<NN> \<G>) \<longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
+  "nonempty_derives \<G> \<equiv> \<forall>N \<in> set (\<NN> \<G>). \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 
 text\<open>
 The core lemma is the following: if the grammar is well-formed and does not allow empty derivations, and a given item is well-formed,

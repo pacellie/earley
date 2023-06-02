@@ -11,10 +11,13 @@ definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
   "\<epsilon>_free \<G> \<longleftrightarrow> (\<forall>r \<in> set (\<RR> \<G>). rule_body r \<noteq> [])"
 
 lemma \<epsilon>_free_impl_non_empty_deriv:
-  "\<epsilon>_free \<G> \<Longrightarrow> N \<in> set (\<NN> \<G>) \<Longrightarrow> \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
+  assumes "\<epsilon>_free \<G>"
+  shows "\<forall>N \<in> set (\<NN> \<G>). \<not> (\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* [])"
 (*<*)
   sorry  
 (*>*)
+
+text\<open>\<close>
 
 datatype t = x | plus
 datatype n = S
@@ -66,7 +69,7 @@ lemma nonempty_derives:
 text\<open>\<close>
 
 lemma correctness:
-  shows "recognizing_list (\<E>arley_list \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
+  shows "recognizing (bins (\<E>arley_list \<G> \<omega>)) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
 (*<*)
   sorry  
 (*>*)
