@@ -1,0 +1,21 @@
+This is LuaTeX, Version 1.14.0 (TeX Live 2022/dev/Debian)  (format=luatex 2023.5.30)  3 JUN 2023 13:17
+ restricted system commands enabled.
+**root.tex
+(./root.tex
+! Undefined control sequence.
+l.1 \RequirePackage
+                 [l2tabu,orthodox]{nag}
+? 
+! Interruption.
+<to be read again> 
+[
+l.1 \RequirePackage[
+                  l2tabu,orthodox]{nag}
+? X
+
+warning  (pdf backend): no pages of output.
+
+PDF statistics: 0 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 131072)
+ 1 words of extra memory for PDF output out of 10000 (max. 100000000)
+
