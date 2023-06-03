@@ -33,11 +33,11 @@
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-Although a recognizer is a useful tool, for most practical applications we would like to not only
+Although a recognizer is a useful tool, for most practical applications we would like to - not only -
 know if the language specified by the grammar accepts the input, but we also want to obtain additional information
 of how the input can be derived in the form of parse trees. In particular, for our running example, the
-grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$ we want to obtain the two possible parse
-trees illustrated in Figures \ref{fig:tree1} \ref{fig:tree2}. But constructing all possible parse trees at once is no
+grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$, we want to obtain the two possible parse
+trees illustrated in Figures \ref{fig:tree1} and \ref{fig:tree2}. But constructing all possible parse trees at once is no
 trivial task.
 
 \begin{figure}[htpb]
@@ -75,7 +75,7 @@ $A \rightarrow \, \gamma \bullet, j, k$. If there exists more than one possible 
 $A$ and obtain the item $B \rightarrow \, \alpha A \bullet \beta, i, k$, then multiple pointers originate
 from the instance of the non-terminal $A$. Annotating every non-terminal of the right-hand side of the item
 $A \rightarrow \, \gamma \bullet, j, k$ recursively with pointers thus represents the derivation trees for
-the non-terminal $A$. After termination of the algorithm, the non-terminal that represents the start symbol
+the non-terminal $A$. Finally, after termination of the algorithm, the non-terminal that represents the start symbol
 contains pointers representing all possible derivation trees.
 
 Note that Earley's pointers connect instances of non-terminals, but Tomita \cite{Tomita:1985} showed
@@ -99,8 +99,8 @@ In this chapter we develop an efficient functional algorithm constructing a sing
 tree in Section \ref{sec:parse-tree} and prove its correctness. In Section \ref{sec:parse-forest}
 we generalize this approach, introducing a data structure representing all possible parse trees
 as a parse forest, adjusting the parse tree algorithm to compute such a forest and prove termination
-and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the performance, the missing
-completeness proof of the algorithm and compare our approach to the algorithm of Scott in greater detail.%
+and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the missing
+completeness proof and the performance of the algorithm and compare our approach to the algorithm of Scott in greater detail.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -121,10 +121,10 @@ completeness proof of the algorithm and compare our approach to the algorithm of
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-The data structure \isa{tree} represents parse trees as shown in Figures \ref{fig:tree1} \ref{fig:tree2}.
+The data structure \isa{tree} represents parse trees as shown in Figures \ref{fig:tree1} and \ref{fig:tree2}.
 A \isa{Leaf} always contains a single symbol (either terminal or non-terminal for partial derivation trees), a \isa{Branch} consists of one non-terminal
 symbol and a list of subtrees. The function \isa{root{\isacharunderscore}{\kern0pt}tree} returns the symbol of the root of the
-parse tree. The yield of a leaf is the single symbol; to compute the yield for a branch with
+parse tree. The yield of a leaf is its single symbol; to compute the yield for a branch with
 subtrees \isa{ts} we apply the function \isa{yield{\isacharunderscore}{\kern0pt}tree} recursively and concatenate the results.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{datatype}\isamarkupfalse%
@@ -144,18 +144,17 @@ subtrees \isa{ts} we apply the function \isa{yield{\isacharunderscore}{\kern0pt}
 \begin{isamarkuptext}%
 We introduce three notions of well-formedness for parse trees:
 \begin{itemize}
-  \item \isa{wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree}: A parse tree must represent a valid (partial) derivation tree according the the grammar \isa{{\isasymG}}.
-    A leaf of a parse tree is always well-formed by construction, for each branch \isa{Branch\ N\ ts}
-    there has to exists a corresponding rule of the grammar \isa{{\isasymG}} such that $N \rightarrow \, $
-    \isa{map\ root{\isacharunderscore}{\kern0pt}tree\ ts} and each subtree \isa{t\ {\isasymin}\ set\ ts} is well-formed.
+  \item \isa{wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree}: A parse tree must represent a valid derivation tree according the the grammar \isa{{\isasymG}}.
+    A leaf of a parse tree is always well-formed by construction. For each branch \isa{Branch\ N\ ts}
+    there has to exists a production rule $N \rightarrow \, $ \isa{map\ root{\isacharunderscore}{\kern0pt}tree\ ts} corresponding to the grammar \isa{{\isasymG}} and each subtree \isa{t\ {\isasymin}\ set\ ts} has to be well-formed.
   \item \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree}: Each branch \isa{Branch\ N\ ts} corresponds to an Earley item
     $N \rightarrow \, \alpha \bullet \beta, i, j$ such that the roots of the subtrees \isa{ts} and
     \isa{{\isasymalpha}} coincide. Note that a branch is only well-formed according to the grammar if
-    the roots of the subtrees are a \textit{complete} right-hand side of a production rule of the grammar.
+    the roots of the subtrees form a \textit{complete} right-hand side of a production rule of the grammar.
     In contrast, a branch is well-formed according to an item if the roots of the subtrees are equal
     to \isa{{\isasymalpha}}, or, since we assume that Earley items are themselves well-formed, a \textit{prefix}
     of a right-hand side of a production rule.
-  \item \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree}: For an item $N \rightarrow \, \alpha \bullet \beta, i, j$, the yield
+  \item \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree}: For an item $N \rightarrow \, \alpha \bullet \beta, i, j$ the yield
     of a parse tree has to match the substring \isa{{\isasymomega}{\isacharbrackleft}{\kern0pt}i{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}j{\isasymrangle}} of the input.
 \end{itemize}%
 \end{isamarkuptext}\isamarkuptrue%
@@ -198,20 +197,20 @@ We introduce three notions of well-formedness for parse trees:
 In Chapter \ref{chap:04} we extended the algorithm of Chapter \ref{chapter:3} in two orthogonal
 ways: implementing sets as lists and adding the additional information to construct parse trees
 in the form null, predecessor, and predecessor/reduction pointers. But we did not formally define
-the semantics of these pointers nor prove anything about their construction. In the following, we
+the semantics of these pointers nor prove anything about their construction. In the following we
 define and proof soundness of the pointers.
 
 \begin{itemize}
   \item A null pointer \isa{Null} of an entry is sound if it \isa{predicts} the item $x$ of
     the entry, or the bullet of $x$ is at the beginning of the right-hand side of its production rule
-    and we have not yet scanned any substring of the input.
+    and we have not yet scanned any substring of the input, or item end and origin are identical.
   \item A predecessor pointer \isa{Pre\ pre} of an entry $e$ is sound for the input \isa{{\isasymomega}}, bins \isa{bs},
     and the index of the current bin $k$ if $k > 0$, the predecessor index does not exceed the length
     of the predecessor bin at index $k-1$, and the predecessor item in bin $k-1$ at index $pre$ \isa{scans}
-    then item of the entry $e$. Item $x'$ \isa{scans} item $x$ for index $k$ if the next symbol of
+    the item of the entry $e$. An item $x'$ \isa{scans} item $x$ for index $k$ if the next symbol of
     $x'$ coincides with the terminal symbol at index $k-1$ in the input \isa{{\isasymomega}} and the item $x$ can be obtained
     by \isa{inc{\isacharunderscore}{\kern0pt}item\ x{\isacharprime}{\kern0pt}\ k}. 
-  \item We define the soundness a pointer \isa{PreRed\ p\ ps} of an entry $e$ for each predecessor/reduction
+  \item Finally, we define the soundness of a pointer \isa{PreRed\ p\ ps} of an entry $e$ for each predecessor/reduction
     triple \isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}p\ {\isacharhash}{\kern0pt}\ ps{\isacharparenright}{\kern0pt}}. The index $k'$ of the predecessor bin must be strictly
     smaller than $k$, and both the predecessor and the reduction index must be within the bounds of their
     respective bins, or bin $k'$ and $k$. Additionally, predicate \isa{completes} holds for $k$,
@@ -255,16 +254,16 @@ define and proof soundness of the pointers.
 \ \ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymequiv}\ {\isasymforall}k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymforall}e\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
 \ \ \ \ sound{\isacharunderscore}{\kern0pt}null{\isacharunderscore}{\kern0pt}ptr\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}pre{\isacharunderscore}{\kern0pt}ptr\ {\isasymomega}\ bs\ k\ e\ {\isasymand}\ sound{\isacharunderscore}{\kern0pt}prered{\isacharunderscore}{\kern0pt}ptr\ bs\ k\ e{\isachardoublequoteclose}%
 \begin{isamarkuptext}%
-We then prove the semantics of the pointers. The structure of the proofs is as always: we first
+We then prove the semantics of the pointers. The structure of the proofs is as usual: we first
 proof pointer soundness for the basic operations \isa{bin{\isacharunderscore}{\kern0pt}upd}, \isa{bin{\isacharunderscore}{\kern0pt}upds}, and \isa{bins{\isacharunderscore}{\kern0pt}upd}.
 Followed by the corresponding proofs for the computation of a single bin or functions \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}}
 and \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list}. Finally, we prove that the initial bins are sound, and functions \isa{Earley{\isacharunderscore}{\kern0pt}list}
 and \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} maintain this property. Although it should be intuitively clear that the
 semantics of pointers hold, the proofs are surprisingly not trivial at all, especially the soundness
 proofs for functions \isa{bin{\isacharunderscore}{\kern0pt}upd} and \isa{Earley{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}list{\isacharprime}{\kern0pt}}. The complexity mostly stems from
-the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and depending
-on the type of the newly inserted items. Nonetheless, since the proofs are very technical but do not
-reveal anything new in structure, we only state them and omit going into detail.%
+the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and dependence
+on the type of the pointers of the newly inserted items. Nonetheless, since the proofs do not reveal anything new in structure
+but are very technical, we only state them and omit going into detail.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ sound{\isacharunderscore}{\kern0pt}ptrs{\isacharunderscore}{\kern0pt}bin{\isacharunderscore}{\kern0pt}upd{\isacharcolon}{\kern0pt}\isanewline
@@ -441,9 +440,8 @@ reveal anything new in structure, we only state them and omit going into detail.
 After execution of the \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} algorithm we obtain bins representing the complete set
 of Earley items. The null, predecessor, and predecessor/reduction pointers provide a way to navigate
 between items or through these bins, and, since they are sound, a way to construct derivation trees.
-The function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} constructs the \textit{single} parse tree corresponding to the
-derivation tree represented by the item $x$ of entry $e$ at index $i$ at the $k$-th bin according to the
-well-formedness definitions of the beginning of this section.
+The function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} constructs a \textit{single} parse tree corresponding to the item $x$ of entry $e$ at index $i$ of the $k$-th bin according to the
+well-formedness definitions from the beginning of this section.
 
 If the pointer of entry $e$ is a null pointer, the algorithm starts building the tree rooted at
 the left-hand side non-terminal $N$ of the production rule of the item $x$ by constructing an initially
@@ -453,7 +451,7 @@ predecessor index \isa{pre}, obtaining a partial parse tree \isa{Branch\ N\ ts}.
 in particular the \isa{scans} predicate holds, we append a Leaf containing the terminal symbol at index
 $k-1$ of the input \isa{{\isasymomega}} to the list of substrees \isa{ts}. In the case that
 the pointer contains predecessor/reduction triples the algorithm only considers the first triple
-\isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}} since we are only constructing a single derivation tree. As for the predecessor
+\isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}} due to the fact that we are only constructing a single derivation tree. As for the predecessor
 case, it recursively calls itself obtaining a partial derivation tree \isa{Branch\ N\ ts} for the predecessor index \isa{pre}
 and bin $k'$, followed by yet another recursive call for the reduction item at the reduction index \isa{red}
 in the current bin $k$, constructing a complete derivation tree $t$. This time the \isa{completes}
@@ -461,8 +459,8 @@ predicate holds, thus the next symbol of the predecessor item coincides with the
 the reduction item, or we are allowed to append the complete tree $t$ to the list of substrees \isa{ts}.
 
 Some minor implementation details to note are: the function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} is a partial function,
-and not tail recursive, hence we it has to return an optional value, as explained in Section \ref{sec:04-wellformedness}.
-We are using the monadic do-notation commonly found in functional programming languages for the option
+and not tail recursive, hence it has to return an optional value, as explained in Section \ref{sec:04-wellformedness}.
+Furthermore, we are using the monadic do-notation commonly found in functional programming languages for the option
 monad. An alternative but equivalent implementation would use explicit case distinctions. Finally, if
 the function computes some value it is always a branch, never a single leaf.%
 \end{isamarkuptext}\isamarkuptrue%
@@ -489,12 +487,13 @@ the function computes some value it is always a branch, never a single leaf.%
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharbraceright}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isasymRightarrow}\ None\ {\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \begin{isamarkuptext}%
-Finally, function \isa{build{\isacharunderscore}{\kern0pt}tree} computes a complete derivation tree if there exists one. It searches the last bin for any finished items or items of the form
-$S \rightarrow \gamma, 0, n$ where $S$ is the start symbol of the grammar \isa{{\isasymG}} and $n$ denotes
-the length of the input \isa{{\isasymomega}}. If there exists such an item it calls function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}}
+The function \isa{build{\isacharunderscore}{\kern0pt}tree} computes a complete derivation tree if there exists one. It searches the last bin for any finished items or items of the form
+$S \rightarrow \gamma \bullet, 0, n$ where $S$ is the start symbol of the grammar \isa{{\isasymG}} and $n$ denotes
+the length of the input \isa{{\isasymomega}}. If there exists such an item, it calls function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}}
 obtaining some parse tree representing the derivation \isa{{\isasymG}\ {\isasymturnstile}\ S\ \ensuremath{\Rightarrow^{\ast}}\ {\isasymomega}} (we will have to proof that it never returns \isa{None}),
 otherwise it returns \isa{None} since there cannot exist a valid parse tree due to the correctness
-proof of Chapter \ref{chapter:3}.%
+proof for the Earley bins of Chapter \ref{chapter:3} if the argument \isa{bs} was constructed by the
+\isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} function.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}tree\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ tree\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
@@ -524,17 +523,17 @@ proof of Chapter \ref{chapter:3}.%
 The function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} uses the null, predecessor and predecessor/reduction pointers to
 navigate through the given bins by calling itself recursively. Sound pointers ensure that we are not
 indexing outside of the bins, but this does not imply that the algorithm terminates. In the following
-we outline when it always terminates with some parse tree. Lets assume the
+we outline the cases for which it always terminates with some parse tree. Let's assume the
 function starts its computation at index $i$ of the $k$-th bin. If it encounters a null pointer, it
 terminates immediately. If the pointer is a simple predecessor pointer, it calls itself recursively
 for the previous bin. Due to the soundness of the predecessor pointer the index $k-1$ of this bin
 is strictly smaller than $k$. A similar argument holds for the first recursive call if the pointer
 is a predecessor/reduction pointer for the predecessor case (\isa{k{\isacharprime}{\kern0pt}\ {\isacharless}{\kern0pt}\ k}). Or, we are following
-the pointers \textit{strictly} back to the origin bin and thus must terminate at some point. But for
-the reduction pointer we run into a problem: the recursive call is for item at index $i$ is in the same
-bin $k$ for a different index $red$, which in turn might contain again reduction triples and so on.
+the pointers \textit{strictly} back to the origin bin $B_0$ and thus must terminate at some point. But for
+the reduction pointer we run into a problem: the recursive call for the item at index $i$ is in the same
+bin $k$ but for the reduction index $red$, which in turn might contain again reduction triples and so on.
 Hence, it is possible that we end up in a cycle of reductions and never terminate. Take for example the
-grammer $A ::= x \, | \, B \qquad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
+grammer $A ::= x \, | \, B \quad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
 illustrates the bins computed by the algorithm of Chapter \ref{chapter:3}. Bin $B_1$ contains the entry
 $B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ at index $1$ and its second reduction triple
 $(0, 2, 2)$ a reduction pointer to index $2$ of the same bin. There we find the entry
@@ -558,9 +557,11 @@ We need to address this problem when constructing all possible parse trees in Se
 but for now we are lucky. While constructing a single parse tree the algorithm always follows the
 first reduction triple that is created when the entry is constructed initially. Since we only
 append new entries to bins, the complete reduction item necessarily appears before the new entry with
-the reduction triple. Furthermore, the implementation of function \isa{bin{\isacharunderscore}{\kern0pt}upd} also makes sure to not change this
-triple. Thus, we know for each item in the $k$-th bin at index $i$ that the reduction pointer $red$,
-that we follow while constructing a single parse tree, is strictly smaller than $i$. To summarize:
+the reduction triple. Furthermore, the implementation of the function \isa{bin{\isacharunderscore}{\kern0pt}upd} also makes sure to not change this
+first triple. Thus, we know for any item at index $i$ in the $k$-th bin that its first reduction pointer $red$,
+that we follow while constructing a single parse tree, is strictly smaller than $i$.
+
+To summarize:
 if the algorithm encounters a null pointer it terminates immediately, for predecessor pointers it
 calls itself recursively in a bin with a strictly smaller index, and for reduction pointers it calls
 itself in the same bin but for a strictly smaller index. The proofs for the monotonicity of the first
@@ -577,8 +578,8 @@ Similarly to Chapter \ref{chapter:3} we define a suitable measure and a notion o
 for the input of the function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} and proof an induction schema, in
 the following referred to as \textit{tree induction}, by complete induction on the measure.
 For the input quadruple \isa{{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}} the measure corresponds to the number of entries
-in the first $k-1$ bins plus $i$. The call the input well-formed it must satisfy the following
-conditions: sound and monotonic pointers, index $k$ does not exceed the length of the bins, and
+in the first $k-1$ bins plus $i$. We call the input well-formed if it satisfies the following
+conditions: sound and monotonic pointers, the bin index $k$ does not exceed the length of the bins, and the item
 index $i$ is within the bounds of the $k$-th bin.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{fun}\isamarkupfalse%
@@ -628,7 +629,7 @@ well-formed input it always terminates with some branch, by \textit{tree inducti
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-We know that for well-formed input a call of the form \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i} always terminates
+From the previous lemma, We know that for well-formed input a call of the form \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i} always terminates
 and yields some parse tree $t$. The following lemma proves that, for well-formed bins \isa{bs},
 $t$ represents a parse tree according to the semantics of the Earley item $N \rightarrow \, \alpha \bullet \beta, j, k$
 at index $i$ in the $k$-th bin. The parse tree is rooted at the item rule head $N$, each of its subtrees is a complete derivation
@@ -659,7 +660,7 @@ tree following the rules of the grammar, and the list of roots of the subtrees t
 
 The proof is by \textit{tree induction} and we split it into three cases according to the kind
 of pointer the algorithm encounters. Let $e$ denote the entry at index $i$ in bin $k$, and $x$
-be \isa{item\ e} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
+be the item of $e$, or $x = N \rightarrow \, \alpha \bullet \beta, j, k$.
 
 \begin{itemize}
 
@@ -689,8 +690,8 @@ be \isa{item\ e} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
       \end{alignedat}
     \end{equation*}
 
-    Since the pointer is a simple predecessor pointer, \isa{scans\ {\isasymomega}\ k\ x{\isacharprime}{\kern0pt}\ x} holds and $x$ as well
-    as $x'$ are well-formed bin items, we have:
+    Since the pointer is a simple predecessor pointer, the predicate \isa{scans\ {\isasymomega}\ k\ x{\isacharprime}{\kern0pt}\ x} holds and we also know that $x$ as well
+    as $x'$ are well-formed bin items. Consequently, we obtain the following facts:
 
     \begin{equation*}
       \begin{alignedat}{2}
@@ -759,7 +760,7 @@ be \isa{item\ e} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
 \begin{isamarkuptext}%
 Next we prove that, if the function \isa{build{\isacharunderscore}{\kern0pt}tree} returns a parse tree, it is a complete and
 well-formed tree according to the grammar, the root of the tree is the start symbol of the grammar,
-and the yield of the tree corresponds to the input. The following corollary proves that the theorem
+and the yield of the tree corresponds to the input. The subsequent corollary then proves that the theorem
 in particular holds if we generate the bins using the algorithm of Chapter \ref{chap:04} if we adjust
 the assumptions accordingly.%
 \end{isamarkuptext}\isamarkuptrue%
@@ -790,15 +791,15 @@ the assumptions accordingly.%
 The function \isa{build{\isacharunderscore}{\kern0pt}tree} searches the last bin for any finished items. Since it returns
 a tree by assumption it is successful, or finds a finished item $x$ at index $i$, and calls
 the function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isacharminus}{\kern0pt}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ i}. By assumption the input and the bins are
-well-formed, we can discharge the assumptions of the previous two lemmas, obtain \isa{t\ {\isacharequal}{\kern0pt}\ Branch\ N\ ts} and have:
+well-formed, we can discharge the assumptions of the previous two lemmas, obtain a tree \isa{t\ {\isacharequal}{\kern0pt}\ Branch\ N\ ts} and have:
 
 $$\isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ x\ t\ {\isasymand}\ wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ x\ t}$$
 
 The item $x$ is finished or its rule head is the start symbol of the grammar, it is complete, and
 its origin and end respectively are $0$ and \isa{{\isacharbar}{\kern0pt}{\isasymomega}{\isacharbar}{\kern0pt}}. Due to the completeness and well-formedness
 of the item \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ x\ t} implies \isa{wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ t} and \isa{root{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymSS}\ {\isasymG}}.
-From \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ x\ t} we have \isa{yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isacharbrackleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}origin\ x{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}item{\isacharunderscore}{\kern0pt}end\ x{\isasymrangle}} by definition
-, and consequently \isa{yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}}.
+From \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ x\ t} we have \isa{yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isacharbrackleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}origin\ x{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}item{\isacharunderscore}{\kern0pt}end\ x{\isasymrangle}} by definition,
+and consequently \isa{yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}}.
 
 \end{proof}%
 \end{isamarkuptext}\isamarkuptrue%
@@ -1315,23 +1316,23 @@ complicating the final algorithm.%
 %:%157=117%:%
 %:%158=118%:%
 %:%159=119%:%
-%:%160=120%:%
-%:%162=123%:%
+%:%161=122%:%
+%:%162=122%:%
 %:%163=123%:%
 %:%164=124%:%
-%:%165=125%:%
+%:%166=126%:%
 %:%167=127%:%
 %:%168=128%:%
-%:%169=129%:%
+%:%169=128%:%
 %:%170=129%:%
 %:%171=130%:%
-%:%172=131%:%
+%:%174=133%:%
 %:%175=134%:%
 %:%176=135%:%
-%:%177=136%:%
+%:%177=135%:%
 %:%178=136%:%
-%:%179=137%:%
-%:%186=140%:%
+%:%185=139%:%
+%:%197=142%:%
 %:%198=143%:%
 %:%199=144%:%
 %:%200=145%:%
@@ -1356,37 +1357,37 @@ complicating the final algorithm.%
 %:%219=164%:%
 %:%220=165%:%
 %:%221=166%:%
-%:%222=167%:%
-%:%224=170%:%
+%:%223=169%:%
+%:%224=169%:%
 %:%225=170%:%
 %:%226=171%:%
 %:%227=172%:%
-%:%228=173%:%
+%:%228=172%:%
 %:%229=173%:%
 %:%230=174%:%
 %:%231=175%:%
-%:%232=176%:%
+%:%232=175%:%
 %:%233=176%:%
 %:%234=177%:%
 %:%235=178%:%
-%:%236=179%:%
+%:%236=178%:%
 %:%237=179%:%
-%:%238=180%:%
+%:%239=181%:%
 %:%240=182%:%
 %:%241=183%:%
-%:%242=184%:%
+%:%242=183%:%
 %:%243=184%:%
 %:%244=185%:%
 %:%245=186%:%
 %:%246=187%:%
-%:%247=188%:%
+%:%247=187%:%
 %:%248=188%:%
-%:%249=189%:%
+%:%250=190%:%
 %:%251=191%:%
 %:%252=192%:%
-%:%253=193%:%
+%:%253=192%:%
 %:%254=193%:%
-%:%255=194%:%
+%:%257=197%:%
 %:%258=198%:%
 %:%259=199%:%
 %:%260=200%:%
@@ -1396,8 +1397,8 @@ complicating the final algorithm.%
 %:%264=204%:%
 %:%265=205%:%
 %:%266=206%:%
-%:%267=207%:%
-%:%269=210%:%
+%:%268=209%:%
+%:%269=209%:%
 %:%270=210%:%
 %:%271=211%:%
 %:%272=212%:%
@@ -1405,44 +1406,44 @@ complicating the final algorithm.%
 %:%274=214%:%
 %:%275=215%:%
 %:%276=216%:%
-%:%277=217%:%
-%:%294=224%:%
+%:%293=223%:%
+%:%294=223%:%
 %:%295=224%:%
 %:%296=225%:%
 %:%297=226%:%
 %:%298=227%:%
 %:%299=228%:%
 %:%300=229%:%
-%:%301=230%:%
-%:%318=237%:%
+%:%317=236%:%
+%:%318=236%:%
 %:%319=237%:%
 %:%320=238%:%
 %:%321=239%:%
 %:%322=240%:%
 %:%323=241%:%
-%:%324=242%:%
-%:%341=249%:%
+%:%340=248%:%
+%:%341=248%:%
 %:%342=249%:%
 %:%343=250%:%
 %:%344=251%:%
 %:%345=252%:%
 %:%346=253%:%
-%:%347=254%:%
-%:%364=261%:%
+%:%363=260%:%
+%:%364=260%:%
 %:%365=261%:%
-%:%366=262%:%
-%:%383=269%:%
+%:%382=268%:%
+%:%383=268%:%
 %:%384=269%:%
 %:%385=270%:%
 %:%386=271%:%
 %:%387=272%:%
-%:%388=273%:%
-%:%405=280%:%
+%:%404=279%:%
+%:%405=279%:%
 %:%406=280%:%
 %:%407=281%:%
 %:%408=282%:%
-%:%409=283%:%
-%:%429=289%:%
+%:%428=288%:%
+%:%440=291%:%
 %:%441=292%:%
 %:%442=293%:%
 %:%443=294%:%
@@ -1468,21 +1469,21 @@ complicating the final algorithm.%
 %:%463=314%:%
 %:%464=315%:%
 %:%465=316%:%
-%:%466=317%:%
-%:%467=318%:%
-%:%469=321%:%
-%:%470=321%:%
-%:%471=322%:%
+%:%467=319%:%
+%:%468=319%:%
+%:%469=320%:%
+%:%490=342%:%
+%:%491=343%:%
 %:%492=344%:%
 %:%493=345%:%
 %:%494=346%:%
 %:%495=347%:%
 %:%496=348%:%
-%:%497=349%:%
-%:%499=352%:%
+%:%498=351%:%
+%:%499=351%:%
 %:%500=352%:%
-%:%501=353%:%
-%:%512=360%:%
+%:%511=359%:%
+%:%523=362%:%
 %:%524=363%:%
 %:%525=364%:%
 %:%526=365%:%
@@ -1529,43 +1530,43 @@ complicating the final algorithm.%
 %:%567=406%:%
 %:%568=407%:%
 %:%569=408%:%
-%:%571=411%:%
-%:%572=411%:%
+%:%570=409%:%
+%:%572=412%:%
 %:%573=412%:%
-%:%576=416%:%
+%:%574=413%:%
 %:%577=417%:%
 %:%578=418%:%
 %:%579=419%:%
 %:%580=420%:%
 %:%581=421%:%
 %:%582=422%:%
-%:%584=425%:%
-%:%585=425%:%
+%:%583=423%:%
+%:%585=426%:%
 %:%586=426%:%
 %:%587=427%:%
 %:%588=428%:%
-%:%589=428%:%
+%:%589=429%:%
 %:%590=429%:%
-%:%593=433%:%
+%:%591=430%:%
 %:%594=434%:%
-%:%596=437%:%
-%:%597=437%:%
+%:%595=435%:%
+%:%597=438%:%
 %:%598=438%:%
 %:%599=439%:%
-%:%619=444%:%
-%:%631=447%:%
+%:%600=440%:%
+%:%620=445%:%
 %:%632=448%:%
 %:%633=449%:%
 %:%634=450%:%
 %:%635=451%:%
 %:%636=452%:%
-%:%638=455%:%
-%:%639=455%:%
+%:%637=453%:%
+%:%639=456%:%
 %:%640=456%:%
 %:%641=457%:%
 %:%642=458%:%
 %:%643=459%:%
-%:%658=465%:%
+%:%644=460%:%
 %:%659=466%:%
 %:%660=467%:%
 %:%661=468%:%
@@ -1664,20 +1665,20 @@ complicating the final algorithm.%
 %:%754=561%:%
 %:%755=562%:%
 %:%756=563%:%
-%:%760=567%:%
+%:%757=564%:%
 %:%761=568%:%
 %:%762=569%:%
 %:%763=570%:%
 %:%764=571%:%
-%:%766=574%:%
-%:%767=574%:%
+%:%765=572%:%
+%:%767=575%:%
 %:%768=575%:%
 %:%769=576%:%
 %:%770=577%:%
 %:%771=578%:%
 %:%772=579%:%
 %:%773=580%:%
-%:%788=586%:%
+%:%774=581%:%
 %:%789=587%:%
 %:%790=588%:%
 %:%791=589%:%
@@ -1693,23 +1694,23 @@ complicating the final algorithm.%
 %:%801=599%:%
 %:%802=600%:%
 %:%803=601%:%
-%:%805=604%:%
-%:%806=604%:%
+%:%804=602%:%
+%:%806=605%:%
 %:%807=605%:%
 %:%808=606%:%
 %:%809=607%:%
 %:%810=608%:%
-%:%825=614%:%
+%:%811=609%:%
 %:%826=615%:%
 %:%827=616%:%
 %:%828=617%:%
-%:%830=620%:%
-%:%831=620%:%
+%:%829=618%:%
+%:%831=621%:%
 %:%832=621%:%
 %:%833=622%:%
 %:%834=623%:%
 %:%835=624%:%
-%:%850=630%:%
+%:%836=625%:%
 %:%851=631%:%
 %:%852=632%:%
 %:%853=633%:%
@@ -1718,73 +1719,73 @@ complicating the final algorithm.%
 %:%856=636%:%
 %:%857=637%:%
 %:%858=638%:%
-%:%867=641%:%
-%:%879=644%:%
-%:%883=648%:%
+%:%859=639%:%
+%:%868=642%:%
+%:%880=645%:%
 %:%884=649%:%
 %:%885=650%:%
 %:%886=651%:%
 %:%887=652%:%
 %:%888=653%:%
-%:%890=656%:%
-%:%891=656%:%
+%:%889=654%:%
+%:%891=657%:%
 %:%892=657%:%
 %:%893=658%:%
 %:%894=659%:%
 %:%895=660%:%
-%:%896=660%:%
+%:%896=661%:%
 %:%897=661%:%
 %:%898=662%:%
 %:%899=663%:%
 %:%900=664%:%
-%:%901=664%:%
+%:%901=665%:%
 %:%902=665%:%
 %:%903=666%:%
-%:%913=672%:%
-%:%923=674%:%
-%:%924=674%:%
+%:%904=667%:%
+%:%914=673%:%
+%:%924=675%:%
 %:%925=675%:%
 %:%926=676%:%
-%:%929=679%:%
+%:%927=677%:%
 %:%930=680%:%
 %:%931=681%:%
-%:%932=681%:%
+%:%932=682%:%
 %:%933=682%:%
 %:%934=683%:%
-%:%946=695%:%
-%:%949=696%:%
-%:%950=696%:%
+%:%935=684%:%
+%:%947=696%:%
+%:%950=697%:%
 %:%951=697%:%
-%:%979=725%:%
+%:%952=698%:%
 %:%980=726%:%
 %:%981=727%:%
-%:%982=727%:%
+%:%982=728%:%
 %:%983=728%:%
-%:%993=734%:%
-%:%1003=736%:%
-%:%1004=736%:%
+%:%984=729%:%
+%:%994=735%:%
+%:%1004=737%:%
 %:%1005=737%:%
 %:%1006=738%:%
 %:%1007=739%:%
-%:%1008=739%:%
+%:%1008=740%:%
 %:%1009=740%:%
 %:%1010=741%:%
 %:%1011=742%:%
 %:%1012=743%:%
-%:%1013=743%:%
+%:%1013=744%:%
 %:%1014=744%:%
 %:%1015=745%:%
-%:%1039=752%:%
-%:%1049=754%:%
-%:%1050=754%:%
+%:%1016=746%:%
+%:%1040=753%:%
+%:%1050=755%:%
 %:%1051=755%:%
 %:%1052=756%:%
 %:%1053=757%:%
 %:%1054=758%:%
 %:%1055=759%:%
 %:%1056=760%:%
-%:%1073=767%:%
-%:%1074=767%:%
+%:%1057=761%:%
+%:%1074=768%:%
 %:%1075=768%:%
 %:%1076=769%:%
 %:%1077=770%:%
@@ -1792,16 +1793,16 @@ complicating the final algorithm.%
 %:%1079=772%:%
 %:%1080=773%:%
 %:%1081=774%:%
-%:%1098=781%:%
-%:%1099=781%:%
+%:%1082=775%:%
+%:%1099=782%:%
 %:%1100=782%:%
 %:%1101=783%:%
 %:%1102=784%:%
 %:%1103=785%:%
 %:%1104=786%:%
 %:%1105=787%:%
-%:%1122=794%:%
-%:%1123=794%:%
+%:%1106=788%:%
+%:%1123=795%:%
 %:%1124=795%:%
 %:%1125=796%:%
 %:%1126=797%:%
@@ -1809,9 +1810,9 @@ complicating the final algorithm.%
 %:%1128=799%:%
 %:%1129=800%:%
 %:%1130=801%:%
-%:%1154=808%:%
-%:%1166=811%:%
-%:%1170=815%:%
+%:%1131=802%:%
+%:%1155=809%:%
+%:%1167=812%:%
 %:%1171=816%:%
 %:%1172=817%:%
 %:%1173=818%:%
@@ -1822,7 +1823,7 @@ complicating the final algorithm.%
 %:%1178=823%:%
 %:%1179=824%:%
 %:%1180=825%:%
-%:%1184=829%:%
+%:%1181=826%:%
 %:%1185=830%:%
 %:%1186=831%:%
 %:%1187=832%:%
@@ -1834,3 +1835,4 @@ complicating the final algorithm.%
 %:%1193=838%:%
 %:%1194=839%:%
 %:%1195=840%:%
+%:%1196=841%:%

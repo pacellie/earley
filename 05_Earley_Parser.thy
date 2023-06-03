@@ -9,11 +9,11 @@ begin
 chapter\<open>Earley Parser Implementation \label{chap:05}\<close>
 
 text\<open>
-Although a recognizer is a useful tool, for most practical applications we would like to not only
+Although a recognizer is a useful tool, for most practical applications we would like to - not only -
 know if the language specified by the grammar accepts the input, but we also want to obtain additional information
 of how the input can be derived in the form of parse trees. In particular, for our running example, the
-grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$ we want to obtain the two possible parse
-trees illustrated in Figures \ref{fig:tree1} \ref{fig:tree2}. But constructing all possible parse trees at once is no
+grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$, we want to obtain the two possible parse
+trees illustrated in Figures \ref{fig:tree1} and \ref{fig:tree2}. But constructing all possible parse trees at once is no
 trivial task.
 
 \begin{figure}[htpb]
@@ -51,7 +51,7 @@ $A \rightarrow \, \gamma \bullet, j, k$. If there exists more than one possible 
 $A$ and obtain the item $B \rightarrow \, \alpha A \bullet \beta, i, k$, then multiple pointers originate
 from the instance of the non-terminal $A$. Annotating every non-terminal of the right-hand side of the item
 $A \rightarrow \, \gamma \bullet, j, k$ recursively with pointers thus represents the derivation trees for
-the non-terminal $A$. After termination of the algorithm, the non-terminal that represents the start symbol
+the non-terminal $A$. Finally, after termination of the algorithm, the non-terminal that represents the start symbol
 contains pointers representing all possible derivation trees.
 
 Note that Earley's pointers connect instances of non-terminals, but Tomita @{cite "Tomita:1985"} showed
@@ -75,17 +75,17 @@ In this chapter we develop an efficient functional algorithm constructing a sing
 tree in Section \ref{sec:parse-tree} and prove its correctness. In Section \ref{sec:parse-forest}
 we generalize this approach, introducing a data structure representing all possible parse trees
 as a parse forest, adjusting the parse tree algorithm to compute such a forest and prove termination
-and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the performance, the missing
-completeness proof of the algorithm and compare our approach to the algorithm of Scott in greater detail.
+and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the missing
+completeness proof and the performance of the algorithm and compare our approach to the algorithm of Scott in greater detail.
 \<close>
 
 section \<open>A Single Parse Tree \label{sec:parse-tree}\<close> 
 
 text\<open>
-The data structure @{term tree} represents parse trees as shown in Figures \ref{fig:tree1} \ref{fig:tree2}.
+The data structure @{term tree} represents parse trees as shown in Figures \ref{fig:tree1} and \ref{fig:tree2}.
 A @{term Leaf} always contains a single symbol (either terminal or non-terminal for partial derivation trees), a @{term Branch} consists of one non-terminal
 symbol and a list of subtrees. The function @{term root_tree} returns the symbol of the root of the
-parse tree. The yield of a leaf is the single symbol; to compute the yield for a branch with
+parse tree. The yield of a leaf is its single symbol; to compute the yield for a branch with
 subtrees @{term ts} we apply the function @{term yield_tree} recursively and concatenate the results. 
 \<close>
 
@@ -104,18 +104,17 @@ fun yield_tree :: "'a tree \<Rightarrow> 'a sentential" where
 text\<open>
 We introduce three notions of well-formedness for parse trees:
 \begin{itemize}
-  \item @{term wf_rule_tree}: A parse tree must represent a valid (partial) derivation tree according the the grammar @{term \<G>}.
-    A leaf of a parse tree is always well-formed by construction, for each branch @{term "Branch N ts"}
-    there has to exists a corresponding rule of the grammar @{term \<G>} such that $N \rightarrow \, $
-    @{term "map root_tree ts"} and each subtree @{term "t \<in> set ts"} is well-formed.
+  \item @{term wf_rule_tree}: A parse tree must represent a valid derivation tree according the the grammar @{term \<G>}.
+    A leaf of a parse tree is always well-formed by construction. For each branch @{term "Branch N ts"}
+    there has to exists a production rule $N \rightarrow \, $ @{term "map root_tree ts"} corresponding to the grammar @{term \<G>} and each subtree @{term "t \<in> set ts"} has to be well-formed.
   \item @{term wf_item_tree}: Each branch @{term "Branch N ts"} corresponds to an Earley item
     $N \rightarrow \, \alpha \bullet \beta, i, j$ such that the roots of the subtrees @{term ts} and
     @{term \<alpha>} coincide. Note that a branch is only well-formed according to the grammar if
-    the roots of the subtrees are a \textit{complete} right-hand side of a production rule of the grammar.
+    the roots of the subtrees form a \textit{complete} right-hand side of a production rule of the grammar.
     In contrast, a branch is well-formed according to an item if the roots of the subtrees are equal
     to @{term \<alpha>}, or, since we assume that Earley items are themselves well-formed, a \textit{prefix}
     of a right-hand side of a production rule.
-  \item @{term wf_yield_tree}: For an item $N \rightarrow \, \alpha \bullet \beta, i, j$, the yield
+  \item @{term wf_yield_tree}: For an item $N \rightarrow \, \alpha \bullet \beta, i, j$ the yield
     of a parse tree has to match the substring @{term "\<omega>[i..j\<rangle>"} of the input.
 \end{itemize}
 \<close>
@@ -143,20 +142,20 @@ text\<open>
 In Chapter \ref{chap:04} we extended the algorithm of Chapter \ref{chapter:3} in two orthogonal
 ways: implementing sets as lists and adding the additional information to construct parse trees
 in the form null, predecessor, and predecessor/reduction pointers. But we did not formally define
-the semantics of these pointers nor prove anything about their construction. In the following, we
+the semantics of these pointers nor prove anything about their construction. In the following we
 define and proof soundness of the pointers.
 
 \begin{itemize}
   \item A null pointer @{term Null} of an entry is sound if it @{term predicts} the item $x$ of
     the entry, or the bullet of $x$ is at the beginning of the right-hand side of its production rule
-    and we have not yet scanned any substring of the input.
+    and we have not yet scanned any substring of the input, or item end and origin are identical.
   \item A predecessor pointer @{term "Pre pre"} of an entry $e$ is sound for the input @{term \<omega>}, bins @{term bs},
     and the index of the current bin $k$ if $k > 0$, the predecessor index does not exceed the length
     of the predecessor bin at index $k-1$, and the predecessor item in bin $k-1$ at index $pre$ @{term scans}
-    then item of the entry $e$. Item $x'$ @{term scans} item $x$ for index $k$ if the next symbol of
+    the item of the entry $e$. An item $x'$ @{term scans} item $x$ for index $k$ if the next symbol of
     $x'$ coincides with the terminal symbol at index $k-1$ in the input @{term \<omega>} and the item $x$ can be obtained
     by @{term "inc_item x' k"}. 
-  \item We define the soundness a pointer @{term "PreRed p ps"} of an entry $e$ for each predecessor/reduction
+  \item Finally, we define the soundness of a pointer @{term "PreRed p ps"} of an entry $e$ for each predecessor/reduction
     triple @{term "(k', pre, red) \<in> set (p#ps)"}. The index $k'$ of the predecessor bin must be strictly
     smaller than $k$, and both the predecessor and the reduction index must be within the bounds of their
     respective bins, or bin $k'$ and $k$. Additionally, predicate @{term completes} holds for $k$,
@@ -195,16 +194,16 @@ definition sound_ptrs :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> bool
     sound_null_ptr e \<and> sound_pre_ptr \<omega> bs k e \<and> sound_prered_ptr bs k e"
 
 text\<open>
-We then prove the semantics of the pointers. The structure of the proofs is as always: we first
+We then prove the semantics of the pointers. The structure of the proofs is as usual: we first
 proof pointer soundness for the basic operations @{term bin_upd}, @{term bin_upds}, and @{term bins_upd}.
 Followed by the corresponding proofs for the computation of a single bin or functions @{term Earley_bin_list'}
 and @{term Earley_bin_list}. Finally, we prove that the initial bins are sound, and functions @{term Earley_list}
 and @{term \<E>arley_list} maintain this property. Although it should be intuitively clear that the
 semantics of pointers hold, the proofs are surprisingly not trivial at all, especially the soundness
 proofs for functions @{term bin_upd} and @{term Earley_bin_list'}. The complexity mostly stems from
-the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and depending
-on the type of the newly inserted items. Nonetheless, since the proofs are very technical but do not
-reveal anything new in structure, we only state them and omit going into detail.
+the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and dependence
+on the type of the pointers of the newly inserted items. Nonetheless, since the proofs do not reveal anything new in structure
+but are very technical, we only state them and omit going into detail.
 \<close>
 
 lemma sound_ptrs_bin_upd:
@@ -292,9 +291,8 @@ text\<open>
 After execution of the @{term \<E>arley_list} algorithm we obtain bins representing the complete set
 of Earley items. The null, predecessor, and predecessor/reduction pointers provide a way to navigate
 between items or through these bins, and, since they are sound, a way to construct derivation trees.
-The function @{term build_tree'} constructs the \textit{single} parse tree corresponding to the
-derivation tree represented by the item $x$ of entry $e$ at index $i$ at the $k$-th bin according to the
-well-formedness definitions of the beginning of this section.
+The function @{term build_tree'} constructs a \textit{single} parse tree corresponding to the item $x$ of entry $e$ at index $i$ of the $k$-th bin according to the
+well-formedness definitions from the beginning of this section.
 
 If the pointer of entry $e$ is a null pointer, the algorithm starts building the tree rooted at
 the left-hand side non-terminal $N$ of the production rule of the item $x$ by constructing an initially
@@ -304,7 +302,7 @@ predecessor index @{term pre}, obtaining a partial parse tree @{term "Branch N t
 in particular the @{term scans} predicate holds, we append a Leaf containing the terminal symbol at index
 $k-1$ of the input @{term \<omega>} to the list of substrees @{term ts}. In the case that
 the pointer contains predecessor/reduction triples the algorithm only considers the first triple
-@{term "(k', pre, red)"} since we are only constructing a single derivation tree. As for the predecessor
+@{term "(k', pre, red)"} due to the fact that we are only constructing a single derivation tree. As for the predecessor
 case, it recursively calls itself obtaining a partial derivation tree @{term "Branch N ts"} for the predecessor index @{term pre}
 and bin $k'$, followed by yet another recursive call for the reduction item at the reduction index @{term red}
 in the current bin $k$, constructing a complete derivation tree $t$. This time the @{term completes}
@@ -312,8 +310,8 @@ predicate holds, thus the next symbol of the predecessor item coincides with the
 the reduction item, or we are allowed to append the complete tree $t$ to the list of substrees @{term ts}.
 
 Some minor implementation details to note are: the function @{term build_tree'} is a partial function,
-and not tail recursive, hence we it has to return an optional value, as explained in Section \ref{sec:04-wellformedness}.
-We are using the monadic do-notation commonly found in functional programming languages for the option
+and not tail recursive, hence it has to return an optional value, as explained in Section \ref{sec:04-wellformedness}.
+Furthermore, we are using the monadic do-notation commonly found in functional programming languages for the option
 monad. An alternative but equivalent implementation would use explicit case distinctions. Finally, if
 the function computes some value it is always a branch, never a single leaf.
 \<close>
@@ -341,12 +339,13 @@ partial_function (option) build_tree' :: "'a bins \<Rightarrow> 'a sentential \<
           | _ \<Rightarrow> None })))"
 
 text\<open>
-Finally, function @{term build_tree} computes a complete derivation tree if there exists one. It searches the last bin for any finished items or items of the form
-$S \rightarrow \gamma, 0, n$ where $S$ is the start symbol of the grammar @{term \<G>} and $n$ denotes
-the length of the input @{term \<omega>}. If there exists such an item it calls function @{term build_tree'}
+The function @{term build_tree} computes a complete derivation tree if there exists one. It searches the last bin for any finished items or items of the form
+$S \rightarrow \gamma \bullet, 0, n$ where $S$ is the start symbol of the grammar @{term \<G>} and $n$ denotes
+the length of the input @{term \<omega>}. If there exists such an item, it calls function @{term build_tree'}
 obtaining some parse tree representing the derivation @{term "\<G> \<turnstile> S \<Rightarrow>\<^sup>* \<omega>"} (we will have to proof that it never returns @{term None}),
 otherwise it returns @{term None} since there cannot exist a valid parse tree due to the correctness
-proof of Chapter \ref{chapter:3}.
+proof for the Earley bins of Chapter \ref{chapter:3} if the argument @{term bs} was constructed by the
+@{term \<E>arley_list} function.
 \<close>
 
 definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a tree option" where
@@ -363,17 +362,17 @@ text\<open>
 The function @{term build_tree'} uses the null, predecessor and predecessor/reduction pointers to
 navigate through the given bins by calling itself recursively. Sound pointers ensure that we are not
 indexing outside of the bins, but this does not imply that the algorithm terminates. In the following
-we outline when it always terminates with some parse tree. Lets assume the
+we outline the cases for which it always terminates with some parse tree. Let's assume the
 function starts its computation at index $i$ of the $k$-th bin. If it encounters a null pointer, it
 terminates immediately. If the pointer is a simple predecessor pointer, it calls itself recursively
 for the previous bin. Due to the soundness of the predecessor pointer the index $k-1$ of this bin
 is strictly smaller than $k$. A similar argument holds for the first recursive call if the pointer
 is a predecessor/reduction pointer for the predecessor case (@{term "k' < k"}). Or, we are following
-the pointers \textit{strictly} back to the origin bin and thus must terminate at some point. But for
-the reduction pointer we run into a problem: the recursive call is for item at index $i$ is in the same
-bin $k$ for a different index $red$, which in turn might contain again reduction triples and so on.
+the pointers \textit{strictly} back to the origin bin $B_0$ and thus must terminate at some point. But for
+the reduction pointer we run into a problem: the recursive call for the item at index $i$ is in the same
+bin $k$ but for the reduction index $red$, which in turn might contain again reduction triples and so on.
 Hence, it is possible that we end up in a cycle of reductions and never terminate. Take for example the
-grammer $A ::= x \, | \, B \qquad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
+grammer $A ::= x \, | \, B \quad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
 illustrates the bins computed by the algorithm of Chapter \ref{chapter:3}. Bin $B_1$ contains the entry
 $B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ at index $1$ and its second reduction triple
 $(0, 2, 2)$ a reduction pointer to index $2$ of the same bin. There we find the entry
@@ -397,9 +396,11 @@ We need to address this problem when constructing all possible parse trees in Se
 but for now we are lucky. While constructing a single parse tree the algorithm always follows the
 first reduction triple that is created when the entry is constructed initially. Since we only
 append new entries to bins, the complete reduction item necessarily appears before the new entry with
-the reduction triple. Furthermore, the implementation of function @{term bin_upd} also makes sure to not change this
-triple. Thus, we know for each item in the $k$-th bin at index $i$ that the reduction pointer $red$,
-that we follow while constructing a single parse tree, is strictly smaller than $i$. To summarize:
+the reduction triple. Furthermore, the implementation of the function @{term bin_upd} also makes sure to not change this
+first triple. Thus, we know for any item at index $i$ in the $k$-th bin that its first reduction pointer $red$,
+that we follow while constructing a single parse tree, is strictly smaller than $i$.
+
+To summarize:
 if the algorithm encounters a null pointer it terminates immediately, for predecessor pointers it
 calls itself recursively in a bin with a strictly smaller index, and for reduction pointers it calls
 itself in the same bin but for a strictly smaller index. The proofs for the monotonicity of the first
@@ -417,8 +418,8 @@ Similarly to Chapter \ref{chapter:3} we define a suitable measure and a notion o
 for the input of the function @{term build_tree'} and proof an induction schema, in
 the following referred to as \textit{tree induction}, by complete induction on the measure.
 For the input quadruple @{term "(bs, \<omega>, k, i)"} the measure corresponds to the number of entries
-in the first $k-1$ bins plus $i$. The call the input well-formed it must satisfy the following
-conditions: sound and monotonic pointers, index $k$ does not exceed the length of the bins, and
+in the first $k-1$ bins plus $i$. We call the input well-formed if it satisfies the following
+conditions: sound and monotonic pointers, the bin index $k$ does not exceed the length of the bins, and the item
 index $i$ is within the bounds of the $k$-th bin.
 \<close>
 
@@ -444,7 +445,7 @@ lemma build_tree'_termination:
 subsection \<open>Correctness\<close>
 
 text\<open>
-We know that for well-formed input a call of the form @{term "build_tree' bs \<omega> k i"} always terminates
+From the previous lemma, We know that for well-formed input a call of the form @{term "build_tree' bs \<omega> k i"} always terminates
 and yields some parse tree $t$. The following lemma proves that, for well-formed bins @{term bs},
 $t$ represents a parse tree according to the semantics of the Earley item $N \rightarrow \, \alpha \bullet \beta, j, k$
 at index $i$ in the $k$-th bin. The parse tree is rooted at the item rule head $N$, each of its subtrees is a complete derivation
@@ -466,7 +467,7 @@ text\<open>
 
 The proof is by \textit{tree induction} and we split it into three cases according to the kind
 of pointer the algorithm encounters. Let $e$ denote the entry at index $i$ in bin $k$, and $x$
-be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
+be the item of $e$, or $x = N \rightarrow \, \alpha \bullet \beta, j, k$.
 
 \begin{itemize}
 
@@ -496,8 +497,8 @@ be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
       \end{alignedat}
     \end{equation*}
 
-    Since the pointer is a simple predecessor pointer, @{term "scans \<omega> k x' x"} holds and $x$ as well
-    as $x'$ are well-formed bin items, we have:
+    Since the pointer is a simple predecessor pointer, the predicate @{term "scans \<omega> k x' x"} holds and we also know that $x$ as well
+    as $x'$ are well-formed bin items. Consequently, we obtain the following facts:
 
     \begin{equation*}
       \begin{alignedat}{2}
@@ -566,7 +567,7 @@ be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
 text\<open>
 Next we prove that, if the function @{term build_tree} returns a parse tree, it is a complete and
 well-formed tree according to the grammar, the root of the tree is the start symbol of the grammar,
-and the yield of the tree corresponds to the input. The following corollary proves that the theorem
+and the yield of the tree corresponds to the input. The subsequent corollary then proves that the theorem
 in particular holds if we generate the bins using the algorithm of Chapter \ref{chap:04} if we adjust
 the assumptions accordingly.
 \<close>
@@ -588,15 +589,15 @@ text\<open>
 The function @{term build_tree} searches the last bin for any finished items. Since it returns
 a tree by assumption it is successful, or finds a finished item $x$ at index $i$, and calls
 the function @{term "build_tree' bs \<omega> ( |bs| - 1) i"}. By assumption the input and the bins are
-well-formed, we can discharge the assumptions of the previous two lemmas, obtain @{term "t = Branch N ts"} and have:
+well-formed, we can discharge the assumptions of the previous two lemmas, obtain a tree @{term "t = Branch N ts"} and have:
 
 $$@{term "wf_item_tree \<G> x t \<and> wf_yield_tree \<omega> x t"}$$
 
 The item $x$ is finished or its rule head is the start symbol of the grammar, it is complete, and
 its origin and end respectively are $0$ and @{term "|\<omega>|"}. Due to the completeness and well-formedness
 of the item @{term "wf_item_tree \<G> x t"} implies @{term "wf_rule_tree \<G> t"} and @{term "root_tree t = \<SS> \<G>"}.
-From @{term "wf_yield_tree \<omega> x t"} we have @{term "yield_tree t = \<omega>[item_origin x..item_end x\<rangle>"} by definition
-, and consequently @{term "yield_tree t = \<omega>"}.
+From @{term "wf_yield_tree \<omega> x t"} we have @{term "yield_tree t = \<omega>[item_origin x..item_end x\<rangle>"} by definition,
+and consequently @{term "yield_tree t = \<omega>"}.
 
 \end{proof}
 \<close>
