@@ -49,6 +49,25 @@ lemma correctness1:
   "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
   using correctness_list wf_cfg1 is_word_inp1 nonempty_derives1 by blast
 
+lemma wf_tree1:
+  assumes "build_tree cfg1 inp1 (\<II>_it cfg1 inp1) = Some t"
+  shows "wf_rule_tree cfg1 t \<and> root_tree t = \<SS> cfg1 \<and> yield_tree t = inp1"
+  using assms nonempty_derives1 wf_cfg1 wf_rule_root_yield_tree_build_tree_\<II>_it by blast
+
+lemma correctness_tree1:
+  "(\<exists>t. build_tree cfg1 inp1 (\<II>_it cfg1 inp1) = Some t) \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  using correctness_build_tree_\<II>_it is_word_inp1 nonempty_derives1 wf_cfg1 by blast
+
+lemma wf_trees1:
+  assumes "build_trees cfg1 inp1 (\<II>_it cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  shows "wf_rule_tree cfg1 t \<and> root_tree t = \<SS> cfg1 \<and> yield_tree t = inp1"
+  using assms nonempty_derives1 wf_cfg1 wf_rule_root_yield_tree_build_trees_\<II>_it by blast
+
+lemma soundness_trees1:
+  assumes "build_trees cfg1 inp1 (\<II>_it cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  shows "derives cfg1 [\<SS> cfg1] inp1"
+  using assms is_word_inp1 nonempty_derives1 soundness_build_trees_\<II>_it wf_cfg1 by blast
+
 value "\<II>_it cfg1 inp1"
 value "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1"
 value "build_trees cfg1 inp1 (\<II>_it cfg1 inp1)"

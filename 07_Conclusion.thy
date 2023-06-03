@@ -9,21 +9,15 @@ chapter\<open>Conclusion\<close>
 
 section\<open>Summary\<close>
 
+text\<open>
+TODO
+\<close>
+
 section\<open>Future Work\<close>
 
 text\<open>
-Different approaches:
-
-(1) SPPF style parse trees as in Scott et al -> need Imperative/HOL for this
-
-Performance improvements:
-
-(1) Look-ahead of k or at least 1 like in the original Earley paper.
-(2) Optimize the representation of the grammar instead of single list, group by production, ...
-(3) Complete faster by keeping a map from nonterminal which are next in the items to the actual items
-(4) Predict faster by organizing the grammar in an efficient manner by nonterminal
-(5) Refine the algorithm to an imperative version using a single linked list and actual pointers instead
-    of natural numbers.
+TODO: collect implementation improvements, highlight worthwhile alternative implementation ideas,
+  proof improvements, and further algorithms such as SPPFs
 \<close>
 
 text\<open>

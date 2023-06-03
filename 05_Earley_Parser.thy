@@ -491,8 +491,8 @@ be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
     
     \begin{equation*}
       \begin{alignedat}{2}
-        & @{term "wf_item_tree \<G> x' (Branch N ts)"} \qquad & @{term "IH1"} \\
-        & @{term "wf_yield_tree \<omega> x' (Branch N ts)"} \qquad & @{term "IH2"} 
+        & @{term "wf_item_tree \<G> x' (Branch N ts)"} \qquad & (@{term "IH1"}) \\
+        & @{term "wf_yield_tree \<omega> x' (Branch N ts)"} \qquad & (@{term "IH2"}) 
       \end{alignedat}
     \end{equation*}
 
@@ -524,10 +524,10 @@ be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
     \end{equation*}
 
     (1) by definition.
-    (2) by @{term "IH1"}.
+    (2) by (@{term "IH1"}).
     (3) by (b).
     (4) by (b,c,d).
-    The statement @{term "wf_item_tree \<G> x t"} follows by (a), using once more @{term "IH1"} to
+    The statement @{term "wf_item_tree \<G> x t"} follows by (a), using once more (@{term "IH1"}) to
     prove that all subtrees are complete according to the grammar by definition of @{term wf_item_tree}.
 
     To conclude the proof for the simple predecessor pointer, we prove the statement @{term "mbox0 (wf_yield_tree \<omega> x t)"}:
@@ -544,7 +544,7 @@ be @{term "item e"} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
     \end{equation*}
 
     (1) by definition.
-    (2) by @{term "IH2"}. 
+    (2) by (@{term "IH2"}). 
     (3) by (g) and the definition of @{term slice}.
     (4) by (e).
     (5) by (f,g).
@@ -571,7 +571,7 @@ in particular holds if we generate the bins using the algorithm of Chapter \ref{
 the assumptions accordingly.
 \<close>
 
-theorem wf_rule_root_yield_build_tree: \<comment>\<open>Detailed\<close>
+theorem wf_rule_root_yield_build_tree:
   assumes "wf_bins \<G> \<omega> bs"
   assumes "sound_ptrs \<omega> bs"
   assumes "mono_red_ptrs bs"
@@ -639,6 +639,10 @@ lemma @{thm[source] correctness_\<E>arley_list} using our assumptions.
 \<close>
 
 section \<open>A Parse Forest \label{sec:parse-forest}\<close>
+
+text\<open>
+TODO
+\<close>
 
 text\<open>
 why not simply generate all parse trees integrated top down? yes for single parse tree, no for
@@ -804,6 +808,10 @@ text\<open>\<close>
 section \<open>A Word on Completeness and Performance \label{sec:word}\<close>
 
 text\<open>
+TODO
+\<close>
+
+text\<open>
 How to proof completeness sketch.
 
 Our approach is slow, exponentially slow.
@@ -818,8 +826,6 @@ Overall approach is not very promising, completeness proof very involved, we sto
 \<close>
 
 text\<open>
-SNIPPET:
-
 A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
 trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
 to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each

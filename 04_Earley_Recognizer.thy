@@ -214,8 +214,6 @@ text\<open>
 Finally, functions @{term Earley_list} and @{term \<E>arley_list} are structurally identical to functions
 @{term Earley} respectively @{term \<E>arley} of Chapter \ref{chapter:3}, differing only in the type of the used operations and the
 return type: bins or lists of items instead of set of items.
-
-\newpage
 \<close>
 
 fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
@@ -452,7 +450,7 @@ lemma wf_bin_bin_upds:
   sorry
 (*>*)
 
-text\<open>\newpage\<close>
+text\<open>\<close>
 
 lemma wf_bins_bins_upd:
   assumes "wf_bins \<G> \<omega> bs"
@@ -935,8 +933,6 @@ into these three cases:
 \end{itemize}
 
 \end{proof}
-
-\newpage
 \<close>
 
 lemma Earley_step_sub_Earley_bin_list:
@@ -989,7 +985,7 @@ text\<open>
 Lemma @{term Earley_bin_sub_Earley_bin_list} concludes the subsumption proof for a single bin.
 Since the function @{term Earley_bin} is defined as the fixpoint of the function
 @{term Earley_step} and the fact that @{term "x \<in> limit f X \<equiv> \<exists>n. x \<in> funpower f n X"} the core
-proof is by induction on the computation of @{term funpower} \newpage.
+proof is by induction on the computation of @{term funpower}.
 \<close>
 
 lemma Earley_bin_sub_Earley_bin_list:
@@ -1043,7 +1039,6 @@ For the induction step we first need to proof a necessary precondition for our i
 (4) by lemma @{term Earley_bin_list_idem} using once more the soundness and non-empty derivation assumptions.
 
 \end{proof}
-\newpage
 \<close>
 
 text\<open>

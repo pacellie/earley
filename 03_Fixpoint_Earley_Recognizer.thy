@@ -119,10 +119,10 @@ definition is_sentence :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> bool
 
 definition derives1 :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a sentential \<Rightarrow> bool" where
   "derives1 \<G> u v \<equiv>
-     \<exists> \<alpha> \<beta> N \<gamma>. 
-         u = \<alpha> @ [N] @ \<beta>
-       \<and> v = \<alpha> @ \<gamma> @ \<beta>
-       \<and> (N, \<gamma>) \<in> set (\<RR> \<G>)"
+     \<exists>\<alpha> \<beta> N \<gamma>. 
+        u = \<alpha> @ [N] @ \<beta>
+      \<and> v = \<alpha> @ \<gamma> @ \<beta>
+      \<and> (N, \<gamma>) \<in> set (\<RR> \<G>)"
 
 definition derivations1 :: "'a cfg \<Rightarrow> ('a sentential \<times> 'a sentential) set" where
   "derivations1 \<G> = { (u,v) | u v. \<G> \<turnstile> u \<Rightarrow> v }"
@@ -376,7 +376,7 @@ lemma wf_Earley_step:
 
 text\<open>
 Lemmas @{thm[source] wf_Init}, @{thm[source] wf_Scan_Predict_Complete}, and @{thm[source] wf_Earley_step}
-follow trivially by definition of the respective operations. \newpage
+follow trivially by definition of the respective operations.
 \<close>
 
 lemma wf_funpower:
@@ -569,7 +569,7 @@ lemma sound_Init:
   sorry
 (*>*)
 
-text\<open>\newpage\<close>
+text\<open>\<close>
 
 lemma sound_Scan:
   assumes "wf_items \<G> \<omega> I"

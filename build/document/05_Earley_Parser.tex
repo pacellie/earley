@@ -684,8 +684,8 @@ be \isa{item\ e} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
     
     \begin{equation*}
       \begin{alignedat}{2}
-        & \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ x{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Branch\ N\ ts{\isacharparenright}{\kern0pt}} \qquad & \isa{IH{\isadigit{1}}} \\
-        & \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ x{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Branch\ N\ ts{\isacharparenright}{\kern0pt}} \qquad & \isa{IH{\isadigit{2}}} 
+        & \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ x{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Branch\ N\ ts{\isacharparenright}{\kern0pt}} \qquad & (\isa{IH{\isadigit{1}}}) \\
+        & \isa{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ x{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Branch\ N\ ts{\isacharparenright}{\kern0pt}} \qquad & (\isa{IH{\isadigit{2}}}) 
       \end{alignedat}
     \end{equation*}
 
@@ -717,10 +717,10 @@ be \isa{item\ e} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
     \end{equation*}
 
     (1) by definition.
-    (2) by \isa{IH{\isadigit{1}}}.
+    (2) by (\isa{IH{\isadigit{1}}}).
     (3) by (b).
     (4) by (b,c,d).
-    The statement \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ x\ t} follows by (a), using once more \isa{IH{\isadigit{1}}} to
+    The statement \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ x\ t} follows by (a), using once more (\isa{IH{\isadigit{1}}}) to
     prove that all subtrees are complete according to the grammar by definition of \isa{wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree}.
 
     To conclude the proof for the simple predecessor pointer, we prove the statement \isa{\mbox{wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ x\ t}}:
@@ -737,7 +737,7 @@ be \isa{item\ e} $= N \rightarrow \, \alpha \bullet \beta, j, k$.
     \end{equation*}
 
     (1) by definition.
-    (2) by \isa{IH{\isadigit{2}}}. 
+    (2) by (\isa{IH{\isadigit{2}}}). 
     (3) by (g) and the definition of \isa{slice}.
     (4) by (e).
     (5) by (f,g).
@@ -764,9 +764,7 @@ in particular holds if we generate the bins using the algorithm of Chapter \ref{
 the assumptions accordingly.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{theorem}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}root{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}tree{\isacharcolon}{\kern0pt}\ %
-\isamarkupcmt{Detailed%
-}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}root{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}tree{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ {\isasymG}\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}mono{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}ptrs\ bs{\isachardoublequoteclose}\isanewline
@@ -876,6 +874,10 @@ lemma \isa{correctness{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunde
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+TODO%
+\end{isamarkuptext}\isamarkuptrue%
 %
 \begin{isamarkuptext}%
 why not simply generate all parse trees integrated top down? yes for single parse tree, no for
@@ -1161,6 +1163,10 @@ by introducing as much structural sharing as possible.%
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
+TODO%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
 How to proof completeness sketch.
 
 Our approach is slow, exponentially slow.
@@ -1175,8 +1181,6 @@ Overall approach is not very promising, completeness proof very involved, we sto
 \end{isamarkuptext}\isamarkuptrue%
 %
 \begin{isamarkuptext}%
-SNIPPET:
-
 A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
 trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
 to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
@@ -1667,168 +1671,166 @@ complicating the final algorithm.%
 %:%764=571%:%
 %:%766=574%:%
 %:%767=574%:%
-%:%768=574%:%
-%:%769=574%:%
-%:%770=575%:%
-%:%771=576%:%
-%:%772=577%:%
-%:%773=578%:%
-%:%774=579%:%
-%:%775=580%:%
-%:%790=586%:%
-%:%791=587%:%
-%:%792=588%:%
-%:%793=589%:%
-%:%794=590%:%
-%:%795=591%:%
-%:%796=592%:%
-%:%797=593%:%
-%:%798=594%:%
-%:%799=595%:%
-%:%800=596%:%
-%:%801=597%:%
-%:%802=598%:%
-%:%803=599%:%
-%:%804=600%:%
-%:%805=601%:%
-%:%807=604%:%
-%:%808=604%:%
-%:%809=605%:%
-%:%810=606%:%
-%:%811=607%:%
-%:%812=608%:%
-%:%827=614%:%
-%:%828=615%:%
-%:%829=616%:%
-%:%830=617%:%
-%:%832=620%:%
-%:%833=620%:%
-%:%834=621%:%
-%:%835=622%:%
-%:%836=623%:%
-%:%837=624%:%
-%:%852=630%:%
-%:%853=631%:%
-%:%854=632%:%
-%:%855=633%:%
-%:%856=634%:%
-%:%857=635%:%
-%:%858=636%:%
-%:%859=637%:%
-%:%860=638%:%
-%:%869=641%:%
-%:%881=644%:%
-%:%882=645%:%
-%:%883=646%:%
-%:%884=647%:%
-%:%885=648%:%
-%:%886=649%:%
-%:%888=652%:%
-%:%889=652%:%
-%:%890=653%:%
-%:%891=654%:%
-%:%892=655%:%
-%:%893=656%:%
-%:%894=656%:%
-%:%895=657%:%
-%:%896=658%:%
-%:%897=659%:%
-%:%898=660%:%
-%:%899=660%:%
-%:%900=661%:%
-%:%901=662%:%
-%:%911=668%:%
-%:%921=670%:%
-%:%922=670%:%
-%:%923=671%:%
-%:%924=672%:%
-%:%927=675%:%
-%:%928=676%:%
-%:%929=677%:%
-%:%930=677%:%
-%:%931=678%:%
-%:%932=679%:%
-%:%944=691%:%
-%:%947=692%:%
-%:%948=692%:%
-%:%949=693%:%
-%:%977=721%:%
-%:%978=722%:%
-%:%979=723%:%
-%:%980=723%:%
-%:%981=724%:%
-%:%991=730%:%
-%:%1001=732%:%
-%:%1002=732%:%
-%:%1003=733%:%
-%:%1004=734%:%
-%:%1005=735%:%
-%:%1006=735%:%
-%:%1007=736%:%
-%:%1008=737%:%
-%:%1009=738%:%
-%:%1010=739%:%
-%:%1011=739%:%
-%:%1012=740%:%
-%:%1013=741%:%
-%:%1037=748%:%
-%:%1047=750%:%
-%:%1048=750%:%
-%:%1049=751%:%
-%:%1050=752%:%
-%:%1051=753%:%
-%:%1052=754%:%
-%:%1053=755%:%
-%:%1054=756%:%
-%:%1071=763%:%
-%:%1072=763%:%
-%:%1073=764%:%
-%:%1074=765%:%
-%:%1075=766%:%
-%:%1076=767%:%
-%:%1077=768%:%
-%:%1078=769%:%
-%:%1079=770%:%
-%:%1096=777%:%
-%:%1097=777%:%
-%:%1098=778%:%
-%:%1099=779%:%
-%:%1100=780%:%
-%:%1101=781%:%
-%:%1102=782%:%
-%:%1103=783%:%
-%:%1120=790%:%
-%:%1121=790%:%
-%:%1122=791%:%
-%:%1123=792%:%
-%:%1124=793%:%
-%:%1125=794%:%
-%:%1126=795%:%
-%:%1127=796%:%
-%:%1128=797%:%
-%:%1152=804%:%
-%:%1164=807%:%
-%:%1165=808%:%
-%:%1166=809%:%
-%:%1167=810%:%
-%:%1168=811%:%
-%:%1169=812%:%
-%:%1170=813%:%
-%:%1171=814%:%
-%:%1172=815%:%
-%:%1173=816%:%
-%:%1174=817%:%
-%:%1178=821%:%
-%:%1179=822%:%
-%:%1180=823%:%
-%:%1181=824%:%
-%:%1182=825%:%
-%:%1183=826%:%
-%:%1184=827%:%
-%:%1185=828%:%
-%:%1186=829%:%
-%:%1187=830%:%
-%:%1188=831%:%
-%:%1189=832%:%
-%:%1190=833%:%
-%:%1191=834%:%
+%:%768=575%:%
+%:%769=576%:%
+%:%770=577%:%
+%:%771=578%:%
+%:%772=579%:%
+%:%773=580%:%
+%:%788=586%:%
+%:%789=587%:%
+%:%790=588%:%
+%:%791=589%:%
+%:%792=590%:%
+%:%793=591%:%
+%:%794=592%:%
+%:%795=593%:%
+%:%796=594%:%
+%:%797=595%:%
+%:%798=596%:%
+%:%799=597%:%
+%:%800=598%:%
+%:%801=599%:%
+%:%802=600%:%
+%:%803=601%:%
+%:%805=604%:%
+%:%806=604%:%
+%:%807=605%:%
+%:%808=606%:%
+%:%809=607%:%
+%:%810=608%:%
+%:%825=614%:%
+%:%826=615%:%
+%:%827=616%:%
+%:%828=617%:%
+%:%830=620%:%
+%:%831=620%:%
+%:%832=621%:%
+%:%833=622%:%
+%:%834=623%:%
+%:%835=624%:%
+%:%850=630%:%
+%:%851=631%:%
+%:%852=632%:%
+%:%853=633%:%
+%:%854=634%:%
+%:%855=635%:%
+%:%856=636%:%
+%:%857=637%:%
+%:%858=638%:%
+%:%867=641%:%
+%:%879=644%:%
+%:%883=648%:%
+%:%884=649%:%
+%:%885=650%:%
+%:%886=651%:%
+%:%887=652%:%
+%:%888=653%:%
+%:%890=656%:%
+%:%891=656%:%
+%:%892=657%:%
+%:%893=658%:%
+%:%894=659%:%
+%:%895=660%:%
+%:%896=660%:%
+%:%897=661%:%
+%:%898=662%:%
+%:%899=663%:%
+%:%900=664%:%
+%:%901=664%:%
+%:%902=665%:%
+%:%903=666%:%
+%:%913=672%:%
+%:%923=674%:%
+%:%924=674%:%
+%:%925=675%:%
+%:%926=676%:%
+%:%929=679%:%
+%:%930=680%:%
+%:%931=681%:%
+%:%932=681%:%
+%:%933=682%:%
+%:%934=683%:%
+%:%946=695%:%
+%:%949=696%:%
+%:%950=696%:%
+%:%951=697%:%
+%:%979=725%:%
+%:%980=726%:%
+%:%981=727%:%
+%:%982=727%:%
+%:%983=728%:%
+%:%993=734%:%
+%:%1003=736%:%
+%:%1004=736%:%
+%:%1005=737%:%
+%:%1006=738%:%
+%:%1007=739%:%
+%:%1008=739%:%
+%:%1009=740%:%
+%:%1010=741%:%
+%:%1011=742%:%
+%:%1012=743%:%
+%:%1013=743%:%
+%:%1014=744%:%
+%:%1015=745%:%
+%:%1039=752%:%
+%:%1049=754%:%
+%:%1050=754%:%
+%:%1051=755%:%
+%:%1052=756%:%
+%:%1053=757%:%
+%:%1054=758%:%
+%:%1055=759%:%
+%:%1056=760%:%
+%:%1073=767%:%
+%:%1074=767%:%
+%:%1075=768%:%
+%:%1076=769%:%
+%:%1077=770%:%
+%:%1078=771%:%
+%:%1079=772%:%
+%:%1080=773%:%
+%:%1081=774%:%
+%:%1098=781%:%
+%:%1099=781%:%
+%:%1100=782%:%
+%:%1101=783%:%
+%:%1102=784%:%
+%:%1103=785%:%
+%:%1104=786%:%
+%:%1105=787%:%
+%:%1122=794%:%
+%:%1123=794%:%
+%:%1124=795%:%
+%:%1125=796%:%
+%:%1126=797%:%
+%:%1127=798%:%
+%:%1128=799%:%
+%:%1129=800%:%
+%:%1130=801%:%
+%:%1154=808%:%
+%:%1166=811%:%
+%:%1170=815%:%
+%:%1171=816%:%
+%:%1172=817%:%
+%:%1173=818%:%
+%:%1174=819%:%
+%:%1175=820%:%
+%:%1176=821%:%
+%:%1177=822%:%
+%:%1178=823%:%
+%:%1179=824%:%
+%:%1180=825%:%
+%:%1184=829%:%
+%:%1185=830%:%
+%:%1186=831%:%
+%:%1187=832%:%
+%:%1188=833%:%
+%:%1189=834%:%
+%:%1190=835%:%
+%:%1191=836%:%
+%:%1192=837%:%
+%:%1193=838%:%
+%:%1194=839%:%
+%:%1195=840%:%

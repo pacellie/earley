@@ -21,7 +21,7 @@
 %
 \isatagdocument
 %
-\isamarkupchapter{The Running Example%
+\isamarkupchapter{The Running Example in Isabelle%
 }
 \isamarkuptrue%
 %
@@ -31,14 +31,83 @@
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+This chapter illustrates how the running example is implemented in Isabelle and highlights
+the corresponding correctness theorems for functions \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list}, \isa{build{\isacharunderscore}{\kern0pt}tree}, and
+\isa{build{\isacharunderscore}{\kern0pt}trees}. But first we make a small addition to easily compute if a grammar allows empty
+derivations or \isa{{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ \ensuremath{\Rightarrow^{\ast}}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}} holds for any non-terminal $N$ of grammar \isa{{\isasymG}}. We call
+a grammar \isa{{\isasymepsilon}{\isacharunderscore}{\kern0pt}free} if there does not exists any production rule of the form $N \rightarrow \, \epsilon$.
+For a well-formed grammar, strictly speaking we only require the left-hand side of any production rule
+to be a non-terminal, we then prove a lemma stating that a grammar does only allow non-empty derivations
+for any non-terminal if and only if it is epsilon-free.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{definition}\isamarkupfalse%
 \ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}\ {\isasymlongleftrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymforall}r\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ {\isasymG}{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ rule{\isacharunderscore}{\kern0pt}body\ r\ {\isasymnoteq}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}\ {\isasymequiv}\ {\isasymforall}r\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymRR}\ {\isasymG}{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ rule{\isacharunderscore}{\kern0pt}body\ r\ {\isasymnoteq}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{lemma}\isamarkupfalse%
-\ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}impl{\isacharunderscore}{\kern0pt}non{\isacharunderscore}{\kern0pt}empty{\isacharunderscore}{\kern0pt}deriv{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymforall}N\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}{\isasymNN}\ {\isasymG}{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ {\isasymnot}\ {\isacharparenleft}{\kern0pt}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ nonempty{\isacharunderscore}{\kern0pt}derives{\isacharunderscore}{\kern0pt}iff{\isacharunderscore}{\kern0pt}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}\ {\isasymlongleftrightarrow}\ {\isasymepsilon}{\isacharunderscore}{\kern0pt}free\ {\isasymG}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+%
+\endisadelimproof
+%
+\begin{isamarkuptext}%
+Next we define the grammar $S ::= S + S \, | \, x$ in Isabelle. We introduce data types \isa{T}, \isa{N}, and \isa{symbol}
+respectively representing terminal symbols $\{x, +\}$, the non-terminal $S$, and the type for symbols.
+Subsequently, we define the grammar as its four constituents: a list of non-terminal symbols, a list of terminal symbols,
+the production rules, and the start symbol. Finally, we specify the input $\omega = x + x + x$.%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{datatype}\isamarkupfalse%
+\ T\ {\isacharequal}{\kern0pt}\ x\ {\isacharbar}{\kern0pt}\ plus\isanewline
+\isacommand{datatype}\isamarkupfalse%
+\ N\ {\isacharequal}{\kern0pt}\ S\isanewline
+\isacommand{datatype}\isamarkupfalse%
+\ symbol\ {\isacharequal}{\kern0pt}\ Terminal\ T\ {\isacharbar}{\kern0pt}\ Nonterminal\ N\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ nonterminals\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}symbol\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}nonterminals\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ S{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ terminals\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}symbol\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}terminals\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ rules\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}symbol\ rule\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}rules\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Nonterminal\ S{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ start{\isacharunderscore}{\kern0pt}symbol\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ symbol\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}start{\isacharunderscore}{\kern0pt}symbol\ {\isacharequal}{\kern0pt}\ Nonterminal\ S{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ {\isasymG}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}symbol\ cfg{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymG}\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals\ terminals\ rules\ start{\isacharunderscore}{\kern0pt}symbol{\isachardoublequoteclose}\isanewline
+\isanewline
+\isacommand{definition}\isamarkupfalse%
+\ {\isasymomega}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}symbol\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}{\isasymomega}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+The following three lemmas state the well-formedness of the grammar and input. The proofs are automatic
+by definition with addition of lemma \isa{nonempty{\isacharunderscore}{\kern0pt}derives{\isacharunderscore}{\kern0pt}iff{\isacharunderscore}{\kern0pt}{\isasymepsilon}{\isacharunderscore}{\kern0pt}free}.%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{lemma}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}{\isasymG}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -55,43 +124,9 @@
 \begin{isamarkuptext}%
 %
 \end{isamarkuptext}\isamarkuptrue%
-\isacommand{datatype}\isamarkupfalse%
-\ t\ {\isacharequal}{\kern0pt}\ x\ {\isacharbar}{\kern0pt}\ plus\isanewline
-\isacommand{datatype}\isamarkupfalse%
-\ n\ {\isacharequal}{\kern0pt}\ S\isanewline
-\isacommand{datatype}\isamarkupfalse%
-\ s\ {\isacharequal}{\kern0pt}\ Terminal\ t\ {\isacharbar}{\kern0pt}\ Nonterminal\ n\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ nonterminals\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}nonterminals\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ S{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ terminals\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}terminals\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ rules\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ rule\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}rules\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}\isanewline
-\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
-\ \ \ \ {\isacharparenleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Nonterminal\ S{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Nonterminal\ S{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
-\ \ {\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ start{\isacharunderscore}{\kern0pt}symbol\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ s\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}start{\isacharunderscore}{\kern0pt}symbol\ {\isacharequal}{\kern0pt}\ Nonterminal\ S{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ {\isasymG}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ cfg{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}{\isasymG}\ {\isacharequal}{\kern0pt}\ CFG\ nonterminals\ terminals\ rules\ start{\isacharunderscore}{\kern0pt}symbol{\isachardoublequoteclose}\isanewline
-\isanewline
-\isacommand{definition}\isamarkupfalse%
-\ {\isasymomega}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}s\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}{\isasymomega}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharcomma}{\kern0pt}\ Terminal\ plus{\isacharcomma}{\kern0pt}\ Terminal\ x{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
 \isacommand{lemma}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}{\isasymG}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}%
+\ nonempty{\isacharunderscore}{\kern0pt}derives{\isacharunderscore}{\kern0pt}{\isasymG}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -125,11 +160,12 @@
 \endisadelimproof
 %
 \begin{isamarkuptext}%
-%
+This section concludes by illustrating the following main theorems for functions \isa{\mbox{{\isasymE}arley{\isacharunderscore}{\kern0pt}list}}, \isa{build{\isacharunderscore}{\kern0pt}tree}, and
+\isa{build{\isacharunderscore}{\kern0pt}trees} for the well-formed grammar \isa{{\isasymG}} and input \isa{{\isasymomega}} introduced above.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
-\ nonempty{\isacharunderscore}{\kern0pt}derives{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}%
+\ correctness{\isacharunderscore}{\kern0pt}bins{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing\ {\isacharparenleft}{\kern0pt}bins\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymG}\ {\isasymomega}\ {\isasymlongleftrightarrow}\ {\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -147,8 +183,72 @@
 %
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
-\ correctness{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}recognizing\ {\isacharparenleft}{\kern0pt}bins\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymG}\ {\isasymomega}\ {\isasymlongleftrightarrow}\ {\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
+\ wf{\isacharunderscore}{\kern0pt}tree{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ t{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ t\ {\isasymand}\ root{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymSS}\ {\isasymG}\ {\isasymand}\ yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+%
+\endisadelimproof
+%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{lemma}\isamarkupfalse%
+\ correctness{\isacharunderscore}{\kern0pt}tree{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isasymexists}t{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ t{\isacharparenright}{\kern0pt}\ {\isasymlongleftrightarrow}\ {\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+%
+\endisadelimproof
+%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{lemma}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}trees{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ t\ {\isasymand}\ root{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymSS}\ {\isasymG}\ {\isasymand}\ yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
+\isadelimproof
+%
+\endisadelimproof
+%
+\isatagproof
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+%
+\endisadelimproof
+%
+\begin{isamarkuptext}%
+%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{lemma}\isamarkupfalse%
+\ soundness{\isacharunderscore}{\kern0pt}trees{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -179,55 +279,89 @@
 \endinput
 %:%file=06_Examples.tex%:%
 %:%24=8%:%
-%:%34=10%:%
-%:%35=10%:%
 %:%36=11%:%
 %:%37=12%:%
 %:%38=13%:%
-%:%39=13%:%
-%:%40=14%:%
-%:%41=15%:%
-%:%58=22%:%
-%:%59=22%:%
-%:%60=23%:%
-%:%61=23%:%
-%:%62=24%:%
-%:%63=24%:%
-%:%64=25%:%
-%:%65=26%:%
-%:%66=26%:%
-%:%67=27%:%
-%:%68=28%:%
-%:%69=29%:%
-%:%70=29%:%
-%:%71=30%:%
-%:%72=31%:%
-%:%73=32%:%
-%:%74=32%:%
-%:%75=33%:%
-%:%78=36%:%
-%:%79=37%:%
-%:%80=38%:%
-%:%81=38%:%
-%:%82=39%:%
-%:%83=40%:%
-%:%84=41%:%
-%:%85=41%:%
-%:%86=42%:%
-%:%87=43%:%
-%:%88=44%:%
-%:%89=44%:%
-%:%90=45%:%
-%:%91=46%:%
-%:%92=47%:%
-%:%93=47%:%
-%:%94=48%:%
-%:%111=55%:%
-%:%112=55%:%
-%:%113=56%:%
-%:%130=63%:%
-%:%131=63%:%
-%:%132=64%:%
-%:%149=71%:%
-%:%150=71%:%
-%:%151=72%:%
+%:%39=14%:%
+%:%40=15%:%
+%:%41=16%:%
+%:%42=17%:%
+%:%43=18%:%
+%:%45=21%:%
+%:%46=21%:%
+%:%47=22%:%
+%:%48=23%:%
+%:%49=24%:%
+%:%50=24%:%
+%:%51=25%:%
+%:%52=26%:%
+%:%67=32%:%
+%:%68=33%:%
+%:%69=34%:%
+%:%70=35%:%
+%:%72=38%:%
+%:%73=38%:%
+%:%74=39%:%
+%:%75=39%:%
+%:%76=40%:%
+%:%77=40%:%
+%:%78=41%:%
+%:%79=42%:%
+%:%80=42%:%
+%:%81=43%:%
+%:%82=44%:%
+%:%83=45%:%
+%:%84=45%:%
+%:%85=46%:%
+%:%86=47%:%
+%:%87=48%:%
+%:%88=48%:%
+%:%89=49%:%
+%:%91=51%:%
+%:%92=52%:%
+%:%93=53%:%
+%:%94=53%:%
+%:%95=54%:%
+%:%96=55%:%
+%:%97=56%:%
+%:%98=56%:%
+%:%99=57%:%
+%:%100=58%:%
+%:%101=59%:%
+%:%102=59%:%
+%:%103=60%:%
+%:%105=63%:%
+%:%106=64%:%
+%:%108=67%:%
+%:%109=67%:%
+%:%110=68%:%
+%:%127=75%:%
+%:%128=75%:%
+%:%129=76%:%
+%:%146=83%:%
+%:%147=83%:%
+%:%148=84%:%
+%:%163=90%:%
+%:%164=91%:%
+%:%166=94%:%
+%:%167=94%:%
+%:%168=95%:%
+%:%185=102%:%
+%:%186=102%:%
+%:%187=103%:%
+%:%188=104%:%
+%:%205=111%:%
+%:%206=111%:%
+%:%207=112%:%
+%:%224=119%:%
+%:%225=119%:%
+%:%226=120%:%
+%:%227=121%:%
+%:%228=122%:%
+%:%229=123%:%
+%:%246=130%:%
+%:%247=130%:%
+%:%248=131%:%
+%:%249=132%:%
+%:%250=133%:%
+%:%251=134%:%
