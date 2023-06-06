@@ -44,7 +44,7 @@ trivial task.
     \end{minipage}
 \end{figure}
 
-Earley @{cite "Earley:1970"} turns his recognizer into a parser by adding the following
+Earley @{cite "Earley:1970"} extends his recognizer to a parser by adding the following
 pointers. If the algorithm performs a completion and constructs an item $B \rightarrow \, \alpha A \bullet \beta, i, k$,
 it adds a pointer from the \textit{instance of the non-terminal} $A$ to the complete item
 $A \rightarrow \, \gamma \bullet, j, k$. If there exists more than one possible way to complete the non-terminal
@@ -62,21 +62,13 @@ derivations of $xx$ and $xxxx$. The problem lies in the fact that left- and righ
 intertwined when they should not be, since pointers originate from instances of non-terminals and don't
 connect Earley items.
 
-The most well-known data structure for representing all possible derivations, a shared packed parse
-forest (SPPF), was introduced by Tomita @{cite "Tomita:1985"}. But Johnson @{cite "Johnson:1991"} has
-shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
-would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott @{cite "Scott:2008"}
-adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
-are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
-very much imperative in nature, and thus not only exceed the scope of this thesis but are also
-very difficult to map to a functional approach.
-
 In this chapter we develop an efficient functional algorithm constructing a single parse
 tree in Section \ref{sec:parse-tree} and prove its correctness. In Section \ref{sec:parse-forest}
 we generalize this approach, introducing a data structure representing all possible parse trees
-as a parse forest, adjusting the parse tree algorithm to compute such a forest and prove termination
-and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the missing
-completeness proof and the performance of the algorithm and compare our approach to the algorithm of Scott in greater detail.
+as a parse forest, adjusting the parse tree algorithm to compute such a forest, prove termination
+and soundness of the algorithm, and informally sketch a completeness proof. Finally, in Section \ref{sec:word}
+we discuss different data representations and implementation approaches for parse forests, comparing our approach
+to the algorithms of Scott @{cite "Scott:2008"}.
 \<close>
 
 section \<open>A Single Parse Tree \label{sec:parse-tree}\<close> 
@@ -356,7 +348,7 @@ definition build_tree :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bi
     | (_, i)#_ \<Rightarrow> build_tree' bs \<omega> k i)"
 
 
-subsection \<open>Termination\<close>
+subsection \<open>Termination \label{q}\<close>
 
 text\<open>
 The function @{term build_tree'} uses the null, predecessor and predecessor/reduction pointers to
@@ -372,7 +364,7 @@ the pointers \textit{strictly} back to the origin bin $B_0$ and thus must termin
 the reduction pointer we run into a problem: the recursive call for the item at index $i$ is in the same
 bin $k$ but for the reduction index $red$, which in turn might contain again reduction triples and so on.
 Hence, it is possible that we end up in a cycle of reductions and never terminate. Take for example the
-grammer $A ::= x \, | \, B \quad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
+grammer $A ::= x \, | \, B, \, B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
 illustrates the bins computed by the algorithm of Chapter \ref{chapter:3}. Bin $B_1$ contains the entry
 $B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ at index $1$ and its second reduction triple
 $(0, 2, 2)$ a reduction pointer to index $2$ of the same bin. There we find the entry
@@ -642,21 +634,47 @@ lemma @{thm[source] correctness_\<E>arley_list} using our assumptions.
 section \<open>A Parse Forest \label{sec:parse-forest}\<close>
 
 text\<open>
-TODO
-\<close>
+Computing a single parse tree is sufficient for unambiguous grammars. But an Earley parser - in its most general form -
+can handle all context-free grammars. And for ambiguous grammars there might exist multiple
+parse trees for a specific input, there might even be exponentially many. One example of a highly ambiguous
+grammar that produces exponentially many parse trees is our running example. To be precise, the number of
+parse trees for an input $\omega = x + \dots + x$ is the Catalan number $C_n$ where $n-1$ is the
+number of times the terminal $x$ occurs in @{term \<omega>}. It is well known that the $n$-th Catalan number can be expressed as
+$C_n = \frac{1}{n+1} \binom{2n}{n}$ and thus grows asympotically at least exponentially. For example, the number of parse trees for an input @{term \<omega>} containing
+$12$ times the terminal $x$ is already $C_{11} = 58786$. Thus, it is infeasible to compute all possible
+parse trees in a naive fashion.
 
-text\<open>
-why not simply generate all parse trees integrated top down? yes for single parse tree, no for
-all since exponential blow up. One option for more sharing is: different reduction item same predecessor.
-We sketch a simple unoptimized algorithm:
+In the following we generalize the algorithm for a single parse tree to compute a representation of
+all parse trees, or a parse forest. The key idea is to find a data structure that allows as much structural
+sharing as possible between different parse trees. As an initial step, we make the following observation:
+for two reduction triples $@{term "(k'\<^sub>A, pre\<^sub>A, red\<^sub>A)"}$ and $@{term "(k'\<^sub>B, pre\<^sub>B, red\<^sub>B)"}$ of an Earley item
+we know that @{term "red\<^sub>A \<noteq> red\<^sub>B"}, but it might be the case that @{term "k'\<^sub>A = k'\<^sub>B"} (which implies
+@{term "pre\<^sub>A = pre\<^sub>B"} due to the set semantics of the bins). In other words, for different reduction
+items, we might have the same predecessor item and thus can share the subtree representing the predecessor.
 
-The idea was: generalize the functional algorithm which generates a single tree to all trees
-by introducing as much structural sharing as possible. 
+We define a data type @{term forest} capturing this idea and representing parse forest. Consider an arbitrary production rule
+$S \rightarrow \, AaB$ for non-terminals $S, A, B$ and terminal $a$. A branch of a single tree
+contains a list of length $3$ containing the three subtrees $t_A$, $t_a$, and $t_B$ corresponding to
+the three symbols $A$, $a$, and $B$. For a parse forest we still have a list of length $3$, but each element is now
+again a list of forests sharing subtrees derived from the same non-terminal. For example, a branch
+might look like @{term "[[f\<^sub>A\<^sub>1, f\<^sub>A\<^sub>2], [f\<^sub>a], [f\<^sub>B]]"} if there are two possible parse forests derived from
+the non-terminal $A$. Note that if the subforest is a forest leaf than the list contains just this
+single leaf, or there never occurs a situation like @{term "[[f\<^sub>A], [f\<^sub>a\<^sub>1, f\<^sub>a\<^sub>2], [f\<^sub>B]]"}.
 \<close>
 
 datatype 'a forest =
   FLeaf 'a
 | FBranch 'a "'a forest list list"
+
+text\<open>
+We define an abstraction function @{term trees} recovering all possible parse trees for a parse forest.
+For a forest leaf this is trivial, for a forest branch @{term "FBranch N fss"} we first apply the function
+@{term trees} recursively for all subforests @{term fss}, concatenating the results for each subforest. E.g. for
+@{term "[[f\<^sub>A\<^sub>1, f\<^sub>A\<^sub>2], [f\<^sub>a], [f\<^sub>B]]"} we might obtain @{term "[[t\<^sub>A\<^sub>1\<^sub>1, t\<^sub>A\<^sub>1\<^sub>2, t\<^sub>A\<^sub>2], [t\<^sub>a], [t\<^sub>B]]"} if the
+forest @{term "f\<^sub>A\<^sub>1"} yields two parse trees @{term "t\<^sub>A\<^sub>1\<^sub>1"} and @{term "t\<^sub>A\<^sub>1\<^sub>2"} and every other forest yields only
+a single tree. The three possible subtrees for the non-terminal $N$ are then: @{term "[t\<^sub>A\<^sub>1\<^sub>1, t\<^sub>a, t\<^sub>B]"}, @{term "[t\<^sub>A\<^sub>1\<^sub>2, t\<^sub>a, t\<^sub>B]"},
+and @{term "[t\<^sub>A\<^sub>2, t\<^sub>a, t\<^sub>B]"}.
+\<close>
 
 fun combinations :: "'a list list \<Rightarrow> 'a list list" where
   "combinations [] = [[]]"
@@ -671,6 +689,12 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
 
 
 subsection \<open>The Parse Forest Algorithm\<close>
+
+text\<open>
+We define two auxiliary functions @{term group_by} and @{term insert_group} grouping a list of values @{term xs} according to a key-mapping $K$
+and a value-mapping $V$ by key. E.g. for the list of tuples @{term "xs = [(1::nat, a), (2, b), (1, c)]"} and
+mappings @{term "K = fst"} and @{term "V = snd"} we obtain the association list @{term "[(1::nat, [a, c]), (2, [b])]"}.
+\<close>
 
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
   "insert_group K V a [] = [(K a, [V a])]"
@@ -694,14 +718,52 @@ lemma [partial_function_mono]:
   sorry
 (*>*)
 
-partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest list option" where
-  "build_trees' bs \<omega> k i I = (
+text\<open>
+Next we define the function @{term "build_forests'"}. It takes as arguments the bins @{term bs}, the indices of the bin and
+item, $k$ respectively $i$, and a set of natural numbers $I$, and returns an optional list of parse forests.
+There are two things to note here: the return type and the argument $I$. One might expect that we can return
+a single parse forest and not a list of forests. This is not the case. Although we are sharing subforests for two distinct reduction triples
+@{term "(k'\<^sub>A, pre\<^sub>A, red\<^sub>A)"} and @{term "(k'\<^sub>B, pre\<^sub>B, red\<^sub>B)"} if @{term "(k'\<^sub>A, pre\<^sub>A) = (k'\<^sub>B, pre\<^sub>B)"}, we
+can not share the subforests if the predecessor items are distinct, and hence need to return two distinct forests in this case. Furthermore, the algorithm returns an
+optional value since the function might not terminate if the pointers are not sound as it was the case
+for function @{term "build_tree'"}. But unfortunately, this time around the situation is even worse:
+even for sound pointers the function @{term build_forests'} might not terminate.
+As explained in Subsection \ref{q}, the bins computed by the algorithm @{term \<E>arley_list} contain
+cyclic reduction pointers for cyclic grammars and thus naively following all reduction pointers might lead
+to non-termination. To ensure the termination of the algorithm we keep track of the items the algorithm
+already visited in a single bin by means of the additional argument $I$ representing the indices
+of the previous function calls in the same bin. The algorithm proceeds as follows:
+
+Let $e$ denote the $i$-th item in the $k$-th bin.. If the pointer of $e$ is
+a null pointer the forest algorithm proceeds analogously to the tree algorithm, constructing an initially
+empty forest branch. For the simple predecessor case it calls itself recursively for the previous bin
+$k-1$, predecessor index @{term pre}, and initializes the set of visited indices for bin $B_{k-1}$ with
+the index @{term pre}, obtaining a list of optional predecessor forests. It then appends
+to the list of subforests of each of these predecessor forests a new forest leaf containing the terminal symbol at
+index $k-1$ of the input. Note the monadic do-notation for the option monad, and the use
+of the function @{term those} that converts a list of optional values into an optional list of values
+if and only if each of each one of the optional values is present or not none. In the case that the algorithm
+encounters a predecessor/reduction pointer it first makes sure to not enter a cycle of reductions
+by discarding any reduction indices that are contained in $I$ and thus were already processed in earlier
+recursive calls. It then groups the reduction triples by predecessor. Subsequently, for each tuple of predecessor
+($k'$ and @{term pre}) and reduction (@{term reds}) indices it proceeds as follows. It first calls itself once recursively
+for the predecessor, initializing the set $I$ as @{term "{pre}"}, and obtaining a list of predecessor
+forests. Then it executes one recursive call for each reduction index @{term "red \<in> set reds"}
+in the current bin $k$ making sure to mark the index @{term "red"} as already visited by adding it to $I$.
+Finally, it appends to the list of subforests of each predecessor forests the list of reduction forests
+computed in the previous step.
+
+The function @{term build_forests} is then defined analogously to the function @{term build_tree}.
+\<close>
+
+partial_function (option) build_forests' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest list option" where
+  "build_forests' bs \<omega> k i I = (
     let e = bs!k!i in (
     case pointer e of
       Null \<Rightarrow> Some ([FBranch (item_rule_head (item e)) []])
     | Pre pre \<Rightarrow> (
         do {
-          pres \<leftarrow> build_trees' bs \<omega> (k-1) pre {pre};
+          pres \<leftarrow> build_forests' bs \<omega> (k-1) pre {pre};
           those (map (\<lambda>f.
             case f of
               FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (\<omega>!(k-1))]]))
@@ -713,8 +775,8 @@ partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentential \
         let gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps' in
         map_option concat (those (map (\<lambda>((k', pre), reds).
           do {
-            pres \<leftarrow> build_trees' bs \<omega> k' pre {pre};
-            rss \<leftarrow> those (map (\<lambda>red. build_trees' bs \<omega> k red (I \<union> {red})) reds);
+            pres \<leftarrow> build_forests' bs \<omega> k' pre {pre};
+            rss \<leftarrow> those (map (\<lambda>red. build_forests' bs \<omega> k red (I \<union> {red})) reds);
             those (map (\<lambda>f.
               case f of
                 FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [concat rss]))
@@ -725,37 +787,85 @@ partial_function (option) build_trees' :: "'a bins \<Rightarrow> 'a sentential \
       )
   ))"
 
-definition build_trees :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
-  "build_trees \<G> \<omega> bs \<equiv>
+definition build_forests :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
+  "build_forests \<G> \<omega> bs \<equiv>
     let k = |bs| - 1 in
     let finished = filter_with_index (\<lambda>x. is_finished \<G> \<omega> x) (items (bs!k)) in
-    map_option concat (those (map (\<lambda>(_, i). build_trees' bs \<omega> k i {i}) finished))"
-
+    map_option concat (those (map (\<lambda>(_, i). build_forests' bs \<omega> k i {i}) finished))"
 
 subsection \<open>Termination\<close>
+
+text\<open>
+Analogously to the single tree algorithm we need to define well-formed input and a suitable
+measure for the forest algorithm to prove an applicable induction schema (\textit{forest induction}) by
+complete induction on the measure. An input quintuplet @{term "(bs, \<omega>, k, i, I)"} is well-formed if
+the pointers are sound, the indices $k$ and $i$ are within their respective bounds, and the set of already
+visited indices $I$ contains the current index $i$ and only consists of valid indices for the current bin $k$.
+As termination measure we count the number of items in the first $k$ bins minus the indices the algorithm
+already visited in the $k$-th bin.
+
+We informally sketch the termination proof. If the algorithm encounters a null pointer it terminates immediately.
+For predecessor pointers it calls itself recursively in a bin with a strictly smaller index, and for chains of reduction
+pointers it visits each index of the current bin at most once.
+
+We then prove by \textit{forest induction} that the function @{term build_forests'} always terminates
+with some list of forests containing only forests branches for well-formed input.
+\<close>
+
+definition wf_forest_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) set" where
+  "wf_forest_input = { (bs, \<omega>, k, i, I) | bs \<omega> k i I.
+      sound_ptrs \<omega> bs \<and> k < |bs| \<and> i < |bs!k| \<and> i \<in> I \<and> I \<subseteq> {0..<|bs!k|} }"
 
 fun build_forest'_measure :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
   "build_forest'_measure (bs, \<omega>, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
-definition wf_trees_input :: "('a bins \<times> 'a sentential \<times> nat \<times> nat \<times> nat set) set" where
-  "wf_trees_input = { (bs, \<omega>, k, i, I) | bs \<omega> k i I.
-      sound_ptrs \<omega> bs \<and> k < |bs| \<and> i < |bs!k| \<and> I \<subseteq> {0..<|bs!k|} \<and> i \<in> I }"
-
-lemma build_trees'_termination:
-  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
-  shows "\<exists>fs. build_trees' bs \<omega> k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
+lemma build_forests'_termination:
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_forest_input"
+  shows "\<exists>fs. build_forests' bs \<omega> k i I = Some fs \<and> (\<forall>f \<in> set fs. \<exists>N fss. f = FBranch N fss)"
 (*<*)
   sorry
 (*>*)
 
-text\<open>\<close>
+text\<open>
+At this point, one might wonder if the argument $I$ is really needed. The problem regarding non-termination
+are the cyclic reduction pointers. In theory we could modify the algorithm of Chapter \ref{chap:04} to not
+add any cyclic pointers at all to the bins, prove an according lemma, and require non-cyclic pointers
+for the well-formedness of the input of the forest algorithm. Subsequently, we could remove the - no longer
+needed - argument $I$ from the function @{term build_forests'} and adjust the implementation accordingly.
+
+But a problem of technical nature occurs while trying to prove the \textit{forest induction} schema.
+We need to define a suitable measure capturing the termination argument in terms of the input, or a function
+of the form $('a \mathit{bins} \times 'a \mathit{sentential} \times \mathit{nat} \times \mathit{nat}) \Rightarrow \, \mathit{nat}$.
+But we cannot express the termination argument just in terms of the current input, we need access to
+the history of recursive calls to argue that - for non-cyclic pointers - the algorithm calls itself
+at most once for each index in the current bin $k$ during chains of reductions. Hence, we need to reintroduce
+the argument $I$ of already visited indices or an equivalent argument. Note that this still simplifies
+the function @{term build_forests'} slightly due to the fact that we no longer need to filter the list
+of reduction pointers, but comes at the cost of computing cycles of reduction pointers in the algorithm
+of Chapter \ref{chap:04}. Additionally, the bins only contain cyclic pointers if the grammar itself is
+cyclic and hence not adding any cyclic pointers in the first place is incorrect.
+
+In summary, the - already visited indices - argument $I$ serves two purposes: checking for pointer cycles while
+constructing parse forests and expressing the termination argument of the algorithm.
+\<close>
 
 subsection \<open>Soundness\<close>
 
-lemma wf_item_yield_build_trees':
-  assumes "(bs, \<omega>, k, i, I) \<in> wf_trees_input"
+text\<open>
+The following four lemmas prove soundness of the functions @{term build_forests'} and @{term build_forests}.
+The proof are analogous to the corresponding proofs for the functions @{term build_tree'} and @{term build_tree},
+replacing \textit{tree induction} with \textit{forest induction}. We might add that although the forest algorithm
+is only a slight generalization of the tree algorithm and hence one might suspect that the proof should generalize
+easily, this is unfortunately not the case. The proofs are rather unpleasant and cumbersome due to the complexity
+that occurs from the interplay of the option monad (and actually list monad), functions @{term those}, @{term map_option},
+@{term concat}, and the quite involved definition of the abstraction function @{term trees}. We refrain from
+presenting any proofs in detail.
+\<close>
+
+lemma wf_item_yield_build_forests':
+  assumes "(bs, \<omega>, k, i, I) \<in> wf_forest_input"
   assumes "wf_bins \<G> \<omega> bs"
-  assumes "build_trees' bs \<omega> k i I = Some fs"
+  assumes "build_forests' bs \<omega> k i I = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "wf_item_tree \<G> (item (bs!k!i)) t \<and> wf_yield_tree \<omega> (item (bs!k!i)) t"
@@ -765,11 +875,11 @@ lemma wf_item_yield_build_trees':
 
 text\<open>\<close>
 
-theorem wf_rule_root_yield_build_trees:
+theorem wf_rule_root_yield_build_forests:
   assumes "wf_bins \<G> \<omega> bs"
   assumes "sound_ptrs \<omega> bs"
   assumes "|bs| = |\<omega>| + 1"
-  assumes "build_trees \<G> \<omega> bs = Some fs"
+  assumes "build_forests \<G> \<omega> bs = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "wf_rule_tree \<G> t \<and> root_tree t = \<SS> \<G> \<and> yield_tree t = \<omega>"
@@ -779,10 +889,10 @@ theorem wf_rule_root_yield_build_trees:
 
 text\<open>\<close>
 
-corollary wf_rule_root_yield_build_trees_\<E>arley_list:
+corollary wf_rule_root_yield_build_forests_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "nonempty_derives \<G>"
-  assumes "build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
+  assumes "build_forests \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "wf_rule_tree \<G> t \<and> root_tree t = \<SS> \<G> \<and> yield_tree t = \<omega>"
@@ -792,11 +902,11 @@ corollary wf_rule_root_yield_build_trees_\<E>arley_list:
 
 text\<open>\<close>
 
-theorem soundness_build_trees_\<E>arley_list:
+theorem soundness_build_forests_\<E>arley_list:
   assumes "wf_\<G> \<G>"
   assumes "is_sentence \<G> \<omega>"
   assumes "nonempty_derives \<G>"
-  assumes "build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
+  assumes "build_forests \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
@@ -806,24 +916,51 @@ theorem soundness_build_trees_\<E>arley_list:
 
 text\<open>\<close>
 
-section \<open>A Word on Completeness and Performance \label{sec:word}\<close>
+subsection \<open>Completeness\<close>
 
 text\<open>
-TODO
+At this point we would like to prove that the forest algorithm indeed computes all possible parse trees.
+But before we can attempt such a proof we first need to define what we mean by completeness. Recall the
+cyclic grammer $A ::= x \, | \, B, \, B ::= A$. There exist an infinite amount of parse tree for the
+input $\omega = x$. Although there certainly exist parse forests data structures that enable an representation
+of an infinite amount of parse trees, our data type @{term forest} is not expressive enough. Note that,
+since we assume a finite grammar, there necessarily has to exist a cycle in the grammar if there exist
+an infinite amount of parse trees. The algorithm @{term build_forests'} does not complete any cycles and
+thus returns only those parse trees up to the depth of the cycle in the grammar, or the parse trees
+$A \, \text{--} \, x$ and $A \, \text{--} \, B \, \text{--} \, A \, \text{--} \, x$. In conclusion,
+we can only prove the completeness of the algorithm for non-cyclic grammars.
+
+But, as mentioned previously, we decided against formally proving completeness for the parse forest algorithm. The
+reasoning is twofold. The completeness proof is far from trivial and exceeded the scope of this thesis.
+The algorithm is only of theoretical interest and far from practical due to its poor performance.
+The simple sharing of subforests for identical predecessor items is one optimization over the naive approach, but unfortunately
+not enough to make the algorithm practical, as some experimentation suggests. We would need to introduce
+further performance improvements. One obvious improvement is to use more structural sharing of subtrees.
+At the moment the algorithm always appends new lists of subforests. We can avoid copying the current list
+of subtrees if we preprend instead of append, and finally reverse the subtrees for complete items. 
+Another concern is the number of recursive calls. As implemented, the algorithm might call itself recursively more than
+once for the same Earley item or identical bins and item indices. This occurs for example if we have
+two different predecessor items but the same reduction item. We could avoid repeated recursive calls using
+common memoization techniques. We experimented with both performance improvements. The result was a
+highly complex algorithm with still subpar performance. 
+
+We can conclude: the straightforward generalization from the single parse tree algorithm to a parse
+forest algorithm is probably correct (at least sound), but some experimentation suggest that due to its
+poor performance the approach is not very practical.
 \<close>
 
+section \<open>A Word on Parse Forests \label{sec:word}\<close>
+
 text\<open>
-How to proof completeness sketch.
 
-Our approach is slow, exponentially slow.
-(1) simple improvement for more structural sharing: cons instead of append for complete items reverse
-(2) need memoization: even though only one recursive call for different reduction items and same
-  predecessor what about different items and same reduction item. But memoization is extremly awkward
-  due to the cyclic calls, need to set a dummy.
-(3) still not enough sharing see snippet: nodes which have the same tree below them are shared with
-  simple improvement and memoization, but packed nodes are not shared.
-
-Overall approach is not very promising, completeness proof very involved, we stop here.
+The most well-known data structure for representing all possible derivations, a shared packed parse
+forest (SPPF), was introduced by Tomita @{cite "Tomita:1985"}. But Johnson @{cite "Johnson:1991"} has
+shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
+would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott @{cite "Scott:2008"}
+adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
+are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
+very much imperative in nature, and thus not only exceed the scope of this thesis but are also
+very difficult to map to a functional approach.
 \<close>
 
 text\<open>

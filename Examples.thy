@@ -80,7 +80,7 @@ fun size_bins :: "'a bins \<Rightarrow> nat" where
 
 definition inp1' :: "s1 list" where
   "inp1' = [
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
+    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
   ]"
 
 lemma is_word_inp1':
@@ -95,7 +95,7 @@ value "\<II>_it cfg1 inp1'"
 value "size_bins (\<II>_it cfg1 inp1')"
 value "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1'"
 value "build_trees cfg1 inp1' (\<II>_it cfg1 inp1')"
-value "map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1'))"
+value "map_option length (build_trees cfg1 inp1' (\<II>_it cfg1 inp1'))"
 value "map_option (foldl (+) 0 \<circ> map length) (map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1')))"
 
 section \<open>Example 3: Cyclic reduction pointers\<close>

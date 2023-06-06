@@ -580,7 +580,7 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
     map (\<lambda>ts. Branch N ts) (combinations tss)
   )"
 
-value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4, FBranch 5 [[FLeaf 6, FLeaf 7]]]])"
+value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4]])"
 
 lemma combinations_singleton:
   "combinations ([xs]) = [ [x] . x <- xs ]"

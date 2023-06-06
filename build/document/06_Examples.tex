@@ -35,7 +35,7 @@
 \begin{isamarkuptext}%
 This chapter illustrates how the running example is implemented in Isabelle and highlights
 the corresponding correctness theorems for functions \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list}, \isa{build{\isacharunderscore}{\kern0pt}tree}, and
-\isa{build{\isacharunderscore}{\kern0pt}trees}. But first we make a small addition to easily compute if a grammar allows empty
+\isa{build{\isacharunderscore}{\kern0pt}forests}. But first we make a small addition to easily compute if a grammar allows empty
 derivations or \isa{{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ \ensuremath{\Rightarrow^{\ast}}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}} holds for any non-terminal $N$ of grammar \isa{{\isasymG}}. We call
 a grammar \isa{{\isasymepsilon}{\isacharunderscore}{\kern0pt}free} if there does not exists any production rule of the form $N \rightarrow \, \epsilon$.
 For a well-formed grammar, strictly speaking we only require the left-hand side of any production rule
@@ -161,7 +161,7 @@ by definition with addition of lemma \isa{nonempty{\isacharunderscore}{\kern0pt}
 %
 \begin{isamarkuptext}%
 This section concludes by illustrating the following main theorems for functions \isa{\mbox{{\isasymE}arley{\isacharunderscore}{\kern0pt}list}}, \isa{build{\isacharunderscore}{\kern0pt}tree}, and
-\isa{build{\isacharunderscore}{\kern0pt}trees} for the well-formed grammar \isa{{\isasymG}} and input \isa{{\isasymomega}} introduced above.%
+\isa{build{\isacharunderscore}{\kern0pt}forests} for the well-formed grammar \isa{{\isasymG}} and input \isa{{\isasymomega}} introduced above.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ correctness{\isacharunderscore}{\kern0pt}bins{\isacharcolon}{\kern0pt}\isanewline
@@ -223,7 +223,7 @@ This section concludes by illustrating the following main theorems for functions
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ wf{\isacharunderscore}{\kern0pt}trees{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ t\ {\isasymand}\ root{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymSS}\ {\isasymG}\ {\isasymand}\ yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
@@ -245,7 +245,7 @@ This section concludes by illustrating the following main theorems for functions
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
 \ soundness{\isacharunderscore}{\kern0pt}trees{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%

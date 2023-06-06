@@ -10,7 +10,7 @@ chapter \<open>The Running Example in Isabelle\<close>
 text\<open>
 This chapter illustrates how the running example is implemented in Isabelle and highlights
 the corresponding correctness theorems for functions @{term \<E>arley_list}, @{term build_tree}, and
-@{term build_trees}. But first we make a small addition to easily compute if a grammar allows empty
+@{term build_forests}. But first we make a small addition to easily compute if a grammar allows empty
 derivations or @{term "\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* []"} holds for any non-terminal $N$ of grammar @{term \<G>}. We call
 a grammar @{term "\<epsilon>_free"} if there does not exists any production rule of the form $N \rightarrow \, \epsilon$.
 For a well-formed grammar, strictly speaking we only require the left-hand side of any production rule
@@ -88,7 +88,7 @@ lemma is_sentence_\<omega>:
 
 text\<open>
 This section concludes by illustrating the following main theorems for functions @{term "mbox0 (\<E>arley_list)"}, @{term build_tree}, and
-@{term build_trees} for the well-formed grammar @{term \<G>} and input @{term \<omega>} introduced above.
+@{term build_forests} for the well-formed grammar @{term \<G>} and input @{term \<omega>} introduced above.
 \<close>
 
 lemma correctness_bins:
@@ -117,7 +117,7 @@ lemma correctness_tree:
 text\<open>\<close>
 
 lemma wf_trees:
-  assumes "build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
+  assumes "build_forests \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "wf_rule_tree \<G> t \<and> root_tree t = \<SS> \<G> \<and> yield_tree t = \<omega>"
@@ -128,7 +128,7 @@ lemma wf_trees:
 text\<open>\<close>
 
 lemma soundness_trees:
-  assumes "build_trees \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
+  assumes "build_forests \<G> \<omega> (\<E>arley_list \<G> \<omega>) = Some fs"
   assumes "f \<in> set fs"
   assumes "t \<in> set (trees f)"
   shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"

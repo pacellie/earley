@@ -68,7 +68,7 @@ trivial task.
     \end{minipage}
 \end{figure}
 
-Earley \cite{Earley:1970} turns his recognizer into a parser by adding the following
+Earley \cite{Earley:1970} extends his recognizer to a parser by adding the following
 pointers. If the algorithm performs a completion and constructs an item $B \rightarrow \, \alpha A \bullet \beta, i, k$,
 it adds a pointer from the \textit{instance of the non-terminal} $A$ to the complete item
 $A \rightarrow \, \gamma \bullet, j, k$. If there exists more than one possible way to complete the non-terminal
@@ -86,21 +86,13 @@ derivations of $xx$ and $xxxx$. The problem lies in the fact that left- and righ
 intertwined when they should not be, since pointers originate from instances of non-terminals and don't
 connect Earley items.
 
-The most well-known data structure for representing all possible derivations, a shared packed parse
-forest (SPPF), was introduced by Tomita \cite{Tomita:1985}. But Johnson \cite{Johnson:1991} has
-shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
-would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott \cite{Scott:2008}
-adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
-are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
-very much imperative in nature, and thus not only exceed the scope of this thesis but are also
-very difficult to map to a functional approach.
-
 In this chapter we develop an efficient functional algorithm constructing a single parse
 tree in Section \ref{sec:parse-tree} and prove its correctness. In Section \ref{sec:parse-forest}
 we generalize this approach, introducing a data structure representing all possible parse trees
-as a parse forest, adjusting the parse tree algorithm to compute such a forest and prove termination
-and soundness of the algorithm. Finally, in Section \ref{sec:word} we discuss the missing
-completeness proof and the performance of the algorithm and compare our approach to the algorithm of Scott in greater detail.%
+as a parse forest, adjusting the parse tree algorithm to compute such a forest, prove termination
+and soundness of the algorithm, and informally sketch a completeness proof. Finally, in Section \ref{sec:word}
+we discuss different data representations and implementation approaches for parse forests, comparing our approach
+to the algorithms of Scott \cite{Scott:2008}.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -508,7 +500,7 @@ proof for the Earley bins of Chapter \ref{chapter:3} if the argument \isa{bs} wa
 %
 \isatagdocument
 %
-\isamarkupsubsection{Termination%
+\isamarkupsubsection{Termination \label{q}%
 }
 \isamarkuptrue%
 %
@@ -533,7 +525,7 @@ the pointers \textit{strictly} back to the origin bin $B_0$ and thus must termin
 the reduction pointer we run into a problem: the recursive call for the item at index $i$ is in the same
 bin $k$ but for the reduction index $red$, which in turn might contain again reduction triples and so on.
 Hence, it is possible that we end up in a cycle of reductions and never terminate. Take for example the
-grammer $A ::= x \, | \, B \quad B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
+grammer $A ::= x \, | \, B, \, B ::= A$ and the input $\omega = x$. Table \ref{tab:cyclic-pointers}
 illustrates the bins computed by the algorithm of Chapter \ref{chapter:3}. Bin $B_1$ contains the entry
 $B \rightarrow \, A \bullet, 0, 1; (0, 2, 0),(0, 2, 2)$ at index $1$ and its second reduction triple
 $(0, 2, 2)$ a reduction pointer to index $2$ of the same bin. There we find the entry
@@ -877,22 +869,46 @@ lemma \isa{correctness{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunde
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\begin{isamarkuptext}%
-why not simply generate all parse trees integrated top down? yes for single parse tree, no for
-all since exponential blow up. One option for more sharing is: different reduction item same predecessor.
-We sketch a simple unoptimized algorithm:
+Computing a single parse tree is sufficient for unambiguous grammars. But an Earley parser - in its most general form -
+can handle all context-free grammars. And for ambiguous grammars there might exist multiple
+parse trees for a specific input, there might even be exponentially many. One example of a highly ambiguous
+grammar that produces exponentially many parse trees is our running example. To be precise, the number of
+parse trees for an input $\omega = x + \dots + x$ is the Catalan number $C_n$ where $n-1$ is the
+number of times the terminal $x$ occurs in \isa{{\isasymomega}}. It is well known that the $n$-th Catalan number can be expressed as
+$C_n = \frac{1}{n+1} \binom{2n}{n}$ and thus grows asympotically at least exponentially. For example, the number of parse trees for an input \isa{{\isasymomega}} containing
+$12$ times the terminal $x$ is already $C_{11} = 58786$. Thus, it is infeasible to compute all possible
+parse trees in a naive fashion.
 
-The idea was: generalize the functional algorithm which generates a single tree to all trees
-by introducing as much structural sharing as possible.%
+In the following we generalize the algorithm for a single parse tree to compute a representation of
+all parse trees, or a parse forest. The key idea is to find a data structure that allows as much structural
+sharing as possible between different parse trees. As an initial step, we make the following observation:
+for two reduction triples $\isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}\isactrlsub A{\isacharcomma}{\kern0pt}\ pre\isactrlsub A{\isacharcomma}{\kern0pt}\ red\isactrlsub A{\isacharparenright}{\kern0pt}}$ and $\isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}\isactrlsub B{\isacharcomma}{\kern0pt}\ pre\isactrlsub B{\isacharcomma}{\kern0pt}\ red\isactrlsub B{\isacharparenright}{\kern0pt}}$ of an Earley item
+we know that \isa{red\isactrlsub A\ {\isasymnoteq}\ red\isactrlsub B}, but it might be the case that \isa{k{\isacharprime}{\kern0pt}\isactrlsub A\ {\isacharequal}{\kern0pt}\ k{\isacharprime}{\kern0pt}\isactrlsub B} (which implies
+\isa{pre\isactrlsub A\ {\isacharequal}{\kern0pt}\ pre\isactrlsub B} due to the set semantics of the bins). In other words, for different reduction
+items, we might have the same predecessor item and thus can share the subtree representing the predecessor.
+
+We define a data type \isa{forest} capturing this idea and representing parse forest. Consider an arbitrary production rule
+$S \rightarrow \, AaB$ for non-terminals $S, A, B$ and terminal $a$. A branch of a single tree
+contains a list of length $3$ containing the three subtrees $t_A$, $t_a$, and $t_B$ corresponding to
+the three symbols $A$, $a$, and $B$. For a parse forest we still have a list of length $3$, but each element is now
+again a list of forests sharing subtrees derived from the same non-terminal. For example, a branch
+might look like \isa{{\isacharbrackleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}f\isactrlsub A\isactrlsub {\isadigit{1}}{\isacharcomma}{\kern0pt}\ f\isactrlsub A\isactrlsub {\isadigit{2}}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}f\isactrlsub a{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}f\isactrlsub B{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}} if there are two possible parse forests derived from
+the non-terminal $A$. Note that if the subforest is a forest leaf than the list contains just this
+single leaf, or there never occurs a situation like \isa{{\isacharbrackleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}f\isactrlsub A{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}f\isactrlsub a\isactrlsub {\isadigit{1}}{\isacharcomma}{\kern0pt}\ f\isactrlsub a\isactrlsub {\isadigit{2}}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}f\isactrlsub B{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}}.%
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{datatype}\isamarkupfalse%
 \ {\isacharprime}{\kern0pt}a\ forest\ {\isacharequal}{\kern0pt}\isanewline
 \ \ FLeaf\ {\isacharprime}{\kern0pt}a\isanewline
-{\isacharbar}{\kern0pt}\ FBranch\ {\isacharprime}{\kern0pt}a\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ forest\ list\ list{\isachardoublequoteclose}\isanewline
-\isanewline
+{\isacharbar}{\kern0pt}\ FBranch\ {\isacharprime}{\kern0pt}a\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ forest\ list\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+We define an abstraction function \isa{trees} recovering all possible parse trees for a parse forest.
+For a forest leaf this is trivial, for a forest branch \isa{FBranch\ N\ fss} we first apply the function
+\isa{trees} recursively for all subforests \isa{fss}, concatenating the results for each subforest. E.g. for
+\isa{{\isacharbrackleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}f\isactrlsub A\isactrlsub {\isadigit{1}}{\isacharcomma}{\kern0pt}\ f\isactrlsub A\isactrlsub {\isadigit{2}}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}f\isactrlsub a{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}f\isactrlsub B{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}} we might obtain \isa{{\isacharbrackleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}t\isactrlsub A\isactrlsub {\isadigit{1}}\isactrlsub {\isadigit{1}}{\isacharcomma}{\kern0pt}\ t\isactrlsub A\isactrlsub {\isadigit{1}}\isactrlsub {\isadigit{2}}{\isacharcomma}{\kern0pt}\ t\isactrlsub A\isactrlsub {\isadigit{2}}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}t\isactrlsub a{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}t\isactrlsub B{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}} if the
+forest \isa{f\isactrlsub A\isactrlsub {\isadigit{1}}} yields two parse trees \isa{t\isactrlsub A\isactrlsub {\isadigit{1}}\isactrlsub {\isadigit{1}}} and \isa{t\isactrlsub A\isactrlsub {\isadigit{1}}\isactrlsub {\isadigit{2}}} and every other forest yields only
+a single tree. The three possible subtrees for the non-terminal $N$ are then: \isa{{\isacharbrackleft}{\kern0pt}t\isactrlsub A\isactrlsub {\isadigit{1}}\isactrlsub {\isadigit{1}}{\isacharcomma}{\kern0pt}\ t\isactrlsub a{\isacharcomma}{\kern0pt}\ t\isactrlsub B{\isacharbrackright}{\kern0pt}}, \isa{{\isacharbrackleft}{\kern0pt}t\isactrlsub A\isactrlsub {\isadigit{1}}\isactrlsub {\isadigit{2}}{\isacharcomma}{\kern0pt}\ t\isactrlsub a{\isacharcomma}{\kern0pt}\ t\isactrlsub B{\isacharbrackright}{\kern0pt}},
+and \isa{{\isacharbrackleft}{\kern0pt}t\isactrlsub A\isactrlsub {\isadigit{2}}{\isacharcomma}{\kern0pt}\ t\isactrlsub a{\isacharcomma}{\kern0pt}\ t\isactrlsub B{\isacharbrackright}{\kern0pt}}.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{fun}\isamarkupfalse%
 \ combinations\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ list\ list\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ list\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}combinations\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
@@ -921,6 +937,12 @@ by introducing as much structural sharing as possible.%
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+We define two auxiliary functions \isa{group{\isacharunderscore}{\kern0pt}by} and \isa{insert{\isacharunderscore}{\kern0pt}group} grouping a list of values \isa{xs} according to a key-mapping $K$
+and a value-mapping $V$ by key. E.g. for the list of tuples \isa{xs\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isadigit{1}}{\isacharcomma}{\kern0pt}\ a{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isadigit{2}}{\isacharcomma}{\kern0pt}\ b{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isadigit{1}}{\isacharcomma}{\kern0pt}\ c{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}} and
+mappings \isa{K\ {\isacharequal}{\kern0pt}\ fst} and \isa{V\ {\isacharequal}{\kern0pt}\ snd} we obtain the association list \isa{{\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isadigit{1}}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}a{\isacharcomma}{\kern0pt}\ c{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isadigit{2}}{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}b{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}}.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{fun}\isamarkupfalse%
 \ insert{\isacharunderscore}{\kern0pt}group\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}k{\isacharparenright}{\kern0pt}\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}v{\isacharparenright}{\kern0pt}\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}k\ {\isasymtimes}\ {\isacharprime}{\kern0pt}v\ list{\isacharparenright}{\kern0pt}\ list\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}k\ {\isasymtimes}\ {\isacharprime}{\kern0pt}v\ list{\isacharparenright}{\kern0pt}\ list{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}insert{\isacharunderscore}{\kern0pt}group\ K\ V\ a\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}K\ a{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}V\ a{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
@@ -944,18 +966,55 @@ by introducing as much structural sharing as possible.%
 {\isafoldproof}%
 %
 \isadelimproof
-\isanewline
 %
 \endisadelimproof
+%
+\begin{isamarkuptext}%
+Next we define the function \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}}. It takes as arguments the bins \isa{bs}, the indices of the bin and
+item, $k$ respectively $i$, and a set of natural numbers $I$, and returns an optional list of parse forests.
+There are two things to note here: the return type and the argument $I$. One might expect that we can return
+a single parse forest and not a list of forests. This is not the case. Although we are sharing subforests for two distinct reduction triples
+\isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}\isactrlsub A{\isacharcomma}{\kern0pt}\ pre\isactrlsub A{\isacharcomma}{\kern0pt}\ red\isactrlsub A{\isacharparenright}{\kern0pt}} and \isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}\isactrlsub B{\isacharcomma}{\kern0pt}\ pre\isactrlsub B{\isacharcomma}{\kern0pt}\ red\isactrlsub B{\isacharparenright}{\kern0pt}} if \isa{{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}\isactrlsub A{\isacharcomma}{\kern0pt}\ pre\isactrlsub A{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}\isactrlsub B{\isacharcomma}{\kern0pt}\ pre\isactrlsub B{\isacharparenright}{\kern0pt}}, we
+can not share the subforests if the predecessor items are distinct, and hence need to return two distinct forests in this case. Furthermore, the algorithm returns an
+optional value since the function might not terminate if the pointers are not sound as it was the case
+for function \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}}. But unfortunately, this time around the situation is even worse:
+even for sound pointers the function \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}} might not terminate.
+As explained in Subsection \ref{q}, the bins computed by the algorithm \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list} contain
+cyclic reduction pointers for cyclic grammars and thus naively following all reduction pointers might lead
+to non-termination. To ensure the termination of the algorithm we keep track of the items the algorithm
+already visited in a single bin by means of the additional argument $I$ representing the indices
+of the previous function calls in the same bin. The algorithm proceeds as follows:
+
+Let $e$ denote the $i$-th item in the $k$-th bin.. If the pointer of $e$ is
+a null pointer the forest algorithm proceeds analogously to the tree algorithm, constructing an initially
+empty forest branch. For the simple predecessor case it calls itself recursively for the previous bin
+$k-1$, predecessor index \isa{pre}, and initializes the set of visited indices for bin $B_{k-1}$ with
+the index \isa{pre}, obtaining a list of optional predecessor forests. It then appends
+to the list of subforests of each of these predecessor forests a new forest leaf containing the terminal symbol at
+index $k-1$ of the input. Note the monadic do-notation for the option monad, and the use
+of the function \isa{those} that converts a list of optional values into an optional list of values
+if and only if each of each one of the optional values is present or not none. In the case that the algorithm
+encounters a predecessor/reduction pointer it first makes sure to not enter a cycle of reductions
+by discarding any reduction indices that are contained in $I$ and thus were already processed in earlier
+recursive calls. It then groups the reduction triples by predecessor. Subsequently, for each tuple of predecessor
+($k'$ and \isa{pre}) and reduction (\isa{reds}) indices it proceeds as follows. It first calls itself once recursively
+for the predecessor, initializing the set $I$ as \isa{{\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}}, and obtaining a list of predecessor
+forests. Then it executes one recursive call for each reduction index \isa{red\ {\isasymin}\ set\ reds}
+in the current bin $k$ making sure to mark the index \isa{red} as already visited by adding it to $I$.
+Finally, it appends to the list of subforests of each predecessor forests the list of reduction forests
+computed in the previous step.
+
+The function \isa{build{\isacharunderscore}{\kern0pt}forests} is then defined analogously to the function \isa{build{\isacharunderscore}{\kern0pt}tree}.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{partial{\isacharunderscore}{\kern0pt}function}\isamarkupfalse%
-\ {\isacharparenleft}{\kern0pt}option{\isacharparenright}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ nat\ set\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ forest\ list\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
+\ {\isacharparenleft}{\kern0pt}option{\isacharparenright}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ nat\ set\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ forest\ list\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
 \ \ \ \ let\ e\ {\isacharequal}{\kern0pt}\ bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i\ in\ {\isacharparenleft}{\kern0pt}\isanewline
 \ \ \ \ case\ pointer\ e\ of\isanewline
 \ \ \ \ \ \ Null\ {\isasymRightarrow}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}FBranch\ {\isacharparenleft}{\kern0pt}item{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}head\ {\isacharparenleft}{\kern0pt}item\ e{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
 \ \ \ \ {\isacharbar}{\kern0pt}\ Pre\ pre\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ do\ {\isacharbraceleft}{\kern0pt}\isanewline
-\ \ \ \ \ \ \ \ \ \ pres\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ pre\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ pres\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ pre\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}f{\isachardot}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ case\ f\ of\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ FBranch\ N\ fss\ {\isasymRightarrow}\ Some\ {\isacharparenleft}{\kern0pt}FBranch\ N\ {\isacharparenleft}{\kern0pt}fss\ {\isacharat}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}FLeaf\ {\isacharparenleft}{\kern0pt}{\isasymomega}{\isacharbang}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
@@ -967,8 +1026,8 @@ by introducing as much structural sharing as possible.%
 \ \ \ \ \ \ \ \ let\ gs\ {\isacharequal}{\kern0pt}\ group{\isacharunderscore}{\kern0pt}by\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharcomma}{\kern0pt}\ red{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ red{\isacharparenright}{\kern0pt}\ ps{\isacharprime}{\kern0pt}\ in\isanewline
 \ \ \ \ \ \ \ \ map{\isacharunderscore}{\kern0pt}option\ concat\ {\isacharparenleft}{\kern0pt}those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}k{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}\ pre{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ reds{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ do\ {\isacharbraceleft}{\kern0pt}\isanewline
-\ \ \ \ \ \ \ \ \ \ \ \ pres\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k{\isacharprime}{\kern0pt}\ pre\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
-\ \ \ \ \ \ \ \ \ \ \ \ rss\ {\isasymleftarrow}\ those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}red{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ red\ {\isacharparenleft}{\kern0pt}I\ {\isasymunion}\ {\isacharbraceleft}{\kern0pt}red{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ reds{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ pres\ {\isasymleftarrow}\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k{\isacharprime}{\kern0pt}\ pre\ {\isacharbraceleft}{\kern0pt}pre{\isacharbraceright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ rss\ {\isasymleftarrow}\ those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}red{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ red\ {\isacharparenleft}{\kern0pt}I\ {\isasymunion}\ {\isacharbraceleft}{\kern0pt}red{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ reds{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}f{\isachardot}{\kern0pt}\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ case\ f\ of\isanewline
 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FBranch\ N\ fss\ {\isasymRightarrow}\ Some\ {\isacharparenleft}{\kern0pt}FBranch\ N\ {\isacharparenleft}{\kern0pt}fss\ {\isacharat}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}concat\ rss{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
@@ -980,11 +1039,11 @@ by introducing as much structural sharing as possible.%
 \ \ {\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \isanewline
 \isacommand{definition}\isamarkupfalse%
-\ build{\isacharunderscore}{\kern0pt}trees\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ forest\ list\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ bs\ {\isasymequiv}\isanewline
+\ build{\isacharunderscore}{\kern0pt}forests\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ cfg\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ bins\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ forest\ list\ option{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests\ {\isasymG}\ {\isasymomega}\ bs\ {\isasymequiv}\isanewline
 \ \ \ \ let\ k\ {\isacharequal}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isacharminus}{\kern0pt}\ {\isadigit{1}}\ in\isanewline
 \ \ \ \ let\ finished\ {\isacharequal}{\kern0pt}\ filter{\isacharunderscore}{\kern0pt}with{\isacharunderscore}{\kern0pt}index\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ is{\isacharunderscore}{\kern0pt}finished\ {\isasymG}\ {\isasymomega}\ x{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}items\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ in\isanewline
-\ \ \ \ map{\isacharunderscore}{\kern0pt}option\ concat\ {\isacharparenleft}{\kern0pt}those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ {\isacharbraceleft}{\kern0pt}i{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ finished{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ \ \ \ map{\isacharunderscore}{\kern0pt}option\ concat\ {\isacharparenleft}{\kern0pt}those\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}{\isacharparenleft}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}\ i{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ {\isacharbraceleft}{\kern0pt}i{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ finished{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimdocument
 %
 \endisadelimdocument
@@ -1001,19 +1060,36 @@ by introducing as much structural sharing as possible.%
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+Analogously to the single tree algorithm we need to define well-formed input and a suitable
+measure for the forest algorithm to prove an applicable induction schema (\textit{forest induction}) by
+complete induction on the measure. An input quintuplet \isa{{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}} is well-formed if
+the pointers are sound, the indices $k$ and $i$ are within their respective bounds, and the set of already
+visited indices $I$ contains the current index $i$ and only consists of valid indices for the current bin $k$.
+As termination measure we count the number of items in the first $k$ bins minus the indices the algorithm
+already visited in the $k$-th bin.
+
+We informally sketch the termination proof. If the algorithm encounters a null pointer it terminates immediately.
+For predecessor pointers it calls itself recursively in a bin with a strictly smaller index, and for chains of reduction
+pointers it visits each index of the current bin at most once.
+
+We then prove by \textit{forest induction} that the function \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}} always terminates
+with some list of forests containing only forests branches for well-formed input.%
+\end{isamarkuptext}\isamarkuptrue%
+\isacommand{definition}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}input\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ set{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I{\isachardot}{\kern0pt}\isanewline
+\ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymand}\ k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isasymand}\ i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\ i\ {\isasymin}\ I\ {\isasymand}\ I\ {\isasymsubseteq}\ {\isacharbraceleft}{\kern0pt}{\isadigit{0}}{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}{\isacharless}{\kern0pt}{\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
 \isacommand{fun}\isamarkupfalse%
 \ build{\isacharunderscore}{\kern0pt}forest{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}measure\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ set{\isacharparenright}{\kern0pt}\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
 \ \ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forest{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}measure\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ foldl\ {\isacharparenleft}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}map\ length\ {\isacharparenleft}{\kern0pt}take\ {\isacharparenleft}{\kern0pt}k{\isacharplus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ bs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharminus}{\kern0pt}\ card\ I{\isachardoublequoteclose}\isanewline
 \isanewline
-\isacommand{definition}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ bins\ {\isasymtimes}\ {\isacharprime}{\kern0pt}a\ sentential\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ {\isasymtimes}\ nat\ set{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeyword{where}\isanewline
-\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I{\isachardot}{\kern0pt}\isanewline
-\ \ \ \ \ \ sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs\ {\isasymand}\ k\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isasymand}\ i\ {\isacharless}{\kern0pt}\ {\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}\ {\isasymand}\ I\ {\isasymsubseteq}\ {\isacharbraceleft}{\kern0pt}{\isadigit{0}}{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}{\isacharless}{\kern0pt}{\isacharbar}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbar}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isasymand}\ i\ {\isasymin}\ I\ {\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\isanewline
 \isacommand{lemma}\isamarkupfalse%
-\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}termination{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymexists}fs{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs\ {\isasymand}\ {\isacharparenleft}{\kern0pt}{\isasymforall}f\ {\isasymin}\ set\ fs{\isachardot}{\kern0pt}\ {\isasymexists}N\ fss{\isachardot}{\kern0pt}\ f\ {\isacharequal}{\kern0pt}\ FBranch\ N\ fss{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}{\isacharunderscore}{\kern0pt}termination{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymexists}fs{\isachardot}{\kern0pt}\ build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs\ {\isasymand}\ {\isacharparenleft}{\kern0pt}{\isasymforall}f\ {\isasymin}\ set\ fs{\isachardot}{\kern0pt}\ {\isasymexists}N\ fss{\isachardot}{\kern0pt}\ f\ {\isacharequal}{\kern0pt}\ FBranch\ N\ fss{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
 \isadelimproof
 %
 \endisadelimproof
@@ -1028,7 +1104,26 @@ by introducing as much structural sharing as possible.%
 \endisadelimproof
 %
 \begin{isamarkuptext}%
-%
+At this point, one might wonder if the argument $I$ is really needed. The problem regarding non-termination
+are the cyclic reduction pointers. In theory we could modify the algorithm of Chapter \ref{chap:04} to not
+add any cyclic pointers at all to the bins, prove an according lemma, and require non-cyclic pointers
+for the well-formedness of the input of the forest algorithm. Subsequently, we could remove the - no longer
+needed - argument $I$ from the function \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}} and adjust the implementation accordingly.
+
+But a problem of technical nature occurs while trying to prove the \textit{forest induction} schema.
+We need to define a suitable measure capturing the termination argument in terms of the input, or a function
+of the form $('a \mathit{bins} \times 'a \mathit{sentential} \times \mathit{nat} \times \mathit{nat}) \Rightarrow \, \mathit{nat}$.
+But we cannot express the termination argument just in terms of the current input, we need access to
+the history of recursive calls to argue that - for non-cyclic pointers - the algorithm calls itself
+at most once for each index in the current bin $k$ during chains of reductions. Hence, we need to reintroduce
+the argument $I$ of already visited indices or an equivalent argument. Note that this still simplifies
+the function \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}} slightly due to the fact that we no longer need to filter the list
+of reduction pointers, but comes at the cost of computing cycles of reduction pointers in the algorithm
+of Chapter \ref{chap:04}. Additionally, the bins only contain cyclic pointers if the grammar itself is
+cyclic and hence not adding any cyclic pointers in the first place is incorrect.
+
+In summary, the - already visited indices - argument $I$ serves two purposes: checking for pointer cycles while
+constructing parse forests and expressing the termination argument of the algorithm.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -1047,11 +1142,22 @@ by introducing as much structural sharing as possible.%
 \isadelimdocument
 %
 \endisadelimdocument
+%
+\begin{isamarkuptext}%
+The following four lemmas prove soundness of the functions \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}} and \isa{build{\isacharunderscore}{\kern0pt}forests}.
+The proof are analogous to the corresponding proofs for the functions \isa{build{\isacharunderscore}{\kern0pt}tree{\isacharprime}{\kern0pt}} and \isa{build{\isacharunderscore}{\kern0pt}tree},
+replacing \textit{tree induction} with \textit{forest induction}. We might add that although the forest algorithm
+is only a slight generalization of the tree algorithm and hence one might suspect that the proof should generalize
+easily, this is unfortunately not the case. The proofs are rather unpleasant and cumbersome due to the complexity
+that occurs from the interplay of the option monad (and actually list monad), functions \isa{those}, \isa{map{\isacharunderscore}{\kern0pt}option},
+\isa{concat}, and the quite involved definition of the abstraction function \isa{trees}. We refrain from
+presenting any proofs in detail.%
+\end{isamarkuptext}\isamarkuptrue%
 \isacommand{lemma}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}bs{\isacharcomma}{\kern0pt}\ {\isasymomega}{\isacharcomma}{\kern0pt}\ k{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ I{\isacharparenright}{\kern0pt}\ {\isasymin}\ wf{\isacharunderscore}{\kern0pt}forest{\isacharunderscore}{\kern0pt}input{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ {\isasymG}\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}\ bs\ {\isasymomega}\ k\ i\ I\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}item{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ t\ {\isasymand}\ wf{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}tree\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}item\ {\isacharparenleft}{\kern0pt}bs{\isacharbang}{\kern0pt}k{\isacharbang}{\kern0pt}i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ t{\isachardoublequoteclose}%
@@ -1072,11 +1178,11 @@ by introducing as much structural sharing as possible.%
 %
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{theorem}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}root{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees{\isacharcolon}{\kern0pt}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}root{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}forests{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}bins\ {\isasymG}\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}sound{\isacharunderscore}{\kern0pt}ptrs\ {\isasymomega}\ bs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}{\isacharbar}{\kern0pt}bs{\isacharbar}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isasymomega}{\isacharbar}{\kern0pt}\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ bs\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests\ {\isasymG}\ {\isasymomega}\ bs\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ t\ {\isasymand}\ root{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymSS}\ {\isasymG}\ {\isasymand}\ yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
@@ -1097,10 +1203,10 @@ by introducing as much structural sharing as possible.%
 %
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{corollary}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}root{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list{\isacharcolon}{\kern0pt}\isanewline
+\ wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}root{\isacharunderscore}{\kern0pt}yield{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}forests{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}rule{\isacharunderscore}{\kern0pt}tree\ {\isasymG}\ t\ {\isasymand}\ root{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymSS}\ {\isasymG}\ {\isasymand}\ yield{\isacharunderscore}{\kern0pt}tree\ t\ {\isacharequal}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
@@ -1121,11 +1227,11 @@ by introducing as much structural sharing as possible.%
 %
 \end{isamarkuptext}\isamarkuptrue%
 \isacommand{theorem}\isamarkupfalse%
-\ soundness{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}trees{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list{\isacharcolon}{\kern0pt}\isanewline
+\ soundness{\isacharunderscore}{\kern0pt}build{\isacharunderscore}{\kern0pt}forests{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}{\isasymG}\ {\isasymG}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}sentence\ {\isasymG}\ {\isasymomega}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}nonempty{\isacharunderscore}{\kern0pt}derives\ {\isasymG}{\isachardoublequoteclose}\isanewline
-\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}trees\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
+\ \ \isakeyword{assumes}\ {\isachardoublequoteopen}build{\isacharunderscore}{\kern0pt}forests\ {\isasymG}\ {\isasymomega}\ {\isacharparenleft}{\kern0pt}{\isasymE}arley{\isacharunderscore}{\kern0pt}list\ {\isasymG}\ {\isasymomega}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}f\ {\isasymin}\ set\ fs{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{assumes}\ {\isachardoublequoteopen}t\ {\isasymin}\ set\ {\isacharparenleft}{\kern0pt}trees\ f{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \ \ \isakeyword{shows}\ {\isachardoublequoteopen}{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isasymSS}\ {\isasymG}{\isacharbrackright}{\kern0pt}\ {\isasymRightarrow}\isactrlsup {\isacharasterisk}{\kern0pt}\ {\isasymomega}{\isachardoublequoteclose}%
@@ -1152,7 +1258,7 @@ by introducing as much structural sharing as possible.%
 %
 \isatagdocument
 %
-\isamarkupsection{A Word on Completeness and Performance \label{sec:word}%
+\isamarkupsubsection{Completeness%
 }
 \isamarkuptrue%
 %
@@ -1164,21 +1270,62 @@ by introducing as much structural sharing as possible.%
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO%
+At this point we would like to prove that the forest algorithm indeed computes all possible parse trees.
+But before we can attempt such a proof we first need to define what we mean by completeness. Recall the
+cyclic grammer $A ::= x \, | \, B, \, B ::= A$. There exist an infinite amount of parse tree for the
+input $\omega = x$. Although there certainly exist parse forests data structures that enable an representation
+of an infinite amount of parse trees, our data type \isa{forest} is not expressive enough. Note that,
+since we assume a finite grammar, there necessarily has to exist a cycle in the grammar if there exist
+an infinite amount of parse trees. The algorithm \isa{build{\isacharunderscore}{\kern0pt}forests{\isacharprime}{\kern0pt}} does not complete any cycles and
+thus returns only those parse trees up to the depth of the cycle in the grammar, or the parse trees
+$A \, \text{--} \, x$ and $A \, \text{--} \, B \, \text{--} \, A \, \text{--} \, x$. In conclusion,
+we can only prove the completeness of the algorithm for non-cyclic grammars.
+
+As mentioned previously, we did not formally prove completeness for the parse forest algorithm. The
+reasoning is twofold. The completeness proof is far from trivial and exceeded the scope of this thesis.
+The algorithm is only of theoretical interest and far from practical due to its poor performance.
+The simple sharing of subforests for identical predecessor items is one optimization over the naive approach, but unfortunately
+not enough to make the algorithm practical, as some experimentation suggests. We would need to introduce
+further performance improvements. One obvious improvement is to use more structural sharing of subtrees.
+At the moment the algorithm always appends new lists of subforests. We can avoid copying the current list
+of subtrees if we preprend instead of append, and finally reverse the subtrees for complete items. 
+Another concern is the number of recursive calls. As implemented, the algorithm might call itself recursively more than
+once for the same Earley item or identical bins and item indices. This occurs for example if we have
+two different predecessor items but the same reduction item. We could avoid repeated recursive calls using
+common memoization techniques. We experimented with both performance improvements. The result was a
+highly complex algorithm with still subpar performance. 
+
+We can conclude: the straightforward generalization from the single parse tree algorithm to a parse
+forest algorithm is probably correct (at least sound), but some experimentation suggest that due to its
+poor performance the approach is not very practical.%
 \end{isamarkuptext}\isamarkuptrue%
 %
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsection{A Word on Parse Forests \label{sec:word}%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
 \begin{isamarkuptext}%
-How to proof completeness sketch.
-
-Our approach is slow, exponentially slow.
-(1) simple improvement for more structural sharing: cons instead of append for complete items reverse
-(2) need memoization: even though only one recursive call for different reduction items and same
-  predecessor what about different items and same reduction item. But memoization is extremly awkward
-  due to the cyclic calls, need to set a dummy.
-(3) still not enough sharing see snippet: nodes which have the same tree below them are shared with
-  simple improvement and memoization, but packed nodes are not shared.
-
-Overall approach is not very promising, completeness proof very involved, we stop here.%
+The most well-known data structure for representing all possible derivations, a shared packed parse
+forest (SPPF), was introduced by Tomita \cite{Tomita:1985}. But Johnson \cite{Johnson:1991} has
+shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
+would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott \cite{Scott:2008}
+adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
+are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
+very much imperative in nature, and thus not only exceed the scope of this thesis but are also
+very difficult to map to a functional approach.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \begin{isamarkuptext}%
@@ -1273,34 +1420,34 @@ complicating the final algorithm.%
 %:%93=69%:%
 %:%94=70%:%
 %:%95=71%:%
-%:%96=72%:%
-%:%97=73%:%
-%:%98=74%:%
-%:%99=75%:%
-%:%100=76%:%
-%:%101=77%:%
-%:%102=78%:%
-%:%103=79%:%
-%:%112=82%:%
+%:%104=74%:%
+%:%116=77%:%
+%:%117=78%:%
+%:%118=79%:%
+%:%119=80%:%
+%:%120=81%:%
+%:%122=84%:%
+%:%123=84%:%
 %:%124=85%:%
 %:%125=86%:%
 %:%126=87%:%
 %:%127=88%:%
-%:%128=89%:%
-%:%130=92%:%
-%:%131=92%:%
-%:%132=93%:%
-%:%133=94%:%
-%:%134=95%:%
-%:%135=96%:%
-%:%136=96%:%
+%:%128=88%:%
+%:%129=89%:%
+%:%130=90%:%
+%:%131=91%:%
+%:%132=92%:%
+%:%133=92%:%
+%:%134=93%:%
+%:%135=94%:%
 %:%137=97%:%
 %:%138=98%:%
 %:%139=99%:%
 %:%140=100%:%
-%:%141=100%:%
-%:%142=101%:%
-%:%143=102%:%
+%:%141=101%:%
+%:%142=102%:%
+%:%143=103%:%
+%:%144=104%:%
 %:%145=105%:%
 %:%146=106%:%
 %:%147=107%:%
@@ -1308,30 +1455,30 @@ complicating the final algorithm.%
 %:%149=109%:%
 %:%150=110%:%
 %:%151=111%:%
-%:%152=112%:%
-%:%153=113%:%
+%:%153=114%:%
 %:%154=114%:%
 %:%155=115%:%
 %:%156=116%:%
-%:%157=117%:%
 %:%158=118%:%
 %:%159=119%:%
-%:%161=122%:%
-%:%162=122%:%
-%:%163=123%:%
-%:%164=124%:%
-%:%166=126%:%
-%:%167=127%:%
-%:%168=128%:%
-%:%169=128%:%
-%:%170=129%:%
-%:%171=130%:%
-%:%174=133%:%
-%:%175=134%:%
-%:%176=135%:%
-%:%177=135%:%
-%:%178=136%:%
-%:%185=139%:%
+%:%160=120%:%
+%:%161=120%:%
+%:%162=121%:%
+%:%163=122%:%
+%:%166=125%:%
+%:%167=126%:%
+%:%168=127%:%
+%:%169=127%:%
+%:%170=128%:%
+%:%177=131%:%
+%:%189=134%:%
+%:%190=135%:%
+%:%191=136%:%
+%:%192=137%:%
+%:%193=138%:%
+%:%194=139%:%
+%:%195=140%:%
+%:%196=141%:%
 %:%197=142%:%
 %:%198=143%:%
 %:%199=144%:%
@@ -1349,100 +1496,100 @@ complicating the final algorithm.%
 %:%211=156%:%
 %:%212=157%:%
 %:%213=158%:%
-%:%214=159%:%
-%:%215=160%:%
+%:%215=161%:%
 %:%216=161%:%
 %:%217=162%:%
 %:%218=163%:%
 %:%219=164%:%
-%:%220=165%:%
-%:%221=166%:%
-%:%223=169%:%
-%:%224=169%:%
-%:%225=170%:%
-%:%226=171%:%
-%:%227=172%:%
-%:%228=172%:%
-%:%229=173%:%
-%:%230=174%:%
-%:%231=175%:%
-%:%232=175%:%
-%:%233=176%:%
-%:%234=177%:%
-%:%235=178%:%
-%:%236=178%:%
-%:%237=179%:%
-%:%239=181%:%
-%:%240=182%:%
-%:%241=183%:%
-%:%242=183%:%
-%:%243=184%:%
-%:%244=185%:%
-%:%245=186%:%
-%:%246=187%:%
-%:%247=187%:%
-%:%248=188%:%
+%:%220=164%:%
+%:%221=165%:%
+%:%222=166%:%
+%:%223=167%:%
+%:%224=167%:%
+%:%225=168%:%
+%:%226=169%:%
+%:%227=170%:%
+%:%228=170%:%
+%:%229=171%:%
+%:%231=173%:%
+%:%232=174%:%
+%:%233=175%:%
+%:%234=175%:%
+%:%235=176%:%
+%:%236=177%:%
+%:%237=178%:%
+%:%238=179%:%
+%:%239=179%:%
+%:%240=180%:%
+%:%242=182%:%
+%:%243=183%:%
+%:%244=184%:%
+%:%245=184%:%
+%:%246=185%:%
+%:%249=189%:%
 %:%250=190%:%
 %:%251=191%:%
 %:%252=192%:%
-%:%253=192%:%
-%:%254=193%:%
+%:%253=193%:%
+%:%254=194%:%
+%:%255=195%:%
+%:%256=196%:%
 %:%257=197%:%
 %:%258=198%:%
-%:%259=199%:%
-%:%260=200%:%
+%:%260=201%:%
 %:%261=201%:%
 %:%262=202%:%
 %:%263=203%:%
 %:%264=204%:%
 %:%265=205%:%
 %:%266=206%:%
-%:%268=209%:%
-%:%269=209%:%
-%:%270=210%:%
-%:%271=211%:%
-%:%272=212%:%
-%:%273=213%:%
-%:%274=214%:%
-%:%275=215%:%
-%:%276=216%:%
-%:%293=223%:%
-%:%294=223%:%
-%:%295=224%:%
-%:%296=225%:%
-%:%297=226%:%
-%:%298=227%:%
-%:%299=228%:%
-%:%300=229%:%
-%:%317=236%:%
-%:%318=236%:%
-%:%319=237%:%
-%:%320=238%:%
-%:%321=239%:%
-%:%322=240%:%
-%:%323=241%:%
-%:%340=248%:%
-%:%341=248%:%
-%:%342=249%:%
-%:%343=250%:%
-%:%344=251%:%
-%:%345=252%:%
-%:%346=253%:%
-%:%363=260%:%
-%:%364=260%:%
-%:%365=261%:%
-%:%382=268%:%
-%:%383=268%:%
-%:%384=269%:%
-%:%385=270%:%
-%:%386=271%:%
-%:%387=272%:%
-%:%404=279%:%
-%:%405=279%:%
-%:%406=280%:%
-%:%407=281%:%
-%:%408=282%:%
-%:%428=288%:%
+%:%267=207%:%
+%:%268=208%:%
+%:%285=215%:%
+%:%286=215%:%
+%:%287=216%:%
+%:%288=217%:%
+%:%289=218%:%
+%:%290=219%:%
+%:%291=220%:%
+%:%292=221%:%
+%:%309=228%:%
+%:%310=228%:%
+%:%311=229%:%
+%:%312=230%:%
+%:%313=231%:%
+%:%314=232%:%
+%:%315=233%:%
+%:%332=240%:%
+%:%333=240%:%
+%:%334=241%:%
+%:%335=242%:%
+%:%336=243%:%
+%:%337=244%:%
+%:%338=245%:%
+%:%355=252%:%
+%:%356=252%:%
+%:%357=253%:%
+%:%374=260%:%
+%:%375=260%:%
+%:%376=261%:%
+%:%377=262%:%
+%:%378=263%:%
+%:%379=264%:%
+%:%396=271%:%
+%:%397=271%:%
+%:%398=272%:%
+%:%399=273%:%
+%:%400=274%:%
+%:%420=280%:%
+%:%432=283%:%
+%:%433=284%:%
+%:%434=285%:%
+%:%435=286%:%
+%:%436=287%:%
+%:%437=288%:%
+%:%438=289%:%
+%:%439=290%:%
 %:%440=291%:%
 %:%441=292%:%
 %:%442=293%:%
@@ -1461,28 +1608,28 @@ complicating the final algorithm.%
 %:%455=306%:%
 %:%456=307%:%
 %:%457=308%:%
-%:%458=309%:%
-%:%459=310%:%
+%:%459=311%:%
 %:%460=311%:%
 %:%461=312%:%
-%:%462=313%:%
-%:%463=314%:%
-%:%464=315%:%
-%:%465=316%:%
-%:%467=319%:%
-%:%468=319%:%
-%:%469=320%:%
-%:%490=342%:%
+%:%482=334%:%
+%:%483=335%:%
+%:%484=336%:%
+%:%485=337%:%
+%:%486=338%:%
+%:%487=339%:%
+%:%488=340%:%
+%:%490=343%:%
 %:%491=343%:%
 %:%492=344%:%
-%:%493=345%:%
-%:%494=346%:%
-%:%495=347%:%
-%:%496=348%:%
-%:%498=351%:%
-%:%499=351%:%
-%:%500=352%:%
-%:%511=359%:%
+%:%503=351%:%
+%:%515=354%:%
+%:%516=355%:%
+%:%517=356%:%
+%:%518=357%:%
+%:%519=358%:%
+%:%520=359%:%
+%:%521=360%:%
+%:%522=361%:%
 %:%523=362%:%
 %:%524=363%:%
 %:%525=364%:%
@@ -1523,50 +1670,50 @@ complicating the final algorithm.%
 %:%560=399%:%
 %:%561=400%:%
 %:%562=401%:%
-%:%563=402%:%
-%:%564=403%:%
+%:%564=404%:%
 %:%565=404%:%
 %:%566=405%:%
-%:%567=406%:%
-%:%568=407%:%
-%:%569=408%:%
-%:%570=409%:%
+%:%569=409%:%
+%:%570=410%:%
+%:%571=411%:%
 %:%572=412%:%
-%:%573=412%:%
-%:%574=413%:%
-%:%577=417%:%
+%:%573=413%:%
+%:%574=414%:%
+%:%575=415%:%
+%:%577=418%:%
 %:%578=418%:%
 %:%579=419%:%
 %:%580=420%:%
 %:%581=421%:%
-%:%582=422%:%
-%:%583=423%:%
-%:%585=426%:%
+%:%582=421%:%
+%:%583=422%:%
 %:%586=426%:%
 %:%587=427%:%
-%:%588=428%:%
-%:%589=429%:%
-%:%590=429%:%
-%:%591=430%:%
-%:%594=434%:%
-%:%595=435%:%
-%:%597=438%:%
-%:%598=438%:%
-%:%599=439%:%
-%:%600=440%:%
-%:%620=445%:%
+%:%589=430%:%
+%:%590=430%:%
+%:%591=431%:%
+%:%592=432%:%
+%:%612=437%:%
+%:%624=440%:%
+%:%625=441%:%
+%:%626=442%:%
+%:%627=443%:%
+%:%628=444%:%
+%:%629=445%:%
+%:%631=448%:%
 %:%632=448%:%
 %:%633=449%:%
 %:%634=450%:%
 %:%635=451%:%
 %:%636=452%:%
-%:%637=453%:%
-%:%639=456%:%
-%:%640=456%:%
-%:%641=457%:%
-%:%642=458%:%
-%:%643=459%:%
-%:%644=460%:%
+%:%651=458%:%
+%:%652=459%:%
+%:%653=460%:%
+%:%654=461%:%
+%:%655=462%:%
+%:%656=463%:%
+%:%657=464%:%
+%:%658=465%:%
 %:%659=466%:%
 %:%660=467%:%
 %:%661=468%:%
@@ -1658,27 +1805,27 @@ complicating the final algorithm.%
 %:%747=554%:%
 %:%748=555%:%
 %:%749=556%:%
-%:%750=557%:%
-%:%751=558%:%
-%:%752=559%:%
 %:%753=560%:%
 %:%754=561%:%
 %:%755=562%:%
 %:%756=563%:%
 %:%757=564%:%
+%:%759=567%:%
+%:%760=567%:%
 %:%761=568%:%
 %:%762=569%:%
 %:%763=570%:%
 %:%764=571%:%
 %:%765=572%:%
-%:%767=575%:%
-%:%768=575%:%
-%:%769=576%:%
-%:%770=577%:%
-%:%771=578%:%
-%:%772=579%:%
-%:%773=580%:%
-%:%774=581%:%
+%:%766=573%:%
+%:%781=579%:%
+%:%782=580%:%
+%:%783=581%:%
+%:%784=582%:%
+%:%785=583%:%
+%:%786=584%:%
+%:%787=585%:%
+%:%788=586%:%
 %:%789=587%:%
 %:%790=588%:%
 %:%791=589%:%
@@ -1687,152 +1834,273 @@ complicating the final algorithm.%
 %:%794=592%:%
 %:%795=593%:%
 %:%796=594%:%
-%:%797=595%:%
-%:%798=596%:%
+%:%798=597%:%
 %:%799=597%:%
 %:%800=598%:%
 %:%801=599%:%
 %:%802=600%:%
 %:%803=601%:%
-%:%804=602%:%
-%:%806=605%:%
-%:%807=605%:%
-%:%808=606%:%
-%:%809=607%:%
-%:%810=608%:%
-%:%811=609%:%
+%:%818=607%:%
+%:%819=608%:%
+%:%820=609%:%
+%:%821=610%:%
+%:%823=613%:%
+%:%824=613%:%
+%:%825=614%:%
 %:%826=615%:%
 %:%827=616%:%
 %:%828=617%:%
-%:%829=618%:%
-%:%831=621%:%
-%:%832=621%:%
-%:%833=622%:%
-%:%834=623%:%
-%:%835=624%:%
-%:%836=625%:%
+%:%843=623%:%
+%:%844=624%:%
+%:%845=625%:%
+%:%846=626%:%
+%:%847=627%:%
+%:%848=628%:%
+%:%849=629%:%
+%:%850=630%:%
 %:%851=631%:%
-%:%852=632%:%
-%:%853=633%:%
-%:%854=634%:%
-%:%855=635%:%
-%:%856=636%:%
-%:%857=637%:%
-%:%858=638%:%
-%:%859=639%:%
-%:%868=642%:%
+%:%860=634%:%
+%:%872=637%:%
+%:%873=638%:%
+%:%874=639%:%
+%:%875=640%:%
+%:%876=641%:%
+%:%877=642%:%
+%:%878=643%:%
+%:%879=644%:%
 %:%880=645%:%
+%:%881=646%:%
+%:%882=647%:%
+%:%883=648%:%
 %:%884=649%:%
 %:%885=650%:%
 %:%886=651%:%
 %:%887=652%:%
 %:%888=653%:%
 %:%889=654%:%
-%:%891=657%:%
+%:%890=655%:%
+%:%891=656%:%
 %:%892=657%:%
 %:%893=658%:%
 %:%894=659%:%
 %:%895=660%:%
 %:%896=661%:%
-%:%897=661%:%
-%:%898=662%:%
-%:%899=663%:%
-%:%900=664%:%
-%:%901=665%:%
-%:%902=665%:%
-%:%903=666%:%
-%:%904=667%:%
-%:%914=673%:%
-%:%924=675%:%
-%:%925=675%:%
-%:%926=676%:%
-%:%927=677%:%
-%:%930=680%:%
-%:%931=681%:%
-%:%932=682%:%
-%:%933=682%:%
-%:%934=683%:%
-%:%935=684%:%
-%:%947=696%:%
-%:%950=697%:%
-%:%951=697%:%
-%:%952=698%:%
-%:%980=726%:%
-%:%981=727%:%
-%:%982=728%:%
-%:%983=728%:%
-%:%984=729%:%
-%:%994=735%:%
-%:%1004=737%:%
-%:%1005=737%:%
-%:%1006=738%:%
-%:%1007=739%:%
-%:%1008=740%:%
-%:%1009=740%:%
-%:%1010=741%:%
-%:%1011=742%:%
-%:%1012=743%:%
-%:%1013=744%:%
-%:%1014=744%:%
-%:%1015=745%:%
-%:%1016=746%:%
-%:%1040=753%:%
-%:%1050=755%:%
-%:%1051=755%:%
-%:%1052=756%:%
-%:%1053=757%:%
-%:%1054=758%:%
-%:%1055=759%:%
-%:%1056=760%:%
-%:%1057=761%:%
-%:%1074=768%:%
-%:%1075=768%:%
-%:%1076=769%:%
-%:%1077=770%:%
-%:%1078=771%:%
-%:%1079=772%:%
-%:%1080=773%:%
-%:%1081=774%:%
-%:%1082=775%:%
-%:%1099=782%:%
-%:%1100=782%:%
-%:%1101=783%:%
-%:%1102=784%:%
-%:%1103=785%:%
-%:%1104=786%:%
-%:%1105=787%:%
-%:%1106=788%:%
-%:%1123=795%:%
-%:%1124=795%:%
-%:%1125=796%:%
-%:%1126=797%:%
-%:%1127=798%:%
-%:%1128=799%:%
-%:%1129=800%:%
-%:%1130=801%:%
-%:%1131=802%:%
-%:%1155=809%:%
-%:%1167=812%:%
-%:%1171=816%:%
-%:%1172=817%:%
-%:%1173=818%:%
-%:%1174=819%:%
-%:%1175=820%:%
-%:%1176=821%:%
-%:%1177=822%:%
-%:%1178=823%:%
-%:%1179=824%:%
-%:%1180=825%:%
-%:%1181=826%:%
-%:%1185=830%:%
-%:%1186=831%:%
-%:%1187=832%:%
-%:%1188=833%:%
-%:%1189=834%:%
-%:%1190=835%:%
-%:%1191=836%:%
-%:%1192=837%:%
-%:%1193=838%:%
-%:%1194=839%:%
-%:%1195=840%:%
-%:%1196=841%:%
+%:%897=662%:%
+%:%899=665%:%
+%:%900=665%:%
+%:%901=666%:%
+%:%902=667%:%
+%:%904=670%:%
+%:%905=671%:%
+%:%906=672%:%
+%:%907=673%:%
+%:%908=674%:%
+%:%909=675%:%
+%:%910=676%:%
+%:%912=679%:%
+%:%913=679%:%
+%:%914=680%:%
+%:%915=681%:%
+%:%916=682%:%
+%:%917=683%:%
+%:%918=683%:%
+%:%919=684%:%
+%:%920=685%:%
+%:%930=691%:%
+%:%942=694%:%
+%:%943=695%:%
+%:%944=696%:%
+%:%946=699%:%
+%:%947=699%:%
+%:%948=700%:%
+%:%949=701%:%
+%:%952=704%:%
+%:%953=705%:%
+%:%954=706%:%
+%:%955=706%:%
+%:%956=707%:%
+%:%957=708%:%
+%:%973=722%:%
+%:%974=723%:%
+%:%975=724%:%
+%:%976=725%:%
+%:%977=726%:%
+%:%978=727%:%
+%:%979=728%:%
+%:%980=729%:%
+%:%981=730%:%
+%:%982=731%:%
+%:%983=732%:%
+%:%984=733%:%
+%:%985=734%:%
+%:%986=735%:%
+%:%987=736%:%
+%:%988=737%:%
+%:%989=738%:%
+%:%990=739%:%
+%:%991=740%:%
+%:%992=741%:%
+%:%993=742%:%
+%:%994=743%:%
+%:%995=744%:%
+%:%996=745%:%
+%:%997=746%:%
+%:%998=747%:%
+%:%999=748%:%
+%:%1000=749%:%
+%:%1001=750%:%
+%:%1002=751%:%
+%:%1003=752%:%
+%:%1004=753%:%
+%:%1005=754%:%
+%:%1006=755%:%
+%:%1007=756%:%
+%:%1009=759%:%
+%:%1010=759%:%
+%:%1011=760%:%
+%:%1039=788%:%
+%:%1040=789%:%
+%:%1041=790%:%
+%:%1042=790%:%
+%:%1043=791%:%
+%:%1053=796%:%
+%:%1065=799%:%
+%:%1066=800%:%
+%:%1067=801%:%
+%:%1068=802%:%
+%:%1069=803%:%
+%:%1070=804%:%
+%:%1071=805%:%
+%:%1072=806%:%
+%:%1073=807%:%
+%:%1074=808%:%
+%:%1075=809%:%
+%:%1076=810%:%
+%:%1077=811%:%
+%:%1078=812%:%
+%:%1080=815%:%
+%:%1081=815%:%
+%:%1082=816%:%
+%:%1083=817%:%
+%:%1084=818%:%
+%:%1085=819%:%
+%:%1086=819%:%
+%:%1087=820%:%
+%:%1088=821%:%
+%:%1089=822%:%
+%:%1090=822%:%
+%:%1091=823%:%
+%:%1092=824%:%
+%:%1107=830%:%
+%:%1108=831%:%
+%:%1109=832%:%
+%:%1110=833%:%
+%:%1111=834%:%
+%:%1112=835%:%
+%:%1113=836%:%
+%:%1114=837%:%
+%:%1115=838%:%
+%:%1116=839%:%
+%:%1117=840%:%
+%:%1118=841%:%
+%:%1119=842%:%
+%:%1120=843%:%
+%:%1121=844%:%
+%:%1122=845%:%
+%:%1123=846%:%
+%:%1124=847%:%
+%:%1125=848%:%
+%:%1126=849%:%
+%:%1135=852%:%
+%:%1147=855%:%
+%:%1148=856%:%
+%:%1149=857%:%
+%:%1150=858%:%
+%:%1151=859%:%
+%:%1152=860%:%
+%:%1153=861%:%
+%:%1154=862%:%
+%:%1156=865%:%
+%:%1157=865%:%
+%:%1158=866%:%
+%:%1159=867%:%
+%:%1160=868%:%
+%:%1161=869%:%
+%:%1162=870%:%
+%:%1163=871%:%
+%:%1180=878%:%
+%:%1181=878%:%
+%:%1182=879%:%
+%:%1183=880%:%
+%:%1184=881%:%
+%:%1185=882%:%
+%:%1186=883%:%
+%:%1187=884%:%
+%:%1188=885%:%
+%:%1205=892%:%
+%:%1206=892%:%
+%:%1207=893%:%
+%:%1208=894%:%
+%:%1209=895%:%
+%:%1210=896%:%
+%:%1211=897%:%
+%:%1212=898%:%
+%:%1229=905%:%
+%:%1230=905%:%
+%:%1231=906%:%
+%:%1232=907%:%
+%:%1233=908%:%
+%:%1234=909%:%
+%:%1235=910%:%
+%:%1236=911%:%
+%:%1237=912%:%
+%:%1261=919%:%
+%:%1273=922%:%
+%:%1274=923%:%
+%:%1275=924%:%
+%:%1276=925%:%
+%:%1277=926%:%
+%:%1278=927%:%
+%:%1279=928%:%
+%:%1280=929%:%
+%:%1281=930%:%
+%:%1282=931%:%
+%:%1283=932%:%
+%:%1284=933%:%
+%:%1285=934%:%
+%:%1286=935%:%
+%:%1287=936%:%
+%:%1288=937%:%
+%:%1289=938%:%
+%:%1290=939%:%
+%:%1291=940%:%
+%:%1292=941%:%
+%:%1293=942%:%
+%:%1294=943%:%
+%:%1295=944%:%
+%:%1296=945%:%
+%:%1297=946%:%
+%:%1298=947%:%
+%:%1299=948%:%
+%:%1300=949%:%
+%:%1309=952%:%
+%:%1321=956%:%
+%:%1322=957%:%
+%:%1323=958%:%
+%:%1324=959%:%
+%:%1325=960%:%
+%:%1326=961%:%
+%:%1327=962%:%
+%:%1328=963%:%
+%:%1332=967%:%
+%:%1333=968%:%
+%:%1334=969%:%
+%:%1335=970%:%
+%:%1336=971%:%
+%:%1337=972%:%
+%:%1338=973%:%
+%:%1339=974%:%
+%:%1340=975%:%
+%:%1341=976%:%
+%:%1342=977%:%
+%:%1343=978%:%
