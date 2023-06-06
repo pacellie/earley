@@ -223,7 +223,7 @@ fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Right
 definition \<E>arley_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
   "\<E>arley_list \<G> \<omega> = Earley_list |\<omega>| \<G> \<omega>"
 
-section \<open>A Word on Performance\<close>
+section \<open>A Word on Performance \label{word:performance}\<close>
 
 text\<open>
 Earley \cite{Earley:1970} implements his recognizer algorithm in the imperative programming paradigm and provides an informal

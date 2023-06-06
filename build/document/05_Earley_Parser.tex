@@ -33,7 +33,7 @@
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-Although a recognizer is a useful tool, for most practical applications we would like to - not only -
+Although a recognizer is a useful tool, for most practical applications we would like to, not only,
 know if the language specified by the grammar accepts the input, but we also want to obtain additional information
 of how the input can be derived in the form of parse trees. In particular, for our running example, the
 grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$, we want to obtain the two possible parse
@@ -417,7 +417,7 @@ but are very technical, we only state them and omit going into detail.%
 %
 \isatagdocument
 %
-\isamarkupsubsection{The Parse Tree Algorithm%
+\isamarkupsubsection{A Parse Tree Algorithm%
 }
 \isamarkuptrue%
 %
@@ -857,7 +857,7 @@ lemma \isa{correctness{\isacharunderscore}{\kern0pt}{\isasymE}arley{\isacharunde
 %
 \isatagdocument
 %
-\isamarkupsection{A Parse Forest \label{sec:parse-forest}%
+\isamarkupsection{All Parse Trees \label{sec:parse-forest}%
 }
 \isamarkuptrue%
 %
@@ -927,7 +927,7 @@ and \isa{{\isacharbrackleft}{\kern0pt}t\isactrlsub A\isactrlsub {\isadigit{2}}{\
 %
 \isatagdocument
 %
-\isamarkupsubsection{The Parse Forest Algorithm%
+\isamarkupsubsection{A Parse Forest Algorithm%
 }
 \isamarkuptrue%
 %
@@ -1281,7 +1281,7 @@ thus returns only those parse trees up to the depth of the cycle in the grammar,
 $A \, \text{--} \, x$ and $A \, \text{--} \, B \, \text{--} \, A \, \text{--} \, x$. In conclusion,
 we can only prove the completeness of the algorithm for non-cyclic grammars.
 
-As mentioned previously, we did not formally prove completeness for the parse forest algorithm. The
+But, as mentioned previously, we decided against formally proving completeness for the parse forest algorithm. The
 reasoning is twofold. The completeness proof is far from trivial and exceeded the scope of this thesis.
 The algorithm is only of theoretical interest and far from practical due to its poor performance.
 The simple sharing of subforests for identical predecessor items is one optimization over the naive approach, but unfortunately
@@ -1318,29 +1318,32 @@ poor performance the approach is not very practical.%
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-The most well-known data structure for representing all possible derivations, a shared packed parse
-forest (SPPF), was introduced by Tomita \cite{Tomita:1985}. But Johnson \cite{Johnson:1991} has
-shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
-would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott \cite{Scott:2008}
-adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
-are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
-very much imperative in nature, and thus not only exceed the scope of this thesis but are also
-very difficult to map to a functional approach.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\begin{isamarkuptext}%
-A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
-trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
-to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
-family of children. Nodes can be packed only if their yields correspond to the same portion of the input string. Thus, to make it easier
-to determine whether two alternates can be packed under a given node, SPPF nodes are labelled with a triple (x,i,j) where
-$a_{j+1} \dots a_i$ is a substring matched by x. To obtain a cubic algorithm we use binarised SPPFs which contain intermediate additional
-nodes but which are of worst case cubic size. (EXAMPlE SPPF running example???)
+We have two main decisions to make while choosing an appropriate data structure and algorithm for implementing
+an Earley parser. (1) should the construction of a parse forest be intertwined with the generation of the
+Earley items or not, in other words, do we want a single or two phase algorithm. (2) and most importantly,
+we need to choose an appropriate data structure to represent a parse forest.
 
-We can turn earley's algorithm into a correct parser by adding pointers between items rather than instances of non-terminals, and labelling th epointers
-in a way which allows a binariesd SPPF to be constructed by walking the resulting structure. However, inorder to
-construct a binarised SPPF we also have to introduce additional nodes for grammar rules of length greater than two,
-complicating the final algorithm.%
+One of the main lessons of Section \ref{sec:parse-forest} is that we should prefer a single phase over a two
+phase algorithm. Any two phase algorithm must store some sort of data structure to indicate the origin
+of each Earley item during the first phase. In the second phase it then walks this data structure while
+constructing a parse forest and encounters the same complications regarding termination as the algorithm
+of the previous section. In contrast, a single phase algorithm that constructs a parse forest while
+generating the bins, can reuse the termination argument of the algorithm of Chapter \ref{chapter:3}: the
+number of Earley items is finite.
+
+The most well-known data structure for representing all possible derivations, a shared packed parse
+forest (SPPF), was introduced by Tomita \cite{Tomita:1985}. The nodes of a SPPF are labelled by
+triples \isa{{\isacharparenleft}{\kern0pt}N{\isacharcomma}{\kern0pt}\ i{\isacharcomma}{\kern0pt}\ j{\isacharparenright}{\kern0pt}} where \isa{{\isasymomega}{\isacharbrackleft}{\kern0pt}i{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}j{\isasymrangle}} is the subsequence matched by the non-terminal $N$.
+A SPPF utilizes two types of sharing. Nodes that have the same tree below them are shared. Additionally,
+the SPPF might contain so-called packed nodes representing a family of children. Each child stands for
+a different derivation of the same subsequence \isa{{\isasymomega}{\isacharbrackleft}{\kern0pt}i{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}j{\isasymrangle}} from the same terminal but following an
+alternate production rule. Scott \cite{Scott:2008} adjust the SPPF data structure of Tomita slightly
+and presents two algorithms - one single and one two phase - based on Earley's recognizer that are of
+worst case cubic space and time. Both approaches can be implemented on top of our implementation of
+the Earley recognizer of Chapter \ref{chapter:3}, although we strongly advise for the single phase algorithm
+due to the argument stated above. We did not attempt to formalize the algorithm of Scott since the
+implementation is rather complex, we already glossed over some important details of the SPPF data structure
+that are necessary to achieve the optimal cubic running time, and hence out of scope for this thesis.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimtheory
@@ -2084,23 +2087,29 @@ complicating the final algorithm.%
 %:%1299=948%:%
 %:%1300=949%:%
 %:%1309=952%:%
-%:%1321=956%:%
-%:%1322=957%:%
-%:%1323=958%:%
-%:%1324=959%:%
-%:%1325=960%:%
-%:%1326=961%:%
-%:%1327=962%:%
-%:%1328=963%:%
-%:%1332=967%:%
-%:%1333=968%:%
-%:%1334=969%:%
-%:%1335=970%:%
-%:%1336=971%:%
-%:%1337=972%:%
-%:%1338=973%:%
-%:%1339=974%:%
-%:%1340=975%:%
-%:%1341=976%:%
-%:%1342=977%:%
-%:%1343=978%:%
+%:%1321=955%:%
+%:%1322=956%:%
+%:%1323=957%:%
+%:%1324=958%:%
+%:%1325=959%:%
+%:%1326=960%:%
+%:%1327=961%:%
+%:%1328=962%:%
+%:%1329=963%:%
+%:%1330=964%:%
+%:%1331=965%:%
+%:%1332=966%:%
+%:%1333=967%:%
+%:%1334=968%:%
+%:%1335=969%:%
+%:%1336=970%:%
+%:%1337=971%:%
+%:%1338=972%:%
+%:%1339=973%:%
+%:%1340=974%:%
+%:%1341=975%:%
+%:%1342=976%:%
+%:%1343=977%:%
+%:%1344=978%:%
+%:%1345=979%:%
+%:%1346=980%:%

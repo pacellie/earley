@@ -9,7 +9,7 @@ begin
 chapter\<open>Earley Parser Implementation \label{chap:05}\<close>
 
 text\<open>
-Although a recognizer is a useful tool, for most practical applications we would like to - not only -
+Although a recognizer is a useful tool, for most practical applications we would like to, not only,
 know if the language specified by the grammar accepts the input, but we also want to obtain additional information
 of how the input can be derived in the form of parse trees. In particular, for our running example, the
 grammar $S ::= S + S \, | \, x$ and the input $\omega = x + x + x$, we want to obtain the two possible parse
@@ -277,7 +277,7 @@ lemma sound_ptrs_\<E>arley_list:
 (*>*)
 
 
-subsection \<open>The Parse Tree Algorithm\<close>
+subsection \<open>A Parse Tree Algorithm\<close>
 
 text\<open>
 After execution of the @{term \<E>arley_list} algorithm we obtain bins representing the complete set
@@ -631,7 +631,7 @@ lemma @{thm[source] correctness_\<E>arley_list} using our assumptions.
 \end{proof}
 \<close>
 
-section \<open>A Parse Forest \label{sec:parse-forest}\<close>
+section \<open>All Parse Trees \label{sec:parse-forest}\<close>
 
 text\<open>
 Computing a single parse tree is sufficient for unambiguous grammars. But an Earley parser - in its most general form -
@@ -688,7 +688,7 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
   )"
 
 
-subsection \<open>The Parse Forest Algorithm\<close>
+subsection \<open>A Parse Forest Algorithm\<close>
 
 text\<open>
 We define two auxiliary functions @{term group_by} and @{term insert_group} grouping a list of values @{term xs} according to a key-mapping $K$
@@ -952,30 +952,32 @@ poor performance the approach is not very practical.
 section \<open>A Word on Parse Forests \label{sec:word}\<close>
 
 text\<open>
+We have two main decisions to make while choosing an appropriate data structure and algorithm for implementing
+an Earley parser. (1) should the construction of a parse forest be intertwined with the generation of the
+Earley items or not, in other words, do we want a single or two phase algorithm. (2) and most importantly,
+we need to choose an appropriate data structure to represent a parse forest.
+
+One of the main lessons of Section \ref{sec:parse-forest} is that we should prefer a single phase over a two
+phase algorithm. Any two phase algorithm must store some sort of data structure to indicate the origin
+of each Earley item during the first phase. In the second phase it then walks this data structure while
+constructing a parse forest and encounters the same complications regarding termination as the algorithm
+of the previous section. In contrast, a single phase algorithm that constructs a parse forest while
+generating the bins, can reuse the termination argument of the algorithm of Chapter \ref{chapter:3}: the
+number of Earley items is finite.
 
 The most well-known data structure for representing all possible derivations, a shared packed parse
-forest (SPPF), was introduced by Tomita @{cite "Tomita:1985"}. But Johnson @{cite "Johnson:1991"} has
-shown that Tomita's representation of SPPFs are of worst case unbounded polynomial size and thus
-would turn our $\mathcal{O}(n^4)$ recognizer into an unbounded polynomial parser. Scott @{cite "Scott:2008"}
-adjust the SPPF data structure slightly and presents two algorithms based on Earley's recognizer that
-are of worst case cubic space and time. Unfortunately, these algorithms are highly non-trivial and
-very much imperative in nature, and thus not only exceed the scope of this thesis but are also
-very difficult to map to a functional approach.
-\<close>
-
-text\<open>
-A shared packed parse forest SPPF is a representation designed to reduce the space required to represent multiple derivation
-trees for an ambiguous sentence. In an SPPF, nodes which have the same tree below them are shared and nodes which correspond
-to different derivations of the same substring from the same non-terminal are combined by creating a packed node for each
-family of children. Nodes can be packed only if their yields correspond to the same portion of the input string. Thus, to make it easier
-to determine whether two alternates can be packed under a given node, SPPF nodes are labelled with a triple (x,i,j) where
-$a_{j+1} \dots a_i$ is a substring matched by x. To obtain a cubic algorithm we use binarised SPPFs which contain intermediate additional
-nodes but which are of worst case cubic size. (EXAMPlE SPPF running example???)
-
-We can turn earley's algorithm into a correct parser by adding pointers between items rather than instances of non-terminals, and labelling th epointers
-in a way which allows a binariesd SPPF to be constructed by walking the resulting structure. However, inorder to
-construct a binarised SPPF we also have to introduce additional nodes for grammar rules of length greater than two,
-complicating the final algorithm.
+forest (SPPF), was introduced by Tomita @{cite "Tomita:1985"}. The nodes of a SPPF are labelled by
+triples @{term "(N, i, j)"} where @{term "\<omega>[i..j\<rangle>"} is the subsequence matched by the non-terminal $N$.
+A SPPF utilizes two types of sharing. Nodes that have the same tree below them are shared. Additionally,
+the SPPF might contain so-called packed nodes representing a family of children. Each child stands for
+a different derivation of the same subsequence @{term "\<omega>[i..j\<rangle>"} from the same terminal but following an
+alternate production rule. Scott @{cite "Scott:2008"} adjust the SPPF data structure of Tomita slightly
+and presents two algorithms - one single and one two phase - based on Earley's recognizer that are of
+worst case cubic space and time. Both approaches can be implemented on top of our implementation of
+the Earley recognizer of Chapter \ref{chapter:3}, although we strongly advise for the single phase algorithm
+due to the argument stated above. We did not attempt to formalize the algorithm of Scott since the
+implementation is rather complex, we already glossed over some important details of the SPPF data structure
+that are necessary to achieve the optimal cubic running time, and hence out of scope for this thesis.
 \<close>
 
 (*<*)
