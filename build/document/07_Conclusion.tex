@@ -37,7 +37,21 @@
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO%
+Chapter 2: introduce Earley recognizer informally with a running example and formulate the final theorem, and three correspoinding lemmas
+Chapter 3: formalize Earley recognizer by defining grammar, derivations, Earley items, the basic operations and the generation of a bin
+  as the fixpoint, and finally functions Earley and Earley. We then proved well-formedness, soundness and completeness highlighting
+  the common proof structure, how to work with and prove things about derivations, and digging into the core argument of the completeness
+  proof. Finally we prove that the set of Earley items is finite.
+Chapter 4: refine the approach of chapter 3 into a functional executable algorithm modelling the imperative implementation of Earley and
+  additionally adding the necessary information to construct parse trees in the form of pointers. We prove termination of the algorithm
+  as well as soundness and completeness by proving subsumption in both directions. For the completeness is non-tivial since the algorithm
+  is incorrect for grammars containing nonempty derivations. We discuss possible solutions and in the end follow Jones and restrict the
+  applicable grammars. We also give an informal arguemnt for the runnign time of the algorithm O(n4) as well as discuss performance improvements as well as
+  sketch alternative implementations.
+Chapter 5:
+Chapter 6:
+
+Overall: which papers did we formalize?%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -58,8 +72,11 @@ TODO%
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO: collect implementation improvements, highlight worthwhile alternative implementation ideas,
-  proof improvements, and further algorithms such as SPPFs%
+Chapter 3: define the set of Earley items inductively instead of the operational approach which might lead to more elegant proofs
+Chapter 4: since algorithm is modelled after imperative Earley, a second refinement step towards an imperative implementation
+  also performance improvements: lookhead, set for faster bin append, set for faster predict, set for faster complete
+Chapter 5:
+Chapter 6:%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \begin{isamarkuptext}%
@@ -108,26 +125,26 @@ from a set of parse trees the intended trees.%
 %:%24=8%:%
 %:%28=10%:%
 %:%40=13%:%
-%:%49=16%:%
-%:%61=19%:%
-%:%62=20%:%
-%:%66=24%:%
-%:%67=25%:%
-%:%68=26%:%
-%:%69=27%:%
-%:%70=28%:%
-%:%71=29%:%
-%:%72=30%:%
-%:%73=31%:%
-%:%74=32%:%
+%:%41=14%:%
+%:%42=15%:%
+%:%43=16%:%
+%:%44=17%:%
+%:%45=18%:%
+%:%46=19%:%
+%:%47=20%:%
+%:%48=21%:%
+%:%49=22%:%
+%:%50=23%:%
+%:%51=24%:%
+%:%52=25%:%
+%:%53=26%:%
+%:%54=27%:%
+%:%63=30%:%
 %:%75=33%:%
 %:%76=34%:%
 %:%77=35%:%
 %:%78=36%:%
 %:%79=37%:%
-%:%80=38%:%
-%:%81=39%:%
-%:%82=40%:%
 %:%83=41%:%
 %:%84=42%:%
 %:%85=43%:%
@@ -135,3 +152,20 @@ from a set of parse trees the intended trees.%
 %:%87=45%:%
 %:%88=46%:%
 %:%89=47%:%
+%:%90=48%:%
+%:%91=49%:%
+%:%92=50%:%
+%:%93=51%:%
+%:%94=52%:%
+%:%95=53%:%
+%:%96=54%:%
+%:%97=55%:%
+%:%98=56%:%
+%:%99=57%:%
+%:%100=58%:%
+%:%101=59%:%
+%:%102=60%:%
+%:%103=61%:%
+%:%104=62%:%
+%:%105=63%:%
+%:%106=64%:%
