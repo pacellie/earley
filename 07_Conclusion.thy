@@ -21,10 +21,15 @@ Chapter 4: refine the approach of chapter 3 into a functional executable algorit
   is incorrect for grammars containing nonempty derivations. We discuss possible solutions and in the end follow Jones and restrict the
   applicable grammars. We also give an informal arguemnt for the runnign time of the algorithm O(n4) as well as discuss performance improvements as well as
   sketch alternative implementations.
-Chapter 5:
-Chapter 6:
+Chapter 5: define and prove the semantics of the pointers of Chapter 4, implement a parse tree algorithm,
+  prove termination, soundness and correctness. Then try to generalize this into a parse forest and a corresponding
+  algorithm, prove termination and soundness, but also discover some complications (termination and performance),
+  ultimately abandon approach and point out a more promising approach.
+Chapter 6: highlight the Isabelle version of the running example as well as the main theorems
 
-Overall: which papers did we formalize?
+Overall we formalized Earley original paper (modulo lookahead and some performance improvements) correcting
+the pointers to represent pointers such as described in Scott. The main approach of stepwise refinement
+of the algorithm and most of the proofs are inspired by the paper of Jones.
 \<close>
 
 section\<open>Future Work\<close>
@@ -33,8 +38,8 @@ text\<open>
 Chapter 3: define the set of Earley items inductively instead of the operational approach which might lead to more elegant proofs
 Chapter 4: since algorithm is modelled after imperative Earley, a second refinement step towards an imperative implementation
   also performance improvements: lookhead, set for faster bin append, set for faster predict, set for faster complete
-Chapter 5:
-Chapter 6:
+Chapter 5: formalize the SPPF algorithm of Scott in particular the built-in version which would replace
+  the classic pointers of earley by a direct construction of a parse forest.
 \<close>
 
 text\<open>

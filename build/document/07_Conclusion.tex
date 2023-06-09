@@ -48,7 +48,10 @@ Chapter 4: refine the approach of chapter 3 into a functional executable algorit
   is incorrect for grammars containing nonempty derivations. We discuss possible solutions and in the end follow Jones and restrict the
   applicable grammars. We also give an informal arguemnt for the runnign time of the algorithm O(n4) as well as discuss performance improvements as well as
   sketch alternative implementations.
-Chapter 5:
+Chapter 5: define and prove the semantics of the pointers of Chapter 4, implement a parse tree algorithm,
+  prove termination, soundness and correctness. Then try to generalize this into a parse forest and a corresponding
+  algorithm, prove termination and soundness, but also discover some complications (termination and performance),
+  ultimately abandon approach and point out a more promising approach.
 Chapter 6:
 
 Overall: which papers did we formalize?%
@@ -75,8 +78,8 @@ Overall: which papers did we formalize?%
 Chapter 3: define the set of Earley items inductively instead of the operational approach which might lead to more elegant proofs
 Chapter 4: since algorithm is modelled after imperative Earley, a second refinement step towards an imperative implementation
   also performance improvements: lookhead, set for faster bin append, set for faster predict, set for faster complete
-Chapter 5:
-Chapter 6:%
+Chapter 5: formalize the SPPF algorithm of Scott in particular the built-in version which would replace
+  the classic pointers of earley by a direct construction of a parse forest.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \begin{isamarkuptext}%
@@ -139,15 +142,15 @@ from a set of parse trees the intended trees.%
 %:%52=25%:%
 %:%53=26%:%
 %:%54=27%:%
-%:%63=30%:%
-%:%75=33%:%
-%:%76=34%:%
-%:%77=35%:%
+%:%55=28%:%
+%:%56=29%:%
+%:%57=30%:%
+%:%66=33%:%
 %:%78=36%:%
 %:%79=37%:%
-%:%83=41%:%
-%:%84=42%:%
-%:%85=43%:%
+%:%80=38%:%
+%:%81=39%:%
+%:%82=40%:%
 %:%86=44%:%
 %:%87=45%:%
 %:%88=46%:%
@@ -169,3 +172,6 @@ from a set of parse trees the intended trees.%
 %:%104=62%:%
 %:%105=63%:%
 %:%106=64%:%
+%:%107=65%:%
+%:%108=66%:%
+%:%109=67%:%

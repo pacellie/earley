@@ -11,7 +11,7 @@ text\<open>
 This chapter illustrates how the running example is implemented in Isabelle and highlights
 the corresponding correctness theorems for functions @{term \<E>arley_list}, @{term build_tree}, and
 @{term build_forests}. But first we make a small addition to easily compute if a grammar allows empty
-derivations or @{term "\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* []"} holds for any non-terminal $N$ of grammar @{term \<G>}. We call
+derivations, or if @{term "\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* []"} holds for any non-terminal $N$ of grammar @{term \<G>}. We call
 a grammar @{term "\<epsilon>_free"} if there does not exists any production rule of the form $N \rightarrow \, \epsilon$.
 For a well-formed grammar, strictly speaking we only require the left-hand side of any production rule
 to be a non-terminal, we then prove a lemma stating that a grammar does only allow non-empty derivations
@@ -30,7 +30,7 @@ lemma nonempty_derives_iff_\<epsilon>_free:
 
 text\<open>
 Next we define the grammar $S ::= S + S \, | \, x$ in Isabelle. We introduce data types @{term T}, @{term N}, and @{term symbol}
-respectively representing terminal symbols $\{x, +\}$, the non-terminal $S$, and the type for symbols.
+respectively representing terminal symbols $\{x, +\}$, the non-terminal $S$, and the type of symbols.
 Subsequently, we define the grammar as its four constituents: a list of non-terminal symbols, a list of terminal symbols,
 the production rules, and the start symbol. Finally, we specify the input $\omega = x + x + x$.
 \<close>

@@ -36,7 +36,7 @@
 This chapter illustrates how the running example is implemented in Isabelle and highlights
 the corresponding correctness theorems for functions \isa{{\isasymE}arley{\isacharunderscore}{\kern0pt}list}, \isa{build{\isacharunderscore}{\kern0pt}tree}, and
 \isa{build{\isacharunderscore}{\kern0pt}forests}. But first we make a small addition to easily compute if a grammar allows empty
-derivations or \isa{{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ \ensuremath{\Rightarrow^{\ast}}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}} holds for any non-terminal $N$ of grammar \isa{{\isasymG}}. We call
+derivations, or if \isa{{\isasymG}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}N{\isacharbrackright}{\kern0pt}\ \ensuremath{\Rightarrow^{\ast}}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}} holds for any non-terminal $N$ of grammar \isa{{\isasymG}}. We call
 a grammar \isa{{\isasymepsilon}{\isacharunderscore}{\kern0pt}free} if there does not exists any production rule of the form $N \rightarrow \, \epsilon$.
 For a well-formed grammar, strictly speaking we only require the left-hand side of any production rule
 to be a non-terminal, we then prove a lemma stating that a grammar does only allow non-empty derivations
@@ -65,7 +65,7 @@ for any non-terminal if and only if it is epsilon-free.%
 %
 \begin{isamarkuptext}%
 Next we define the grammar $S ::= S + S \, | \, x$ in Isabelle. We introduce data types \isa{T}, \isa{N}, and \isa{symbol}
-respectively representing terminal symbols $\{x, +\}$, the non-terminal $S$, and the type for symbols.
+respectively representing terminal symbols $\{x, +\}$, the non-terminal $S$, and the type of symbols.
 Subsequently, we define the grammar as its four constituents: a list of non-terminal symbols, a list of terminal symbols,
 the production rules, and the start symbol. Finally, we specify the input $\omega = x + x + x$.%
 \end{isamarkuptext}\isamarkuptrue%
