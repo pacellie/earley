@@ -7,6 +7,11 @@ begin
 
 chapter\<open>Conclusion\<close>
 
+text\<open>
+In this chapter we shortly summarize the contributions of this thesis and point the reader towards
+relevant and worthwhile future work.
+\<close>
+
 section\<open>Summary\<close>
 
 text\<open>
