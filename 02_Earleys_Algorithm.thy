@@ -16,7 +16,7 @@ text\<open>
 We present a slightly simplified version of Earley's original recognizer algorithm \cite{Earley:1970},
 omitting Earley's proposed look-ahead since its primary purpose is to increase the efficiency of the
 resulting recognizer. Throughout this thesis we are working with a running example. The considered grammar is a tiny excerpt of a toy
-arithmetic expression grammar: @{term "\<G>"}: $\, S ::= x \,\, \vert \,\, S + S$ and
+arithmetic expression grammar @{term "\<G>"}: $\, S ::= x \,\, \vert \,\, S + S$ and
 the, rather trivial, input is @{term \<omega>} $= x + x + x$.
 
 Intuitively, an Earley recognizer works in principle like a top-down parser carrying along all possible
@@ -30,8 +30,8 @@ an origin $i$ describing the position in @{term \<omega>} where we started parsi
 the position in @{term \<omega>} we are currently considering next for the remaining right-hand side of the production rule.
 Note that there will be only one set of Earley items or only one bin $B$ and we say an item is conceptually part of bin $B_j$ if its end is the index $j$.
 Table \ref{tab:earley_bins} lists the items for our example grammar. Bin $B_4$ contains for example the item $S \rightarrow \, S + \bullet S, 2, 4$.
-Or, we are considering the rule $S \rightarrow \, S + S$, have recognized the substring from $2$ to $4$ (the first index being
-inclusive the second one exclusive) of @{term \<omega>} by $\alpha = S +$, and are trying to parse $\beta = S$ from position 4 in \omega. 
+Or, we are considering the rule $S \rightarrow \, S + S$, have recognized the substring from $2$ to $4$ of @{term \<omega>} (the first index being
+inclusive the second one exclusive) by $\alpha = S +$, and are trying to parse $\beta = S$ from position 4 in \omega. 
 
 The algorithm initializes $B$ by applying the \textit{Init} operation. It then proceeds to execute
 the \textit{Scan}, \textit{Predict} and \textit{Complete} operations listed in Figure \ref{fig:inference_rules}
@@ -67,7 +67,7 @@ in detail:
     move over the bullet, resulting in one new item $A \rightarrow \, \alpha B \bullet \beta, i, k$. Note in particular
     the origin and end indices.
 
-    Looking back at our example, we can add the item $S \rightarrow \, S + S \bullet, 0, 5$
+    Looking back at our example, we can add the item $S \rightarrow \, S + S \bullet, 0, 5$ to bin $B_5$
     for two different reasons corresponding to the two different ways we can derive \omega.
     When processing $S \rightarrow \, x \bullet, 4, 5$ we find $S \rightarrow \, S + \bullet S, 0, 4$ in the origin
     bin $B_4$ which corresponds to recognizing $(x + x) + x$. We would add the same item again
@@ -82,11 +82,11 @@ since there exist derivations for $\omega = x + x + x$, e.g.
 $S \Rightarrow S + S \Rightarrow x + S \Rightarrow x + S + S \Rightarrow^{\ast} x + x + x$ or
 $S \Rightarrow S + S \Rightarrow S + x \Rightarrow S + S + x \Rightarrow^{\ast} x + x + x$.
 
-To prove the correctness of Earley's recognizer algorithm we need to show the following theorem:
+To prove correctness of Earley's recognizer algorithm we need to show the following theorem:
 
 $$S \rightarrow \, \alpha \bullet, 0, \lvert \omega \rvert \in B \,\,\, \textrm{iff} \,\,\, S \, \Rightarrow^{\ast} \, @{term \<omega>}$$
 
-It follows from the following three lemmas:
+It follows from the following three lemmas about Earley items:
 
 \begin{enumerate}
   \item Soundness: for every generated item there exists an according derivation: \\
