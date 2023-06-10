@@ -34,7 +34,7 @@
 %
 \begin{isamarkuptext}%
 In this chapter we shortly summarize the contributions of this thesis and point the reader towards
-relevant and worthwhile future work.%
+- at least in our opinion - relevant and worthwhile future work.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -55,26 +55,33 @@ relevant and worthwhile future work.%
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-Chapter 2: introduce Earley recognizer informally with a running example and formulate the final theorem, and three correspoinding lemmas
-Chapter 3: formalize Earley recognizer by defining grammar, derivations, Earley items, the basic operations and the generation of a bin
-  as the fixpoint, and finally functions Earley and Earley. We then proved well-formedness, soundness and completeness highlighting
-  the common proof structure, how to work with and prove things about derivations, and digging into the core argument of the completeness
-  proof. Finally we prove that the set of Earley items is finite.
-Chapter 4: refine the approach of chapter 3 into a functional executable algorithm modelling the imperative implementation of Earley and
-  additionally adding the necessary information to construct parse trees in the form of pointers. We prove termination of the algorithm
-  as well as soundness and completeness by proving subsumption in both directions. For the completeness is non-tivial since the algorithm
-  is incorrect for grammars containing nonempty derivations. We discuss possible solutions and in the end follow Jones and restrict the
-  applicable grammars. We also give an informal arguemnt for the runnign time of the algorithm O(n4) as well as discuss performance improvements as well as
-  sketch alternative implementations.
-Chapter 5: define and prove the semantics of the pointers of Chapter 4, implement a parse tree algorithm,
-  prove termination, soundness and correctness. Then try to generalize this into a parse forest and a corresponding
-  algorithm, prove termination and soundness, but also discover some complications (termination and performance),
-  ultimately abandon approach and point out a more promising approach.
-Chapter 6: highlight the Isabelle version of the running example as well as the main theorems
+We formalized and verified an Earley Parser. Our approach and proof development is incremental and
+tries to separate the concerns of recognizing and parsing as much as possible.
 
-Overall we formalized Earley original paper (modulo lookahead and some performance improvements) correcting
-the pointers to represent pointers such as described in Scott. The main approach of stepwise refinement
-of the algorithm and most of the proofs are inspired by the paper of Jones.%
+In an initial step, we introduced an abstract set-based implementation of an Earley recognizer. Our contributions
+build upon the foundation of the work on Local Lexing of Obua \cite{Obua:2017} \cite{LocalLexing-AFP}
+who formalized the basic building blocks about context-free grammars and derivations. We then proved
+the core theorems soundness, completeness and finiteness putting the main focus on the completeness proof
+that is mostly inspired by the work of Jones \cite{Jones:1972}.
+
+Subsequently, we refined the Earley recognizer algorithm to a functional executable implementation modeled
+after the original imperative implementation of Earley \cite{Earley:1970}. Then we followed once more
+Jones footsteps, by not explicitly reproving correctness of the algorithm, but instead replacing set-based
+specifications by list-based implementations and proving subsumption in both directions. In the process,
+we encountered the hurdles that concern Earley recognizers and grammars containing non-empty derivations, and
+ultimately followed Jones one final time and restrained the grammar. Finally, we provided an informal argument
+for the running time of our functional implementation and discussed alternative implementation approaches.
+
+We moved on to extend the recognizer into a fully-fledged parser. First, we enriched the recognizer with
+the necessary information to construct parse trees in the form of pointers that we modeled after the work
+of Scott \cite{Scott:2008} and thus avoided erroneous derivations that occurred in Earley's original
+version. We then developed a functional algorithm that utilizes the pointers to construct a single parse tree
+and proved its correctness. In a last step, we attempted to generalize our algorithm from a parse tree to
+a parse forest. We succeeded in proving soundness, but ultimately abandoned the approach.
+Nonetheless, we learned valuable lessons that lay the foundation for future work.
+
+We rounded off the development and highlighted the main theorems by implementing the running example
+in Isabelle.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -95,38 +102,48 @@ of the algorithm and most of the proofs are inspired by the paper of Jones.%
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-Chapter 3: define the set of Earley items inductively instead of the operational approach which might lead to more elegant proofs
-Chapter 4: since algorithm is modelled after imperative Earley, a second refinement step towards an imperative implementation
-  also performance improvements: lookhead, set for faster bin append, set for faster predict, set for faster complete
-Chapter 5: formalize the SPPF algorithm of Scott in particular the built-in version which would replace
-  the classic pointers of earley by a direct construction of a parse forest.%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\begin{isamarkuptext}%
-Parse tree disambiguation:
+Unfortunately, or fortunately, the work on the formalization of Earley parsing is by no means completed. In the following
+we sketch - in our opinion - worthwhile future work, roughly presented in decreasing order of importance,
+although this might by subject to personal preference.
 
-Parser generators like YACC resolve ambiguities in context-free grammers by allowing the user
-the specify precedence and associativity declarations restricting the set of allowed parses. But they
-do not handle all grammatical restrictions, like 'dangling else' or interactions between binary operators
-and functional 'if'-expressions.
+As mentioned in Chapter \ref{chapter:3}, we followed an operational approach to specify an abstract
+set-based implementation of an Earley recognizer. In hindsight, it would have been more elegant to not
+follow the approach of Obua and instead define the set of Earley items inductively in Isabelle. This
+would probably also simplify some of the subsumption proofs of Chapter \ref{chap:04} that resolve around
+function iteration.
 
-Grammar rewriting:
+From a practical point of view, the last missing piece of the formalization is the construction of a
+complete parse forest that represent all possible derivation trees compactly. As discussed in Chapter \ref{chap:05},
+the most promising approaches are the algorithms presented by Scott \cite{Scott:2008}, in particular
+the algorithm that intertwines the construction of the shared-packed parse forest with the generation of
+the Earley bins and thus does not need to concern itself with any technicalities whilst proving termination.
+Note that Scott describes her algorithm at high-level of abstraction and consequently any attempted
+formalization entails a significant amount of work.
 
-Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach reinterpreting CFGs as
-the tree automata, intersectiong them with tree automata encoding desired restrictions and reinterpreting
-the results back into CFGs.
+A next step are the possibly endless opportunities to improve the performance of the algorithm(s).
+One non-trivial optimization is another refinement step towards an imperative implementation that incorporates the
+necessary performance optimization to achieve the optimal cubic time and space bounds described in
+Chapter \ref{chapter:3}. A formal proof of the complexity bounds should be attempted at this point.
+Other performance improvements include incorporating a look-head symbol to prune dead-end derivation
+trees, and optimizing the representation of the grammar and the bins to enable faster prediction and
+completion operations, but this list is by no means conclusive.
 
-Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach to specifying operator precedence
-based on declarative disambiguation rules basing their implementation on grammar rewriting.
-
-Thorup \cite{Thorup:1996} develops two concrete algorithms for disambiguation of grammars based on the idea of 
-excluding a certain set of forbidden sub-parse trees.
-
-Parse tree filtering:
-
-Klint \textit{et al} \cite{Klint:1997} propose a framework of filters to describe and compare a wide
-range of disambiguation problems in a parser-independent way. A filter is a function that selects
-from a set of parse trees the intended trees.%
+In a last step, one might want to investigate how to incorporate parse tree disambiguation into an
+Earley parser. One of strengths of an Earley parser is its ability to work with arbitrary context-free
+grammars (at least grammars that contain non-empty derivations in our case). Nonetheless, one might
+want to resolve some ambiguities by allowing the user the specify precedence and associativity declarations
+restricting the set of allowed parser that are commonly found in parser generators. During our initial
+research we investigated possible approaches and found the following non-conclusive approaches:
+Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach that reinterprets context-free
+grammars as tree automata, intersects them with automata encoding the desired restrictions and reinterpret
+the results into a context-free grammar. Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach
+of specifying operator precedence based on declarative disambiguation rules basing their implementation
+on grammar rewriting. Thorup \cite{Thorup:1996} develops two concrete algorithms for disambiguation of
+grammars based on the idea of excluding a certain set of forbidden sub-parse trees. Last but not least,
+and possibly the most interesting approach since it avoids grammar rewriting and is solely based on parse
+tree filtering: Klint \textit{et al} \cite{Klint:1997} propose a framework of filters, that select from
+a set of parse trees the intended trees, to describe and compare a wide range of disambiguation problems
+in a parser-independent way.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimtheory
@@ -169,12 +186,15 @@ from a set of parse trees the intended trees.%
 %:%75=35%:%
 %:%76=36%:%
 %:%77=37%:%
-%:%86=40%:%
-%:%98=43%:%
-%:%99=44%:%
-%:%100=45%:%
-%:%101=46%:%
-%:%102=47%:%
+%:%78=38%:%
+%:%79=39%:%
+%:%80=40%:%
+%:%81=41%:%
+%:%82=42%:%
+%:%83=43%:%
+%:%84=44%:%
+%:%93=47%:%
+%:%105=50%:%
 %:%106=51%:%
 %:%107=52%:%
 %:%108=53%:%
@@ -199,3 +219,20 @@ from a set of parse trees the intended trees.%
 %:%127=72%:%
 %:%128=73%:%
 %:%129=74%:%
+%:%130=75%:%
+%:%131=76%:%
+%:%132=77%:%
+%:%133=78%:%
+%:%134=79%:%
+%:%135=80%:%
+%:%136=81%:%
+%:%137=82%:%
+%:%138=83%:%
+%:%139=84%:%
+%:%140=85%:%
+%:%141=86%:%
+%:%142=87%:%
+%:%143=88%:%
+%:%144=89%:%
+%:%145=90%:%
+%:%146=91%:%
