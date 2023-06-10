@@ -47,14 +47,14 @@ in Isabelle.
 section\<open>Future Work\<close>
 
 text\<open>
-Unfortunately, or fortunately, the work on the formalization of Earley parsing is by no means completed. In the following
+The work on the formalization of Earley parsing is by no means completed. In the following
 we sketch - in our opinion - worthwhile future work, roughly presented in decreasing order of importance,
 although this might by subject to personal preference.
 
 As mentioned in Chapter \ref{chapter:3}, we followed an operational approach to specify an abstract
 set-based implementation of an Earley recognizer. In hindsight, it would have been more elegant to not
 follow the approach of Obua and instead define the set of Earley items inductively in Isabelle. This
-would probably also simplify some of the subsumption proofs of Chapter \ref{chap:04} that resolve around
+would probably also simplify some of the subsumption proofs of Chapter \ref{chap:04} that revolve around
 function iteration.
 
 From a practical point of view, the last missing piece of the formalization is the construction of a
@@ -62,28 +62,28 @@ complete parse forest that represent all possible derivation trees compactly. As
 the most promising approaches are the algorithms presented by Scott @{cite "Scott:2008"}, in particular
 the algorithm that intertwines the construction of the shared-packed parse forest with the generation of
 the Earley bins and thus does not need to concern itself with any technicalities whilst proving termination.
-Note that Scott describes her algorithm at high-level of abstraction and consequently any attempted
+Note that Scott describes her algorithm at a high level of abstraction and consequently any attempted
 formalization entails a significant amount of work.
 
-A next step are the possibly endless opportunities to improve the performance of the algorithm(s).
+A possible next step are the various opportunities to improve the performance of the algorithm(s).
 One non-trivial optimization is another refinement step towards an imperative implementation that incorporates the
 necessary performance optimization to achieve the optimal cubic time and space bounds described in
 Chapter \ref{chapter:3}. A formal proof of the complexity bounds should be attempted at this point.
 Other performance improvements include incorporating a look-head symbol to prune dead-end derivation
 trees, and optimizing the representation of the grammar and the bins to enable faster prediction and
-completion operations, but this list is by no means conclusive.
+completion operations.
 
 In a last step, one might want to investigate how to incorporate parse tree disambiguation into an
 Earley parser. One of strengths of an Earley parser is its ability to work with arbitrary context-free
 grammars (at least grammars that contain non-empty derivations in our case). Nonetheless, one might
 want to resolve some ambiguities by allowing the user the specify precedence and associativity declarations
-restricting the set of allowed parser that are commonly found in parser generators. During our initial
-research we investigated possible approaches and found the following non-conclusive approaches:
+restricting the set of allowed parses, as commonly found in parser generators. During our initial
+research we investigated possible approaches. The following list is by no means conclusive:
 Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach that reinterprets context-free
 grammars as tree automata, intersects them with automata encoding the desired restrictions and reinterpret
 the results into a context-free grammar. Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach
 of specifying operator precedence based on declarative disambiguation rules basing their implementation
-on grammar rewriting. Thorup \cite{Thorup:1996} develops two concrete algorithms for disambiguation of
+on grammar rewriting. Thorup \cite{Thorup:1996} develops two concrete algorithms for the disambiguation of
 grammars based on the idea of excluding a certain set of forbidden sub-parse trees. Last but not least,
 and possibly the most interesting approach since it avoids grammar rewriting and is solely based on parse
 tree filtering: Klint \textit{et al} \cite{Klint:1997} propose a framework of filters, that select from
