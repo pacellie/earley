@@ -109,8 +109,7 @@ definition Init_list :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bin
   "Init_list \<G> \<omega> \<equiv> 
     let bs = replicate ( |\<omega>| + 1) ([]) in
     let rs = filter (\<lambda>r. rule_head r = \<SS> \<G>) (\<RR> \<G>) in
-    let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
-    bs[0 := b0]"
+    let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in bs[0 := b0]"
 
 text\<open>
 Functions @{term Scan_list}, @{term Predict_list}, and @{term Complete_list} are defined analogously
@@ -119,7 +118,7 @@ differences. The set-based implementations take accumulated as arguments the ind
 bin, the grammar @{term \<G>}, the input @{term \<omega>}, and the current set of Earley items $I$.
 The list-based definitions are more specific. The $k$-th bin is no longer only conceptional and we replace the argument $I$ in the following ways: function
 @{term Scan_list} takes as arguments the currently considered item $x$, its next \textit{terminal} symbol $a$ (as plain value and
-not wrapped in an option) and the index @{term pre} of $x$ in the current bin $k$ (the item $x$ will be the predecessor of any item the function @{term Scan_list} computes, and sets the predecessor pointer accordingly. Function @{term Predict_list}
+not wrapped in an option) and the index @{term pre} of $x$ in the current bin $k$ (the item $x$ will be the predecessor of any item the function @{term Scan_list} computes), and sets the predecessor pointer accordingly. Function @{term Predict_list}
 only needs access to the next non-terminal symbol $N$ of $x$, and returns only entries with @{term Null} pointers. The implementation of @{term Complete_list}
 is slightly more involved. It takes as arguments again $x$ and the index @{term red} of $x$ in the current bin $k$ (since $x$ is a
 complete reduction item this time around), but also the complete bins @{term bs}, since
@@ -187,7 +186,7 @@ text\<open>
 The central piece for the list-based implementation is the function @{term Earley_bin_list'}. A
 function call of the form @{term "Earley_bin_list' k \<G> \<omega> bs i"} completes the $k$-th bin starting from index $i$.
 For the current item $x$ under consideration the function first computes the possible new entries depending on the next
-symbol of $x$ which can either be some terminal symbol - we scan -, or non-terminal symbol - we predict -, or @{term None} - we complete.
+symbol of $x$ which can either be some terminal symbol - we scan - or non-terminal symbol - we predict - or @{term None} - we complete.
 It then updates the bins @{term bs} appropriately using the function @{term bins_upd}.
 Note that we have to define the function as a @{term partial_function},
 since it might never terminate if it keeps appending newly generated items to the $k$-th bin it currently operates
@@ -215,8 +214,7 @@ definition Earley_bin_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentent
 
 text\<open>
 Finally, functions @{term Earley_list} and @{term \<E>arley_list} are structurally identical to functions
-@{term Earley} respectively @{term \<E>arley} of Chapter \ref{chapter:3}, differing only in the type of the used operations and the
-return type: bins or lists of items instead of sets of items.
+@{term Earley} respectively @{term \<E>arley} of Chapter \ref{chapter:3}.
 \<close>
 
 fun Earley_list :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins" where
@@ -249,7 +247,7 @@ depends on $j$ which is in turn dependent on $n$. Thus, the number of items in e
 We also have @{term Init_list} $\in \mathcal{O}(n)$ since the function @{term replicate} takes time linear in the length of @{term \<omega>},
 and functions @{term filter} and @{term map} operate at most on the size of the grammar @{term \<G>} or constant time.
 We also know @{term Scan_list} $\in \mathcal{O}(n)$. The dominating term is surprisingly @{term "mbox0 (\<omega>!k)"}, since $0 \le k \le n$, and it computes
-at most one new entry. Function @{term Predict_list} takes time in the the size of the grammar @{term \<G>},
+at most one new entry. Function @{term Predict_list} takes time in the size of the grammar @{term \<G>},
 due to the @{term filter} and @{term map} functions, or constant time, and computes at most @{term "|\<G>|"} new items.
 Function @{term Complete_list} again takes linear time, since finding the origin bin of the given item
 $x$ takes linear time, and functions @{term items}, @{term filter_with_index}, and @{term map}
@@ -306,10 +304,10 @@ first performance improvement is to group the production rules by their left-han
 We can also complete more efficiently. The @{term Complete} operation scans through the origin bin of
 an complete item, searching for items where the next symbol matches the rule head of the production rule
 of the complete item. We can optimize this search by keeping an additional map from 'next symbol' non-terminals to
-their corresponding items for each bin. Finally, as mentioned earlier, we omitted implementing a lookahead terminal
+their corresponding items for each bin. Finally, as mentioned earlier, we omitted implementing a lookahead symbol
 which would reduce the number of Earley items and thus improve performance by pruning dead end derivations.
 Note that, although these performance improvements might speed up the algorithm quite considerably, particularly
-the lookahead terminal, none of them improve the worst case running time.
+the lookahead symbol, none of them improve the worst case running time.
 
 We decided against implementing the map-based functional approach with a running time of $\mathcal{O}(n^3 \log{n})$
 and 'settle' for the current approach with a running time of $\mathcal{O}(n^4)$ due to two reasons.
@@ -470,7 +468,7 @@ At this point we would like to prove that function @{term Earley_bin_list'} also
 the bins. But since it is a partial function we first need to take a short excursion into function definitions
 in Isabelle.
 Intuitively, a recursive function terminates if for every recursive call the size of its input strictly decreases.
-And normally all functions defined in Isabelle must be total. But there are different ways to define a recursive function depending on the complexity of its termination:
+And all functions defined in Isabelle must be total. But there are different ways to define a recursive function depending on the complexity of its termination:
 (1) with the \textit{fun} keyword. Isabelle then tries to find a measure of the input that proves
 termination. If successful we obtain an induction schema corresponding to the function definition.
 (2) via the \textit{function} keyword. We then need to define and prove a suitable measure by hand.
@@ -506,8 +504,7 @@ definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentential \<tim
   "wf_earley_input = { 
     (k, \<G>, \<omega>, bs) | k \<G> \<omega> bs.
       k \<le> |\<omega>| \<and> |bs| = |\<omega>| + 1 \<and>
-      wf_\<G> \<G> \<and>
-      wf_bins \<G> \<omega> bs }"
+      wf_\<G> \<G> \<and> wf_bins \<G> \<omega> bs }"
 
 fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentential \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
   "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_bin_item \<G> \<omega> k x } - i"
@@ -578,7 +575,7 @@ are each straightforward by definition of the corresponding functions.
 lemma Scan_list_sub_Scan:
   assumes "wf_bins \<G> \<omega> bs"
   assumes "bins bs \<subseteq> I"
-  assumes "k < |bs|" "k < |\<omega>|"
+  assumes "k < |bs| \<and> k < |\<omega>|"
   assumes "x \<in> set (items (bs!k))"
   assumes "next_symbol x = Some a"
   shows "set (items (Scan_list k \<omega> a x pre)) \<subseteq> Scan k \<omega> I"
@@ -646,7 +643,7 @@ Moreover we know that function @{term Earley_bin} is monotonic in the set it ope
 \begin{equation*}
   @{term "Earley_bin k \<G> \<omega> (I \<union> Complete k I) \<subseteq> Earley_bin k \<G> \<omega> (Earley_bin k \<G> \<omega> I)"} \qquad (2)
 \end{equation*}
-The statement to proof follows from (1), (2) and the fact that the function @{term Earley_bin} is
+The statement to prove follows from (1), (2) and the fact that the function @{term Earley_bin} is
 idempotent.
 
 \end{proof}
@@ -758,7 +755,7 @@ text\<open>
 The core lemma is the following: if the grammar is well-formed and does not allow empty derivations, and a given item is well-formed,
 sound and complete, then its item origin and item end cannot coincide, which implies that the origin of
 the item is strictly smaller than the item end due to the well-formedness of the item. And consequently
-there do not exist any items of the form $A \rightarrow \, \epsilon, i, j$ in any bin $B_j$.
+there do not exist any items of the form $A \rightarrow \, \epsilon, j, j$ in any bin $B_j$.
 \<close>
 
 lemma impossible_complete_item:
@@ -820,9 +817,9 @@ such that
 \begin{equation*}
 \begin{alignedat}{2}
   @{term "x \<in> Complete k (I \<union> z)"} \quad & (1) \quad @{term "x \<notin> Complete k I"} \quad & (2) \\
-  @{term "x' \<in> bin (I \<union> {z}) (item_origin y)"} \quad & (3) \quad @{term "next_symbol x' = Some (item_rule_head y)"} \qquad & (4) \\
-  @{term "y \<in> bin (I \<union> {z}) k"} \quad & (5) \quad @{term "is_complete y"} \quad & (6) \\
-  @{term "x = inc_item x' k"} \quad & (7) & \\
+  @{term "y \<in> bin (I \<union> {z}) k"} \quad & (3) \quad @{term "is_complete y"} \quad & (4) \\
+  @{term "x' \<in> bin (I \<union> {z}) (item_origin y)"} \quad & (5) \quad @{term "x = inc_item x' k"} \quad & (6) \\
+  @{term "next_symbol x' = Some (item_rule_head y)"} \quad & (7) &
 \end{alignedat}
 \end{equation*}
 
@@ -830,12 +827,12 @@ From assumptions (2-7) and the definition of @{term Complete} we need to conside
 
 \begin{itemize}
   \item @{term "z = x'"}: Due to assumption @{term "item_end z = k"} and (3,5) we know that the item origin
-    and end of item $y$ is $k$. Additionally, the item is sound and well-formed due to assumptions (5,6) and
+    and end of item $y$ is $k$. Additionally, the item is sound and well-formed due to assumptions (3,4) and
     @{term "wf_items \<G> \<omega> I"}, @{term "wf_item \<G> \<omega> z"}, and @{term "sound_items \<G> \<omega> I"}, @{term "next_symbol z = Some A"}.
     Moreover, using assumptions @{term "wf_\<G> \<G>"} and @{term "mbox0 (nonempty_derives \<G>)"} and the fact that
-    $y$ is complete (6), we can discharge the assumptions of lemma @{term impossible_complete_item} and
+    $y$ is complete (4), we can discharge the assumptions of lemma @{term impossible_complete_item} and
     arrive at a contradiction.
-  \item @{term "z = y"}: Thus we know that $z$ must be complete since $y$ is complete by (6). But we
+  \item @{term "z = y"}: Thus we know that $z$ must be complete since $y$ is complete by (4). But we
     also know that @{term "next_symbol z = Some A"}, a contradiction.
 \end{itemize}
 
@@ -871,10 +868,10 @@ We are only highlighting the @{term Predict} case. Hence, we are currently consi
 in the $k$-th bin at index $i$ whose next symbol is some non-terminal $N$. Let @{term bs'} denote
 the updated bins or @{term "bins_upd bs k (Predict_list k \<G> N)"}. We know that the function @{term bins_upd}
 maintains well-formedness and soundness of the items, but to apply our induction hypothesis
-we need to proof one additional statement:
+we need to prove one additional statement:
 
 \begin{equation*}
-@{term "Earley_step k \<G> \<omega> (bins_upto bs' k (i+1)) \<subseteq> bins bs'"}
+@{term "Earley_step k \<G> \<omega> (bins_upto bs' k (i+1)) \<subseteq> bins bs'"} \qquad (0)
 \end{equation*}
 
 Since @{term Earley_step} is defined as the union of the basic three operations we split this proof
@@ -936,6 +933,22 @@ into these three cases:
 
 \end{itemize}
 
+We conclude the proof by:
+
+    \begin{equation*}
+    \begin{alignedat}{2}
+      & @{term "Earley_step k \<G> \<omega> (bins bs)"} & \\
+      & \qquad \subseteq @{term "Earley_step k \<G> \<omega> (bins bs')"} \quad & (1) \\
+      & \qquad \subseteq @{term "bins (Earley_bin_list' k \<G> \<omega> bs (i+1))"} \quad & (2) \\
+      & \qquad = @{term "bins (Earley_bin_list' k \<G> \<omega> bs i)"} \quad & (3)
+    \end{alignedat}
+    \end{equation*}
+
+  (1) by the set semantics of the function @{term "bins_upd"} and the monotonicity of function @{term Earley_step}-
+  (2) by induction hypothesis using soundness, well-formedness of bins @{term bs'}, the assumptions @{term "is_sentence \<G> \<omega>"} and @{term "nonempty_derives \<G>"},
+    and (0).
+  (3) by definition of @{term Earley_bin_list'} since we are in the @{term Predict} case.
+
 \end{proof}
 \<close>
 
@@ -991,6 +1004,7 @@ Lemma @{term Earley_bin_sub_Earley_bin_list} concludes the subsumption proof for
 Since the function @{term Earley_bin} is defined as the fixpoint of the function
 @{term Earley_step} and the fact that @{term "x \<in> limit f X \<equiv> \<exists>n. x \<in> funpower f n X"} the core
 proof is by induction on the computation of @{term funpower}.
+\newpage
 \<close>
 
 lemma Earley_bin_sub_Earley_bin_list:
@@ -1007,12 +1021,13 @@ lemma Earley_bin_sub_Earley_bin_list:
 text\<open>
 \begin{proof}
 
-The goal is @{term "funpower (Earley_step k \<G> \<omega>) (Suc n) (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"}.
+Our proof goal is:
+$$@{term "funpower (Earley_step k \<G> \<omega>) (Suc n) (bins bs) \<subseteq> bins (Earley_bin_list k \<G> \<omega> bs)"}$$
 
 For the base case we have @{term "funpower (Earley_step k \<G> \<omega>) 0 (bins bs) = bins bs"}. And we conclude
 the proof due to the fact that the function @{term Earley_bin_list} is monotonic in the bins.
 
-For the induction step we first need to proof a necessary precondition for our induction hypothesis:
+For the induction step we first need to prove a necessary precondition for our induction hypothesis:
 
 \begin{equation*}
   \begin{alignedat}{2}
@@ -1047,7 +1062,7 @@ For the induction step we first need to proof a necessary precondition for our i
 \<close>
 
 text\<open>
-We finish the subsumption proof with lemmas @{term "Earley_sub_Earley_list"} and @{term "\<E>arley_sub_\<E>arley_list"}.
+We finish the subsumption proof with the next two lemmas.
 The proofs are respectively by induction on $k$ using lemmas @{term Init_list_eq_Init} and @{term Earley_bin_sub_Earley_bin_list},
 and once more by definition using the previous lemma.
 \<close>

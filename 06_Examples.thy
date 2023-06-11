@@ -29,7 +29,7 @@ lemma nonempty_derives_iff_\<epsilon>_free:
 (*>*)
 
 text\<open>
-Next we define the grammar $S ::= S + S \, | \, x$ in Isabelle. We introduce data types @{term T}, @{term N}, and @{term symbol}
+Next we define the grammar $S ::= S + S \,\, | \,\, x$ in Isabelle. We introduce data types @{term T}, @{term N}, and @{term symbol}
 respectively representing terminal symbols $\{x, +\}$, the non-terminal $S$, and the type of symbols.
 Subsequently, we define the grammar as its four constituents: a list of non-terminal symbols, a list of terminal symbols,
 the production rules, and the start symbol. Finally, we specify the input $\omega = x + x + x$.

@@ -19,7 +19,7 @@ We formalized and verified an Earley Parser. Our approach and proof development 
 tries to separate the concerns of recognizing and parsing as much as possible.
 
 In an initial step, we introduced an abstract set-based implementation of an Earley recognizer. Our contributions
-build upon the foundation of the work on Local Lexing of Obua @{cite "Obua:2017"} @{cite "LocalLexing-AFP"}
+build upon the foundation of the work on Local Lexing of Obua @{cite "Obua:2017"} @{cite "LocalLexing-AFP"},
 who formalized the basic building blocks about context-free grammars and derivations. We then proved
 the core theorems soundness, completeness and finiteness putting the main focus on the completeness proof
 that is mostly inspired by the work of Jones @{cite "Jones:1972"}.
@@ -53,11 +53,11 @@ although this might by subject to personal preference.
 
 As mentioned in Chapter \ref{chapter:3}, we followed an operational approach to specify an abstract
 set-based implementation of an Earley recognizer. In hindsight, it would have been more elegant to not
-follow the approach of Obua and instead define the set of Earley items inductively in Isabelle. This
+follow the approach of Obua but instead define the set of Earley items inductively in Isabelle. This
 would probably also simplify some of the subsumption proofs of Chapter \ref{chap:04} that revolve around
 function iteration.
 
-From a practical point of view, the last missing piece of the formalization is the construction of a
+From a practical point of view, the last missing piece of this formalization is the construction of a
 complete parse forest that represent all possible derivation trees compactly. As discussed in Chapter \ref{chap:05},
 the most promising approaches are the algorithms presented by Scott @{cite "Scott:2008"}, in particular
 the algorithm that intertwines the construction of the shared-packed parse forest with the generation of
@@ -67,9 +67,9 @@ formalization entails a significant amount of work.
 
 A possible next step are the various opportunities to improve the performance of the algorithm(s).
 One non-trivial optimization is another refinement step towards an imperative implementation that incorporates the
-necessary performance optimization to achieve the optimal cubic time and space bounds described in
+necessary performance optimizations to achieve the optimal cubic time and space bounds described in
 Chapter \ref{chapter:3}. A formal proof of the complexity bounds should be attempted at this point.
-Other performance improvements include incorporating a look-head symbol to prune dead-end derivation
+Other performance improvements include incorporating a look-head symbol to prune dead end derivation
 trees, and optimizing the representation of the grammar and the bins to enable faster prediction and
 completion operations.
 
@@ -80,7 +80,7 @@ want to resolve some ambiguities by allowing the user the specify precedence and
 restricting the set of allowed parses, as commonly found in parser generators. During our initial
 research we investigated possible approaches. The following list is by no means conclusive:
 Adams \textit{et al} \cite{Adams:2017} describe a grammar rewriting approach that reinterprets context-free
-grammars as tree automata, intersects them with automata encoding the desired restrictions and reinterpret
+grammars as tree automata, intersects them with automata encoding the desired restrictions and reinterprets
 the results into a context-free grammar. Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach
 of specifying operator precedence based on declarative disambiguation rules basing their implementation
 on grammar rewriting. Thorup \cite{Thorup:1996} develops two concrete algorithms for the disambiguation of
