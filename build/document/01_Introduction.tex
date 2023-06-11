@@ -33,7 +33,71 @@
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO%
+SNIPPET:
+
+Context-free grammars have been used extensively for describing the syntax of programming languages
+and natural languages. Parsing algorithms for context-free grammars consequently play a large role in
+the implementation of compilers and interpreters for programming languages and of programs which understand
+or translate natural languages. Numerous parsing algorithms have been developed. Some are general,
+in the sense that they can handle all context-free grammars, while others can handle only subclasses of
+grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
+seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
+in linear time than most of the restricted algorithms.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+SNIPPET:
+
+The Computer Science community has been able to automatically generate parsers for a very wide class of context
+free languages. However, many parsers are still written manually, either using tool support or even completely
+by hand. This is partly because in some application areas such as natural language processing and bioinformatics
+we don not have the luxury of designing the language so that it is amendable to know parsing techniques, but also
+it is clear that left to themselves computer language designers do not naturally write LR(1) grammars. A grammar
+not only defines the syntax of a language, it is also the starting point for the definition of the semantics,
+and the grammar which facilitates semantics definition is not usually the one which is LR(1). Given this difficulty
+in constructing natural LR(1) grammars that support desired semantics, the general parsing techniques, such as
+the CYK Younger \cite{Younger:1967}, Earley \cite{Earley:1970} and GLR Tomita \cite{Tomita:1985} algorithms, developed
+for natural language processing are also of interest to the wider computer science community. When using grammars as
+the starting point for semantics definition, we distinguish between recognizers which simply determine whether or not
+a given string is in the language defined by a given grammar, and parserwhich also return some form of derivation
+of the string, if one exists. In their basic form the CYK and Earley algorithms are recognizers while GLR-style
+algorithms are designed with derivation tree construction, and hence parsing, in mind.
+
+There is no known liner time parsing or recognition algorithm that can be used with all context free grammars.
+In their recognizer forms the CYK algorithm is worst case cubic on grammars in Chomsky normal form and Earley's
+algorithm is worst case cubic on general context free grammers and worst case n2 on non-ambibuous grammars.
+General recognizers must, by definition, be applicable to ambiguous grammars. Tomita's GLR algorithm is of unbounded
+polynomial order in the worst case. Expanding general recognizers to parser raises several problems, not least
+because there can be exponentially many or even infinitely many derivations for a given input string. A cubic
+recognizer which was modified to simply return all derivations could become an unbounded parser.
+Of course, it can be argued that ambiguous grammars reflect ambiguous semantics and thus should not be used in
+practice. This would be far too extreme a position to take. For example, it is well known that the if-else
+statement in hthe AnSI-standard grammar for C is ambiguous, but a longest match resolution results in a linear
+time parser that attach the else to the most recent if, as specified by the ANSI-C semantics. The ambiguous
+ANSI-C grammar is certainly practical for parser implementation. However, in general ambiguity is not so easily handled,
+and it is well known that grammar ambiguity is in fact undecidable Hopcroft \textit{et al} \cite{Hopcroft:2006}, thus
+we cannot expect a parser generator simply to check for ambiguity inthe grammar and report the problem back to the user.
+Another possiblity is to avoid the issue by just returning one derivation. However, if only one derivation is returned
+then this creates problems for a user who wants all derivations and, even in the case where only one derivation is
+required, there is the issue of ensuring that it is the required derivationthat is returned. A truely general parser
+will reutrn all possible derivations in some form. Perhaps the most well known representation is the shared packed
+parse foreset SPPF described and used by Tomita \cite{Tomita:1985}. Tomita's description of the representation does ont allow
+for the infinitely many derivations which arise from grammars which contain cycles, the source adapt the SPPF representation
+to allow these. Johnson \cite{Johnson:1991} has shown that Tomita-style SPPFs are worst case unbounded polynomial size. Thus
+using such structures will alo turn any cubic recognition technique into a worst case unbounded polynomial parsing technique.
+Leaving aside the potential increase in complexity when turning a recogniser into a parser, it is clear that this proccess is often difficult to carry
+out correctly. Earley gave an algorithm for constructing derivations of a string accepted by his recognizer,
+but this was subsequently shown by Tomita \cite{Tomita:1985} to return spurious derivations in certain cases.
+Tomita's original version of his algorithm failed to terminate on grammars with hidden left recursio and, as remarked above
+, had no mechanism for contructing complete SPPFs for grammers with cycles.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+Incorporate our main contributions:
+(1) formalization of large parts of Earley \cite{Earley:1970} and Jones \cite{Jones:1972} for the recognizer
+(2) correction of Earley pointers which were shown by Tomita \cite{Tomita:1985} to be spurious with the pointers of Scott \cite{Scott:2008}.
+(2) development of a functional algorithm for single parse trees and a generalization to a parse forest
+  (that unfortunately is not promising)%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -105,28 +169,19 @@ They proof soundness and completeness for all non-left-recursive grammars using 
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-TODO%
-\end{isamarkuptext}\isamarkuptrue%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\isatagdocument
-%
-\isamarkupsection{Contributions%
-}
-\isamarkuptrue%
-%
-\endisatagdocument
-{\isafolddocument}%
-%
-\isadelimdocument
-%
-\endisadelimdocument
-%
-\begin{isamarkuptext}%
-TODO%
+Chapter 2 informally describes the Earley recognizer algorithm and sketches a high-level correctness proof.
+Chapter 3 introduces the interactive theorem prover Isabelle, formalizes context-free grammars and the algorithm
+  of Chapter 2, and presents the soundness and completeness proofs.
+Chapter 4 refines the algorithm of Chapter 3 to an executable implementation that already contains the
+  necessary information to construct parse trees in the form of pointers. It then proves termination and
+  correctness of the algorithm. Additionally, it provides an informal argument for the running time and
+  discusses alternative implementations.
+Chapter 5 starts by defining and proving the semantics of the pointers of Chapter 4. It then presents
+  a functional algorithm that builds a single parse tree and proves its correctness, before generalizing
+  this approach to an algorithm for a complete parse forest, proving soundness. It ends with a discussion
+  about the missing completeness proof and alternative implementation approaches for parse forests.
+Chapter 6 illustrates the complete formalization with a simple example that highlight the main theorems.
+Chapter 7 concludes with a summary of this thesis and points the reader towards worthwhile future work.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimtheory
@@ -147,36 +202,104 @@ TODO%
 %:%file=01_Introduction.tex%:%
 %:%24=8%:%
 %:%36=11%:%
-%:%45=14%:%
-%:%57=16%:%
-%:%58=17%:%
-%:%59=18%:%
-%:%60=19%:%
-%:%61=20%:%
-%:%62=21%:%
-%:%66=25%:%
-%:%67=26%:%
-%:%68=27%:%
-%:%69=28%:%
-%:%70=29%:%
-%:%71=30%:%
-%:%72=31%:%
-%:%73=32%:%
-%:%74=33%:%
-%:%75=34%:%
-%:%76=35%:%
-%:%77=36%:%
-%:%78=37%:%
-%:%79=38%:%
-%:%80=39%:%
-%:%81=40%:%
-%:%82=41%:%
-%:%83=42%:%
-%:%84=43%:%
-%:%85=44%:%
-%:%86=45%:%
-%:%87=46%:%
-%:%96=49%:%
-%:%108=52%:%
-%:%117=55%:%
-%:%129=58%:%
+%:%37=12%:%
+%:%38=13%:%
+%:%39=14%:%
+%:%40=15%:%
+%:%41=16%:%
+%:%42=17%:%
+%:%43=18%:%
+%:%44=19%:%
+%:%45=20%:%
+%:%49=24%:%
+%:%50=25%:%
+%:%51=26%:%
+%:%52=27%:%
+%:%53=28%:%
+%:%54=29%:%
+%:%55=30%:%
+%:%56=31%:%
+%:%57=32%:%
+%:%58=33%:%
+%:%59=34%:%
+%:%60=35%:%
+%:%61=36%:%
+%:%62=37%:%
+%:%63=38%:%
+%:%64=39%:%
+%:%65=40%:%
+%:%66=41%:%
+%:%67=42%:%
+%:%68=43%:%
+%:%69=44%:%
+%:%70=45%:%
+%:%71=46%:%
+%:%72=47%:%
+%:%73=48%:%
+%:%74=49%:%
+%:%75=50%:%
+%:%76=51%:%
+%:%77=52%:%
+%:%78=53%:%
+%:%79=54%:%
+%:%80=55%:%
+%:%81=56%:%
+%:%82=57%:%
+%:%83=58%:%
+%:%84=59%:%
+%:%85=60%:%
+%:%86=61%:%
+%:%87=62%:%
+%:%88=63%:%
+%:%89=64%:%
+%:%90=65%:%
+%:%91=66%:%
+%:%92=67%:%
+%:%96=72%:%
+%:%97=73%:%
+%:%98=74%:%
+%:%99=75%:%
+%:%100=76%:%
+%:%109=79%:%
+%:%121=81%:%
+%:%122=82%:%
+%:%123=83%:%
+%:%124=84%:%
+%:%125=85%:%
+%:%126=86%:%
+%:%130=90%:%
+%:%131=91%:%
+%:%132=92%:%
+%:%133=93%:%
+%:%134=94%:%
+%:%135=95%:%
+%:%136=96%:%
+%:%137=97%:%
+%:%138=98%:%
+%:%139=99%:%
+%:%140=100%:%
+%:%141=101%:%
+%:%142=102%:%
+%:%143=103%:%
+%:%144=104%:%
+%:%145=105%:%
+%:%146=106%:%
+%:%147=107%:%
+%:%148=108%:%
+%:%149=109%:%
+%:%150=110%:%
+%:%151=111%:%
+%:%160=114%:%
+%:%172=117%:%
+%:%173=118%:%
+%:%174=119%:%
+%:%175=120%:%
+%:%176=121%:%
+%:%177=122%:%
+%:%178=123%:%
+%:%179=124%:%
+%:%180=125%:%
+%:%181=126%:%
+%:%182=127%:%
+%:%183=128%:%
+%:%184=129%:%
