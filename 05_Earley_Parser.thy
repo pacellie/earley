@@ -59,7 +59,7 @@ that this approach is incorrect and may lead to spurious derivations in certain 
 presents an example for the grammar $S ::= SS \, | \, x$ and the input $\omega = xxx$. Earley's parser
 correctly constructs the parse trees for the input but additionally returns erroneous parse trees representing
 derivations of $xx$ and $xxxx$. The problem lies in the fact that left- and rightmost derivations are
-intertwined when they should not be, since pointers originate from instances of non-terminals and don't
+intertwined when they should not be, since pointers originate from instances of non-terminals and do not
 connect Earley items.
 
 In this chapter we develop an efficient functional algorithm constructing a single parse
@@ -68,7 +68,7 @@ we generalize this approach, introducing a data structure representing all possi
 as a parse forest, adjusting the parse tree algorithm to compute such a forest, prove termination
 and soundness of the algorithm, and discuss the missing completeness proof. Finally, in Section \ref{sec:word}
 we summarize lessons learned from our approach and highlight a different data representation and
-implementation approaches for parse forests, comparing our approach to the algorithms of Scott @{cite "Scott:2008"}.
+implementation approaches for parse forests, in particular highlighting the algorithms of Scott @{cite "Scott:2008"}.
 \<close>
 
 section \<open>A Single Parse Tree \label{sec:parse-tree}\<close> 
@@ -145,8 +145,8 @@ define and proof soundness of the pointers.
     and the index of the current bin $k$ if $k > 0$, the predecessor index does not exceed the length
     of the predecessor bin at index $k-1$, and the predecessor item in bin $k-1$ at index $pre$ @{term scans}
     the item of the entry $e$. An item $x'$ @{term scans} item $x$ for index $k$ if the next symbol of
-    $x'$ coincides with the terminal symbol at index $k-1$ in the input @{term \<omega>} and the item $x$ can be obtained the function call
-    by @{term "inc_item x' k"}. 
+    $x'$ coincides with the terminal symbol at index $k-1$ in the input @{term \<omega>} and the item $x$ can be obtained by the function call
+    @{term "inc_item x' k"}. 
   \item Finally, we define the soundness of a pointer @{term "PreRed p ps"} of an entry $e$ for each predecessor/reduction
     triple @{term "(k', pre, red) \<in> set (p#ps)"}. The index $k'$ of the predecessor bin must be strictly
     smaller than $k$, and both the predecessor and the reduction index must be within the bounds of their
@@ -170,7 +170,7 @@ definition scans :: "'a sentential \<Rightarrow> nat \<Rightarrow> 'a item \<Rig
 definition sound_pre_ptr :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_pre_ptr \<omega> bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
     k > 0 \<and> pre < |bs!(k-1)| \<and>
-    scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
+      scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
 
 definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> 'a item \<Rightarrow> bool" where
   "completes k x' x y \<equiv> x = inc_item x' k \<and> is_complete y \<and> item_origin y = item_end x' \<and>
@@ -179,7 +179,7 @@ definition completes :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a item \<Right
 definition sound_prered_ptr :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry \<Rightarrow> bool" where
   "sound_prered_ptr bs k e \<equiv> \<forall>p ps k' pre red. pointer e = PreRed p ps \<and>
     (k', pre, red) \<in> set (p#ps) \<longrightarrow> k' < k \<and> pre < |bs!k'| \<and> red < |bs!k| \<and>
-    completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
+      completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
 
 definition sound_ptrs :: "'a sentential \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "sound_ptrs \<omega> bs \<equiv> \<forall>k < |bs|. \<forall>e \<in> set (bs!k).
@@ -196,8 +196,7 @@ restate the conditions of the operations @{term Predict}, @{term Scan}, and @{te
 and the bounds of the indices are sound by construction. But the proofs are surprisingly not trivial at all, especially the soundness
 proofs for functions @{term bin_upd} and @{term Earley_bin_list'}. The complexity mostly stems from
 the predecessor/reduction case that requires a quite significant amount of case splitting due to the indexing and dependence
-on the type of the pointers of the newly inserted items. Nonetheless, since the proofs do not reveal anything new in structure
-but are very technical, we only state them and omit going into any detail.
+on the type of the pointers of the newly inserted items. Nonetheless, we only state the proofs and do not go into detail.
 \<close>
 
 lemma sound_ptrs_bin_upd:
@@ -286,7 +285,7 @@ After execution of the @{term \<E>arley_list} algorithm we obtain bins represent
 of Earley items. The null, predecessor, and predecessor/reduction pointers provide a way to navigate
 between items or through these bins, and, since they are sound, a way to construct derivation trees.
 The function @{term build_tree'} constructs a \textit{single} parse tree corresponding to the item $x$ of entry $e$ at index $i$ of the $k$-th bin according to the
-well-formedness definitions from the beginning of this section.
+well-formedness definitions for parse trees from the beginning of this section.
 
 If the pointer of entry $e$ is a null pointer, the algorithm starts building the tree rooted at
 the left-hand side non-terminal $N$ of the production rule of the item $x$ by constructing an initially
@@ -479,7 +478,7 @@ be the item of $e$, or $x = N \rightarrow \, \alpha \bullet \beta, j, k$.
     due to the null pointer, or the bullet of $x$ is at position $0$. Thus, we have @{term "\<alpha> = []"} and
     the list of subtrees @{term "[]"} matches. In summary, we have @{term "wf_item_tree \<G> x t"}.
     From @{term "predicts x"}, we also know that @{term "j = k"}, or @{term "\<omega>[j..k\<rangle> = []"} by definition
-    of the @{term slice} function. Since the yield of $t$ is empty, we have @{term "wf_yield_tree \<omega> x t"}
+    of the @{term slice} function. Since the yield of $t$ is empty, we have @{term "mbox0 (wf_yield_tree \<omega> x t)"}
     and conclude the proof for the null pointer.
 
   \item @{term "pointer e = Pre pre"}:
@@ -554,7 +553,7 @@ be the item of $e$, or $x = N \rightarrow \, \alpha \bullet \beta, j, k$.
   \item @{term "pointer e = PreRed (k', pre, red) ps"}:
     The proof is similar in structure to the proof of the simple predecessor case. We only highlight
     the main differences. In contrast to only one recursive call for the predecessor item $x'$, we
-    have another recursive call for the complete reduction item $y$. But we have also have an additional
+    have another recursive call for the complete reduction item $y$. But we also have an additional
     induction hypothesis. The proofs of @{term "wf_item_tree \<G> x t"} and @{term "wf_yield_tree \<omega> x t"}
     are analogous to the case above replacing @{term "Leaf (\<omega>!(k-1))"} with the branch obtained from
     the second recursive call. Statements similar to (a-g) hold since all items are well-formed and
@@ -643,7 +642,7 @@ lemma @{thm[source] correctness_\<E>arley_list} using our assumptions.
 section \<open>All Parse Trees \label{sec:parse-forest}\<close>
 
 text\<open>
-While computing a single parse tree is sufficient for unambiguous grammars, an Earley parser - in its most general form -
+Computing a single parse tree is sufficient for unambiguous grammars, but an Earley parser - in its most general form -
 can handle all context-free grammars. For ambiguous grammars there might exist multiple
 parse trees for a specific input, there might even be exponentially many. One example of a highly ambiguous
 grammar that produces exponentially many parse trees is our running example. To be precise, the number of
@@ -694,8 +693,7 @@ fun trees :: "'a forest \<Rightarrow> 'a tree list" where
   "trees (FLeaf a) = [Leaf a]"
 | "trees (FBranch N fss) = (
     let tss = (map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss) in
-    map (\<lambda>ts. Branch N ts) (combinations tss)
-  )"
+    map (\<lambda>ts. Branch N ts) (combinations tss))"
 
 
 subsection \<open>A Parse Forest Algorithm\<close>
@@ -704,6 +702,7 @@ text\<open>
 We define two auxiliary functions @{term group_by} and @{term insert_group} grouping a list of values @{term xs} according to a key-mapping $K$
 and a value-mapping $V$ by key. E.g. for the list of tuples @{term "xs = [(1::nat, a), (2, b), (1, c)]"} and
 mappings @{term "K = fst"} and @{term "V = snd"} we obtain the association list @{term "[(1::nat, [a, c]), (2, [b])]"}.
+\newpage
 \<close>
 
 fun insert_group :: "('a \<Rightarrow> 'k) \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('k \<times> 'v list) list \<Rightarrow> ('k \<times> 'v list) list" where
@@ -733,7 +732,7 @@ Next we implement the function @{term "build_forests'"}. It takes as arguments t
 item, $k$ respectively $i$, and a set of natural numbers $I$, and returns an optional list of parse forests.
 There are two things to note here: the return type and the argument $I$. One might expect that we can return
 a single parse forest and not a list of forests. This is not the case. Although we are sharing subforests for two distinct reduction triples
-@{term "(k'\<^sub>A, pre\<^sub>A, red\<^sub>A)"} and @{term "(k'\<^sub>B, pre\<^sub>B, red\<^sub>B)"} if @{term "(k'\<^sub>A, pre\<^sub>A) = (k'\<^sub>B, pre\<^sub>B)"}, we
+@{term "(k'\<^sub>A, pre\<^sub>A, red\<^sub>A)"} and @{term "(k'\<^sub>B, pre\<^sub>B, red\<^sub>B)"} if @{term "mbox0 ((k'\<^sub>A, pre\<^sub>A) = (k'\<^sub>B, pre\<^sub>B))"}, we
 can not share the subforests if the predecessor items are distinct, and hence need to return two distinct forests in this case. Furthermore, the algorithm returns an
 optional value since the function might not terminate if the pointers are not sound as it was the case
 for function @{term "build_tree'"}. But unfortunately, this time around the situation is even worse:
@@ -744,7 +743,7 @@ to non-termination. To ensure the termination of the algorithm we keep track of 
 already visited in a single bin by means of the additional argument $I$ representing the indices
 of the previous function calls in the same bin. The algorithm proceeds as follows:
 
-Let $e$ denote the $i$-th item in the $k$-th bin.. If the pointer of $e$ is
+Let $e$ denote the $i$-th item in the $k$-th bin. If the pointer of $e$ is
 a null pointer the forest algorithm proceeds analogously to the tree algorithm, constructing an initially
 empty forest branch.
 
@@ -760,14 +759,12 @@ In the case that the algorithm
 encounters a predecessor/reduction pointer it first makes sure to not enter a cycle of reductions
 by discarding any reduction indices that are contained in $I$ and thus the algorithm has already started to process in earlier
 recursive calls. It then groups the reduction triples by predecessor. Subsequently, for each tuple of predecessor
-($k'$ and @{term pre}) and reduction (@{term reds}) indices it proceeds as follows. It first calls itself once recursively
+($k'$ and @{term pre}) and reduction indices @{term reds} it proceeds as follows. It first calls itself once recursively
 for the predecessor, initializing the set $I$ as @{term "{pre}"}, and obtaining a list of predecessor
 forests. Then it executes one recursive call for each reduction index @{term "red \<in> set reds"}
 in the current bin $k$ making sure to mark the index @{term "red"} as already visited by adding it to $I$.
-Finally, it appends to the list of subforests of each predecessor forests the list of reduction forests
+Finally, it appends to the list of subforests of each predecessor forest the list of reduction forests
 computed in the previous step.
-
-The function @{term build_forests} is then defined analogously to the function @{term build_tree}.
 \<close>
 
 partial_function (option) build_forests' :: "'a bins \<Rightarrow> 'a sentential \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> 'a forest list option" where
@@ -782,8 +779,7 @@ partial_function (option) build_forests' :: "'a bins \<Rightarrow> 'a sentential
             case f of
               FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (\<omega>!(k-1))]]))
             | _ \<Rightarrow> None
-          ) pres)
-        })
+          ) pres)})
     | PreRed p ps \<Rightarrow> (
         let ps' = filter (\<lambda>(k', pre, red). red \<notin> I) (p#ps) in
         let gs = group_by (\<lambda>(k', pre, red). (k', pre)) (\<lambda>(k', pre, red). red) ps' in
@@ -797,9 +793,13 @@ partial_function (option) build_forests' :: "'a bins \<Rightarrow> 'a sentential
               | _ \<Rightarrow> None
             ) pres)
           }
-        ) gs))
-      )
-  ))"
+        ) gs)))))"
+
+text\<open>
+The function @{term build_forests} is then defined analogously to the function @{term build_tree}.
+The only difference is the use of the function @{term those} to obtain an optional list of lists of
+forests for all finished items in the last bin, and the subsequent use of @{term map_option} and @{term concat}.
+\<close>
 
 definition build_forests :: "'a cfg \<Rightarrow> 'a sentential \<Rightarrow> 'a bins \<Rightarrow> 'a forest list option" where
   "build_forests \<G> \<omega> bs \<equiv>
@@ -812,7 +812,7 @@ subsection \<open>Termination\<close>
 text\<open>
 Similarly to the single tree algorithm we need to define the well-formedess of the input and a suitable
 measure for the forest algorithm to prove an applicable induction schema (\textit{forest induction}) by
-complete induction on the measure. An input quintuplet @{term "(bs, \<omega>, k, i, I)"} is well-formed if
+complete induction on the measure. An input quintuplet @{term "mbox0 ((bs, \<omega>, k, i, I))"} is well-formed if
 the pointers are sound, the indices $k$ and $i$ are within their respective bounds, and the set of already
 visited indices $I$ contains the current index $i$ and only consists of indices bounded by the size of the current bin $k$.
 As termination measure we count the number of items in the first $k$ bins minus the indices the algorithm
@@ -854,7 +854,7 @@ needed - argument $I$ from the function @{term build_forests'} and adjust the im
 But a problem of technical nature arises while trying to prove the \textit{forest induction} schema.
 We need to define a suitable measure capturing the termination argument in terms of the input, or a function
 of the form $('a \, \mathit{bins} \times 'a \, \mathit{sentential} \times \mathit{nat} \times \mathit{nat}) \Rightarrow \, \mathit{nat}$.
-But we cannot express the termination argument just in terms of the current input @{term "(bs, \<omega>, k , i)"}, but need access to
+But we cannot express the termination argument just in terms of the current input @{term "mbox0 ((bs, \<omega>, k , i))"}, but need access to
 the history of recursive calls to argue that - for non-cyclic pointers - the algorithm calls itself
 at most once for each index in the current bin $k$ during chains of reductions. Hence, we need to reintroduce
 the argument $I$ of already visited indices or an equivalent argument. Note that this still simplifies
@@ -873,7 +873,7 @@ text\<open>
 The following four lemmas prove soundness of the functions @{term build_forests'} and @{term build_forests}.
 The proof are analogous to the corresponding proofs for the functions @{term build_tree'} and @{term build_tree},
 replacing \textit{tree induction} with \textit{forest induction}. We might add that although the forest algorithm
-is only a slight generalization of the tree algorithm and hence one might suspect that the proof should generalize
+is only a slight generalization of the tree algorithm and hence one might suspect that the proofs should generalize
 easily, this is unfortunately not the case. The proofs are rather unpleasant and cumbersome due to the complexity
 that occurs from the interplay of the option monad (and actually the list monad we are working with but not using explicit do notation for), functions @{term those}, @{term map_option},
 @{term concat}, and the quite involved definition of the abstraction function @{term trees}. We refrain from
@@ -953,9 +953,9 @@ reasoning is twofold. The completeness proof is far from trivial and exceeded th
 Secondly, the algorithm is only of theoretical interest and far from being practical due to its poor performance.
 The simple sharing of subforests for identical predecessor items is one optimization over the naive approach, but unfortunately
 not enough to make the algorithm practical, as some experimentation suggests. We would need to introduce
-further performance improvements. One obvious improvement is to use more structural sharing of subtrees.
+further performance improvements. One obvious improvement is to use more structural sharing of subforests.
 At the moment the algorithm always appends new lists of subforests. We can avoid copying the current list
-of subtrees if we preprend instead of append, and finally reverse the subtrees for complete items. 
+of subforests if we preprend instead of append, and finally reverse the subforests for complete items. 
 Another concern is the number of executed recursive calls. As implemented, the algorithm might call itself recursively more than
 once for the same Earley item or identical bins and item indices. This occurs for example if we have
 two different predecessor items but the same reduction item, e.g. items of the form $A \rightarrow \, \alpha_A C \bullet \beta_A, i_A, j$,
