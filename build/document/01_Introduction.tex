@@ -33,77 +33,59 @@
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-DRAFT:
+Communication is key, not only in everyday life while conveying ideas to other people, but also in
+the interaction between human and machine. In both cases the medium to transport ideas between parties
+is language. The exact structure of the language might range from more or less defined natural
+speech to precisely and formally specified programming languages, but one thing is common to any
+communication through language: it needs to be parsed. The work of Chomsky \cite{Chomsky:1956} laid
+the foundation to formalize a grammar of a language. And nowadays one of the most popular approaches
+to define the extension or syntax of a language, and consequently also its intension or semantics, are
+his context-free grammars.
 
-Start with the fact that language is essential for communication, not only between humans but also
-between humans and machines. The work of Chomsky \cite{Chomsky:1956} laid the foundation to formalize grammars. A parser or recognizer
-is the first step to go from unstructured text with the help of a grammar to capture the syntax or extension
-of a language and consequently define its intension or semantics.
+In the field of computer science a recognizer is a program that takes a string of symbols
+and answers \textit{yes} if the string of symbols is in the language, otherwise it answers \textit{no}. A parser additionally
+transforms the string of symbols into some structure, most commonly a parse tree, according to the grammar
+of the language, if the answer is \textit{yes}. To define the syntax of a language
+a recognizer suffices, to talk about the semantics of a language one necessarily requires a parser.
 
-Definition Parser: Something that transforms a string of symbols into a structure according to a description
-  of the mapping from strings to structures. Structures can be considered to be parse trees.
+The conception of ALGOL 60 \cite{Backus:1963} and Irons \cite{Irons:1961} paper,
+on what we would nowadays call a parser for a programming language, started the quest
+to solve the parsing problem: find an efficient, general, declarative and practical parser.
 
-Definition Recognizer: Something that takes a string and ansers yes if the string is in the language
-  otherwise no.
+During the early days, predating ALGOL 60, and surprisingly still to this day parsers are often written in an ad-hoc fashion.
+And, more often than not, these algorithms work top-down starting with the highest-level non-terminal symbol
+of the grammar and recursively descent to derive the input string. In 1961, Lucas \cite{Lucas:1961}
+publishes the first description of what we would today call a top-down recursive descent parser,
+and in 1968 Lewis and Stearns \cite{Lewis:1968} finally define LL(k) grammars with mathematical rigor.
 
-Context-free grammars have been used extensively for describing the syntax of programming languages
-and natural languages. Parsing algorithms for context-free grammars consequently play a large role in
-the implementation of compilers and interpreters for programming languages and of programs which understand
-or translate natural languages. Numerous parsing algorithms have been developed. Some are general,
-in the sense that they can handle all context-free grammars, while others can handle only subclasses of
-grammars. The latter, restricted algorithms tend to be much more efficient The algorithm described here
-seems to be the most efficient of the general algorithms, and also it can handle a larger class of grammars
-in linear time than most of the restricted algorithms.
+In a parallel development Knuth \cite{Knuth:1965} discovers the classes of LR(k) grammars in 1965 and
+conceives bottom-up LR parsing that starts from the input and successively reduces it to the target
+language constructs. DeRemer \cite{DeRemer:1969} later develops his famous LALR algorithm, combining
+the efficiency of LR parsers with a compact representation of parser tables, that is subsequently popularized
+by tools such as YACC and Bison.
 
-Since the invention of ALGOL 60 \cite{Backus:1963} and Irons \cite{Irons:1961} maybe first paper on
-something we would nowadays call a parser, a block structured language the quest to solve the parsing problem begins:
-Find an efficient, general, declarative, and practical parser.
+In a more recent development the functional programming community takes a stab at parsing.
+In 1995, Wadler \cite{Wadler:1995} introduces monads and one of the motivating examples for their
+applications is combinator-based parsing. Later Hutton and Meijer \cite{Hutton:1996} elaborate on this
+approach in their infamous paper on monadic parser combinators. In 2004, Ford \cite{Ford:2004}
+proposes parsing expression grammars (PEGs) as an alternative to context-free grammars, and later
+introduces packrat parsing \cite{Ford:2006}.
 
-Lucas \cite{Lucas:1961} publishes his description of a top-down recursive descent parser.
+Most parsing algorithms can only handle certain subclasses of grammars,
+but for some applications such as natural language processing general parsing algorithms that can
+handle arbitrary context-free grammars are needed. Sakai \cite{Sakai:1961} discovers table-parsing
+in 1961 and his algorithm, nowadays more commonly called CYK algorithm, is rediscovered several times
+by Hayes or Cocke \cite{Cocke:1969}, Younger \cite{Younger:1967}, and Kasami and Torii \cite{Kasami:1969}.
+In 1985, Tomita \cite{Tomita:1985} extends LR parsing to generalized LR parsing. By then Earley \cite{Earley:1970}
+had already published his top-down, table-driven parsing algorithm. Both handle non-deterministic and ambiguous grammars.
 
-Knuth \cite{Knuth:1965} discovers the classes of LR(k) grammars and shift-reduce bottom-up LR parsing.
-DeRemer \cite{DeRemer:1969} later develops his famous LALR algorithm combining the efficiency of
-LR parsers with a compact representation of parser tables and were popularized by tools YACC and Bison.
-Later Tomita \cite{Tomita:1985} extends LR parsing to generalized LR parsing to handle non-deterministic
-and ambiguous grammars.
-
-Note that top-down grammars lacked a mathematical description. Lewis and Stearns \cite{Lewis:1968}
-fill that gap by defining LL(k) grammars.
-
-Earley \cite{Earley:1970} publishes the first fully general parsing algorithm for all context-free grammars,
-but is ahead of its time, since table-driven parsing, is daunting for the hardware of the 1960s.
-
-Leo \cite{Leo:1991} discovers a way of speeding up right recursions in Earley's algorithm and is
-linar for all LRR grammars, or a superset of LR(k) and therefore just about every unambiguous grammar
-of practical interest.
-
-Aycock and Horspool \cite{Aycock:2002} publish their attempt at a fast, practical Earley parser,
-missing Leo's improvement but solving the zero-length production rule bug.
-
-Ford \cite{Ford:2004} was proposed as an alternative to CFGS parsing expression grammars (PEGs)
-provide an alternative, recognition-based formal foundation for describing machine-oriented
-syntax, allows for more expressive grammars and features such as prioritized choice and unlimited
-lookahead. And Ford \cite{Ford:2006} packrat parsing is a memoization based technique that efficiently
-handles PEGs.
-
-Wadler \cite{Wadler:1995} introduces monads and the illustrations include an example of
-monadic combinator based parsing. Hutton and Meijer \cite{Hutton:1996} extend this later in their
-paper on combinator parsing.
-
-Izmaylova \textit{et al} \cite{Izmaylova:2016} develop a general parser 
-combinator library based on memoized Continuation-Passing Style (CPS) recognizers that supports all
-context-free grammars and constructs a Shared Packed Parse Forest (SPPF) in worst case cubic time and space.
-
-Kegler \cite{Kegler:2023} can be considered state-of-the-art Earley parsing. It implements Leo performance
-improvement for right recursions and fixes the zero-length production rule bug by incorporating the
-work of Aycock and Horspool. It is linear for nearley all unambiguous gramamrs, in particular
-for all LL(k), LR(k), LALR, operator grammars.
-
-Incorporate our main contributions:
-(1) formalization of large parts of Earley \cite{Earley:1970} and Jones \cite{Jones:1972} for the recognizer
-(2) correction of Earley pointers which were shown by Tomita \cite{Tomita:1985} to be spurious with the pointers of Scott \cite{Scott:2008}.
-(2) development of a functional algorithm for single parse trees and a generalization to a parse forest
-  (that unfortunately is not promising)%
+The main contributions of this thesis is the first verification of an Earley parser. We formalize
+a slightly simplified functional version of Earley's \cite{Earley:1970} recognizer algorithm
+using the interactive theorem prover Isabelle/HOL \cite{Nipkow:2002}, and prove soundness and completeness.
+The base for our proofs are the extensive paper proofs of Jones \cite{Jones:1972}. We also incorporate
+the work of Scott \cite{Scott:2008} to fix a bug in Earley's original implementation that was discovered
+by Tomita \cite{Tomita:1985}, and develop two functional algorithms constructing respectively a single parse
+tree and a parse forest, proving correctness of the former and soundness of the latter.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -124,28 +106,19 @@ Incorporate our main contributions:
 \endisadelimdocument
 %
 \begin{isamarkuptext}%
-Obua \textit{et al} \cite{Obua:2017} introduce local lexing, a novel parsing concept which interleaves
-lexing and parsing whilst allowing lexing to be dependent on the parsing process. They base their
-development on Earley's algorithm and have verified the correctness with respect to its local lexing
-semantics in the theorem prover Isabelle/HOL. The background theory of this Master's thesis is based
-upon the local lexing entry \cite{LocalLexing-AFP} in the Archive of Formal Proofs.
-
+The field of parsing is old and vast, but surprisingly only few algorithms and theorems seem to have been
+verified formally. The basis for this thesis is Obua's formalization of Local Lexing \cite{Obua:2017} \cite{LocalLexing-AFP} in Isabelle,
+a parsing concept that interleaves lexing and parsing allowing lexing to be dependent on the parsing process.
 Lasser \textit{et al} \cite{Lasser:2019} verify an LL(1) parser generator using the Coq proof assistant.
-
-Barthwal \textit{et al} \cite{Barthwal:2009} formalize background theory
-about context-free languages and grammars, and subsequently verify an SLR automaton and parser produced
-by a parser generator.
-
-Blaudeau \textit{et al} \cite{Blaudeau:2020} formalize the metatheory on Parsing expression grammars (PEGs) and
-build a verified parser interpreter based on higher-order parsing combinators for expression grammars
-using the PVS specification language and verification system. Koprowski \textit{et al} \cite{Koprowski:2011}
-present TRX: a parser interpreter formally developed in Coq which also parses expression grammars.
-
-Jourdan \textit{et al} \cite{Jourdan:2012} present a validator which checks if a context-free grammar
-and an LR(1) parser agree, producing correctness guarantees required by verified compilers.
-
-Lasser \textit{et al} \cite{Lasser:2021} present the verified parser CoStar based on the ALL(*) algorithm.
-They proof soundness and completeness for all non-left-recursive grammars using the Coq proof assistant.%
+Barthwal \textit{et al} \cite{Barthwal:2009} formalize background theory about context-free languages
+and grammars, and subsequently verify an SLR automaton and parser produced by a parser generator.
+Blaudeau \textit{et al} \cite{Blaudeau:2020} formalize the meta theory on PEGs and build a verified parser
+interpreter based on higher-order parsing combinators for expression grammars using the PVS specification
+language and verification system. Koprowski \textit{et al} \cite{Koprowski:2011} present TRX: a parser
+interpreter formally developed in Coq which also parses expression grammars. Jourdan \textit{et al}
+\cite{Jourdan:2012} present a validator which checks if a context-free grammar and an LR(1) parser
+agree, producing correctness guarantees required by verified compilers. Lasser \textit{et al} \cite{Lasser:2021}
+present the verified parser CoStar based on the ALL(*) algorithm using the Coq proof assistant.%
 \end{isamarkuptext}\isamarkuptrue%
 %
 \isadelimdocument
@@ -251,58 +224,31 @@ Chapter 7 concludes with a summary of this thesis and points the reader towards 
 %:%86=61%:%
 %:%87=62%:%
 %:%88=63%:%
-%:%89=64%:%
-%:%90=65%:%
-%:%91=66%:%
-%:%92=67%:%
-%:%93=68%:%
-%:%94=69%:%
-%:%95=70%:%
-%:%96=71%:%
-%:%97=72%:%
-%:%98=73%:%
-%:%99=74%:%
-%:%100=75%:%
-%:%101=76%:%
-%:%102=77%:%
-%:%103=78%:%
-%:%104=79%:%
-%:%105=80%:%
-%:%106=81%:%
-%:%115=84%:%
-%:%127=87%:%
-%:%128=88%:%
-%:%129=89%:%
-%:%130=90%:%
-%:%131=91%:%
-%:%132=92%:%
-%:%133=93%:%
-%:%134=94%:%
-%:%135=95%:%
-%:%136=96%:%
-%:%137=97%:%
-%:%138=98%:%
-%:%139=99%:%
-%:%140=100%:%
-%:%141=101%:%
-%:%142=102%:%
-%:%143=103%:%
-%:%144=104%:%
-%:%145=105%:%
-%:%146=106%:%
-%:%147=107%:%
-%:%148=108%:%
-%:%157=111%:%
-%:%169=114%:%
-%:%170=115%:%
-%:%171=116%:%
-%:%172=117%:%
-%:%173=118%:%
-%:%174=119%:%
-%:%175=120%:%
-%:%176=121%:%
-%:%177=122%:%
-%:%178=123%:%
-%:%179=124%:%
-%:%180=125%:%
-%:%181=126%:%
+%:%97=67%:%
+%:%109=70%:%
+%:%110=71%:%
+%:%111=72%:%
+%:%112=73%:%
+%:%113=74%:%
+%:%114=75%:%
+%:%115=76%:%
+%:%116=77%:%
+%:%117=78%:%
+%:%118=79%:%
+%:%119=80%:%
+%:%120=81%:%
+%:%121=82%:%
+%:%130=85%:%
+%:%142=88%:%
+%:%143=89%:%
+%:%144=90%:%
+%:%145=91%:%
+%:%146=92%:%
+%:%147=93%:%
+%:%148=94%:%
+%:%149=95%:%
+%:%150=96%:%
+%:%151=97%:%
+%:%152=98%:%
+%:%153=99%:%
+%:%154=100%:%

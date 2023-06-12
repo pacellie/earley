@@ -69,7 +69,7 @@ trees, and optimizing the representation of the grammar and the bins to enable f
 completion operations. Or one could reach for the stars and verify the state-of-the-art Earley-based
 parsing algorithm Marpa introduced by Kepler @{cite "Kegler:2023"}. It allows arbitrary context-free
 grammars, including grammars with empty derivations, by incorporating the work of Aycock and Horspool @{cite "Aycock:2002"},
-and is based on the algorithms of Earley @{cite "Earley:1970"} and Leo @{cite "Leo:1991"} who improves
+and is based on the algorithms of Earley @{cite "Earley:1970"} and Leo @{cite "Leo:1991"} who significantly improves
 the running time for right recursions. It claims to run in linear time for nearly all unambiguous grammars,
 in particular all LL(k), LR(k), LALR, LRR and operator grammars.
 
