@@ -7,11 +7,6 @@ begin
 
 chapter\<open>Conclusion\<close>
 
-text\<open>
-In this chapter we shortly summarize the contributions of this thesis and point the reader towards
-- at least in our opinion - relevant and worthwhile future work.
-\<close>
-
 section\<open>Summary\<close>
 
 text\<open>
@@ -71,7 +66,12 @@ necessary performance optimizations to achieve the optimal cubic time and space 
 Chapter \ref{chapter:3}. A formal proof of the complexity bounds should be attempted at this point.
 Other performance improvements include incorporating a look-head symbol to prune dead end derivation
 trees, and optimizing the representation of the grammar and the bins to enable faster prediction and
-completion operations.
+completion operations. Or one could reach for the stars and verify the state-of-the-art Earley-based
+parsing algorithm Marpa introduced by Kepler @{cite "Kegler:2023"}. It allows arbitrary context-free
+grammars, including grammars with empty derivations, by incorporating the work of Aycock and Horspool @{cite "Aycock:2002"},
+and is based on the algorithms of Earley @{cite "Earley:1970"} and Leo @{cite "Leo:1991"} who improves
+the running time for right recursions. It claims to run in linear time for nearly all unambiguous grammars,
+in particular all LL(k), LR(k), LALR, LRR and operator grammars.
 
 In a last step, one might want to investigate how to incorporate parse tree disambiguation into an
 Earley parser. One of strengths of an Earley parser is its ability to work with arbitrary context-free
@@ -84,11 +84,12 @@ grammars as tree automata, intersects them with automata encoding the desired re
 the results into a context-free grammar. Afroozeh \textit{et al} \cite{Afroozeh:2013} present an approach
 of specifying operator precedence based on declarative disambiguation rules basing their implementation
 on grammar rewriting. Thorup \cite{Thorup:1996} develops two concrete algorithms for the disambiguation of
-grammars based on the idea of excluding a certain set of forbidden sub-parse trees. Last but not least,
-and possibly the most interesting approach since it avoids grammar rewriting and is solely based on parse
-tree filtering: Klint \textit{et al} \cite{Klint:1997} propose a framework of filters, that select from
+grammars based on the idea of excluding a certain set of forbidden sub-parse trees.
+Possibly the most interesting approach, since it avoids grammar rewriting and is solely based on parse
+tree filtering, is the work of Klint \textit{et al} \cite{Klint:1997}. He propose as framework of filters, that select from
 a set of parse trees the intended trees, to describe and compare a wide range of disambiguation problems
-in a parser-independent way.
+in a parser-independent way. Last but not least, Marpa also allows the user to mix classical Chomskyan
+parsing and precedence parsing to annotate expressions with precedence and association rules.
 \<close>
 
 (*<*)
