@@ -7,6 +7,7 @@ session Earley = LocalLexing +
     CFG
     Derivations
     Earley
+    Earley_Fixpoint
     Earley_Recognizer_Executable
     Earley_Parser_Executable
     Examples
