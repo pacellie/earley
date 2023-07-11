@@ -730,18 +730,19 @@ subsection\<open>Completeness\<close>
 
 lemma Earley_bin0_sub_\<pi>0:
   assumes "Init cfg \<subseteq> I"
-  shows "bin (Earley cfg inp) 0 \<subseteq> \<pi> 0 cfg inp I"
+  shows "bin (Earley cfg inp) 0 \<subseteq> bin (\<pi> 0 cfg inp I) 0"
 proof standard
   fix x
   assume *: "x \<in> bin (Earley cfg inp) 0" 
   hence "x \<in> Earley cfg inp"
     using bin_def by blast
-  thus "x \<in> \<pi> 0 cfg inp I"
+  thus "x \<in> bin (\<pi> 0 cfg inp I) 0"
     using assms *
   proof (induction rule: Earley.induct)
     case (Init r)
     thus ?case
-      unfolding Init_def init_item_def using \<pi>_mono by (smt (verit, best) CollectI in_mono)
+      unfolding Init_def init_item_def bin_def using \<pi>_mono
+      by (smt (verit, ccfv_SIG) CollectI item.sel(4) subsetD)
   next
     case (Scan x r b i j a)
     thus ?case
@@ -752,35 +753,33 @@ proof standard
       using Predict.prems(2) bin_def by (metis (mono_tags, lifting) item.sel(4) mem_Collect_eq)
     hence "x \<in> bin (Earley cfg inp) 0"
       using Predict.hyps(1,2) bin_def by force
-    hence "x \<in> \<pi> 0 cfg inp I"
+    hence "x \<in> bin (\<pi> 0 cfg inp I) 0"
       using Predict.IH Predict.prems(1) by blast
     hence "Item r' 0 j j \<in> Predict 0 cfg (\<pi> 0 cfg inp I)"
-      using Predict.hyps(1,3,4) Predict_def init_item_def bin_def \<open>x \<in> bin (Earley cfg inp) 0\<close>
-      by (smt (verit, del_insts) item.sel(4) mem_Collect_eq)
+      using Predict.hyps(1,3,4) Predict_def init_item_def bin_def \<open>j = 0\<close>
+      by (smt (verit, del_insts) mem_Collect_eq)
     hence "Item r' 0 j j \<in> \<pi>_step 0 cfg inp (\<pi> 0 cfg inp I)"
       unfolding \<pi>_step_def by blast
     hence "Item r' 0 j j \<in> \<pi> 0 cfg inp I"
       using \<pi>_idem \<pi>_step_\<pi>_mono by blast
     thus ?case
-      by simp
+      using bin_def \<open>j = 0\<close> by fastforce
   next
     case (Complete x r\<^sub>x b\<^sub>x i j y r\<^sub>y b\<^sub>y k)
     have "k = 0"
       using Complete.prems(2) bin_def by (metis (mono_tags, lifting) item.sel(4) mem_Collect_eq)
     hence "y \<in> bin (Earley cfg inp) 0"
       unfolding bin_def using Complete.hyps(3,4) by auto
-    hence "y \<in> \<pi> 0 cfg inp I"
-      using Complete.IH Complete.prems(1) by blast
     hence 0: "y \<in> bin (\<pi> 0 cfg inp I) 0"
-      by (simp add: Complete.hyps(3) \<open>k = 0\<close> bin_def)
+      using Complete.IH Complete.prems(1) by blast
     have "j = 0"
       using wf_Earley Complete.hyps(3,4) wf_item_def \<open>k = 0\<close> by force
     hence "x \<in> bin (Earley cfg inp) 0"
       unfolding bin_def using Complete.hyps(1,2) by auto
-    hence "x \<in> \<pi> 0 cfg inp I"
+    hence "x \<in> bin (\<pi> 0 cfg inp I) 0"
       using Complete.IH Complete.prems(1) by blast
     hence 1: "x \<in> bin (\<pi> 0 cfg inp I) (item_origin y)"
-      by (simp add: Complete.hyps(1) Complete.hyps(3) bin_def)
+      by (auto simp: Complete.hyps(1) Complete.hyps(3) bin_def)
     have "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> Complete 0 (\<pi> 0 cfg inp I)"
       unfolding Complete_def inc_item_def using 0 1 Complete.hyps(1,3,5,6) \<open>k = 0\<close> by force
     hence "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> \<pi>_step 0 cfg inp (\<pi> 0 cfg inp I)"
@@ -788,13 +787,106 @@ proof standard
     hence "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> \<pi> 0 cfg inp I"
       using \<pi>_idem \<pi>_step_\<pi>_mono by blast
     thus ?case
-      by blast
+      using bin_def \<open>k = 0\<close> by fastforce
   qed
 qed
 
+definition prev_symbol :: "'a item \<Rightarrow> 'a option" where
+  "prev_symbol x = (if item_dot x = 0 then None else Some (item_rule_body x ! (item_dot x - 1)))"
+
+definition stem :: "'a sentence \<Rightarrow> 'a item set \<Rightarrow> nat \<Rightarrow> 'a item set" where
+  "stem inp I k = { x . x \<in> I \<and> item_end x = k \<and> prev_symbol x = Some (inp!(k-1)) }"
+
 lemma Earley_bink_sub_\<pi>k:
-  assumes "\<forall>k' < k. bin (Earley cfg inp) k' \<subseteq> I" "k > 0"
-  shows "bin (Earley cfg inp) k \<subseteq> \<pi> k cfg inp I"
-  sorry
+  assumes "k > 0"
+  assumes "\<forall>k' < k. bin (Earley cfg inp) k' \<subseteq> I"
+  assumes "stem inp (Earley cfg inp) k \<subseteq> I"
+  shows "bin (Earley cfg inp) k \<subseteq> bin (\<pi> k cfg inp I) k"
+proof standard
+  fix x
+  assume *: "x \<in> bin (Earley cfg inp) k" 
+  hence "x \<in> Earley cfg inp"
+    using bin_def by blast
+  thus "x \<in> bin (\<pi> k cfg inp I) k"
+    using assms *
+  proof (induction rule: Earley.induct)
+    case (Init r)
+    have "k = 0"
+      using Init.prems(4) unfolding bin_def by simp
+    hence "False"
+      using Init.prems(1) by blast
+    thus ?case
+      by blast
+  next
+    case (Scan x r b i j a)
+    have "j+1 = k"
+      using Scan.prems(4) bin_def by (metis (mono_tags, lifting) CollectD item.sel(4))
+    have "prev_symbol (Item r (b + 1) i (j + 1)) = Some (inp ! (k - 1))"
+      using Scan.hyps(1,3,5) \<open>j+1 = k\<close> by (auto simp: next_symbol_def prev_symbol_def item_rule_body_def split: if_splits)
+    hence "Item r (b + 1) i (j + 1) \<in> stem inp (Earley cfg inp) k"
+      unfolding stem_def using Scan.prems(4) bin_def by fastforce
+    hence "Item r (b + 1) i (j + 1) \<in> I"
+      using Scan.prems(3) by blast
+    hence "Item r (b + 1) i (j + 1) \<in> \<pi> k cfg inp I"
+      using \<pi>_mono by blast
+    thus ?case
+      using \<open>j+1 = k\<close> bin_def by fastforce
+  next
+    case (Predict x r b i j r')
+    have "j = k"
+      using Predict.prems(4) bin_def by (metis (mono_tags, lifting) CollectD item.sel(4))
+    hence "x \<in> bin (Earley cfg inp) k"
+      using Predict.hyps(1,2) bin_def by fastforce
+    hence "x \<in> bin (\<pi> k cfg inp I) k"
+      using Predict.IH Predict.prems(1-3) by blast
+    hence "Item r' 0 j j \<in> Predict k cfg (\<pi> k cfg inp I)"
+      unfolding Predict_def init_item_def using Predict.hyps(1,3,4) \<open>j = k\<close> by blast
+    hence "Item r' 0 j j \<in> \<pi>_step k cfg inp (\<pi> k cfg inp I)"
+      using Predict_\<pi>_step_mono by blast
+    hence "Item r' 0 j j \<in> \<pi> k cfg inp I"
+      using \<pi>_idem \<pi>_step_\<pi>_mono by blast
+    thus ?case
+      by (simp add: \<open>j = k\<close> bin_def)
+  next
+    case (Complete x r\<^sub>x b\<^sub>x i j y r\<^sub>y b\<^sub>y l)
+    have "l = k"
+      using Complete.prems(4) bin_def by (metis (mono_tags, lifting) CollectD item.sel(4))
+    hence "y \<in> bin (Earley cfg inp) l"
+      using Complete.hyps(3,4) bin_def by fastforce
+    hence 0: "y \<in> bin (\<pi> k cfg inp I) k"
+      using Complete.IH(2) Complete.prems(1-3) \<open>l = k\<close> by blast
+    have 1: "x \<in> bin (\<pi> k cfg inp I) (item_origin y)"
+    proof (cases "j = k")
+      case True
+      hence "x \<in> bin (Earley cfg inp) k"
+        using Complete.hyps(1,2) bin_def by fastforce
+      hence "x \<in> bin (\<pi> k cfg inp I) k"
+        using Complete.IH(1) Complete.prems(1-3) by blast
+      thus ?thesis
+        using Complete.hyps(3) True by simp
+    next
+      case False
+      hence "j < k"
+        using \<open>l = k\<close> wf_Earley wf_item_def Complete.hyps(3,4) by force
+      moreover have "x \<in> bin (Earley cfg inp) j"
+        using Complete.hyps(1,2) bin_def by force
+      ultimately have "x \<in> I"
+        using Complete.prems(2) by blast
+      hence "x \<in> bin (\<pi> k cfg inp I) j"
+        using Complete.hyps(1) \<pi>_mono bin_def by fastforce
+      thus ?thesis
+        using Complete.hyps(3) by simp
+    qed
+    have "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> Complete k (\<pi> k cfg inp I)"
+      unfolding Complete_def inc_item_def using 0 1 Complete.hyps(1,5,6) by force
+    hence "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> \<pi>_step k cfg inp (\<pi> k cfg inp I)"
+      unfolding \<pi>_step_def by blast
+    hence "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> \<pi> k cfg inp I"
+      using \<pi>_idem \<pi>_step_\<pi>_mono by blast
+    thus ?case
+      using bin_def \<open>l = k\<close> by fastforce
+  qed
+qed
+  
 
 end
