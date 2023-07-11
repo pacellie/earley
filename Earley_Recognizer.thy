@@ -1,4 +1,4 @@
-theory Earley_Recognizer_Executable
+theory Earley_Recognizer
   imports
     Earley_Fixpoint
 begin

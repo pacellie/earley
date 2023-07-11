@@ -1,5 +1,7 @@
-theory Earley_Parser_Executable
-  imports Earley_Recognizer_Executable "HOL-Library.Monad_Syntax"
+theory Earley_Parser
+  imports
+    Earley_Recognizer
+    "HOL-Library.Monad_Syntax"
 begin
 
 section \<open>Earley parser\<close>

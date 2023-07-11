@@ -1,84 +1,9 @@
 theory Earley_Fixpoint
   imports
+    Earley
     Derivations
     Limit
 begin
-
-section \<open>Slices\<close>
-
-\<comment>\<open>slice a b xs: a is inclusive, b is exclusive\<close>
-fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
-  "slice _ _ [] = []"
-| "slice _ 0 (x#xs) = []"
-| "slice 0 (Suc b) (x#xs) = x # slice 0 b xs"
-| "slice (Suc a) (Suc b) (x#xs) = slice a b xs"
-
-lemma slice_drop_take:
-  "slice a b xs = drop a (take b xs)"
-  by (induction a b xs rule: slice.induct) auto
-
-lemma slice_append_aux:
-  "Suc b \<le> c \<Longrightarrow> slice (Suc b) c (x # xs) = slice b (c-1) xs"
-  using Suc_le_D by fastforce
-
-lemma slice_concat:
-  "a \<le> b \<Longrightarrow> b \<le> c \<Longrightarrow> slice a b xs @ slice b c xs = slice a c xs"
-  apply (induction a b xs arbitrary: c rule: slice.induct)
-  apply (auto simp: slice_append_aux)
-  using Suc_le_D by fastforce
-
-lemma slice_concat_Ex:
-  "a \<le> c \<Longrightarrow> slice a c xs = ys @ zs \<Longrightarrow> \<exists>b. ys = slice a b xs \<and> zs = slice b c xs \<and> a \<le> b \<and> b \<le> c"
-proof (induction a c xs arbitrary: ys zs rule: slice.induct)
-  case (3 b x xs)
-  show ?case
-  proof (cases ys)
-    case Nil
-    then obtain zs' where "x # slice 0 b xs = x # zs'" "x # zs' = zs"
-      using "3.prems"(2) by auto
-    thus ?thesis
-      using Nil by force
-  next
-    case (Cons y ys')
-    then obtain ys' where "x # slice 0 b xs = x # ys' @ zs" "x # ys' = ys"
-      using "3.prems"(2) by auto
-    thus ?thesis
-      using "3.IH"[of ys' zs] by force
-  qed
-next
-  case (4 a b x xs)
-  thus ?case
-    by (auto, metis slice.simps(4) Suc_le_mono)
-qed auto
-
-lemma slice_nth:
-  "a < length xs \<Longrightarrow> slice a (a+1) xs = [xs!a]"
-  unfolding slice_drop_take
-  by (metis Cons_nth_drop_Suc One_nat_def diff_add_inverse drop_take take_Suc_Cons take_eq_Nil)
-
-lemma slice_append_nth:
-  "a \<le> b \<Longrightarrow> b < length xs \<Longrightarrow> slice a b xs @ [xs!b] = slice a (b+1) xs"
-  by (metis le_add1 slice_concat slice_nth)
-
-lemma slice_empty:
-  "b \<le> a \<Longrightarrow> slice a b xs = []"
-  by (simp add: slice_drop_take)
-
-lemma slice_id[simp]:
-  "slice 0 (length xs) xs = xs"
-  by (simp add: slice_drop_take)
-
-lemma slice_subset:
-  "set (slice a b xs) \<subseteq> set xs"
-  using slice_drop_take by (metis in_set_dropD in_set_takeD subsetI)
-
-lemma slice_singleton:
-  "b \<le> length xs \<Longrightarrow> [x] = slice a b xs \<Longrightarrow> b = a + 1"
-  by (induction a b xs rule: slice.induct) (auto simp: slice_drop_take)
-
-lemma slice_shift:
-  "slice (a+i) (b+i) xs = slice a b (slice i (length xs) xs)"
-  unfolding slice_drop_take by (simp add: drop_take)
 
 
 section \<open>Additional Derivation Lemmas\<close>
