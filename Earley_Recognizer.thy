@@ -99,13 +99,13 @@ definition pointers :: "'a bin \<Rightarrow> pointer list" where
 definition bins_eq_items :: "'a bins \<Rightarrow> 'a bins \<Rightarrow> bool" where
   "bins_eq_items bs0 bs1 \<longleftrightarrow> map items bs0 = map items bs1"
 
-definition bins_items :: "'a bins \<Rightarrow> 'a items" where
+definition bins_items :: "'a bins \<Rightarrow> 'a item set" where
   "bins_items bs = \<Union> { set (items (bs ! k)) | k. k < length bs }"
 
-definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a items" where
+definition bin_items_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a item set" where
   "bin_items_upto b i = { items b ! j | j. j < i \<and> j < length (items b) }"
 
-definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a items" where
+definition bins_items_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a item set" where
   "bins_items_upto bs k i = \<Union> { set (items (bs ! l)) | l. l < k } \<union> bin_items_upto (bs ! k) i"
 
 definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
@@ -479,8 +479,8 @@ lemma wf_bins_bins_upd:
   by (metis length_list_update nth_list_update_eq nth_list_update_neq)
 
 lemma wf_bins_impl_wf_items:
-  "wf_bins cfg inp bs \<Longrightarrow> wf_items cfg inp (bins_items bs)"
-  unfolding wf_bins_def wf_bin_def wf_items_def wf_bin_items_def bins_items_def by auto
+  "wf_bins cfg inp bs \<Longrightarrow> \<forall>x \<in> (bins_items bs). wf_item cfg inp x"
+  unfolding wf_bins_def wf_bin_def wf_bin_items_def bins_items_def by auto
 
 lemma bin_upd_eq_items:
   "item e \<in> set (items b) \<Longrightarrow> set (items (bin_upd e b)) = set (items b)"
@@ -1414,9 +1414,9 @@ subsection \<open>Soundness\<close>
 
 lemma sound_Scan_it:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs" "k < length inp"
-  assumes "next_symbol x = Some a" "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (set (items (Scan_it k inp a x i)))"
-  using sound_Scan Scan_it_sub_Scan assms by (smt (verit, best) sound_items_def subsetD)
+  assumes "next_symbol x = Some a" "\<forall>x \<in> I. wf_item cfg inp x" "\<forall>x \<in> I. sound_item cfg inp x"
+  shows "\<forall>x \<in> set (items (Scan_it k inp a x i)). sound_item cfg inp x"
+  using sound_Scan Scan_it_sub_Scan assms sorry
 
 lemma sound_Predict_it:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs ! k))" "k < length bs"

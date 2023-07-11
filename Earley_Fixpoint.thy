@@ -5,270 +5,23 @@ theory Earley_Fixpoint
     Limit
 begin
 
-
-section \<open>Additional Derivation Lemmas\<close>
-
-lemma Derives1_prepend:
-  assumes "Derives1 cfg u i r v"
-  shows "Derives1 cfg (w@u) (i + length w) r (w@v)"
-proof -
-  obtain x y N \<alpha> where *:
-    "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
-    "(N, \<alpha>) \<in> set (\<RR> cfg)" "r = (N, \<alpha>)" "i = length x"
-    using assms Derives1_def by (smt (verit))
-  hence "w@u = w @ x @ [N] @ y" "w@v = w @ x @ \<alpha> @ y"
-    by auto
-  thus ?thesis
-    unfolding Derives1_def using *
-    apply (rule_tac exI[where x="w@x"])
-    apply (rule_tac exI[where x="y"])
-    by simp
-qed
-
-lemma Derivation_prepend:
-  "Derivation cfg b D b' \<Longrightarrow> Derivation cfg (a@b) (map (\<lambda>(i, r). (i + length a, r)) D) (a@b')"
-  using Derives1_prepend by (induction D arbitrary: b b') (auto, fast)
-
-lemma Derives1_append:
-  assumes "Derives1 cfg u i r v"
-  shows "Derives1 cfg (u@w) i r (v@w)"
-proof -
-  obtain x y N \<alpha> where *:
-    "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
-    "(N, \<alpha>) \<in> set (\<RR> cfg)" "r = (N, \<alpha>)" "i = length x"
-    using assms Derives1_def by (smt (verit))
-  hence "u@w = x @ [N] @ y @ w" "v@w = x @ \<alpha> @ y @ w"
-    by auto
-  thus ?thesis
-    unfolding Derives1_def using *
-    apply (rule_tac exI[where x="x"])
-    apply (rule_tac exI[where x="y@w"])
-    by blast
-qed
-
-lemma Derivation_append':
-  "Derivation cfg a D a' \<Longrightarrow> Derivation cfg (a@b) D (a'@b)"
-  using Derives1_append by (induction D arbitrary: a a') (auto, fast)
-
-lemma Derivation_append_rewrite:
-  assumes "Derivation cfg a D (b @ c @ d) " "Derivation cfg c E c'"
-  shows "\<exists>F. Derivation cfg a F (b @ c' @ d)"
-  using assms Derivation_append' Derivation_prepend Derivation_implies_append by fast
-
-lemma derives1_if_valid_rule:
-  "(N, \<alpha>) \<in> set (\<RR> cfg) \<Longrightarrow> derives1 cfg [N] \<alpha>"
-  unfolding derives1_def
-  apply (rule_tac exI[where x="[]"])
-  apply (rule_tac exI[where x="[]"])
-  by simp
-
-lemma derives_if_valid_rule:
-  "(N, \<alpha>) \<in> set (\<RR> cfg) \<Longrightarrow> derives cfg [N] \<alpha>"
-  using derives1_if_valid_rule by fastforce
-
-lemma Derivation_from_empty:
-  "Derivation cfg [] D a \<Longrightarrow> a = []"
-  by (cases D) (auto simp: Derives1_def)
-
-lemma Derivation_concat_split:
-  "Derivation cfg (a@b) D c \<Longrightarrow> \<exists>E F a' b'. Derivation cfg a E a' \<and> Derivation cfg b F b' \<and>
-     c = a' @ b' \<and> length E \<le> length D \<and> length F \<le> length D"
-proof (induction D arbitrary: a b)
-  case Nil
-  thus ?case
-    by (metis Derivation.simps(1) order_refl)
-next
-  case (Cons d D)
-  then obtain ab where *: "Derives1 cfg (a@b) (fst d) (snd d) ab" "Derivation cfg ab D c"
-    by auto
-  then obtain x y N \<alpha> where #:
-    "a@b = x @ [N] @ y" "ab = x @ \<alpha> @ y" "(N,\<alpha>) \<in> set (\<RR> cfg)" "snd d = (N,\<alpha>)" "fst d = length x"
-    using * unfolding Derives1_def by blast
-  show ?case
-  proof (cases "length a \<le> length x")
-    case True
-    hence ab_def:
-      "a = take (length a) x"
-      "b = drop (length a) x @ [N] @ y"
-      "ab = take (length a) x @ drop (length a) x @ \<alpha> @ y"
-      using #(1,2) True by (metis append_eq_append_conv_if)+
-    then obtain E F a' b' where IH:
-      "Derivation cfg (take (length a) x) E a'"
-      "Derivation cfg (drop (length a) x @ \<alpha> @ y) F b'"
-      "c = a' @ b'"
-      "length E \<le> length D"
-      "length F \<le> length D"
-      using Cons *(2) by blast
-    have "Derives1 cfg b (fst d - length a) (snd d) (drop (length a) x @ \<alpha> @ y)"
-      unfolding Derives1_def using *(1) #(3-5) ab_def(2) by (metis length_drop)
-    hence "Derivation cfg b ((fst d - length a, snd d) # F) b'"
-      using IH(2) by force
-    moreover have "Derivation cfg a E a'"
-      using IH(1) ab_def(1) by fastforce
-    ultimately show ?thesis
-      using IH(3-5) by fastforce
-  next
-    case False
-    hence a_def: "a = x @ [N] @ take (length a - length x - 1) y"
-      using #(1) append_eq_conv_conj[of a b "x @ [N] @ y"] take_all_iff take_append
-      by (metis append_Cons append_Nil diff_is_0_eq le_cases take_Cons')
-    hence b_def: "b = drop (length a - length x - 1) y"
-      using #(1) by (metis List.append.assoc append_take_drop_id same_append_eq)
-    have "ab = x @ \<alpha> @ take (length a - length x - 1) y @ drop (length a - length x - 1) y"
-      using #(2) by force
-    then obtain E F a' b' where IH:
-      "Derivation cfg (x @ \<alpha> @ take (length a - length x - 1) y) E a'"
-      "Derivation cfg (drop (length a - length x - 1) y) F b'"
-      "c = a' @ b'"
-      "length E \<le> length D"
-      "length F \<le> length D"
-      using Cons.IH[of "x @ \<alpha> @ take (length a - length x - 1) y" "drop (length a - length x - 1) y"] *(2) by auto
-    have "Derives1 cfg a (fst d) (snd d) (x @ \<alpha> @ take (length a - length x - 1) y)"
-      unfolding Derives1_def using #(3-5) a_def by blast
-    hence "Derivation cfg a ((fst d, snd d) # E) a'"
-      using IH(1) by fastforce
-    moreover have "Derivation cfg b F b'"
-      using b_def IH(2) by blast
-    ultimately show ?thesis
-      using IH(3-5) by fastforce
-  qed
-qed
-
-
 section \<open>Earley recognizer\<close>
 
-subsection \<open>Earley items\<close>
-
-definition rule_head :: "'a rule \<Rightarrow> 'a" where
-  "rule_head = fst"
-
-definition rule_body :: "'a rule \<Rightarrow> 'a list" where
-  "rule_body = snd"
-
-datatype 'a item =
-  Item
-    (item_rule: "'a rule")
-    (item_dot : nat)
-    (item_origin : nat)
-    (item_end : nat)
-
-type_synonym 'a items = "'a item set"
-
-definition item_rule_head :: "'a item \<Rightarrow> 'a" where
-  "item_rule_head x = rule_head (item_rule x)"
-
-definition item_rule_body :: "'a item \<Rightarrow> 'a sentence" where
-  "item_rule_body x = rule_body (item_rule x)"
-
-definition item_\<alpha> :: "'a item \<Rightarrow> 'a sentence" where
-  "item_\<alpha> x = take (item_dot x) (item_rule_body x)"
-
-definition item_\<beta> :: "'a item \<Rightarrow> 'a sentence" where
-  "item_\<beta> x = drop (item_dot x) (item_rule_body x)"
+subsection \<open>Earley Fixpoint\<close>
 
 definition init_item :: "'a rule \<Rightarrow> nat \<Rightarrow> 'a item" where
   "init_item r k = Item r 0 k k"
 
-definition is_complete :: "'a item \<Rightarrow> bool" where
-  "is_complete x = (item_dot x \<ge> length (item_rule_body x))"
-
-definition next_symbol :: "'a item \<Rightarrow> 'a option" where
-  "next_symbol x = (if is_complete x then None else Some ((item_rule_body x) ! (item_dot x)))"
-
-definition is_opening :: "'a item \<Rightarrow> bool" where
-  "is_opening x = (item_dot x = 0)"
-
-definition prev_symbol :: "'a item \<Rightarrow> 'a option" where
-  "prev_symbol x = (if is_opening x then None else Some ((item_rule_body x) ! (item_dot x - 1)))"
-
 definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
   "inc_item x k = Item (item_rule x) (item_dot x + 1) (item_origin x) k"
 
-lemmas item_defs = item_rule_head_def item_rule_body_def item_\<alpha>_def item_\<beta>_def rule_head_def rule_body_def
-
-definition bin :: "'a items \<Rightarrow> nat \<Rightarrow> 'a items" where
+definition bin :: "'a item set \<Rightarrow> nat \<Rightarrow> 'a item set" where
   "bin I k = { x . x \<in> I \<and> item_end x = k }"
 
-definition wf_item :: "'a cfg \<Rightarrow> 'a sentence => 'a item \<Rightarrow> bool" where
-  "wf_item cfg inp x = (
-    item_rule x \<in> set (\<RR> cfg) \<and>
-    item_dot x \<le> length (item_rule_body x) \<and>
-    item_origin x \<le> item_end x \<and>
-    item_end x \<le> length inp)"
-
-definition wf_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> bool" where
-  "wf_items cfg inp I = (\<forall>x \<in> I. wf_item cfg inp x)"
-
-
-subsection \<open>Epsilon Productions\<close>
-
-definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
-  "\<epsilon>_free cfg \<longleftrightarrow> (\<forall>r \<in> set (\<RR> cfg). rule_body r \<noteq> [])"
-
-lemma \<epsilon>_free_impl_non_empty_sentence_deriv:
-  "\<epsilon>_free cfg \<Longrightarrow> a \<noteq> [] \<Longrightarrow> \<not> Derivation cfg a D []"
-proof (induction "length D" arbitrary: a D rule: nat_less_induct)
-  case 1
-  show ?case
-  proof (rule ccontr)
-    assume assm: "\<not> \<not> Derivation cfg a D []"
-    show False
-    proof (cases "D = []")
-      case True
-      then show ?thesis
-        using "1.prems"(2) assm by auto
-    next
-      case False
-      then obtain d D' \<alpha> where *:
-        "D = d # D'" "Derives1 cfg a (fst d) (snd d) \<alpha>" "Derivation cfg \<alpha> D' []" "snd d \<in> set (\<RR> cfg)"
-        using list.exhaust assm Derives1_def by (metis Derivation.simps(2))
-      show ?thesis
-      proof cases
-        assume "\<alpha> = []"
-        thus ?thesis
-          using *(2,4) Derives1_split \<epsilon>_free_def rule_body_def "1.prems"(1) by (metis append_is_Nil_conv)
-      next
-        assume "\<not> \<alpha> = []"
-        thus ?thesis
-          using *(1,3) "1.hyps" "1.prems"(1) by auto
-      qed
-    qed
-  qed
-qed
-
-lemma \<epsilon>_free_impl_non_empty_deriv:
-  "\<epsilon>_free cfg \<Longrightarrow> \<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []"
-  using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation by (metis not_Cons_self2)
-
-lemma nonempty_deriv_impl_\<epsilon>_free:
-  assumes "\<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []" "\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg)"
-  shows "\<epsilon>_free cfg"
-proof (rule ccontr)
-  assume "\<not> \<epsilon>_free cfg"
-  then obtain N \<alpha> where *: "(N, \<alpha>) \<in> set (\<RR> cfg)" "rule_body (N, \<alpha>) = []"
-    unfolding \<epsilon>_free_def by auto
-  hence "derives1 cfg [N] []"
-    unfolding derives1_def rule_body_def by auto
-  hence "derives cfg [N] []"
-    by auto
-  moreover have "N \<in> set (\<NN> cfg)"
-    using *(1) assms(2) by blast
-  ultimately show False
-    using assms(1) by blast
-qed
-
-lemma nonempty_deriv_iff_\<epsilon>_free:
-  assumes "\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg)"
-  shows "(\<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []) \<longleftrightarrow> \<epsilon>_free cfg"
-  using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free[OF _ assms] by blast
-
-
-subsection \<open>Earley algorithm\<close>
-
-definition Init :: "'a cfg \<Rightarrow> 'a items" where
+definition Init :: "'a cfg \<Rightarrow> 'a item set" where
   "Init cfg = { init_item r 0 | r. r \<in> set (\<RR> cfg) \<and> fst r = (\<SS> cfg) }"
 
-definition Scan :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+definition Scan :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
   "Scan k inp I =
     { inc_item x (k+1) | x a.
         x \<in> bin I k \<and>
@@ -276,14 +29,14 @@ definition Scan :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Right
         k < length inp \<and>
         next_symbol x = Some a }"
 
-definition Predict :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+definition Predict :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
   "Predict k cfg I =
     { init_item r k | r x.
         r \<in> set (\<RR> cfg) \<and>
         x \<in> bin I k \<and>
         next_symbol x = Some (rule_head r) }"
 
-definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+definition Complete :: "nat \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
   "Complete k I =
     { inc_item x k | x y.
         x \<in> bin I (item_origin y) \<and>
@@ -291,224 +44,18 @@ definition Complete :: "nat \<Rightarrow> 'a items \<Rightarrow> 'a items" where
         is_complete y \<and>
         next_symbol x = Some (item_rule_head y) }"
 
-definition \<pi>_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+definition \<pi>_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
   "\<pi>_step k cfg inp I = I \<union> Scan k inp I \<union> Complete k I \<union> Predict k cfg I"
 
-definition \<pi> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> 'a items" where
+definition \<pi> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
   "\<pi> k cfg inp I = limit (\<pi>_step k cfg inp) I"
 
-fun \<I> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items" where
+fun \<I> :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set" where
   "\<I> 0 cfg inp = \<pi> 0 cfg inp (Init cfg)"
 | "\<I> (Suc n) cfg inp = \<pi> (Suc n) cfg inp (\<I> n cfg inp)"
 
-definition \<II> :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items" where
+definition \<II> :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set" where
   "\<II> cfg inp = \<I> (length inp) cfg inp"
-
-definition is_finished :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "is_finished cfg inp x \<longleftrightarrow> (
-    item_rule_head x = \<SS> cfg \<and>
-    item_origin x = 0 \<and>
-    item_end x = length inp \<and>
-    is_complete x)"
-
-definition earley_recognized :: "'a items \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "earley_recognized I cfg inp = (\<exists>x \<in> I. is_finished cfg inp x)"
-
-
-subsection \<open>Wellformedness\<close>
-
-lemma wf_items_Un:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp J \<Longrightarrow> wf_items cfg inp (I \<union> J)"
-  unfolding wf_items_def by blast
-
-lemmas wf_defs = wf_item_def wf_items_def
-
-lemma wf_Init:
-  "x \<in> Init cfg \<Longrightarrow> wf_item cfg inp x"
-  unfolding Init_def wf_item_def init_item_def by auto
-
-lemma wf_Scan:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (Scan k inp I)"
-  unfolding Scan_def wf_defs bin_def inc_item_def is_complete_def item_rule_body_def next_symbol_def
-  by (auto split: if_splits)
-
-lemma wf_Predict:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (Predict k cfg I)"
-  unfolding Predict_def wf_defs bin_def init_item_def by auto
-
-lemma wf_Complete:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (Complete k I)"
-  unfolding Complete_def wf_defs bin_def inc_item_def is_complete_def item_rule_body_def next_symbol_def
-  by (auto split: if_splits; metis le_trans)
-
-lemma wf_\<pi>_step:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (\<pi>_step k cfg inp I)"
-  unfolding \<pi>_step_def using wf_Scan wf_Predict wf_Complete wf_items_Un by metis
-
-lemma wf_funpower:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
-  using wf_\<pi>_step unfolding wf_items_def
-  by (induction n) (auto, blast)
-
-lemma wf_\<pi>:
-  "wf_items cfg inp I \<Longrightarrow> wf_items cfg inp (\<pi> k cfg inp I)"
-  by (metis \<pi>_def elem_limit_simp wf_funpower wf_items_def)
-
-lemma wf_\<pi>0:
-  "wf_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
-  using wf_items_def wf_Init wf_\<pi> by metis
-
-lemma wf_\<I>:
-  "wf_items cfg inp (\<I> n cfg inp)"
-  by (induction n) (auto simp: wf_\<pi>0 wf_\<pi>)
-
-lemma wf_\<II>:
-  "wf_items cfg inp (\<II> cfg inp)"
-  unfolding \<II>_def using wf_\<I> by blast
-
-
-subsection \<open>Soundness\<close>
-
-definition sound_item :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
-  "sound_item cfg inp x = derives cfg [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
-
-definition sound_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a items \<Rightarrow> bool" where
-  "sound_items cfg inp I = (\<forall>x \<in> I. sound_item cfg inp x)"
-
-lemmas sound_defs = sound_items_def sound_item_def
-
-lemma sound_Init:
-  "sound_items cfg inp (Init cfg)"
-  unfolding sound_items_def
-proof (standard)
-  fix x
-  assume *: "x \<in> Init cfg"
-  hence "item_dot x = 0"
-    by (smt (verit) Init_def init_item_def item.exhaust_sel item.inject mem_Collect_eq)
-  hence "(item_rule_head x, item_\<beta> x) \<in> set (\<RR> cfg)"
-    unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
-    using * wf_Init wf_item_def by fastforce
-  hence "derives cfg [item_rule_head x] (item_\<beta> x)"
-    using derives_if_valid_rule by metis
-  moreover have "item_origin x = item_end x"
-    by (metis * Ex_list_of_length nle_le wf_Init wf_item_def)
-  ultimately show "sound_item cfg inp x"
-    unfolding sound_item_def by (simp add: slice_empty)
-qed
-
-lemma sound_item_inc_item:
-  assumes "wf_item cfg inp x" "sound_item cfg inp x"
-  assumes "next_symbol x = Some a"
-  assumes "k < length inp" "inp!k = a" "item_end x = k"
-  shows "sound_item cfg inp (inc_item x (k+1))"
-proof -
-  define x' where [simp]: "x' = inc_item x (k+1)"
-  obtain item_\<beta>' where *: "item_\<beta> x = a # item_\<beta>'"
-    using assms(3) apply (auto simp: item_\<beta>_def is_complete_def next_symbol_def split: if_splits)
-    by (metis Cons_nth_drop_Suc leI)
-  have "slice (item_origin x) (item_end x) inp @ item_\<beta> x = slice (item_origin x') (item_end x') inp @ item_\<beta>'"
-    using * assms(1,4-6) slice_append_nth wf_item_def by (auto simp: inc_item_def; blast)
-  moreover have "item_\<beta>' = item_\<beta> x'"
-    using * by (auto simp: inc_item_def item_\<beta>_def item_rule_body_def, metis List.list.sel(3) drop_Suc tl_drop)
-  moreover have "derives cfg [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
-    using assms(1,2,6) sound_item_def by blast
-  ultimately show ?thesis
-    by (simp add: inc_item_def item_rule_head_def sound_item_def)
-qed
-
-lemma sound_Scan:
-  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (Scan k inp I)"
-  unfolding Scan_def using sound_item_inc_item by (auto simp: wf_items_def sound_items_def bin_def; fast)
-
-lemma sound_Predict:
-  "sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (Predict k cfg I)"
-  unfolding Predict_def by (auto simp: sound_defs init_item_def derives_if_valid_rule slice_empty item_defs)
-
-lemma sound_Complete:
-  assumes "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (Complete k I)"
-  unfolding sound_items_def
-proof standard
-  fix z
-  assume "z \<in> Complete k I"
-  show "sound_item cfg inp z"
-  proof cases
-    assume "z \<in> I"
-    thus ?thesis
-      using assms unfolding sound_items_def by blast
-  next
-    assume "\<not> z \<in> I"
-    then obtain x y where *:
-      "z = inc_item x k" "x \<in> bin I (item_origin y)" "y \<in> bin I k"
-      "is_complete y" "next_symbol x = Some (item_rule_head y)"
-      using \<open>z \<in> Complete k I\<close> unfolding Complete_def by blast
-
-    have "derives cfg [item_rule_head y] (slice (item_origin y) (item_end y) inp)"
-      using *(3,4) sound_defs assms
-      by (metis (no_types, lifting) append_Nil2 bin_def drop_eq_Nil is_complete_def item_\<beta>_def mem_Collect_eq)
-    then obtain E where E: "Derivation cfg [item_rule_head y] E (slice (item_origin y) (item_end y) inp)"
-      using derives_implies_Derivation by blast
-
-    have "derives cfg [item_rule_head x] (slice (item_origin x) (item_origin y) inp @ item_\<beta> x)"
-      using *(2) sound_defs assms sound_items_def by (metis (mono_tags, lifting) bin_def mem_Collect_eq)
-    moreover have 0: "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"
-      using *(5) by (auto simp: next_symbol_def item_\<beta>_def is_complete_def split: if_splits,
-                     metis Cons_nth_drop_Suc drop_Suc drop_tl leI)
-    ultimately obtain D where D:
-      "Derivation cfg [item_rule_head x] D (slice (item_origin x) (item_origin y) inp @
-       [item_rule_head y] @ (tl (item_\<beta> x)))"
-      using derives_implies_Derivation by (metis append_Cons append_Nil)
-
-    have "wf_item cfg inp x"
-      using *(2) assms(1) bin_def wf_items_def by (metis (mono_tags, lifting) mem_Collect_eq)
-    obtain G where
-      "Derivation cfg [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
-       slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
-      using Derivation_append_rewrite D E by blast
-    moreover have "item_origin x \<le> item_origin y"
-      using *(2) \<open>wf_item cfg inp x\<close> wf_item_def by (auto simp: bin_def; force)
-    moreover have "item_origin y \<le> item_end y"
-      using *(3) wf_defs assms(1) by (auto simp: bin_def; blast)
-    ultimately have "derives cfg [item_rule_head x] (slice (item_origin x) (item_end y) inp @ tl (item_\<beta> x))"
-      by (metis Derivation_implies_derives append.assoc slice_concat)
-    moreover have "tl (item_\<beta> x) = item_\<beta> z"
-      using *(1,5) 0 by (auto simp: inc_item_def item_rule_body_def tl_drop drop_Suc item_\<beta>_def)
-    ultimately show ?thesis
-      using sound_item_def *(1,3) by (metis (mono_tags, lifting) bin_def inc_item_def item.sel(1,3,4) item_defs(1) mem_Collect_eq)
-  qed
-qed
-
-lemma sound_\<pi>_step:
-  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (\<pi>_step k cfg inp I)"
-  unfolding \<pi>_step_def using sound_Scan sound_Predict sound_Complete by (metis UnE sound_items_def)
-
-lemma sound_funpower:
-  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
-  by (induction n) (auto simp: sound_\<pi>_step wf_\<pi>_step wf_funpower)
-
-lemma sound_\<pi>:
-  assumes "wf_items cfg inp I" "sound_items cfg inp I"
-  shows "sound_items cfg inp (\<pi> k cfg inp I)"
-  by (metis \<pi>_def assms elem_limit_simp sound_items_def sound_funpower)
-
-lemma sound_\<pi>0:
-  "sound_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
-  using sound_Init sound_\<pi> wf_Init wf_items_def by metis
-
-lemma sound_\<I>:
-  "sound_items cfg inp (\<I> k cfg inp)"
-  apply (induction k)
-  apply (auto simp: sound_\<pi>0)
-  using sound_\<pi> wf_\<I> by force
-
-lemma sound_\<II>:
-  "sound_items cfg inp (\<II> cfg inp)"
-  unfolding \<II>_def using sound_\<I> by blast
-
-theorem soundness:
-  "earley_recognized (\<II> cfg inp) cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
-  using earley_recognized_def sound_\<II> sound_defs
-  by (metis drop_eq_Nil is_complete_def is_finished_def item_\<beta>_def self_append_conv slice_id)
 
 
 subsection \<open>Monotonicity and Absorption\<close>
@@ -723,6 +270,142 @@ next
     using \<pi>_mono \<open>x \<in> bin I i\<close> by (metis (no_types, lifting) bin_def mem_Collect_eq subsetD)
 qed
 
+
+(*
+subsection \<open>Soundness\<close>
+
+lemma sound_Init:
+  "sound_items cfg inp (Init cfg)"
+  unfolding sound_items_def
+proof (standard)
+  fix x
+  assume *: "x \<in> Init cfg"
+  hence "item_dot x = 0"
+    by (smt (verit) Init_def init_item_def item.exhaust_sel item.inject mem_Collect_eq)
+  hence "(item_rule_head x, item_\<beta> x) \<in> set (\<RR> cfg)"
+    unfolding item_rule_head_def rule_head_def item_\<beta>_def item_rule_body_def rule_body_def
+    using * wf_Init wf_item_def by fastforce
+  hence "derives cfg [item_rule_head x] (item_\<beta> x)"
+    using derives_if_valid_rule by metis
+  moreover have "item_origin x = item_end x"
+    by (metis * Ex_list_of_length nle_le wf_Init wf_item_def)
+  ultimately show "sound_item cfg inp x"
+    unfolding sound_item_def by (simp add: slice_empty)
+qed
+
+lemma sound_item_inc_item:
+  assumes "wf_item cfg inp x" "sound_item cfg inp x"
+  assumes "next_symbol x = Some a"
+  assumes "k < length inp" "inp!k = a" "item_end x = k"
+  shows "sound_item cfg inp (inc_item x (k+1))"
+proof -
+  define x' where [simp]: "x' = inc_item x (k+1)"
+  obtain item_\<beta>' where *: "item_\<beta> x = a # item_\<beta>'"
+    using assms(3) apply (auto simp: item_\<beta>_def is_complete_def next_symbol_def split: if_splits)
+    by (metis Cons_nth_drop_Suc leI)
+  have "slice (item_origin x) (item_end x) inp @ item_\<beta> x = slice (item_origin x') (item_end x') inp @ item_\<beta>'"
+    using * assms(1,4-6) slice_append_nth wf_item_def by (auto simp: inc_item_def; blast)
+  moreover have "item_\<beta>' = item_\<beta> x'"
+    using * by (auto simp: inc_item_def item_\<beta>_def item_rule_body_def, metis List.list.sel(3) drop_Suc tl_drop)
+  moreover have "derives cfg [item_rule_head x] (slice (item_origin x) (item_end x) inp @ item_\<beta> x)"
+    using assms(1,2,6) sound_item_def by blast
+  ultimately show ?thesis
+    by (simp add: inc_item_def item_rule_head_def sound_item_def)
+qed
+
+lemma sound_Scan:
+  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (Scan k inp I)"
+  unfolding Scan_def using sound_item_inc_item by (auto simp: wf_items_def sound_items_def bin_def; fast)
+
+lemma sound_Predict:
+  "sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (Predict k cfg I)"
+  unfolding Predict_def by (auto simp: sound_defs init_item_def derives_if_valid_rule slice_empty item_defs)
+
+lemma sound_Complete:
+  assumes "wf_items cfg inp I" "sound_items cfg inp I"
+  shows "sound_items cfg inp (Complete k I)"
+  unfolding sound_items_def
+proof standard
+  fix z
+  assume "z \<in> Complete k I"
+  show "sound_item cfg inp z"
+  proof cases
+    assume "z \<in> I"
+    thus ?thesis
+      using assms unfolding sound_items_def by blast
+  next
+    assume "\<not> z \<in> I"
+    then obtain x y where *:
+      "z = inc_item x k" "x \<in> bin I (item_origin y)" "y \<in> bin I k"
+      "is_complete y" "next_symbol x = Some (item_rule_head y)"
+      using \<open>z \<in> Complete k I\<close> unfolding Complete_def by blast
+
+    have "derives cfg [item_rule_head y] (slice (item_origin y) (item_end y) inp)"
+      using *(3,4) sound_defs assms
+      by (metis (no_types, lifting) append_Nil2 bin_def drop_eq_Nil is_complete_def item_\<beta>_def mem_Collect_eq)
+    then obtain E where E: "Derivation cfg [item_rule_head y] E (slice (item_origin y) (item_end y) inp)"
+      using derives_implies_Derivation by blast
+
+    have "derives cfg [item_rule_head x] (slice (item_origin x) (item_origin y) inp @ item_\<beta> x)"
+      using *(2) sound_defs assms sound_items_def by (metis (mono_tags, lifting) bin_def mem_Collect_eq)
+    moreover have 0: "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"
+      using *(5) by (auto simp: next_symbol_def item_\<beta>_def is_complete_def split: if_splits,
+                     metis Cons_nth_drop_Suc drop_Suc drop_tl leI)
+    ultimately obtain D where D:
+      "Derivation cfg [item_rule_head x] D (slice (item_origin x) (item_origin y) inp @
+       [item_rule_head y] @ (tl (item_\<beta> x)))"
+      using derives_implies_Derivation by (metis append_Cons append_Nil)
+
+    have "wf_item cfg inp x"
+      using *(2) assms(1) bin_def wf_items_def by (metis (mono_tags, lifting) mem_Collect_eq)
+    obtain G where
+      "Derivation cfg [item_rule_head x] G (slice (item_origin x) (item_origin y) inp @
+       slice (item_origin y) (item_end y) inp @ tl (item_\<beta> x))"
+      using Derivation_append_rewrite D E by blast
+    moreover have "item_origin x \<le> item_origin y"
+      using *(2) \<open>wf_item cfg inp x\<close> wf_item_def by (auto simp: bin_def; force)
+    moreover have "item_origin y \<le> item_end y"
+      using *(3) wf_defs assms(1) by (auto simp: bin_def; blast)
+    ultimately have "derives cfg [item_rule_head x] (slice (item_origin x) (item_end y) inp @ tl (item_\<beta> x))"
+      by (metis Derivation_implies_derives append.assoc slice_concat)
+    moreover have "tl (item_\<beta> x) = item_\<beta> z"
+      using *(1,5) 0 by (auto simp: inc_item_def item_rule_body_def tl_drop drop_Suc item_\<beta>_def)
+    ultimately show ?thesis
+      using sound_item_def *(1,3) by (metis (mono_tags, lifting) bin_def inc_item_def item.sel(1,3,4) item_defs(1) mem_Collect_eq)
+  qed
+qed
+
+lemma sound_\<pi>_step:
+  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (\<pi>_step k cfg inp I)"
+  unfolding \<pi>_step_def using sound_Scan sound_Predict sound_Complete by (metis UnE sound_items_def)
+
+lemma sound_funpower:
+  "wf_items cfg inp I \<Longrightarrow> sound_items cfg inp I \<Longrightarrow> sound_items cfg inp (funpower (\<pi>_step k cfg inp) n I)"
+  by (induction n) (auto simp: sound_\<pi>_step wf_\<pi>_step wf_funpower)
+
+lemma sound_\<pi>:
+  assumes "wf_items cfg inp I" "sound_items cfg inp I"
+  shows "sound_items cfg inp (\<pi> k cfg inp I)"
+  by (metis \<pi>_def assms elem_limit_simp sound_items_def sound_funpower)
+
+lemma sound_\<pi>0:
+  "sound_items cfg inp (\<pi> 0 cfg inp (Init cfg))"
+  using sound_Init sound_\<pi> wf_Init wf_items_def by metis
+
+lemma sound_\<I>:
+  "sound_items cfg inp (\<I> k cfg inp)"
+  apply (induction k)
+  apply (auto simp: sound_\<pi>0)
+  using sound_\<pi> wf_\<I> by force
+
+lemma sound_\<II>:
+  "sound_items cfg inp (\<II> cfg inp)"
+  unfolding \<II>_def using sound_\<I> by blast
+
+theorem soundness:
+  "earley_recognized (\<II> cfg inp) cfg inp \<Longrightarrow> derives cfg [\<SS> cfg] inp"
+  using earley_recognized_def sound_\<II> sound_defs
+  by (metis drop_eq_Nil is_complete_def is_finished_def item_\<beta>_def self_append_conv slice_id)
 
 subsection \<open>Completeness\<close>
 
@@ -972,24 +655,6 @@ lemma Init_sub_\<I>:
   "Init cfg \<subseteq> \<I> k cfg inp"
   using \<pi>_mono by (induction k) (auto, blast, blast)
 
-lemma Derivation_\<SS>1:
-  assumes "Derivation cfg [\<SS> cfg] D inp" "is_word cfg inp" "wf_cfg cfg"
-  shows "\<exists>\<alpha> E. Derivation cfg \<alpha> E inp \<and> (\<SS> cfg,\<alpha>) \<in> set (\<RR> cfg)"
-proof (cases D)
-  case Nil
-  thus ?thesis
-    using assms is_nonterminal_startsymbol is_terminal_nonterminal by (metis Derivation.simps(1) is_word_def list.set_intros(1))
-next
-  case (Cons d D)
-  then obtain \<alpha> where "Derives1 cfg [\<SS> cfg] (fst d) (snd d) \<alpha>" "Derivation cfg \<alpha> D inp"
-    using assms by auto
-  hence "(\<SS> cfg, \<alpha>) \<in> set (\<RR> cfg)"
-    unfolding Derives1_def
-    by (metis List.append.right_neutral List.list.discI append_eq_Cons_conv append_is_Nil_conv nth_Cons_0 self_append_conv2)
-  thus ?thesis
-    using \<open>Derivation cfg \<alpha> D inp\<close> by auto
-qed
-
 theorem completeness:
   assumes "derives cfg [\<SS> cfg] inp" "is_word cfg inp" "wf_cfg cfg"
   shows "earley_recognized (\<II> cfg inp) cfg inp"
@@ -1015,60 +680,121 @@ corollary correctness_set:
   assumes "wf_cfg cfg" "is_word cfg inp"
   shows "earley_recognized (\<II> cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
   using assms soundness completeness by blast
+*)
 
 
-subsection \<open>Finiteness\<close>
+subsection\<open>Soundness\<close>
 
-lemma finiteness_empty:
-  "set (\<RR> cfg) = {} \<Longrightarrow> finite { x | x. wf_item cfg inp x }"
-  unfolding wf_item_def by simp
+lemma Init_sub_Earley:
+  "Init cfg \<subseteq> Earley cfg inp"
+  unfolding Init_def init_item_def using Earley.Init by blast
 
-fun item_intro :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" where
-  "item_intro (rule, dot, origin, ends) = Item rule dot origin ends"
+lemma Scan_sub_Earley:
+  assumes "I \<subseteq> Earley cfg inp"
+  shows "Scan k inp I \<subseteq> Earley cfg inp"
+  unfolding Scan_def inc_item_def bin_def using assms Earley.Scan 
+  by (smt (verit, ccfv_SIG) item.exhaust_sel mem_Collect_eq subsetD subsetI)
 
-lemma finiteness_nonempty:
-  assumes "set (\<RR> cfg) \<noteq> {}"
-  shows "finite { x | x. wf_item cfg inp x }"
-proof -
-  define M where "M = Max { length (rule_body r) | r. r \<in> set (\<RR> cfg) }"
-  define Top where "Top = (set (\<RR> cfg) \<times> {0..M} \<times> {0..length inp} \<times> {0..length inp})"
-  hence "finite Top"
-    using finite_cartesian_product finite by blast
-  have "inj_on item_intro Top"
-    unfolding Top_def inj_on_def by simp
-  hence "finite (item_intro ` Top)"
-    using finite_image_iff \<open>finite Top\<close> by auto
-  have "{ x | x. wf_item cfg inp x } \<subseteq> item_intro ` Top"
-  proof standard
-    fix x
-    assume "x \<in> { x | x. wf_item cfg inp x }"
-    then obtain rule dot origin endp where *: "x = Item rule dot origin endp"
-      "rule \<in> set (\<RR> cfg)" "dot \<le> length (item_rule_body x)" "origin \<le> length inp" "endp \<le> length inp"
-      unfolding wf_item_def using item.exhaust_sel le_trans by blast
-    hence "length (rule_body rule) \<in> { length (rule_body r) | r. r \<in> set (\<RR> cfg) }"
-      using *(1,2) item_rule_body_def by blast
-    moreover have "finite { length (rule_body r) | r. r \<in> set (\<RR> cfg) }"
-      using finite finite_image_set[of "\<lambda>x. x \<in> set (\<RR> cfg)"] by fastforce
-    ultimately have "M \<ge> length (rule_body rule)"
-      unfolding M_def by simp
-    hence "dot \<le> M"
-      using *(1,3) item_rule_body_def by (metis item.sel(1) le_trans)
-    hence "(rule, dot, origin, endp) \<in> Top"
-      using *(2,4,5) unfolding Top_def by simp
-    thus "x \<in> item_intro ` Top"
-      using *(1) by force
+lemma Predict_sub_Earley:
+  assumes "I \<subseteq> Earley cfg inp"
+  shows "Predict k cfg I \<subseteq> Earley cfg inp"
+  unfolding Predict_def init_item_def bin_def using assms Earley.Predict
+  using item.exhaust_sel by blast
+
+lemma Complete_sub_Earley:
+  assumes "I \<subseteq> Earley cfg inp"
+  shows "Complete k I \<subseteq> Earley cfg inp"
+  unfolding Complete_def inc_item_def bin_def using assms Earley.Complete
+  by (smt (verit, del_insts) item.exhaust_sel mem_Collect_eq subset_eq)
+
+lemma \<pi>_step_sub_Earley:
+  assumes "I \<subseteq> Earley cfg inp"
+  shows "\<pi>_step k cfg inp I \<subseteq> Earley cfg inp"
+  unfolding \<pi>_step_def using assms Complete_sub_Earley Predict_sub_Earley Scan_sub_Earley by (metis le_supI)
+
+lemma \<pi>_sub_Earley:
+  assumes "I \<subseteq> Earley cfg inp"
+  shows "\<pi> k cfg inp I \<subseteq> Earley cfg inp"
+  using assms \<pi>_step_sub_Earley by (metis \<pi>_def limit_upperbound)
+
+lemma \<I>_sub_Earley:
+  shows "\<I> n cfg inp \<subseteq> Earley cfg inp"
+  by (induction n) (auto simp: \<pi>_sub_Earley Init_sub_Earley)
+
+lemma \<II>_sub_Earley:
+  shows "\<II> cfg inp \<subseteq> Earley cfg inp"
+  by (simp add: \<I>_sub_Earley \<II>_def)
+
+
+subsection\<open>Completeness\<close>
+
+lemma Earley_bin0_sub_\<pi>0:
+  assumes "Init cfg \<subseteq> I"
+  shows "bin (Earley cfg inp) 0 \<subseteq> \<pi> 0 cfg inp I"
+proof standard
+  fix x
+  assume *: "x \<in> bin (Earley cfg inp) 0" 
+  hence "x \<in> Earley cfg inp"
+    using bin_def by blast
+  thus "x \<in> \<pi> 0 cfg inp I"
+    using assms *
+  proof (induction rule: Earley.induct)
+    case (Init r)
+    thus ?case
+      unfolding Init_def init_item_def using \<pi>_mono by (smt (verit, best) CollectI in_mono)
+  next
+    case (Scan x r b i j a)
+    thus ?case
+      by (simp add: bin_def)
+  next
+    case (Predict x r b i j r')
+    have "j = 0"
+      using Predict.prems(2) bin_def by (metis (mono_tags, lifting) item.sel(4) mem_Collect_eq)
+    hence "x \<in> bin (Earley cfg inp) 0"
+      using Predict.hyps(1,2) bin_def by force
+    hence "x \<in> \<pi> 0 cfg inp I"
+      using Predict.IH Predict.prems(1) by blast
+    hence "Item r' 0 j j \<in> Predict 0 cfg (\<pi> 0 cfg inp I)"
+      using Predict.hyps(1,3,4) Predict_def init_item_def bin_def \<open>x \<in> bin (Earley cfg inp) 0\<close>
+      by (smt (verit, del_insts) item.sel(4) mem_Collect_eq)
+    hence "Item r' 0 j j \<in> \<pi>_step 0 cfg inp (\<pi> 0 cfg inp I)"
+      unfolding \<pi>_step_def by blast
+    hence "Item r' 0 j j \<in> \<pi> 0 cfg inp I"
+      using \<pi>_idem \<pi>_step_\<pi>_mono by blast
+    thus ?case
+      by simp
+  next
+    case (Complete x r\<^sub>x b\<^sub>x i j y r\<^sub>y b\<^sub>y k)
+    have "k = 0"
+      using Complete.prems(2) bin_def by (metis (mono_tags, lifting) item.sel(4) mem_Collect_eq)
+    hence "y \<in> bin (Earley cfg inp) 0"
+      unfolding bin_def using Complete.hyps(3,4) by auto
+    hence "y \<in> \<pi> 0 cfg inp I"
+      using Complete.IH Complete.prems(1) by blast
+    hence 0: "y \<in> bin (\<pi> 0 cfg inp I) 0"
+      by (simp add: Complete.hyps(3) \<open>k = 0\<close> bin_def)
+    have "j = 0"
+      using wf_Earley Complete.hyps(3,4) wf_item_def \<open>k = 0\<close> by force
+    hence "x \<in> bin (Earley cfg inp) 0"
+      unfolding bin_def using Complete.hyps(1,2) by auto
+    hence "x \<in> \<pi> 0 cfg inp I"
+      using Complete.IH Complete.prems(1) by blast
+    hence 1: "x \<in> bin (\<pi> 0 cfg inp I) (item_origin y)"
+      by (simp add: Complete.hyps(1) Complete.hyps(3) bin_def)
+    have "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> Complete 0 (\<pi> 0 cfg inp I)"
+      unfolding Complete_def inc_item_def using 0 1 Complete.hyps(1,3,5,6) \<open>k = 0\<close> by force
+    hence "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> \<pi>_step 0 cfg inp (\<pi> 0 cfg inp I)"
+      unfolding \<pi>_step_def by blast
+    hence "Item r\<^sub>x (b\<^sub>x + 1) i k \<in> \<pi> 0 cfg inp I"
+      using \<pi>_idem \<pi>_step_\<pi>_mono by blast
+    thus ?case
+      by blast
   qed
-  thus ?thesis
-    using \<open>finite (item_intro ` Top)\<close> rev_finite_subset by auto
 qed
 
-lemma finiteness_UNIV_wf_item:
-  "finite { x | x. wf_item cfg inp x }"
-  using finiteness_empty finiteness_nonempty by fastforce
-
-theorem finiteness:
-  "finite (\<II> cfg inp)"
-  using finiteness_UNIV_wf_item wf_items_def wf_\<II> rev_finite_subset by (metis mem_Collect_eq subsetI)
-
+lemma Earley_bink_sub_\<pi>k:
+  assumes "\<forall>k' < k. bin (Earley cfg inp) k' \<subseteq> I" "k > 0"
+  shows "bin (Earley cfg inp) k \<subseteq> \<pi> k cfg inp I"
+  sorry
 
 end

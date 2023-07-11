@@ -4,6 +4,68 @@ begin
 
 declare [[names_short]]
 
+subsection \<open>Epsilon Productions\<close>
+
+definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
+  "\<epsilon>_free cfg \<longleftrightarrow> (\<forall>r \<in> set (\<RR> cfg). rule_body r \<noteq> [])"
+
+lemma \<epsilon>_free_impl_non_empty_sentence_deriv:
+  "\<epsilon>_free cfg \<Longrightarrow> a \<noteq> [] \<Longrightarrow> \<not> Derivation cfg a D []"
+proof (induction "length D" arbitrary: a D rule: nat_less_induct)
+  case 1
+  show ?case
+  proof (rule ccontr)
+    assume assm: "\<not> \<not> Derivation cfg a D []"
+    show False
+    proof (cases "D = []")
+      case True
+      then show ?thesis
+        using "1.prems"(2) assm by auto
+    next
+      case False
+      then obtain d D' \<alpha> where *:
+        "D = d # D'" "Derives1 cfg a (fst d) (snd d) \<alpha>" "Derivation cfg \<alpha> D' []" "snd d \<in> set (\<RR> cfg)"
+        using list.exhaust assm Derives1_def by (metis Derivation.simps(2))
+      show ?thesis
+      proof cases
+        assume "\<alpha> = []"
+        thus ?thesis
+          using *(2,4) Derives1_split \<epsilon>_free_def rule_body_def "1.prems"(1) by (metis append_is_Nil_conv)
+      next
+        assume "\<not> \<alpha> = []"
+        thus ?thesis
+          using *(1,3) "1.hyps" "1.prems"(1) by auto
+      qed
+    qed
+  qed
+qed
+
+lemma \<epsilon>_free_impl_non_empty_deriv:
+  "\<epsilon>_free cfg \<Longrightarrow> \<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []"
+  using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation by (metis not_Cons_self2)
+
+lemma nonempty_deriv_impl_\<epsilon>_free:
+  assumes "\<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []" "\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg)"
+  shows "\<epsilon>_free cfg"
+proof (rule ccontr)
+  assume "\<not> \<epsilon>_free cfg"
+  then obtain N \<alpha> where *: "(N, \<alpha>) \<in> set (\<RR> cfg)" "rule_body (N, \<alpha>) = []"
+    unfolding \<epsilon>_free_def by auto
+  hence "derives1 cfg [N] []"
+    unfolding derives1_def rule_body_def by auto
+  hence "derives cfg [N] []"
+    by auto
+  moreover have "N \<in> set (\<NN> cfg)"
+    using *(1) assms(2) by blast
+  ultimately show False
+    using assms(1) by blast
+qed
+
+lemma nonempty_deriv_iff_\<epsilon>_free:
+  assumes "\<forall>(N, \<alpha>) \<in> set (\<RR> cfg). N \<in> set (\<NN> cfg)"
+  shows "(\<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []) \<longleftrightarrow> \<epsilon>_free cfg"
+  using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free[OF _ assms] by blast
+
 subsection \<open>Example 1: Addition\<close>
 
 datatype t1 = x | plus

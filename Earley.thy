@@ -272,8 +272,6 @@ inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item 
       Item r\<^sub>x (b\<^sub>x + 1) i k \<in> Earley \<G> \<omega>"
 
 
-find_theorems Earley
-
 subsection \<open>Well-formedness\<close>
 
 definition wf_item :: "'a cfg \<Rightarrow> 'a sentence => 'a item \<Rightarrow> bool" where 
