@@ -1417,19 +1417,43 @@ lemma sound_Scan_it:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs!k))" "k < length bs" "k < length inp"
   assumes "next_symbol x = Some a" "\<forall>x \<in> I. wf_item cfg inp x" "\<forall>x \<in> I. sound_item cfg inp x"
   shows "\<forall>x \<in> set (items (Scan_it k inp a x i)). sound_item cfg inp x"
-  sorry
+proof standard
+  fix y
+  assume "y \<in> set (items (Scan_it k inp a x i))"
+  hence "y \<in> Scan k inp I"
+    by (meson Scan_it_sub_Scan assms(1-6) in_mono)
+  thus "sound_item cfg inp y"
+    using sound_Scan assms(7,8) unfolding Scan_def inc_item_def bin_def
+    by (smt (verit, best) item.exhaust_sel mem_Collect_eq)
+qed
 
 lemma sound_Predict_it:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "x \<in> set (items (bs!k))" "k < length bs"
-  assumes "next_symbol x = Some X" "\<forall>x \<in> I. sound_item cfg inp x"
+  assumes "next_symbol x = Some X" "\<forall>x \<in> I. wf_item cfg inp x" "\<forall>x \<in> I. sound_item cfg inp x"
   shows "\<forall>x \<in> set (items (Predict_it k cfg X)). sound_item cfg inp x"
-  sorry
+proof standard
+  fix y
+  assume "y \<in> set (items (Predict_it k cfg X))"
+  hence "y \<in> Predict k cfg I"
+    by (meson Predict_it_sub_Predict assms(1-5) subsetD)
+  thus "sound_item cfg inp y"
+    using sound_Predict assms(6,7) unfolding Predict_def init_item_def bin_def
+    by (smt (verit, del_insts) item.exhaust_sel mem_Collect_eq)
+qed
 
 lemma sound_Complete_it:
   assumes "wf_bins cfg inp bs" "bins_items bs \<subseteq> I" "y \<in> set (items (bs!k))" "k < length bs"
   assumes "next_symbol y = None" "\<forall>x \<in> I. wf_item cfg inp x" "\<forall>x \<in> I. sound_item cfg inp x"
   shows "\<forall>x \<in> set (items (Complete_it k y bs i)). sound_item cfg inp x"
-  sorry
+proof standard
+  fix x
+  assume "x \<in> set (items (Complete_it k y bs i))"
+  hence "x \<in> Complete k I"
+    using Complete_it_sub_Complete assms(1-5) by blast
+  thus "sound_item cfg inp x"
+    using sound_Complete assms(6,7) unfolding Complete_def inc_item_def bin_def
+    by (smt (verit, del_insts) item.exhaust_sel mem_Collect_eq)
+qed
 
 lemma sound_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
