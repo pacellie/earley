@@ -11,7 +11,6 @@ session Earley (AFP) = LocalLexing +
     Earley_Recognizer
     Earley_Parser
     Examples
-    MyLaTeXSugar
   document_files
     "bibliography.bib"
 

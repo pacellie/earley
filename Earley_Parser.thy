@@ -349,7 +349,7 @@ qed simp
 
 lemma sound_mono_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "sound_ptrs inp bs" "sound_items cfg inp (bins_items bs)"
+  assumes "sound_ptrs inp bs" "\<forall>x \<in> bins_items bs. sound_item cfg inp x"
   assumes "mono_red_ptr bs"
   assumes "nonempty_derives cfg" "wf_cfg cfg"
   shows "sound_ptrs inp (\<pi>_it' k cfg inp bs i) \<and> mono_red_ptr (\<pi>_it' k cfg inp bs i)"
@@ -359,11 +359,11 @@ proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete 
   let ?bs' = "bins_upd bs k (Complete_it k x bs i)"
   have x: "x \<in> set (items (bs ! k))"
     using Complete.hyps(1,2) by force
-  hence "sound_items cfg inp (set (items (Complete_it k x bs i)))"
-    using sound_Complete_it \<pi>_mono Complete.hyps(3) Complete.prems bins_bin_exists 
-      sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
-  hence sound: "sound_items cfg inp (bins_items ?bs')"
-    using Complete.prems(1,3) bins_bins_upd sound_items_def wellformed_bins_elim UnE by metis
+  hence "\<forall>x \<in> set (items (Complete_it k x bs i)). sound_item cfg inp x"
+    using sound_Complete_it Complete.hyps(3) Complete.prems wellformed_bins_elim wf_bins_impl_wf_items x
+    by (metis dual_order.refl)
+  hence sound: "\<forall>x \<in> bins_items ?bs'. sound_item cfg inp x"
+    by (metis Complete.prems(1,3) UnE bins_bins_upd wellformed_bins_elim)
   have 0: "k < length bs"
     using Complete.prems(1) wellformed_bins_elim by auto
   have 1: "\<forall>e \<in> set (Complete_it k x bs i). sound_null_ptr e"
@@ -380,12 +380,12 @@ proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete 
     moreover have "wf_item cfg inp x" "item_end x = k"
       using Complete.prems(1) x wellformed_bins_elim wf_bins_kth_bin by blast+
     ultimately have 0: "k' \<le> k"
-      using wf_defs(1) by blast
+      using wf_item_def by blast
     have 1: "k' \<noteq> k"
     proof (rule ccontr)
       assume "\<not> k' \<noteq> k"
       have "sound_item cfg inp x"
-        using Complete.prems(1,3) x sound_items_def kth_bin_sub_bins wellformed_bins_elim by (metis subset_eq)
+        using Complete.prems(1,3) x kth_bin_sub_bins wellformed_bins_elim by (metis subset_eq)
       moreover have "is_complete x"
         using Complete.hyps(3) by (auto simp: next_symbol_def split: if_splits)
       moreover have "item_origin x = k"
@@ -430,11 +430,11 @@ next
   let ?bs' = "bins_upd bs (k+1) (Scan_it k inp a x i)"
   have "x \<in> set (items (bs ! k))"
     using Scan.hyps(1,2) by force
-  hence "sound_items cfg inp (set (items (Scan_it k inp a x i)))"
-    using sound_Scan_it \<pi>_mono Scan.hyps(3,5) Scan.prems(1,2,3) bins_bin_exists 
-      sound_\<pi> wf_\<pi> wf_bins_kth_bin wf_items_def wellformed_bins_elim by metis
-  hence sound: "sound_items cfg inp (bins_items ?bs')"
-    using Scan.hyps(5) Scan.prems(1,3) bins_bins_upd sound_items_def wellformed_bins_elim UnE by (metis add_less_cancel_right)
+  hence "\<forall>x \<in> set (items (Scan_it k inp a x i)). sound_item cfg inp x"
+    using sound_Scan_it Scan.hyps(3,5) Scan.prems(1,2,3) wellformed_bins_elim wf_bins_impl_wf_items wf_bins_impl_wf_items by fast
+  hence sound: "\<forall>x \<in> bins_items ?bs'. sound_item cfg inp x"
+    using Scan.hyps(5) Scan.prems(1,3) bins_bins_upd wellformed_bins_elim
+    by (metis UnE add_less_cancel_right)
   have 0: "k+1 < length bs"
     using Scan.hyps(5) Scan.prems(1) wellformed_bins_elim by force
   have 1: "\<forall>e \<in> set (Scan_it k inp a x i). sound_null_ptr e"
@@ -460,11 +460,10 @@ next
   let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
   have "x \<in> set (items (bs ! k))"
     using Predict.hyps(1,2) by force
-  hence "sound_items cfg inp (set (items (Predict_it k cfg a)))"
-    using sound_Predict_it \<pi>_mono Predict.hyps(3) Predict.prems bins_bin_exists wellformed_bins_elim
-      sound_\<pi> wf_bins_kth_bin wf_items_def by metis
-  hence sound: "sound_items cfg inp (bins_items ?bs')"
-    using Predict.prems(1,3) bins_bins_upd sound_items_def wellformed_bins_elim by (metis UnE)
+  hence "\<forall>x \<in> set (items(Predict_it k cfg a)). sound_item cfg inp x"
+    using sound_Predict_it Predict.hyps(3) Predict.prems wellformed_bins_elim wf_bins_impl_wf_items by fast
+  hence sound: "\<forall>x \<in> bins_items ?bs'. sound_item cfg inp x"
+    using Predict.prems(1,3) UnE bins_bins_upd wellformed_bins_elim by metis
   have 0: "k < length bs"
     using Predict.prems(1) wellformed_bins_elim by force
   have 1: "\<forall>e \<in> set (Predict_it k cfg a). sound_null_ptr e"
@@ -489,7 +488,7 @@ qed simp_all
 
 lemma sound_mono_ptrs_\<pi>_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  assumes "sound_ptrs inp bs" "sound_items cfg inp (bins_items bs)"
+  assumes "sound_ptrs inp bs" "\<forall>x \<in> bins_items bs. sound_item cfg inp x"
   assumes "mono_red_ptr bs"
   assumes "nonempty_derives cfg" "wf_cfg cfg"
   shows "sound_ptrs inp (\<pi>_it k cfg inp bs) \<and> mono_red_ptr (\<pi>_it k cfg inp bs)"
@@ -514,8 +513,8 @@ proof (induction k)
   case 0
   have "(0, cfg, inp, (Init_it cfg inp)) \<in> wellformed_bins"
     using assms(2) wellformed_bins_Init_it by blast
-  moreover have "sound_items cfg inp (bins_items (Init_it cfg inp))"
-    by (simp add: Init_it_eq_Init sound_Init)
+  moreover have "\<forall>x \<in> bins_items (Init_it cfg inp). sound_item cfg inp x"
+    by (metis Init_it_eq_Init Init_sub_Earley sound_Earley subsetD wf_Earley)
   ultimately show ?case
     using sound_mono_ptrs_\<pi>_it sound_ptrs_Init_it mono_red_ptr_Init_it "0.prems"(2,3) by fastforce
 next
@@ -524,10 +523,10 @@ next
     by (simp add: Suc.prems(1) Suc_leD assms(2) wellformed_bins_intro)
   moreover have "sound_ptrs inp (\<I>_it k cfg inp)"
     using Suc by simp
-  moreover have "sound_items cfg inp (bins_items (\<I>_it k cfg inp))"
-    using sound_\<I> \<I>_it_sub_\<I> Suc.prems(1,2) sound_items_def by (metis Suc_leD subsetD)
+  moreover have "\<forall>x \<in> bins_items (\<I>_it k cfg inp). sound_item cfg inp x"
+    by (meson Suc.prems(1) Suc_leD \<I>_it_sub_\<I> \<I>_sub_Earley assms(2) sound_Earley subsetD wf_bins_\<I>_it wf_bins_impl_wf_items)
   ultimately show ?case
-    using Suc.prems(1,3,4) sound_mono_ptrs_\<pi>_it Suc.IH by auto
+    using Suc.prems(1,3,4) sound_mono_ptrs_\<pi>_it Suc.IH by fastforce
 qed
 
 lemma sound_mono_ptrs_\<II>_it:
