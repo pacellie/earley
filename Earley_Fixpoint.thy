@@ -1,13 +1,12 @@
 theory Earley_Fixpoint
   imports
     Earley
-    Derivations
     Limit
 begin
 
 section \<open>Earley recognizer\<close>
 
-subsection \<open>Earley Fixpoint\<close>
+subsection \<open>Earley fixpoint\<close>
 
 definition init_item :: "'a rule \<Rightarrow> nat \<Rightarrow> 'a item" where
   "init_item r k = Item r 0 k k"
@@ -90,8 +89,8 @@ next
       proof (cases "x \<in> Complete k (\<Union> {C n |n. True})")
         case True
         then show ?thesis
-          using * unfolding chain_def
-          apply (auto simp: \<pi>_step_def Complete_def bin_def)
+          using * unfolding chain_def \<pi>_step_def Complete_def bin_def
+          apply auto
         proof -
           fix y :: "'a item" and z :: "'a item" and n :: nat and m :: nat
           assume a1: "is_complete z"
@@ -435,7 +434,7 @@ proof standard
 qed
 
 lemma Earley_stem1_sub_\<pi>0:
-  assumes "Init cfg \<subseteq> I" "wf_cfg cfg" "is_word cfg inp"
+  assumes "Init cfg \<subseteq> I" "wf_\<G> cfg" "is_word cfg inp"
   shows "stem inp (Earley cfg inp) 1 \<subseteq> bin (\<pi> 0 cfg inp I) 1"
 proof standard
   fix x
@@ -494,7 +493,7 @@ proof standard
 qed
 
 lemma Earley_stemk_sub_\<pi>k:
-  assumes "k > 0" "wf_cfg cfg" "is_word cfg inp"
+  assumes "k > 0" "wf_\<G> cfg" "is_word cfg inp"
   assumes "\<forall>k' < k. bin (Earley cfg inp) k' \<subseteq> I"
   assumes "stem inp (Earley cfg inp) k \<subseteq> I"
   shows "stem inp (Earley cfg inp) (k+1) \<subseteq> bin (\<pi> k cfg inp I) (k+1)"
@@ -557,7 +556,7 @@ proof standard
 qed
 
 lemma Earley_bink_sub_\<I>:
-  assumes "wf_cfg cfg" "is_word cfg inp" "k \<le> n"
+  assumes "wf_\<G> cfg" "is_word cfg inp" "k \<le> n"
   shows "bin (Earley cfg inp) k \<subseteq> \<I> n cfg inp"
   using assms
 proof (induction n arbitrary: k)
@@ -610,7 +609,7 @@ next
 qed
 
 lemma Earley_sub_\<II>:
-  assumes "wf_cfg cfg" "is_word cfg inp"
+  assumes "wf_\<G> cfg" "is_word cfg inp"
   shows "Earley cfg inp \<subseteq> \<II> cfg inp"
 proof -
   have "\<forall>k \<le> length inp. bin (Earley cfg inp) k \<subseteq> \<II> cfg inp"
@@ -620,7 +619,7 @@ proof -
 qed
 
 theorem Earley_eq_\<II>:
-  assumes "wf_cfg cfg" "is_word cfg inp"
+  assumes "wf_\<G> cfg" "is_word cfg inp"
   shows "Earley cfg inp = \<II> cfg inp"
   by (simp add: Earley_sub_\<II> \<II>_sub_Earley assms subset_antisym)
 

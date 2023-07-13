@@ -351,7 +351,7 @@ lemma sound_mono_ptrs_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_ptrs inp bs" "\<forall>x \<in> bins_items bs. sound_item cfg inp x"
   assumes "mono_red_ptr bs"
-  assumes "nonempty_derives cfg" "wf_cfg cfg"
+  assumes "nonempty_derives cfg" "wf_\<G> cfg"
   shows "sound_ptrs inp (\<pi>_it' k cfg inp bs i) \<and> mono_red_ptr (\<pi>_it' k cfg inp bs i)"
   using assms
 proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
@@ -490,7 +490,7 @@ lemma sound_mono_ptrs_\<pi>_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_ptrs inp bs" "\<forall>x \<in> bins_items bs. sound_item cfg inp x"
   assumes "mono_red_ptr bs"
-  assumes "nonempty_derives cfg" "wf_cfg cfg"
+  assumes "nonempty_derives cfg" "wf_\<G> cfg"
   shows "sound_ptrs inp (\<pi>_it k cfg inp bs) \<and> mono_red_ptr (\<pi>_it k cfg inp bs)"
   using assms sound_mono_ptrs_\<pi>_it' \<pi>_it_def by metis
 
@@ -506,7 +506,7 @@ lemma mono_red_ptr_Init_it:
   by (auto simp: init_item_def less_Suc_eq_0_disj)
 
 lemma sound_mono_ptrs_\<I>_it:
-  assumes "k \<le> length inp" "wf_cfg cfg" "nonempty_derives cfg" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg" "nonempty_derives cfg" "wf_\<G> cfg"
   shows "sound_ptrs inp (\<I>_it k cfg inp) \<and> mono_red_ptr (\<I>_it k cfg inp)"
   using assms
 proof (induction k)
@@ -530,7 +530,7 @@ next
 qed
 
 lemma sound_mono_ptrs_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "nonempty_derives cfg"
   shows "sound_ptrs inp (\<II>_it cfg inp) \<and> mono_red_ptr (\<II>_it cfg inp)"
   using assms sound_mono_ptrs_\<I>_it \<II>_it_def by (metis dual_order.refl)
 
@@ -1246,14 +1246,14 @@ proof -
 qed
 
 corollary wf_rule_root_yield_tree_build_tree_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "nonempty_derives cfg"
   assumes "build_tree cfg inp (\<II>_it cfg inp) = Some t"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
   using assms wf_rule_root_yield_tree_build_forest wf_bins_\<II>_it sound_mono_ptrs_\<II>_it \<II>_it_def
     length_\<I>_it length_bins_Init_it by (metis nle_le)
 
 theorem correctness_build_tree_\<II>_it:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "(\<exists>t. build_tree cfg inp (\<II>_it cfg inp) = Some t) \<longleftrightarrow> derives cfg [\<SS> cfg] inp" (is "?L \<longleftrightarrow> ?R")
 proof standard
   assume *: ?L
@@ -2448,7 +2448,7 @@ proof -
 qed
 
 corollary wf_rule_root_yield_tree_build_trees_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "nonempty_derives cfg"
   assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
   using assms wf_rule_root_yield_tree_build_trees wf_bins_\<II>_it \<II>_it_def
@@ -2456,7 +2456,7 @@ corollary wf_rule_root_yield_tree_build_trees_\<II>_it:
   by (metis dual_order.eq_iff )
 
 theorem soundness_build_trees_\<II>_it:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
   assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg [\<SS> cfg] inp"
 proof -
@@ -2488,7 +2488,7 @@ proof -
 qed
 
 theorem termination_build_tree_\<II>_it:
-  assumes "wf_cfg cfg" "nonempty_derives cfg" "derives cfg [\<SS> cfg] inp"
+  assumes "wf_\<G> cfg" "nonempty_derives cfg" "derives cfg [\<SS> cfg] inp"
   shows "\<exists>fs. build_trees cfg inp (\<II>_it cfg inp) = Some fs"
 proof -
   let ?k = "length (\<II>_it cfg inp) - 1"

@@ -77,7 +77,7 @@ subsection \<open>Definitions\<close>
 
 datatype pointer =
   Null
-  | Pre nat
+  | Pre nat \<comment>\<open>pre\<close>
   | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list" \<comment>\<open>k', pre, red\<close>
 
 datatype 'a entry =
@@ -667,8 +667,8 @@ lemma distinct_Scan_it:
   unfolding Scan_it_def by (auto simp: items_def)
 
 lemma distinct_Predict_it:
-  "wf_cfg cfg \<Longrightarrow> distinct (items (Predict_it k cfg X))"
-  unfolding Predict_it_def wf_cfg_defs by (auto simp: init_item_def rule_head_def distinct_map inj_on_def items_def)
+  "wf_\<G> cfg \<Longrightarrow> distinct (items (Predict_it k cfg X))"
+  unfolding Predict_it_def wf_\<G>_defs by (auto simp: init_item_def rule_head_def distinct_map inj_on_def items_def)
 
 lemma inj_on_inc_item:
   "\<forall>x \<in> A. item_end x = l \<Longrightarrow> inj_on (\<lambda>x. inc_item x k) A"
@@ -713,9 +713,9 @@ lemma wf_bins_Scan_it:
   using wf_bins_Scan_it'[OF assms] by (simp add: Scan_it_def items_def)
 
 lemma wf_bins_Predict_it:
-  assumes "wf_bins cfg inp bs" "k < length bs" "k \<le> length inp" "wf_cfg cfg"
+  assumes "wf_bins cfg inp bs" "k < length bs" "k \<le> length inp" "wf_\<G> cfg"
   shows "\<forall>y \<in> set (items (Predict_it k cfg X)). wf_item cfg inp y \<and> item_end y = k"
-  using assms by (auto simp: Predict_it_def wf_item_def wf_bins_def wf_bin_def init_item_def wf_cfg_defs items_def)
+  using assms by (auto simp: Predict_it_def wf_item_def wf_bins_def wf_bin_def init_item_def wf_\<G>_defs items_def)
 
 lemma wf_item_inc_item:
   assumes "wf_item cfg inp x" "next_symbol x = Some a" "item_origin x \<le> k" "k \<le> length inp"
@@ -755,11 +755,11 @@ proof -
 qed
 
 lemma Ex_wf_bins:
-  "\<exists>n bs inp cfg. n \<le> length inp \<and> length bs = Suc (length inp) \<and> wf_cfg cfg \<and> wf_bins cfg inp bs"
+  "\<exists>n bs inp cfg. n \<le> length inp \<and> length bs = Suc (length inp) \<and> wf_\<G> cfg \<and> wf_bins cfg inp bs"
   apply (rule exI[where x="0"])
   apply (rule exI[where x="[[]]"])
   apply (rule exI[where x="[]"])
-  apply (auto simp: wf_bins_def wf_bin_def wf_cfg_defs wf_bin_items_def items_def split: prod.splits)
+  apply (auto simp: wf_bins_def wf_bin_def wf_\<G>_defs wf_bin_items_def items_def split: prod.splits)
   by (metis cfg.sel distinct.simps(1) empty_iff empty_set inf_bot_right list.set_intros(1))
 
 definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set" where
@@ -767,7 +767,7 @@ definition wellformed_bins :: "(nat \<times> 'a cfg \<times> 'a sentence \<times
     (k, cfg, inp, bs) | k cfg inp bs.
       k \<le> length inp \<and>
       length bs = length inp + 1 \<and>
-      wf_cfg cfg \<and>
+      wf_\<G> cfg \<and>
       wf_bins cfg inp bs
   }"
 
@@ -777,11 +777,11 @@ typedef 'a wf_bins = "wellformed_bins::(nat \<times> 'a cfg \<times> 'a sentence
 
 lemma wellformed_bins_elim:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  shows "k \<le> length inp \<and> k < length bs \<and> length bs = length inp + 1 \<and> wf_cfg cfg \<and> wf_bins cfg inp bs"
+  shows "k \<le> length inp \<and> k < length bs \<and> length bs = length inp + 1 \<and> wf_\<G> cfg \<and> wf_bins cfg inp bs"
   using assms(1) from_wf_bins wellformed_bins_def by (smt (verit) Suc_eq_plus1 less_Suc_eq_le mem_Collect_eq prod.sel(1) snd_conv)
 
 lemma wellformed_bins_intro:
-  assumes "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+  assumes "k \<le> length inp" "length bs = length inp + 1" "wf_\<G> cfg" "wf_bins cfg inp bs"
   shows "(k, cfg, inp, bs) \<in> wellformed_bins"
   by (simp add: assms wellformed_bins_def)
 
@@ -790,7 +790,7 @@ lemma wellformed_bins_Complete_it:
   assumes "x = items (bs ! k) ! i" "next_symbol x = None"
   shows "(k, cfg, inp, bins_upd bs k (Complete_it k x bs red)) \<in> wellformed_bins"
 proof -
-  have *: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+  have *: "k \<le> length inp" "length bs = length inp + 1" "wf_\<G> cfg" "wf_bins cfg inp bs"
     using wellformed_bins_elim assms(1) by metis+
   have x: "x \<in> set (items (bs ! k))"
     using assms(2,3) by simp
@@ -809,7 +809,7 @@ lemma wellformed_bins_Scan_it:
   assumes "is_terminal cfg a" "k < length inp"
   shows "(k, cfg, inp, bins_upd bs (k+1) (Scan_it k inp a x pre)) \<in> wellformed_bins"
 proof -
-  have *: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+  have *: "k \<le> length inp" "length bs = length inp + 1" "wf_\<G> cfg" "wf_bins cfg inp bs"
     using wellformed_bins_elim assms(1) by metis+
   have x: "x \<in> set (items(bs ! k))"
     using assms(2,3) by simp
@@ -825,7 +825,7 @@ lemma wellformed_bins_Predict_it:
   assumes "x = items (bs ! k) ! i" "next_symbol x = Some a" "\<not> is_terminal cfg a"
   shows "(k, cfg, inp, bins_upd bs k (Predict_it k cfg a)) \<in> wellformed_bins"
 proof -
-  have *: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+  have *: "k \<le> length inp" "length bs = length inp + 1" "wf_\<G> cfg" "wf_bins cfg inp bs"
     using wellformed_bins_elim assms(1) by metis+
   have x: "x \<in> set (items (bs ! k))"
     using assms(2,3) by simp
@@ -868,7 +868,7 @@ lemma \<pi>_it'_induct[case_names Base Complete Scan Pass Predict]:
   using assms(1)
 proof (induction n\<equiv>"earley_measure (k, cfg, inp, bs) i" arbitrary: bs i rule: nat_less_induct)
   case 1
-  have wf: "k \<le> length inp" "length bs = length inp + 1" "wf_cfg cfg" "wf_bins cfg inp bs"
+  have wf: "k \<le> length inp" "length bs = length inp + 1" "wf_\<G> cfg" "wf_bins cfg inp bs"
     using "1.prems" wellformed_bins_elim by metis+
   hence k: "k < length bs"
     by simp
@@ -1101,14 +1101,14 @@ lemma bins_upto_k0_\<pi>_it'_eq:
   unfolding bins_items_upto_def bin_items_upto_def \<pi>_it_def using set_items_\<pi>_it'_eq assms nth_\<pi>_it'_eq by fastforce
 
 lemma wellformed_bins_Init_it:
-  assumes "k \<le> length inp" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg"
   shows "(k, cfg, inp, Init_it cfg inp) \<in> wellformed_bins"
 proof -
   let ?rs = "filter (\<lambda>r. rule_head r = \<SS> cfg) (\<RR> cfg)"
   let ?b0 = "map (\<lambda>r. (Entry (init_item r 0) Null)) ?rs"
   let ?bs = "replicate (length inp + 1) ([])"
   have "distinct (items ?b0)"
-    using assms unfolding wf_bin_def wf_item_def wf_cfg_def distinct_rules_def items_def
+    using assms unfolding wf_bin_def wf_item_def wf_\<G>_def distinct_rules_def items_def
     by (auto simp: init_item_def distinct_map inj_on_def)
   moreover have "\<forall>x \<in> set (items ?b0). wf_item cfg inp x \<and> item_end x = 0"
     using assms unfolding wf_bin_def wf_item_def by (auto simp: init_item_def items_def)
@@ -1125,7 +1125,7 @@ lemma length_bins_Init_it[simp]:
   by (simp add: Init_it_def)
 
 lemma wellformed_bins_\<I>_it[simp]:
-  assumes "k \<le> length inp" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg"
   shows "(k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
   using assms
 proof (induction k)
@@ -1143,17 +1143,17 @@ next
 qed
 
 lemma length_\<I>_it[simp]:
-  assumes "k \<le> length inp" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg"
   shows "length (\<I>_it k cfg inp) = length (Init_it cfg inp)"
   using assms wellformed_bins_\<I>_it wellformed_bins_elim by fastforce
 
 lemma wf_bins_\<I>_it[simp]:
-  assumes "k \<le> length inp" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg"
   shows "wf_bins cfg inp (\<I>_it k cfg inp)"
   using assms wellformed_bins_\<I>_it wellformed_bins_elim by fastforce
 
 lemma wf_bins_\<II>_it:
-  "wf_cfg cfg \<Longrightarrow> wf_bins cfg inp (\<II>_it cfg inp)"
+  "wf_\<G> cfg \<Longrightarrow> wf_bins cfg inp (\<II>_it cfg inp)"
   by (simp add: \<II>_it_def)
 
 
@@ -1321,7 +1321,7 @@ lemma \<pi>_it_sub_\<pi>:
   using assms \<pi>_it'_sub_\<pi> \<pi>_it_def by metis
 
 lemma \<I>_it_sub_\<I>:
-  assumes "k \<le> length inp" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg"
   shows "bins_items (\<I>_it k cfg inp) \<subseteq> \<I> k cfg inp"
   using assms
 proof (induction k)
@@ -1339,7 +1339,7 @@ next
 qed
 
 lemma \<II>_it_sub_\<II>:
-  "wf_cfg cfg \<Longrightarrow> bins_items (\<II>_it cfg inp) \<subseteq> \<II> cfg inp"
+  "wf_\<G> cfg \<Longrightarrow> bins_items (\<II>_it cfg inp) \<subseteq> \<II> cfg inp"
   using \<I>_it_sub_\<I> \<II>_def \<II>_it_def by (metis dual_order.refl)
 
 
@@ -1455,7 +1455,7 @@ lemma bin_bins_upto_bins_eq:
   done
 
 lemma impossible_complete_item:
-  assumes "wf_cfg cfg" "wf_item cfg inp x" "sound_item cfg inp x"
+  assumes "wf_\<G> cfg" "wf_item cfg inp x" "sound_item cfg inp x"
   assumes "is_complete x"  "item_origin x = k" "item_end x = k" "nonempty_derives cfg"
   shows False
 proof -
@@ -1469,7 +1469,7 @@ proof -
 qed
 
 lemma Complete_Un_eq_terminal:
-  assumes "next_symbol z = Some a" "is_terminal cfg a" "\<forall>x \<in> I. wf_item cfg inp x" "wf_item cfg inp z" "wf_cfg cfg"
+  assumes "next_symbol z = Some a" "is_terminal cfg a" "\<forall>x \<in> I. wf_item cfg inp x" "wf_item cfg inp z" "wf_\<G> cfg"
   shows "Complete k (I \<union> {z}) = Complete k I"
 proof (rule ccontr)
   assume "Complete k (I \<union> {z}) \<noteq> Complete k I"
@@ -1497,7 +1497,7 @@ proof (rule ccontr)
 qed
 
 lemma Complete_Un_eq_nonterminal:
-  assumes "wf_cfg cfg" "\<forall>x \<in> I. wf_item cfg inp x" "\<forall>x \<in> I. sound_item cfg inp x"
+  assumes "wf_\<G> cfg" "\<forall>x \<in> I. wf_item cfg inp x" "\<forall>x \<in> I. sound_item cfg inp x"
   assumes "nonempty_derives cfg" "wf_item cfg inp z"
   assumes "item_end z = k" "next_symbol z \<noteq> None"
   shows "Complete k (I \<union> {z}) = Complete k I"
@@ -2260,7 +2260,7 @@ lemma \<pi>_sub_\<pi>_it:
   using assms funpower_\<pi>_step_sub_\<pi>_it \<pi>_def elem_limit_simp by fastforce
 
 lemma \<I>_sub_\<I>_it:
-  assumes "k \<le> length inp" "wf_cfg cfg"
+  assumes "k \<le> length inp" "wf_\<G> cfg"
   assumes "is_word cfg inp" "nonempty_derives cfg"
   shows "\<I> k cfg inp \<subseteq> bins_items (\<I>_it k cfg inp)"
   using assms
@@ -2297,7 +2297,7 @@ next
 qed
 
 lemma \<II>_sub_\<II>_it:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "\<II> cfg inp \<subseteq> bins_items (\<II>_it cfg inp)"
   using assms \<I>_sub_\<I>_it \<II>_def \<II>_it_def by (metis le_refl)
 
@@ -2308,8 +2308,8 @@ definition earley_recognized_it :: "'a bins \<Rightarrow> 'a cfg \<Rightarrow> '
   "earley_recognized_it I cfg inp = (\<exists>x \<in> set (items (I ! length inp)). is_finished cfg inp x)"
 
 theorem earley_recognized_it_iff_earley_recognized:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> earley_recognized (\<II> cfg inp) cfg inp"
+  assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
+  shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> recognizing (\<II> cfg inp) cfg inp"
 proof -
   have "earley_recognized_it (\<II>_it cfg inp) cfg inp = (\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
     unfolding earley_recognized_it_def by blast
@@ -2319,14 +2319,14 @@ proof -
     by (smt (verit) le_eq_less_or_eq subset_code(1) wellformed_bins_\<I>_it wellformed_bins_elim)
   also have "... = (\<exists>x \<in> \<II> cfg inp. is_finished cfg inp x)"
     using assms \<II>_it_sub_\<II> \<II>_sub_\<II>_it by blast
-  also have "... = earley_recognized (\<II> cfg inp) cfg inp"
-    unfolding earley_recognized_def by blast
+  also have "... = recognizing (\<II> cfg inp) cfg inp"
+    unfolding recognizing_def by blast
   finally show ?thesis .
 qed
 
 corollary correctness_list:
-  assumes "wf_cfg cfg" "is_word cfg inp" "nonempty_derives cfg"
+  assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
   shows "earley_recognized_it (\<II>_it cfg inp) cfg inp \<longleftrightarrow> derives cfg [\<SS> cfg] inp"
-  by (metis Earley_eq_\<II> assms correctness earley_recognized_it_iff_earley_recognized)
+  by (metis Earley_eq_\<II> assms correctness_Earley earley_recognized_it_iff_earley_recognized)
 
 end
