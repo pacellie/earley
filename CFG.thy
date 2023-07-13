@@ -2,7 +2,7 @@ theory CFG
   imports Main
 begin
 
-section \<open>Slightly adjusted content from AFP/LocalLexing\<close>
+section \<open>Adjusted content from AFP/LocalLexing\<close>
 
 type_synonym 'a rule = "'a \<times> 'a list"
 
@@ -11,11 +11,7 @@ type_synonym 'a rules = "'a rule list"
 type_synonym 'a sentence = "'a list"
 
 datatype 'a cfg = 
-  CFG 
-    (\<NN> : "'a list") 
-    (\<TT> : "'a list") 
-    (\<RR> : "'a rules")
-    (\<SS> : "'a")
+  CFG (\<NN> : "'a list") (\<TT> : "'a list") (\<RR> : "'a rules") (\<SS> : "'a")
 
 definition disjunct_symbols :: "'a cfg \<Rightarrow> bool" where
   "disjunct_symbols cfg \<longleftrightarrow> set (\<NN> cfg) \<inter> set (\<TT> cfg) = {}"
@@ -67,14 +63,5 @@ definition derivations :: "'a cfg \<Rightarrow> ('a sentence \<times> 'a sentenc
 
 definition derives :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
   "derives cfg u v = ((u, v) \<in> derivations cfg)"
-
-definition is_derivation :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "is_derivation cfg u = derives cfg [\<SS> cfg] u"
-
-definition \<L> :: "'a cfg \<Rightarrow> 'a sentence set" where
-  "\<L> cfg = { v | v. is_word cfg v \<and> is_derivation cfg v}"
-
-definition "\<L>\<^sub>P"  :: "'a cfg \<Rightarrow> 'a sentence set" where
-  "\<L>\<^sub>P cfg = { u | u v. is_word cfg u \<and> is_derivation cfg (u@v) }"
 
 end

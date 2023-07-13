@@ -572,20 +572,12 @@ fun combinations :: "'a list list \<Rightarrow> 'a list list" where
   "combinations [] = [[]]"
 | "combinations (xs#xss) = [ x#cs . x <- xs, cs <- combinations xss ]"
 
-value "combinations [[1,2],[3],[4,5::nat]]"
-
 fun trees :: "'a forest \<Rightarrow> 'a tree list" where
   "trees (FLeaf a) = [Leaf a]"
 | "trees (FBranch N fss) = (
     let tss = (map (\<lambda>fs. concat (map (\<lambda>f. trees f) fs)) fss) in
     map (\<lambda>ts. Branch N ts) (combinations tss)
   )"
-
-value "trees (FBranch (0::nat) [[FLeaf 1, FLeaf 2], [FLeaf 3], [FLeaf 4]])"
-
-lemma combinations_singleton:
-  "combinations ([xs]) = [ [x] . x <- xs ]"
-  by auto
 
 lemma list_comp_flatten:
   "[ f xs . xs <- [ g xs ys . xs <- as, ys <- bs ] ] = [ f (g xs ys) . xs <- as, ys <- bs ]"
@@ -602,17 +594,6 @@ lemma list_comp_flatten_append:
 lemma combinations_append:
   "combinations (xss @ yss) = [ xs @ ys . xs <- combinations xss, ys <- combinations yss ]"
   by (induction xss) (auto simp: list_comp_flatten_Cons list_comp_flatten_append map_idI)
-
-lemma combinations_append_singleton:
-  "combinations (xss @ [ys]) = [ xs @ [y] . xs <- combinations xss, y <- ys ]"
-  apply (subst combinations_append)
-  apply (subst combinations_singleton)
-  by (simp add: o_def)
-
-lemma combinations_append_single_singleton:
-  "combinations (xss @ [[y]]) = [ xs @ [y] . xs <- combinations xss ]"
-  apply (subst combinations_append_singleton)
-  by auto
 
 lemma trees_append:
   "trees (FBranch N (xss @ yss)) = (
@@ -1324,10 +1305,6 @@ qed
 
 
 subsection \<open>Random those, map, map_option lemmas\<close>
-
-lemma those_nonempty:
-  "those xs = Some ys \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> ys \<noteq> []"
-  by (induction xs arbitrary: ys) (auto split: option.splits)
 
 lemma those_map_exists:
   "Some ys = those (map f xs) \<Longrightarrow> y \<in> set ys \<Longrightarrow> \<exists>x. x \<in> set xs \<and> Some y \<in> set (map f xs)"
@@ -2516,7 +2493,6 @@ theorem termination_build_tree_\<II>_it:
 proof -
   let ?k = "length (\<II>_it cfg inp) - 1"
   define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
-  thm build_trees'_termination
   have "\<forall>f \<in> set finished. (\<II>_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
   proof standard
     fix f

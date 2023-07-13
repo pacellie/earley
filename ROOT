@@ -1,7 +1,5 @@
-session Earley (AFP) = LocalLexing +
+session Earley (AFP) = "HOL-Library" +
   options [document = pdf, document_output = "build"]
-  sessions
-    "HOL-Library"
   theories
     Limit
     CFG

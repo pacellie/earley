@@ -6,7 +6,6 @@ begin
 
 section \<open>Slices\<close>
 
-\<comment>\<open>slice a b xs: a is inclusive, b is exclusive\<close>
 fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
   "slice _ _ [] = []"
 | "slice _ 0 (x#xs) = []"
@@ -68,146 +67,9 @@ lemma slice_id[simp]:
   "slice 0 (length xs) xs = xs"
   by (simp add: slice_drop_take)
 
-lemma slice_subset:
-  "set (slice a b xs) \<subseteq> set xs"
-  using slice_drop_take by (metis in_set_dropD in_set_takeD subsetI)
-
 lemma slice_singleton:
   "b \<le> length xs \<Longrightarrow> [x] = slice a b xs \<Longrightarrow> b = a + 1"
   by (induction a b xs rule: slice.induct) (auto simp: slice_drop_take)
-
-lemma slice_shift:
-  "slice (a+i) (b+i) xs = slice a b (slice i (length xs) xs)"
-  unfolding slice_drop_take by (simp add: drop_take)
-
-
-section \<open>Derivation Lemmas\<close>
-
-lemma Derives1_prepend:
-  assumes "Derives1 cfg u i r v"
-  shows "Derives1 cfg (w@u) (i + length w) r (w@v)"
-proof -
-  obtain x y N \<alpha> where *:
-    "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
-    "(N, \<alpha>) \<in> set (\<RR> cfg)" "r = (N, \<alpha>)" "i = length x"
-    using assms Derives1_def by (smt (verit))
-  hence "w@u = w @ x @ [N] @ y" "w@v = w @ x @ \<alpha> @ y"
-    by auto
-  thus ?thesis
-    unfolding Derives1_def using *
-    apply (rule_tac exI[where x="w@x"])
-    apply (rule_tac exI[where x="y"])
-    by simp
-qed
-
-lemma Derivation_prepend:
-  "Derivation cfg b D b' \<Longrightarrow> Derivation cfg (a@b) (map (\<lambda>(i, r). (i + length a, r)) D) (a@b')"
-  using Derives1_prepend by (induction D arbitrary: b b') (auto, fast)
-
-lemma Derives1_append:
-  assumes "Derives1 cfg u i r v"
-  shows "Derives1 cfg (u@w) i r (v@w)"
-proof -
-  obtain x y N \<alpha> where *: 
-    "u = x @ [N] @ y" "v = x @ \<alpha> @ y"
-    "(N, \<alpha>) \<in> set (\<RR> cfg)" "r = (N, \<alpha>)" "i = length x"
-    using assms Derives1_def by (smt (verit))
-  hence "u@w = x @ [N] @ y @ w" "v@w = x @ \<alpha> @ y @ w"
-    by auto
-  thus ?thesis
-    unfolding Derives1_def using *
-    apply (rule_tac exI[where x="x"])
-    apply (rule_tac exI[where x="y@w"])
-    by blast
-qed
-
-lemma Derivation_append':
-  "Derivation cfg a D a' \<Longrightarrow> Derivation cfg (a@b) D (a'@b)"
-  using Derives1_append by (induction D arbitrary: a a') (auto, fast)
-
-lemma Derivation_append_rewrite:
-  assumes "Derivation cfg a D (b @ c @ d) " "Derivation cfg c E c'"
-  shows "\<exists>F. Derivation cfg a F (b @ c' @ d)"
-  using assms Derivation_append' Derivation_prepend Derivation_implies_append by fast
-
-lemma derives1_if_valid_rule:
-  "(N, \<alpha>) \<in> set (\<RR> cfg) \<Longrightarrow> derives1 cfg [N] \<alpha>"
-  unfolding derives1_def
-  apply (rule_tac exI[where x="[]"])
-  apply (rule_tac exI[where x="[]"])
-  by simp
-
-lemma derives_if_valid_rule:
-  "(N, \<alpha>) \<in> set (\<RR> cfg) \<Longrightarrow> derives cfg [N] \<alpha>"
-  using derives1_if_valid_rule by fastforce
-
-lemma Derivation_from_empty:
-  "Derivation cfg [] D a \<Longrightarrow> a = []"
-  by (cases D) (auto simp: Derives1_def)
-
-lemma Derivation_concat_split:
-  "Derivation cfg (a@b) D c \<Longrightarrow> \<exists>E F a' b'. Derivation cfg a E a' \<and> Derivation cfg b F b' \<and>
-     c = a' @ b' \<and> length E \<le> length D \<and> length F \<le> length D"
-proof (induction D arbitrary: a b)
-  case Nil
-  thus ?case
-    by (metis Derivation.simps(1) order_refl)
-next
-  case (Cons d D)
-  then obtain ab where *: "Derives1 cfg (a@b) (fst d) (snd d) ab" "Derivation cfg ab D c"
-    by auto
-  then obtain x y N \<alpha> where #:
-    "a@b = x @ [N] @ y" "ab = x @ \<alpha> @ y" "(N,\<alpha>) \<in> set (\<RR> cfg)" "snd d = (N,\<alpha>)" "fst d = length x"
-    using * unfolding Derives1_def by blast
-  show ?case
-  proof (cases "length a \<le> length x")
-    case True
-    hence ab_def: 
-      "a = take (length a) x" 
-      "b = drop (length a) x @ [N] @ y"
-      "ab = take (length a) x @ drop (length a) x @ \<alpha> @ y"
-      using #(1,2) True by (metis append_eq_append_conv_if)+
-    then obtain E F a' b' where IH:
-      "Derivation cfg (take (length a) x) E a'"
-      "Derivation cfg (drop (length a) x @ \<alpha> @ y) F b'"
-      "c = a' @ b'"
-      "length E \<le> length D"
-      "length F \<le> length D"
-      using Cons *(2) by blast
-    have "Derives1 cfg b (fst d - length a) (snd d) (drop (length a) x @ \<alpha> @ y)"
-      unfolding Derives1_def using *(1) #(3-5) ab_def(2) by (metis length_drop)
-    hence "Derivation cfg b ((fst d - length a, snd d) # F) b'"
-      using IH(2) by force
-    moreover have "Derivation cfg a E a'"
-      using IH(1) ab_def(1) by fastforce
-    ultimately show ?thesis
-      using IH(3-5) by fastforce
-  next
-    case False
-    hence a_def: "a = x @ [N] @ take (length a - length x - 1) y"
-      using #(1) append_eq_conv_conj[of a b "x @ [N] @ y"] take_all_iff take_append
-      by (metis append_Cons append_Nil diff_is_0_eq le_cases take_Cons')
-    hence b_def: "b = drop (length a - length x - 1) y"
-      using #(1) by (metis List.append.assoc append_take_drop_id same_append_eq)
-    have "ab = x @ \<alpha> @ take (length a - length x - 1) y @ drop (length a - length x - 1) y"
-      using #(2) by force
-    then obtain E F a' b' where IH:
-      "Derivation cfg (x @ \<alpha> @ take (length a - length x - 1) y) E a'"
-      "Derivation cfg (drop (length a - length x - 1) y) F b'"
-      "c = a' @ b'"
-      "length E \<le> length D"
-      "length F \<le> length D"
-      using Cons.IH[of "x @ \<alpha> @ take (length a - length x - 1) y" "drop (length a - length x - 1) y"] *(2) by auto
-    have "Derives1 cfg a (fst d) (snd d) (x @ \<alpha> @ take (length a - length x - 1) y)"
-      unfolding Derives1_def using #(3-5) a_def by blast
-    hence "Derivation cfg a ((fst d, snd d) # E) a'"
-      using IH(1) by fastforce
-    moreover have "Derivation cfg b F b'"
-      using b_def IH(2) by blast
-    ultimately show ?thesis
-      using IH(3-5) by fastforce
-  qed
-qed
 
 
 section \<open>Earley recognizer\<close>

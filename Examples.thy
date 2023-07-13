@@ -4,7 +4,7 @@ begin
 
 declare [[names_short]]
 
-subsection \<open>Epsilon Productions\<close>
+section \<open>Epsilon Productions\<close>
 
 definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
   "\<epsilon>_free cfg \<longleftrightarrow> (\<forall>r \<in> set (\<RR> cfg). rule_body r \<noteq> [])"
@@ -66,7 +66,7 @@ lemma nonempty_deriv_iff_\<epsilon>_free:
   shows "(\<forall>N \<in> set (\<NN> cfg). \<not> derives cfg [N] []) \<longleftrightarrow> \<epsilon>_free cfg"
   using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free[OF _ assms] by blast
 
-subsection \<open>Example 1: Addition\<close>
+section \<open>Example 1: Addition\<close>
 
 datatype t1 = x | plus
 datatype n1 = S
@@ -130,37 +130,7 @@ lemma soundness_trees1:
   shows "derives cfg1 [\<SS> cfg1] inp1"
   using assms is_word_inp1 nonempty_derives1 soundness_build_trees_\<II>_it wf_cfg1 by blast
 
-value "\<II>_it cfg1 inp1"
-value "earley_recognized_it (\<II>_it cfg1 inp1) cfg1 inp1"
-value "build_trees cfg1 inp1 (\<II>_it cfg1 inp1)"
-value "map_option (map trees) (build_trees cfg1 inp1 (\<II>_it cfg1 inp1))"
-
-subsection \<open>Example 2: Addition performance sanity check\<close>
-
-fun size_bins :: "'a bins \<Rightarrow> nat" where
-  "size_bins bs = fold (+) (map length bs) 0"
-
-definition inp1' :: "s1 list" where
-  "inp1' = [
-    Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x
-  ]"
-
-lemma is_word_inp1':
-  "is_word cfg1 inp1'"
-  by (auto simp: is_word_def is_terminal_def cfg1_defs inp1'_def)
-
-lemma correctness1':
-  "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1' \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1'"
-  using correctness_list wf_cfg1 is_word_inp1' nonempty_derives1 by blast
-
-value "\<II>_it cfg1 inp1'"
-value "size_bins (\<II>_it cfg1 inp1')"
-value "earley_recognized_it (\<II>_it cfg1 inp1') cfg1 inp1'"
-value "build_trees cfg1 inp1' (\<II>_it cfg1 inp1')"
-value "map_option length (build_trees cfg1 inp1' (\<II>_it cfg1 inp1'))"
-value "map_option (foldl (+) 0 \<circ> map length) (map_option (map trees) (build_trees cfg1 inp1' (\<II>_it cfg1 inp1')))"
-
-section \<open>Example 3: Cyclic reduction pointers\<close>
+section \<open>Example 2: Cyclic reduction pointers\<close>
 
 datatype t2 = x
 datatype n2 = A | B
@@ -206,9 +176,25 @@ lemma correctness2:
   "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
   using correctness_list wf_cfg2 is_word_inp2 nonempty_derives2 by blast
 
-value "\<II>_it cfg2 inp2"
-value "earley_recognized_it (\<II>_it cfg2 inp2) cfg2 inp2"
-value "build_trees cfg2 inp2 (\<II>_it cfg2 inp2)"
-value "map_option (map trees) (build_trees cfg2 inp2 (\<II>_it cfg2 inp2))"
+lemma wf_tree2:
+  assumes "build_tree cfg2 inp2 (\<II>_it cfg2 inp2) = Some t"
+  shows "wf_rule_tree cfg2 t \<and> root_tree t = \<SS> cfg2 \<and> yield_tree t = inp2"
+  using assms nonempty_derives2 wf_cfg2 wf_rule_root_yield_tree_build_tree_\<II>_it by blast
+
+lemma correctness_tree2:
+  "(\<exists>t. build_tree cfg2 inp2 (\<II>_it cfg2 inp2) = Some t) \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  using correctness_build_tree_\<II>_it is_word_inp2 nonempty_derives2 wf_cfg2 by blast
+
+lemma wf_trees2:
+  assumes "build_trees cfg2 inp2 (\<II>_it cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  shows "wf_rule_tree cfg2 t \<and> root_tree t = \<SS> cfg2 \<and> yield_tree t = inp2"
+  using assms nonempty_derives2 wf_cfg2 wf_rule_root_yield_tree_build_trees_\<II>_it by blast
+
+lemma soundness_trees2:
+  assumes "build_trees cfg2 inp2 (\<II>_it cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  shows "derives cfg2 [\<SS> cfg2] inp2"
+  using assms is_word_inp2 nonempty_derives2 soundness_build_trees_\<II>_it wf_cfg2 by blast
+
+unused_thms CFG -
 
 end

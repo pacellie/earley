@@ -3,8 +3,6 @@ theory Earley_Recognizer
     Earley_Fixpoint
 begin
 
-unused_thms CFG - Earley
-
 section \<open>Earley recognizer\<close>
 
 subsection \<open>List auxilaries\<close>
@@ -205,10 +203,6 @@ lemma length_bin_upds:
   "length (bin_upds es b) \<ge> length b"
   by (induction es arbitrary: b) (auto, meson le_trans length_bin_upd)
 
-lemma length_items_pointers_eq:
-  "length (items b) = length (pointers b)"
-  by (simp add: items_def pointers_def)
-
 lemma length_nth_bin_bins_upd:
   "length (bins_upd bs k es ! n) \<ge> length (bs ! n)"
   unfolding bins_upd_def using length_bin_upds
@@ -376,10 +370,6 @@ lemma bins_items_upto_Suc_Un:
   "n < length (bs ! k) \<Longrightarrow> bins_items_upto bs k (n+1) = bins_items_upto bs k n \<union> { items (bs ! k) ! n }"
   unfolding bins_items_upto_def bin_items_upto_def using less_Suc_eq by (auto simp: items_def, metis nth_map)
 
-lemma bins_items_upto_Suc_eq:
-  "n \<ge> length (bs ! k) \<Longrightarrow> bins_items_upto bs k (n+1) = bins_items_upto bs k n"
-  unfolding bins_items_upto_def bin_items_upto_def by (auto; metis dual_order.strict_trans1 items_def length_map)
-
 lemma bins_bin_exists:
   "x \<in> bins_items bs \<Longrightarrow> \<exists>k < length bs. x \<in> set (items (bs ! k))"
   unfolding bins_items_def by blast
@@ -418,14 +408,6 @@ proof (induction b arbitrary: e)
     qed
   qed
 qed (auto simp: items_def)
-
-lemma distinct_bin_upds:
-  "distinct (items b) \<Longrightarrow> distinct (items (bin_upds es b))"
-  by (induction es arbitrary: b) (auto simp: distinct_bin_upd)
-
-lemma distinct_bins_upd:
-  "distinct (items (bs ! k)) \<Longrightarrow> distinct (items (bins_upd bs k ips ! k))"
-  by (metis bins_upd_def distinct_bin_upds leI list_update_beyond nth_list_update)
 
 lemma wf_bins_kth_bin:
   "wf_bins cfg inp bs \<Longrightarrow> k < length bs \<Longrightarrow> x \<in> set (items (bs ! k)) \<Longrightarrow> wf_item cfg inp x \<and> item_end x = k"
@@ -482,47 +464,12 @@ lemma wf_bins_impl_wf_items:
   "wf_bins cfg inp bs \<Longrightarrow> \<forall>x \<in> (bins_items bs). wf_item cfg inp x"
   unfolding wf_bins_def wf_bin_def wf_bin_items_def bins_items_def by auto
 
-lemma bin_upd_eq_items:
-  "item e \<in> set (items b) \<Longrightarrow> set (items (bin_upd e b)) = set (items b)"
-proof (induction b arbitrary: e)
-  case (Cons b bs)
-  show ?case
-  proof (cases "\<exists>x xp xs y yp ys. e = Entry x (PreRed xp xs) \<and> b = Entry y (PreRed yp ys)")
-    case True
-    then obtain x xp xs y yp ys where "e = Entry x (PreRed xp xs)" "b = Entry y (PreRed yp ys)"
-      by blast
-    thus ?thesis
-      using Cons set_items_bin_upd by (metis Un_insert_right insert_absorb sup_bot_right)
-  next
-    case False
-    then show ?thesis
-    proof cases
-      assume *: "item e = item b"
-      hence "bin_upd e (b # bs) = b # bs"
-        using False by (auto split: pointer.splits entry.splits)
-      thus ?thesis
-        using * Cons.prems by (auto simp: items_def)
-    next
-      assume *: "\<not> item e = item b"
-      hence "bin_upd e (b # bs) = b # bin_upd e bs"
-        using False by (auto split: pointer.splits entry.splits)
-      thus ?thesis
-        using * Cons.prems set_items_bin_upd by (metis Un_insert_right insert_absorb sup_bot_right)
-    qed
-  qed
-qed (auto simp: items_def)
-
 lemma bin_upds_eq_items:
   "set (items es) \<subseteq> set (items b) \<Longrightarrow> set (items (bin_upds es b)) = set (items b)"
   apply (induction es arbitrary: b)
    apply (auto simp: set_items_bin_upd set_items_bin_upds)
    apply (simp add: items_def)
   by (metis Un_iff Un_subset_iff items_def list.simps(9) set_subset_Cons)
-
-lemma bins_upd_eq_items:
-  "set (items es) \<subseteq> set (items (bs!k)) \<Longrightarrow> bins_items (bins_upd bs k es) = bins_items bs"
-  using bins_bins_upd kth_bin_sub_bins bins_upd_def
-  by (metis (no_types, opaque_lifting) dual_order.trans linorder_not_le list_update_beyond sup.orderE)
 
 lemma bin_eq_items_bin_upd:
   "item e \<in> set (items b) \<Longrightarrow> items (bin_upd e b) = items b"
@@ -1067,15 +1014,10 @@ lemma wellformed_bins_\<pi>_it:
   shows "(k, cfg, inp, \<pi>_it k cfg inp bs) \<in> wellformed_bins"
   using assms by (simp add: \<pi>_it_def wellformed_bins_\<pi>_it')
 
-lemma length_bins_\<pi>_it'[simp]:
+lemma length_bins_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   shows "length (\<pi>_it' k cfg inp bs i) = length bs"
   by (metis assms wellformed_bins_\<pi>_it' wellformed_bins_elim)
-
-lemma length_bins_\<pi>_it[simp]:
-  assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
-  shows "length (\<pi>_it k cfg inp bs) = length bs"
-  using assms unfolding \<pi>_it_def by simp
 
 lemma length_nth_bin_\<pi>_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
@@ -1182,11 +1124,6 @@ lemma length_bins_Init_it[simp]:
   "length (Init_it cfg inp) = length inp + 1"
   by (simp add: Init_it_def)
 
-lemma wf_bins_Init_it:
-  assumes "wf_cfg cfg"
-  shows "wf_bins cfg inp (Init_it cfg inp)"
-  using assms wellformed_bins_Init_it wellformed_bins_elim by blast
-
 lemma wellformed_bins_\<I>_it[simp]:
   assumes "k \<le> length inp" "wf_cfg cfg"
   shows "(k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
@@ -1214,10 +1151,6 @@ lemma wf_bins_\<I>_it[simp]:
   assumes "k \<le> length inp" "wf_cfg cfg"
   shows "wf_bins cfg inp (\<I>_it k cfg inp)"
   using assms wellformed_bins_\<I>_it wellformed_bins_elim by fastforce
-
-lemma wellformed_bins_\<II>_it:
-  "k \<le> length inp \<Longrightarrow> wf_cfg cfg \<Longrightarrow> (k, cfg, inp, \<II>_it cfg inp) \<in> wellformed_bins"
-  by (simp add: \<II>_it_def wellformed_bins_intro)
 
 lemma wf_bins_\<II>_it:
   "wf_cfg cfg \<Longrightarrow> wf_bins cfg inp (\<II>_it cfg inp)"

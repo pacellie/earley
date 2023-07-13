@@ -150,10 +150,6 @@ lemma Predict_bin_absorb:
   "Predict k cfg (bin I k) = Predict k cfg I"
   unfolding Predict_def bin_def by simp
 
-lemma Complete_bin_absorb:
-  "Complete k (bin I k) \<subseteq> Complete k I"
-  unfolding Complete_def bin_def by blast
-
 lemma Scan_Un:
   "Scan k inp (I \<union> J) = Scan k inp I \<union> Scan k inp J"
   unfolding Scan_def bin_def by blast
@@ -231,44 +227,6 @@ lemma Complete_\<pi>_mono:
 lemma \<pi>_mono:
   "I \<subseteq> \<pi> k cfg inp I"
   using \<pi>_step_\<pi>_mono \<pi>_step_def by blast
-
-lemma Scan_bin_empty:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (Scan k inp I) i = {}"
-  unfolding Scan_def bin_def inc_item_def by fastforce
-
-lemma Predict_bin_empty:
-  "i \<noteq> k \<Longrightarrow> bin (Predict k cfg I) i = {}"
-  unfolding Predict_def bin_def init_item_def by auto
-
-lemma Complete_bin_empty:
-  "i \<noteq> k \<Longrightarrow> bin (Complete k I) i = {}"
-  unfolding Complete_def bin_def inc_item_def by auto
-
-lemma \<pi>_step_bin_absorb:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k + 1 \<Longrightarrow> bin (\<pi>_step k cfg inp I) i = bin I i"
-  unfolding \<pi>_step_def using Scan_bin_empty Predict_bin_empty Complete_bin_empty
-  unfolding bin_def using Un_iff empty_iff mem_Collect_eq by fastforce
-
-lemma funpower_bin_absorb:
-  "i \<noteq> k \<Longrightarrow> i \<noteq> k+1 \<Longrightarrow> bin (funpower (\<pi>_step k cfg inp) n I) i = bin I i"
-  by (induction n) (auto simp: \<pi>_step_bin_absorb)
-
-lemma \<pi>_bin_absorb:
-  assumes "i \<noteq> k" "i \<noteq> k+1"
-  shows "bin (\<pi> k cfg inp I) i = bin I i"
-proof (standard; standard)
-  fix x
-  assume "x \<in> bin (\<pi> k cfg inp I) i"
-  then obtain n where "x \<in> bin (funpower (\<pi>_step k cfg inp) n I) i"
-    unfolding \<pi>_def limit_def natUnion_def by (auto simp: bin_def)
-  then show "x \<in> bin I i"
-    using funpower_bin_absorb assms by blast
-next
-  fix x
-  assume "x \<in> bin I i"
-  show "x \<in> bin (\<pi> k cfg inp I) i"
-    using \<pi>_mono \<open>x \<in> bin I i\<close> by (metis (no_types, lifting) bin_def mem_Collect_eq subsetD)
-qed
 
 
 subsection \<open>Soundness\<close>
