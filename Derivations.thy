@@ -9,21 +9,16 @@ type_synonym 'a derivation = "(nat \<times> 'a rule) list"
 
 lemma [simp]: "is_word cfg []" by (auto simp add: is_word_def)
 
-definition leftderives1 :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "leftderives1 cfg u v = 
-     (\<exists> x y N \<alpha>. 
-          u = x @ [N] @ y
-        \<and> v = x @ \<alpha> @ y
-        \<and> is_word cfg x
-        \<and> (N, \<alpha>) \<in> set (\<RR> cfg))"  
-
-lemma derives1_implies_derives[simp]:"derives1 cfg a b \<Longrightarrow> derives cfg a b"
+lemma derives1_implies_derives[simp]:
+  "derives1 cfg a b \<Longrightarrow> derives cfg a b"
   by (auto simp add: derives_def derivations_def derivations1_def)
 
-lemma derives_trans: "derives cfg a b \<Longrightarrow> derives cfg b c \<Longrightarrow> derives cfg a c"
+lemma derives_trans:
+  "derives cfg a b \<Longrightarrow> derives cfg b c \<Longrightarrow> derives cfg a c"
   by (auto simp add: derives_def derivations_def)
 
-lemma derives1_eq_derivations1: "derives1 cfg x y = ((x, y) \<in> derivations1 cfg)"
+lemma derives1_eq_derivations1:
+  "derives1 cfg x y = ((x, y) \<in> derivations1 cfg)"
   by (simp add: derivations1_def)
 
 lemma derives_induct[consumes 1, case_names Base Step]:
@@ -38,12 +33,10 @@ proof -
 qed
 
 definition Derives1 :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a rule \<Rightarrow> 'a sentence \<Rightarrow> bool" where
-  "Derives1 cfg u i r v = 
-     (\<exists> x y N \<alpha>. 
-          u = x @ [N] @ y
-        \<and> v = x @ \<alpha> @ y
-        \<and> (N, \<alpha>) \<in> set (\<RR> cfg)
-        \<and> r = (N, \<alpha>) \<and> i = length x)"  
+  "Derives1 cfg u i r v \<equiv> \<exists> x y N \<alpha>. 
+    u = x @ [N] @ y \<and>
+    v = x @ \<alpha> @ y \<and>
+    (N, \<alpha>) \<in> set (\<RR> cfg) \<and> r = (N, \<alpha>) \<and> i = length x"  
 
 lemma Derives1_split:
   "Derives1 cfg u i r v \<Longrightarrow> \<exists> x y. u = x @ [fst r] @ y \<and> v = x @ (snd r) @ y \<and> length x = i"
@@ -65,12 +58,12 @@ proof (induct D arbitrary: a b)
     by (simp add: derives_def derivations_def)
 next
   case (Cons d D)
-    note ihyps = this
-    from ihyps have "\<exists> x. Derives1 cfg a (fst d) (snd d) x \<and> Derivation cfg x D b" by auto
-    then obtain x where "Derives1 cfg a (fst d) (snd d) x" and xb: "Derivation cfg x D b" by blast
-    with Derives1_implies_derives1 have d1: "derives cfg a x" by fastforce
-    from ihyps xb have d2:"derives cfg x b" by simp
-    show "derives cfg a b" by (rule derives_trans[OF d1 d2])
+  note ihyps = this
+  from ihyps have "\<exists> x. Derives1 cfg a (fst d) (snd d) x \<and> Derivation cfg x D b" by auto
+  then obtain x where "Derives1 cfg a (fst d) (snd d) x" and xb: "Derivation cfg x D b" by blast
+  with Derives1_implies_derives1 have d1: "derives cfg a x" by fastforce
+  from ihyps xb have d2:"derives cfg x b" by simp
+  show "derives cfg a b" by (rule derives_trans[OF d1 d2])
 qed 
 
 lemma Derivation_Derives1: "Derivation cfg a S y \<Longrightarrow> Derives1 cfg y i r z \<Longrightarrow> Derivation cfg a (S@[(i,r)]) z"
@@ -106,15 +99,11 @@ lemma is_word_is_terminal: "i < length u \<Longrightarrow> is_word cfg u \<Longr
   using is_word_def by force
 
 lemma Derivation_append: "Derivation cfg a (D@E) c = (\<exists> b. Derivation cfg a D b \<and> Derivation cfg b E c)"
-proof(induct D arbitrary: a c E)
-  case Nil thus ?case by auto
-next
-  case (Cons d D) thus ?case by auto
-qed
+  by (induct D arbitrary: a c E) auto
 
 lemma Derivation_implies_append: 
   "Derivation cfg a D b \<Longrightarrow> Derivation cfg b E c \<Longrightarrow> Derivation cfg a (D@E) c"
-using Derivation_append by blast
+  using Derivation_append by blast
 
 
 section \<open>Additional derivation lemmas\<close>
