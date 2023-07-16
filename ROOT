@@ -1,3 +1,5 @@
+chapter AFP
+
 session Earley_Parser (AFP) = HOL +
   options [timeout = 600]
   sessions
