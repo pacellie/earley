@@ -72,6 +72,14 @@ lemma filter_with_index_nonempty:
   "x \<in> set xs \<Longrightarrow> P x \<Longrightarrow> filter_with_index P xs \<noteq> []"
   by (metis filter_empty_conv filter_with_index_cong_filter list.map(1))
 
+lemma filter_with_index'_Ex_first:
+  "(\<exists>x i xs'. filter_with_index' n P xs = (x, i)#xs') \<longleftrightarrow> (\<exists>x \<in> set xs. P x)"
+  by (induction xs arbitrary: n) auto
+
+lemma filter_with_index_Ex_first:
+  "(\<exists>x i xs'. filter_with_index P xs = (x, i)#xs') \<longleftrightarrow> (\<exists>x \<in> set xs. P x)"
+  using filter_with_index'_Ex_first filter_with_index_def by metis
+
 
 subsection \<open>Definitions\<close>
 

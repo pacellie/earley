@@ -2,8 +2,6 @@ theory Examples
   imports Earley_Parser
 begin
 
-declare [[names_short]]
-
 section \<open>Epsilon Productions\<close>
 
 definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
@@ -108,8 +106,8 @@ lemma nonempty_derives1:
   by (auto simp: \<epsilon>_free_def cfg1_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness1:
-  "earley_recognized_it (Earley\<^sub>L cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
-  using correctness_list wf_\<G>1 is_word_inp1 nonempty_derives1 by blast
+  "recognizing (bins (Earley\<^sub>L cfg1 inp1)) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  using correctness_Earley\<^sub>L wf_\<G>1 is_word_inp1 nonempty_derives1 by blast
 
 lemma wf_tree1:
   assumes "build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t"
@@ -173,8 +171,8 @@ lemma nonempty_derives2:
   by (auto simp: \<epsilon>_free_def cfg2_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness2:
-  "earley_recognized_it (Earley\<^sub>L cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
-  using correctness_list wf_\<G>2 is_word_inp2 nonempty_derives2 by blast
+  "recognizing (bins (Earley\<^sub>L cfg2 inp2)) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  using correctness_Earley\<^sub>L wf_\<G>2 is_word_inp2 nonempty_derives2 by blast
 
 lemma wf_tree2:
   assumes "build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t"
@@ -194,7 +192,5 @@ lemma soundness_trees2:
   assumes "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg2 [\<SS> cfg2] inp2"
   using assms is_word_inp2 nonempty_derives2 soundness_build_trees_Earley\<^sub>L wf_\<G>2 by blast
-
-unused_thms Limit -
 
 end
