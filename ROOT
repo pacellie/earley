@@ -1,5 +1,7 @@
-session Earley_Parser (AFP) = "HOL-Library" +
+session Earley_Parser (AFP) = HOL +
   options [timeout = 600]
+  sessions
+    "HOL-Library"
   theories
     Limit
     CFG
