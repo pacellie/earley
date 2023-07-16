@@ -7,7 +7,7 @@ section \<open>Adjusted content from AFP/LocalLexing\<close>
 
 type_synonym 'a derivation = "(nat \<times> 'a rule) list"
 
-lemma [simp]: "is_word \<G> []" by (auto simp add: is_word_def)
+lemma is_word_empty: "is_word \<G> []" by (auto simp add: is_word_def)
 
 lemma derives1_implies_derives[simp]:
   "derives1 \<G> a b \<Longrightarrow> derives \<G> a b"

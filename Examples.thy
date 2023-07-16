@@ -2,7 +2,7 @@ theory Examples
   imports Earley_Parser
 begin
 
-section \<open>Epsilon Productions\<close>
+section \<open>Epsilon productions\<close>
 
 definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
   "\<epsilon>_free \<G> \<longleftrightarrow> (\<forall>r \<in> set (\<RR> \<G>). rule_body r \<noteq> [])"

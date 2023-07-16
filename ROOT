@@ -1,5 +1,5 @@
-session Earley (AFP) = "HOL-Library" +
-  options [document = pdf, document_output = "build"]
+session Earley_Parser (AFP) = "HOL-Library" +
+  options [timeout = 600]
   theories
     Limit
     CFG
@@ -10,5 +10,6 @@ session Earley (AFP) = "HOL-Library" +
     Earley_Parser
     Examples
   document_files
-    "bibliography.bib"
+    "root.tex"
+    "root.bib"
 
