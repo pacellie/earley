@@ -108,27 +108,27 @@ lemma nonempty_derives1:
   by (auto simp: \<epsilon>_free_def cfg1_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness1:
-  "earley_recognized_it (Earley\<^sub>F_it cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  "earley_recognized_it (Earley\<^sub>L cfg1 inp1) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
   using correctness_list wf_\<G>1 is_word_inp1 nonempty_derives1 by blast
 
 lemma wf_tree1:
-  assumes "build_tree cfg1 inp1 (Earley\<^sub>F_it cfg1 inp1) = Some t"
+  assumes "build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t"
   shows "wf_rule_tree cfg1 t \<and> root_tree t = \<SS> cfg1 \<and> yield_tree t = inp1"
-  using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_tree_Earley\<^sub>F_it by blast
+  using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_tree_Earley\<^sub>L by blast
 
 lemma correctness_tree1:
-  "(\<exists>t. build_tree cfg1 inp1 (Earley\<^sub>F_it cfg1 inp1) = Some t) \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
-  using correctness_build_tree_Earley\<^sub>F_it is_word_inp1 nonempty_derives1 wf_\<G>1 by blast
+  "(\<exists>t. build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t) \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  using correctness_build_tree_Earley\<^sub>L is_word_inp1 nonempty_derives1 wf_\<G>1 by blast
 
 lemma wf_trees1:
-  assumes "build_trees cfg1 inp1 (Earley\<^sub>F_it cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "wf_rule_tree cfg1 t \<and> root_tree t = \<SS> cfg1 \<and> yield_tree t = inp1"
-  using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_trees_Earley\<^sub>F_it by blast
+  using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_trees_Earley\<^sub>L by blast
 
 lemma soundness_trees1:
-  assumes "build_trees cfg1 inp1 (Earley\<^sub>F_it cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg1 [\<SS> cfg1] inp1"
-  using assms is_word_inp1 nonempty_derives1 soundness_build_trees_Earley\<^sub>F_it wf_\<G>1 by blast
+  using assms is_word_inp1 nonempty_derives1 soundness_build_trees_Earley\<^sub>L wf_\<G>1 by blast
 
 section \<open>Example 2: Cyclic reduction pointers\<close>
 
@@ -173,27 +173,27 @@ lemma nonempty_derives2:
   by (auto simp: \<epsilon>_free_def cfg2_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness2:
-  "earley_recognized_it (Earley\<^sub>F_it cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  "earley_recognized_it (Earley\<^sub>L cfg2 inp2) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
   using correctness_list wf_\<G>2 is_word_inp2 nonempty_derives2 by blast
 
 lemma wf_tree2:
-  assumes "build_tree cfg2 inp2 (Earley\<^sub>F_it cfg2 inp2) = Some t"
+  assumes "build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t"
   shows "wf_rule_tree cfg2 t \<and> root_tree t = \<SS> cfg2 \<and> yield_tree t = inp2"
-  using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_tree_Earley\<^sub>F_it by blast
+  using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_tree_Earley\<^sub>L by blast
 
 lemma correctness_tree2:
-  "(\<exists>t. build_tree cfg2 inp2 (Earley\<^sub>F_it cfg2 inp2) = Some t) \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
-  using correctness_build_tree_Earley\<^sub>F_it is_word_inp2 nonempty_derives2 wf_\<G>2 by blast
+  "(\<exists>t. build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t) \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  using correctness_build_tree_Earley\<^sub>L is_word_inp2 nonempty_derives2 wf_\<G>2 by blast
 
 lemma wf_trees2:
-  assumes "build_trees cfg2 inp2 (Earley\<^sub>F_it cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "wf_rule_tree cfg2 t \<and> root_tree t = \<SS> cfg2 \<and> yield_tree t = inp2"
-  using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_trees_Earley\<^sub>F_it by blast
+  using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_trees_Earley\<^sub>L by blast
 
 lemma soundness_trees2:
-  assumes "build_trees cfg2 inp2 (Earley\<^sub>F_it cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg2 [\<SS> cfg2] inp2"
-  using assms is_word_inp2 nonempty_derives2 soundness_build_trees_Earley\<^sub>F_it wf_\<G>2 by blast
+  using assms is_word_inp2 nonempty_derives2 soundness_build_trees_Earley\<^sub>L wf_\<G>2 by blast
 
 unused_thms Limit -
 
