@@ -347,192 +347,192 @@ proof (induction es arbitrary: b bs)
     by simp
 qed simp
 
-lemma sound_mono_ptrs_\<pi>_it':
+lemma sound_mono_ptrs_Earley\<^sub>F_bin_it':
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_ptrs inp bs" "\<forall>x \<in> bins_items bs. sound_item cfg inp x"
   assumes "mono_red_ptr bs"
   assumes "nonempty_derives cfg" "wf_\<G> cfg"
-  shows "sound_ptrs inp (\<pi>_it' k cfg inp bs i) \<and> mono_red_ptr (\<pi>_it' k cfg inp bs i)"
+  shows "sound_ptrs inp (Earley\<^sub>F_bin_it' k cfg inp bs i) \<and> mono_red_ptr (Earley\<^sub>F_bin_it' k cfg inp bs i)"
   using assms
-proof (induction i rule: \<pi>_it'_induct[OF assms(1), case_names Base Complete Scan Pass Predict])
-  case (Complete k cfg inp bs i x)
-  let ?bs' = "bins_upd bs k (Complete_it k x bs i)"
+proof (induction i rule: Earley\<^sub>F_bin_it'_induct[OF assms(1), case_names Base Complete\<^sub>F Scan\<^sub>F Pass Predict\<^sub>F])
+  case (Complete\<^sub>F k cfg inp bs i x)
+  let ?bs' = "bins_upd bs k (Complete\<^sub>F_it k x bs i)"
   have x: "x \<in> set (items (bs ! k))"
-    using Complete.hyps(1,2) by force
-  hence "\<forall>x \<in> set (items (Complete_it k x bs i)). sound_item cfg inp x"
-    using sound_Complete_it Complete.hyps(3) Complete.prems wellformed_bins_elim wf_bins_impl_wf_items x
+    using Complete\<^sub>F.hyps(1,2) by force
+  hence "\<forall>x \<in> set (items (Complete\<^sub>F_it k x bs i)). sound_item cfg inp x"
+    using sound_Complete\<^sub>F_it Complete\<^sub>F.hyps(3) Complete\<^sub>F.prems wellformed_bins_elim wf_bins_impl_wf_items x
     by (metis dual_order.refl)
   hence sound: "\<forall>x \<in> bins_items ?bs'. sound_item cfg inp x"
-    by (metis Complete.prems(1,3) UnE bins_bins_upd wellformed_bins_elim)
+    by (metis Complete\<^sub>F.prems(1,3) UnE bins_bins_upd wellformed_bins_elim)
   have 0: "k < length bs"
-    using Complete.prems(1) wellformed_bins_elim by auto
-  have 1: "\<forall>e \<in> set (Complete_it k x bs i). sound_null_ptr e"
-    unfolding Complete_it_def sound_null_ptr_def by auto
-  have 2: "\<forall>e \<in> set (Complete_it k x bs i). sound_pre_ptr inp bs k e"
-    unfolding Complete_it_def sound_pre_ptr_def by auto
+    using Complete\<^sub>F.prems(1) wellformed_bins_elim by auto
+  have 1: "\<forall>e \<in> set (Complete\<^sub>F_it k x bs i). sound_null_ptr e"
+    unfolding Complete\<^sub>F_it_def sound_null_ptr_def by auto
+  have 2: "\<forall>e \<in> set (Complete\<^sub>F_it k x bs i). sound_pre_ptr inp bs k e"
+    unfolding Complete\<^sub>F_it_def sound_pre_ptr_def by auto
   {
     fix e
-    assume a0: "e \<in> set (Complete_it k x bs i)"
+    assume a0: "e \<in> set (Complete\<^sub>F_it k x bs i)"
     fix p ps k' pre red
     assume a1: "pointer e = PreRed p ps" "(k', pre, red) \<in> set (p#ps)"
     have "k' = item_origin x"
-      using a0 a1 unfolding Complete_it_def by auto
+      using a0 a1 unfolding Complete\<^sub>F_it_def by auto
     moreover have "wf_item cfg inp x" "item_end x = k"
-      using Complete.prems(1) x wellformed_bins_elim wf_bins_kth_bin by blast+
+      using Complete\<^sub>F.prems(1) x wellformed_bins_elim wf_bins_kth_bin by blast+
     ultimately have 0: "k' \<le> k"
       using wf_item_def by blast
     have 1: "k' \<noteq> k"
     proof (rule ccontr)
       assume "\<not> k' \<noteq> k"
       have "sound_item cfg inp x"
-        using Complete.prems(1,3) x kth_bin_sub_bins wellformed_bins_elim by (metis subset_eq)
+        using Complete\<^sub>F.prems(1,3) x kth_bin_sub_bins wellformed_bins_elim by (metis subset_eq)
       moreover have "is_complete x"
-        using Complete.hyps(3) by (auto simp: next_symbol_def split: if_splits)
+        using Complete\<^sub>F.hyps(3) by (auto simp: next_symbol_def split: if_splits)
       moreover have "item_origin x = k"
         using \<open>\<not> k' \<noteq> k\<close> \<open>k' = item_origin x\<close> by auto
       ultimately show False
-        using impossible_complete_item Complete.prems(1,5) wellformed_bins_elim \<open>item_end x = k\<close> \<open>wf_item cfg inp x\<close> by blast
+        using impossible_complete_item Complete\<^sub>F.prems(1,5) wellformed_bins_elim \<open>item_end x = k\<close> \<open>wf_item cfg inp x\<close> by blast
     qed
     have 2: "pre < length (bs!k')"
-      using a0 a1 index_filter_with_index_lt_length unfolding Complete_it_def by (auto simp: items_def; fastforce)
+      using a0 a1 index_filter_with_index_lt_length unfolding Complete\<^sub>F_it_def by (auto simp: items_def; fastforce)
     have 3: "red < i+1"
-      using a0 a1 unfolding Complete_it_def by auto
+      using a0 a1 unfolding Complete\<^sub>F_it_def by auto
     have 4: "completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
-      using a0 a1 0 2 Complete.hyps(1,2,3) Complete.prems(1) \<open>k' = item_origin x\<close> unfolding Complete_it_def completes_def
+      using a0 a1 0 2 Complete\<^sub>F.hyps(1,2,3) Complete\<^sub>F.prems(1) \<open>k' = item_origin x\<close> unfolding Complete\<^sub>F_it_def completes_def
       apply (auto simp: items_def)
-         apply (metis filter_with_index_nth nth_map)
-        apply (metis next_symbol_def option.discI)
-       apply (metis items_def index_filter_with_index_lt_length nth_map nth_mem order_le_less_trans wellformed_bins_elim wf_bins_kth_bin)
+      apply (metis filter_with_index_nth nth_map)
+      apply (metis next_symbol_def option.discI)
+      apply (metis items_def index_filter_with_index_lt_length nth_map nth_mem order_le_less_trans wellformed_bins_elim wf_bins_kth_bin)
       by (metis (mono_tags, lifting) filter_with_index_P filter_with_index_nth items_def linorder_not_less nth_map)
     have "k' < k" "pre < length (bs!k')" "red < i+1" "completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
       using 0 1 2 3 4 by simp_all
   }
-  hence "\<forall>e \<in> set (Complete_it k x bs i). \<forall>p ps k' pre red. pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
+  hence "\<forall>e \<in> set (Complete\<^sub>F_it k x bs i). \<forall>p ps k' pre red. pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
     k' < k \<and> pre < length (bs!k') \<and> red < i+1 \<and> completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
     by force
-  hence 3: "\<forall>e \<in> set (Complete_it k x bs i). sound_prered_ptr bs k e"
-    unfolding sound_prered_ptr_def using Complete.hyps(1) items_def by (smt (verit) discrete dual_order.strict_trans1 leI length_map)
-  have 4: "distinct (items (Complete_it k x bs i))"
-    using distinct_Complete_it x Complete.prems(1) wellformed_bins_elim wf_bin_def wf_bin_items_def wf_bins_def wf_item_def
+  hence 3: "\<forall>e \<in> set (Complete\<^sub>F_it k x bs i). sound_prered_ptr bs k e"
+    unfolding sound_prered_ptr_def using Complete\<^sub>F.hyps(1) items_def by (smt (verit) discrete dual_order.strict_trans1 leI length_map)
+  have 4: "distinct (items (Complete\<^sub>F_it k x bs i))"
+    using distinct_Complete\<^sub>F_it x Complete\<^sub>F.prems(1) wellformed_bins_elim wf_bin_def wf_bin_items_def wf_bins_def wf_item_def
     by (metis order_le_less_trans)
   have "sound_ptrs inp ?bs' \<and> mono_red_ptr ?bs'"
-    using sound_mono_ptrs_bin_upds[OF Complete.prems(2) Complete.prems(4) 0] 1 2 3 4 sound_prered_ptr_def
-      Complete.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def
+    using sound_mono_ptrs_bin_upds[OF Complete\<^sub>F.prems(2) Complete\<^sub>F.prems(4) 0] 1 2 3 4 sound_prered_ptr_def
+      Complete\<^sub>F.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def
     by (smt (verit, ccfv_SIG) list.set_intros(1))
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
-    using Complete.hyps Complete.prems(1) wellformed_bins_Complete_it by blast
-  ultimately have "sound_ptrs inp (\<pi>_it' k cfg inp ?bs' (i+1)) \<and> mono_red_ptr (\<pi>_it' k cfg inp ?bs' (i+1))"
-    using Complete.IH Complete.prems(4-6) sound by blast
+    using Complete\<^sub>F.hyps Complete\<^sub>F.prems(1) wellformed_bins_Complete\<^sub>F_it by blast
+  ultimately have "sound_ptrs inp (Earley\<^sub>F_bin_it' k cfg inp ?bs' (i+1)) \<and> mono_red_ptr (Earley\<^sub>F_bin_it' k cfg inp ?bs' (i+1))"
+    using Complete\<^sub>F.IH Complete\<^sub>F.prems(4-6) sound by blast
   thus ?case
-    using Complete.hyps by simp
+    using Complete\<^sub>F.hyps by simp
 next
-  case (Scan k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs (k+1) (Scan_it k inp a x i)"
+  case (Scan\<^sub>F k cfg inp bs i x a)
+  let ?bs' = "bins_upd bs (k+1) (Scan\<^sub>F_it k inp a x i)"
   have "x \<in> set (items (bs ! k))"
-    using Scan.hyps(1,2) by force
-  hence "\<forall>x \<in> set (items (Scan_it k inp a x i)). sound_item cfg inp x"
-    using sound_Scan_it Scan.hyps(3,5) Scan.prems(1,2,3) wellformed_bins_elim wf_bins_impl_wf_items wf_bins_impl_wf_items by fast
+    using Scan\<^sub>F.hyps(1,2) by force
+  hence "\<forall>x \<in> set (items (Scan\<^sub>F_it k inp a x i)). sound_item cfg inp x"
+    using sound_Scan\<^sub>F_it Scan\<^sub>F.hyps(3,5) Scan\<^sub>F.prems(1,2,3) wellformed_bins_elim wf_bins_impl_wf_items wf_bins_impl_wf_items by fast
   hence sound: "\<forall>x \<in> bins_items ?bs'. sound_item cfg inp x"
-    using Scan.hyps(5) Scan.prems(1,3) bins_bins_upd wellformed_bins_elim
+    using Scan\<^sub>F.hyps(5) Scan\<^sub>F.prems(1,3) bins_bins_upd wellformed_bins_elim
     by (metis UnE add_less_cancel_right)
   have 0: "k+1 < length bs"
-    using Scan.hyps(5) Scan.prems(1) wellformed_bins_elim by force
-  have 1: "\<forall>e \<in> set (Scan_it k inp a x i). sound_null_ptr e"
-    unfolding Scan_it_def sound_null_ptr_def by auto
-  have 2: "\<forall>e \<in> set (Scan_it k inp a x i). sound_pre_ptr inp bs (k+1) e"
-    using Scan.hyps(1,2,3) unfolding sound_pre_ptr_def Scan_it_def scans_def items_def by auto
-  have 3: "\<forall>e \<in> set (Scan_it k inp a x i). sound_prered_ptr bs (k+1) e"
-    unfolding Scan_it_def sound_prered_ptr_def by simp
-  have 4: "distinct (items (Scan_it k inp a x i))"
-    using distinct_Scan_it by fast
+    using Scan\<^sub>F.hyps(5) Scan\<^sub>F.prems(1) wellformed_bins_elim by force
+  have 1: "\<forall>e \<in> set (Scan\<^sub>F_it k inp a x i). sound_null_ptr e"
+    unfolding Scan\<^sub>F_it_def sound_null_ptr_def by auto
+  have 2: "\<forall>e \<in> set (Scan\<^sub>F_it k inp a x i). sound_pre_ptr inp bs (k+1) e"
+    using Scan\<^sub>F.hyps(1,2,3) unfolding sound_pre_ptr_def Scan\<^sub>F_it_def scans_def items_def by auto
+  have 3: "\<forall>e \<in> set (Scan\<^sub>F_it k inp a x i). sound_prered_ptr bs (k+1) e"
+    unfolding Scan\<^sub>F_it_def sound_prered_ptr_def by simp
+  have 4: "distinct (items (Scan\<^sub>F_it k inp a x i))"
+    using distinct_Scan\<^sub>F_it by fast
   have "sound_ptrs inp ?bs' \<and> mono_red_ptr ?bs'"
-    using sound_mono_ptrs_bin_upds[OF Scan.prems(2) Scan.prems(4) 0] 0 1 2 3 4 sound_prered_ptr_def
-      Scan.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def
+    using sound_mono_ptrs_bin_upds[OF Scan\<^sub>F.prems(2) Scan\<^sub>F.prems(4) 0] 0 1 2 3 4 sound_prered_ptr_def
+      Scan\<^sub>F.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def
     by (smt (verit, ccfv_threshold) list.set_intros(1))
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
-    using Scan.hyps Scan.prems(1) wellformed_bins_Scan_it by metis
-  ultimately have "sound_ptrs inp (\<pi>_it' k cfg inp ?bs' (i+1)) \<and> mono_red_ptr (\<pi>_it' k cfg inp ?bs' (i+1))"
-    using Scan.IH Scan.prems(4-6) sound by blast
+    using Scan\<^sub>F.hyps Scan\<^sub>F.prems(1) wellformed_bins_Scan\<^sub>F_it by metis
+  ultimately have "sound_ptrs inp (Earley\<^sub>F_bin_it' k cfg inp ?bs' (i+1)) \<and> mono_red_ptr (Earley\<^sub>F_bin_it' k cfg inp ?bs' (i+1))"
+    using Scan\<^sub>F.IH Scan\<^sub>F.prems(4-6) sound by blast
   thus ?case
-    using Scan.hyps by simp
+    using Scan\<^sub>F.hyps by simp
 next
-  case (Predict k cfg inp bs i x a)
-  let ?bs' = "bins_upd bs k (Predict_it k cfg a)"
+  case (Predict\<^sub>F k cfg inp bs i x a)
+  let ?bs' = "bins_upd bs k (Predict\<^sub>F_it k cfg a)"
   have "x \<in> set (items (bs ! k))"
-    using Predict.hyps(1,2) by force
-  hence "\<forall>x \<in> set (items(Predict_it k cfg a)). sound_item cfg inp x"
-    using sound_Predict_it Predict.hyps(3) Predict.prems wellformed_bins_elim wf_bins_impl_wf_items by fast
+    using Predict\<^sub>F.hyps(1,2) by force
+  hence "\<forall>x \<in> set (items(Predict\<^sub>F_it k cfg a)). sound_item cfg inp x"
+    using sound_Predict\<^sub>F_it Predict\<^sub>F.hyps(3) Predict\<^sub>F.prems wellformed_bins_elim wf_bins_impl_wf_items by fast
   hence sound: "\<forall>x \<in> bins_items ?bs'. sound_item cfg inp x"
-    using Predict.prems(1,3) UnE bins_bins_upd wellformed_bins_elim by metis
+    using Predict\<^sub>F.prems(1,3) UnE bins_bins_upd wellformed_bins_elim by metis
   have 0: "k < length bs"
-    using Predict.prems(1) wellformed_bins_elim by force
-  have 1: "\<forall>e \<in> set (Predict_it k cfg a). sound_null_ptr e"
-    unfolding sound_null_ptr_def Predict_it_def predicts_def by (auto simp: init_item_def)
-  have 2: "\<forall>e \<in> set (Predict_it k cfg a). sound_pre_ptr inp bs k e"
-    unfolding sound_pre_ptr_def Predict_it_def by simp
-  have 3: "\<forall>e \<in> set (Predict_it k cfg a). sound_prered_ptr bs k e"
-    unfolding sound_prered_ptr_def Predict_it_def by simp
-  have 4: "distinct (items (Predict_it k cfg a))"
-    using Predict.prems(6) distinct_Predict_it by fast
+    using Predict\<^sub>F.prems(1) wellformed_bins_elim by force
+  have 1: "\<forall>e \<in> set (Predict\<^sub>F_it k cfg a). sound_null_ptr e"
+    unfolding sound_null_ptr_def Predict\<^sub>F_it_def predicts_def by (auto simp: init_item_def)
+  have 2: "\<forall>e \<in> set (Predict\<^sub>F_it k cfg a). sound_pre_ptr inp bs k e"
+    unfolding sound_pre_ptr_def Predict\<^sub>F_it_def by simp
+  have 3: "\<forall>e \<in> set (Predict\<^sub>F_it k cfg a). sound_prered_ptr bs k e"
+    unfolding sound_prered_ptr_def Predict\<^sub>F_it_def by simp
+  have 4: "distinct (items (Predict\<^sub>F_it k cfg a))"
+    using Predict\<^sub>F.prems(6) distinct_Predict\<^sub>F_it by fast
   have "sound_ptrs inp ?bs' \<and> mono_red_ptr ?bs'"
-    using sound_mono_ptrs_bin_upds[OF Predict.prems(2) Predict.prems(4) 0] 0 1 2 3 4 sound_prered_ptr_def
-      Predict.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def
+    using sound_mono_ptrs_bin_upds[OF Predict\<^sub>F.prems(2) Predict\<^sub>F.prems(4) 0] 0 1 2 3 4 sound_prered_ptr_def
+      Predict\<^sub>F.prems(1) bins_upd_def wellformed_bins_elim wf_bin_def wf_bins_def
     by (smt (verit, ccfv_threshold) list.set_intros(1))
   moreover have "(k, cfg, inp, ?bs') \<in> wellformed_bins"
-    using Predict.hyps Predict.prems(1) wellformed_bins_Predict_it by metis
-  ultimately have "sound_ptrs inp (\<pi>_it' k cfg inp ?bs' (i+1)) \<and> mono_red_ptr (\<pi>_it' k cfg inp ?bs' (i+1))"
-    using Predict.IH Predict.prems(4-6) sound by blast
+    using Predict\<^sub>F.hyps Predict\<^sub>F.prems(1) wellformed_bins_Predict\<^sub>F_it by metis
+  ultimately have "sound_ptrs inp (Earley\<^sub>F_bin_it' k cfg inp ?bs' (i+1)) \<and> mono_red_ptr (Earley\<^sub>F_bin_it' k cfg inp ?bs' (i+1))"
+    using Predict\<^sub>F.IH Predict\<^sub>F.prems(4-6) sound by blast
   thus ?case
-    using Predict.hyps by simp
+    using Predict\<^sub>F.hyps by simp
 qed simp_all
 
-lemma sound_mono_ptrs_\<pi>_it:
+lemma sound_mono_ptrs_Earley\<^sub>F_bin_it:
   assumes "(k, cfg, inp, bs) \<in> wellformed_bins"
   assumes "sound_ptrs inp bs" "\<forall>x \<in> bins_items bs. sound_item cfg inp x"
   assumes "mono_red_ptr bs"
   assumes "nonempty_derives cfg" "wf_\<G> cfg"
-  shows "sound_ptrs inp (\<pi>_it k cfg inp bs) \<and> mono_red_ptr (\<pi>_it k cfg inp bs)"
-  using assms sound_mono_ptrs_\<pi>_it' \<pi>_it_def by metis
+  shows "sound_ptrs inp (Earley\<^sub>F_bin_it k cfg inp bs) \<and> mono_red_ptr (Earley\<^sub>F_bin_it k cfg inp bs)"
+  using assms sound_mono_ptrs_Earley\<^sub>F_bin_it' Earley\<^sub>F_bin_it_def by metis
 
-lemma sound_ptrs_Init_it:
-  "sound_ptrs inp (Init_it cfg inp)"
+lemma sound_ptrs_Init\<^sub>F_it:
+  "sound_ptrs inp (Init\<^sub>F_it cfg inp)"
   unfolding sound_ptrs_def sound_null_ptr_def sound_pre_ptr_def sound_prered_ptr_def
-    predicts_def scans_def completes_def Init_it_def
+    predicts_def scans_def completes_def Init\<^sub>F_it_def
   by (auto simp: init_item_def less_Suc_eq_0_disj)
 
-lemma mono_red_ptr_Init_it:
-  "mono_red_ptr (Init_it cfg inp)"
-  unfolding mono_red_ptr_def Init_it_def
+lemma mono_red_ptr_Init\<^sub>F_it:
+  "mono_red_ptr (Init\<^sub>F_it cfg inp)"
+  unfolding mono_red_ptr_def Init\<^sub>F_it_def
   by (auto simp: init_item_def less_Suc_eq_0_disj)
 
-lemma sound_mono_ptrs_\<I>_it:
+lemma sound_mono_ptrs_Earley\<^sub>F_bins_it:
   assumes "k \<le> length inp" "wf_\<G> cfg" "nonempty_derives cfg" "wf_\<G> cfg"
-  shows "sound_ptrs inp (\<I>_it k cfg inp) \<and> mono_red_ptr (\<I>_it k cfg inp)"
+  shows "sound_ptrs inp (Earley\<^sub>F_bins_it k cfg inp) \<and> mono_red_ptr (Earley\<^sub>F_bins_it k cfg inp)"
   using assms
 proof (induction k)
   case 0
-  have "(0, cfg, inp, (Init_it cfg inp)) \<in> wellformed_bins"
-    using assms(2) wellformed_bins_Init_it by blast
-  moreover have "\<forall>x \<in> bins_items (Init_it cfg inp). sound_item cfg inp x"
-    by (metis Init_it_eq_Init Init_sub_Earley sound_Earley subsetD wf_Earley)
+  have "(0, cfg, inp, (Init\<^sub>F_it cfg inp)) \<in> wellformed_bins"
+    using assms(2) wellformed_bins_Init\<^sub>F_it by blast
+  moreover have "\<forall>x \<in> bins_items (Init\<^sub>F_it cfg inp). sound_item cfg inp x"
+    by (metis Init\<^sub>F_it_eq_Init\<^sub>F Init\<^sub>F_sub_Earley sound_Earley subsetD wf_Earley)
   ultimately show ?case
-    using sound_mono_ptrs_\<pi>_it sound_ptrs_Init_it mono_red_ptr_Init_it "0.prems"(2,3) by fastforce
+    using sound_mono_ptrs_Earley\<^sub>F_bin_it sound_ptrs_Init\<^sub>F_it mono_red_ptr_Init\<^sub>F_it "0.prems"(2,3) by fastforce
 next
   case (Suc k)
-  have "(Suc k, cfg, inp, \<I>_it k cfg inp) \<in> wellformed_bins"
+  have "(Suc k, cfg, inp, Earley\<^sub>F_bins_it k cfg inp) \<in> wellformed_bins"
     by (simp add: Suc.prems(1) Suc_leD assms(2) wellformed_bins_intro)
-  moreover have "sound_ptrs inp (\<I>_it k cfg inp)"
+  moreover have "sound_ptrs inp (Earley\<^sub>F_bins_it k cfg inp)"
     using Suc by simp
-  moreover have "\<forall>x \<in> bins_items (\<I>_it k cfg inp). sound_item cfg inp x"
-    by (meson Suc.prems(1) Suc_leD \<I>_it_sub_\<I> \<I>_sub_Earley assms(2) sound_Earley subsetD wf_bins_\<I>_it wf_bins_impl_wf_items)
+  moreover have "\<forall>x \<in> bins_items (Earley\<^sub>F_bins_it k cfg inp). sound_item cfg inp x"
+    by (meson Suc.prems(1) Suc_leD Earley\<^sub>F_bins_it_sub_Earley\<^sub>F_bins Earley\<^sub>F_bins_sub_Earley assms(2) sound_Earley subsetD wf_bins_Earley\<^sub>F_bins_it wf_bins_impl_wf_items)
   ultimately show ?case
-    using Suc.prems(1,3,4) sound_mono_ptrs_\<pi>_it Suc.IH by fastforce
+    using Suc.prems(1,3,4) sound_mono_ptrs_Earley\<^sub>F_bin_it Suc.IH by fastforce
 qed
 
-lemma sound_mono_ptrs_\<II>_it:
+lemma sound_mono_ptrs_Earley\<^sub>F_it:
   assumes "wf_\<G> cfg" "nonempty_derives cfg"
-  shows "sound_ptrs inp (\<II>_it cfg inp) \<and> mono_red_ptr (\<II>_it cfg inp)"
-  using assms sound_mono_ptrs_\<I>_it \<II>_it_def by (metis dual_order.refl)
+  shows "sound_ptrs inp (Earley\<^sub>F_it cfg inp) \<and> mono_red_ptr (Earley\<^sub>F_it cfg inp)"
+  using assms sound_mono_ptrs_Earley\<^sub>F_bins_it Earley\<^sub>F_it_def by (metis dual_order.refl)
 
 
 subsection \<open>Common Definitions\<close>
@@ -1245,59 +1245,59 @@ proof -
     using * wf_rule root yield assms(4) unfolding build_tree_def by simp
 qed
 
-corollary wf_rule_root_yield_tree_build_tree_\<II>_it:
+corollary wf_rule_root_yield_tree_build_tree_Earley\<^sub>F_it:
   assumes "wf_\<G> cfg" "nonempty_derives cfg"
-  assumes "build_tree cfg inp (\<II>_it cfg inp) = Some t"
+  assumes "build_tree cfg inp (Earley\<^sub>F_it cfg inp) = Some t"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
-  using assms wf_rule_root_yield_tree_build_forest wf_bins_\<II>_it sound_mono_ptrs_\<II>_it \<II>_it_def
-    length_\<I>_it length_bins_Init_it by (metis nle_le)
+  using assms wf_rule_root_yield_tree_build_forest wf_bins_Earley\<^sub>F_it sound_mono_ptrs_Earley\<^sub>F_it Earley\<^sub>F_it_def
+    length_Earley\<^sub>F_bins_it length_bins_Init\<^sub>F_it by (metis nle_le)
 
-theorem correctness_build_tree_\<II>_it:
+theorem correctness_build_tree_Earley\<^sub>F_it:
   assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
-  shows "(\<exists>t. build_tree cfg inp (\<II>_it cfg inp) = Some t) \<longleftrightarrow> derives cfg [\<SS> cfg] inp" (is "?L \<longleftrightarrow> ?R")
+  shows "(\<exists>t. build_tree cfg inp (Earley\<^sub>F_it cfg inp) = Some t) \<longleftrightarrow> derives cfg [\<SS> cfg] inp" (is "?L \<longleftrightarrow> ?R")
 proof standard
   assume *: ?L
-  let ?k = "length (\<II>_it cfg inp) - 1"
-  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
-  then obtain t x i where *: "(x,i) \<in> set finished" "Some t = build_tree' (\<II>_it cfg inp) inp ?k i"
+  let ?k = "length (Earley\<^sub>F_it cfg inp) - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((Earley\<^sub>F_it cfg inp)!?k))"
+  then obtain t x i where *: "(x,i) \<in> set finished" "Some t = build_tree' (Earley\<^sub>F_it cfg inp) inp ?k i"
     using * unfolding finished_def build_tree_def by (auto simp: Let_def split: list.splits, presburger)
-  have k: "?k < length (\<II>_it cfg inp)" "?k \<le> length inp"
-    by (simp_all add: \<II>_it_def assms(1))
-  have i: "i < length ((\<II>_it cfg inp) ! ?k)"
+  have k: "?k < length (Earley\<^sub>F_it cfg inp)" "?k \<le> length inp"
+    by (simp_all add: Earley\<^sub>F_it_def assms(1))
+  have i: "i < length ((Earley\<^sub>F_it cfg inp) ! ?k)"
     using index_filter_with_index_lt_length * items_def finished_def by (metis length_map)
-  have x: "x = item ((\<II>_it cfg inp)!?k!i)"
+  have x: "x = item ((Earley\<^sub>F_it cfg inp)!?k!i)"
     using * i filter_with_index_nth items_def nth_map finished_def by metis
   have finished: "is_finished cfg inp x"
     using * filter_with_index_P finished_def by metis
-  moreover have "x \<in> set (items ((\<II>_it cfg inp) ! ?k))"
+  moreover have "x \<in> set (items ((Earley\<^sub>F_it cfg inp) ! ?k))"
     using x by (auto simp: items_def; metis One_nat_def i imageI nth_mem)
-  ultimately have "(\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
-    by (metis assms(1) is_finished_def k(1) wf_bins_\<II>_it wf_bins_kth_bin)    
-  hence "earley_recognized_it (\<II>_it cfg inp) cfg inp"
+  ultimately have "(\<exists>x \<in> set (items ((Earley\<^sub>F_it cfg inp) ! length inp)). is_finished cfg inp x)"
+    by (metis assms(1) is_finished_def k(1) wf_bins_Earley\<^sub>F_it wf_bins_kth_bin)    
+  hence "earley_recognized_it (Earley\<^sub>F_it cfg inp) cfg inp"
     using earley_recognized_it_def by blast
   thus ?R
     using correctness_list assms by blast
 next
   assume *: ?R
-  let ?k = "length (\<II>_it cfg inp) - 1"
-  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
-  have "earley_recognized_it (\<II>_it cfg inp) cfg inp"
+  let ?k = "length (Earley\<^sub>F_it cfg inp) - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((Earley\<^sub>F_it cfg inp)!?k))"
+  have "earley_recognized_it (Earley\<^sub>F_it cfg inp) cfg inp"
     using assms * correctness_list by blast
   moreover have "?k = length inp"
-    by (simp add: \<II>_it_def assms(1))
+    by (simp add: Earley\<^sub>F_it_def assms(1))
   ultimately obtain x i xs where xis: "finished = (x,i)#xs"
     using earley_recognized_it_def unfolding finished_def by (metis filter_with_index_nonempty neq_Nil_conv surj_pair)
-  hence simp: "build_tree cfg inp (\<II>_it cfg inp) = build_tree' (\<II>_it cfg inp) inp ?k i"
+  hence simp: "build_tree cfg inp (Earley\<^sub>F_it cfg inp) = build_tree' (Earley\<^sub>F_it cfg inp) inp ?k i"
     unfolding build_tree_def finished_def by auto
   have "(x,i) \<in> set finished"
     using xis by simp
-  hence "i < length ((\<II>_it cfg inp)!?k)"
+  hence "i < length ((Earley\<^sub>F_it cfg inp)!?k)"
     using index_filter_with_index_lt_length by (metis finished_def items_def length_map)
-  moreover have "?k < length (\<II>_it cfg inp)"
-    by (simp add: \<II>_it_def assms(1))
-  ultimately have "(\<II>_it cfg inp, inp, ?k, i) \<in> wellformed_tree_ptrs"
-    unfolding wellformed_tree_ptrs_def using sound_mono_ptrs_\<II>_it assms(1,3) by blast
-  then obtain N ts where "build_tree' (\<II>_it cfg inp) inp ?k i = Some (Branch N ts)"
+  moreover have "?k < length (Earley\<^sub>F_it cfg inp)"
+    by (simp add: Earley\<^sub>F_it_def assms(1))
+  ultimately have "(Earley\<^sub>F_it cfg inp, inp, ?k, i) \<in> wellformed_tree_ptrs"
+    unfolding wellformed_tree_ptrs_def using sound_mono_ptrs_Earley\<^sub>F_it assms(1,3) by blast
+  then obtain N ts where "build_tree' (Earley\<^sub>F_it cfg inp) inp ?k i = Some (Branch N ts)"
     using build_tree'_termination by blast
   thus ?L
     using simp by simp
@@ -2447,72 +2447,72 @@ proof -
     using * wf_rule root yield assms(4) unfolding build_trees_def by simp
 qed
 
-corollary wf_rule_root_yield_tree_build_trees_\<II>_it:
+corollary wf_rule_root_yield_tree_build_trees_Earley\<^sub>F_it:
   assumes "wf_\<G> cfg" "nonempty_derives cfg"
-  assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg inp (Earley\<^sub>F_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "wf_rule_tree cfg t \<and> root_tree t = \<SS> cfg \<and> yield_tree t = inp"
-  using assms wf_rule_root_yield_tree_build_trees wf_bins_\<II>_it \<II>_it_def
-    length_\<I>_it length_bins_Init_it sound_mono_ptrs_\<II>_it
+  using assms wf_rule_root_yield_tree_build_trees wf_bins_Earley\<^sub>F_it Earley\<^sub>F_it_def
+    length_Earley\<^sub>F_bins_it length_bins_Init\<^sub>F_it sound_mono_ptrs_Earley\<^sub>F_it
   by (metis dual_order.eq_iff )
 
-theorem soundness_build_trees_\<II>_it:
+theorem soundness_build_trees_Earley\<^sub>F_it:
   assumes "wf_\<G> cfg" "is_word cfg inp" "nonempty_derives cfg"
-  assumes "build_trees cfg inp (\<II>_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
+  assumes "build_trees cfg inp (Earley\<^sub>F_it cfg inp) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
   shows "derives cfg [\<SS> cfg] inp"
 proof -
-  let ?k = "length (\<II>_it cfg inp) - 1"
-  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
-  have #: "Some fs = map_option concat (those (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished))"
+  let ?k = "length (Earley\<^sub>F_it cfg inp) - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((Earley\<^sub>F_it cfg inp)!?k))"
+  have #: "Some fs = map_option concat (those (map (\<lambda>(_, i). build_trees' (Earley\<^sub>F_it cfg inp) inp ?k i {i}) finished))"
     using assms(4) build_trees_def finished_def by (metis (full_types))
-  then obtain fss fs' where fss: "Some fss = those (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished)"
+  then obtain fss fs' where fss: "Some fss = those (map (\<lambda>(_, i). build_trees' (Earley\<^sub>F_it cfg inp) inp ?k i {i}) finished)"
     "fs' \<in> set fss" "f \<in> set fs'"
     using map_option_concat_those_map_exists assms(5) by fastforce
-  then obtain x i where *: "(x,i) \<in> set finished" "Some fs' =  build_trees' (\<II>_it cfg inp) inp ?k i {i}"
+  then obtain x i where *: "(x,i) \<in> set finished" "Some fs' =  build_trees' (Earley\<^sub>F_it cfg inp) inp ?k i {i}"
     using those_map_exists[OF fss(1,2)] by auto
-  have k: "?k < length (\<II>_it cfg inp)" "?k \<le> length inp"
-    by (simp_all add: \<II>_it_def assms(1))
-  have i: "i < length ((\<II>_it cfg inp) ! ?k)"
+  have k: "?k < length (Earley\<^sub>F_it cfg inp)" "?k \<le> length inp"
+    by (simp_all add: Earley\<^sub>F_it_def assms(1))
+  have i: "i < length ((Earley\<^sub>F_it cfg inp) ! ?k)"
     using index_filter_with_index_lt_length * items_def finished_def by (metis length_map)
-  have x: "x = item ((\<II>_it cfg inp)!?k!i)"
+  have x: "x = item ((Earley\<^sub>F_it cfg inp)!?k!i)"
     using * i filter_with_index_nth items_def nth_map finished_def by metis
   have finished: "is_finished cfg inp x"
     using * filter_with_index_P finished_def by metis
-  moreover have "x \<in> set (items ((\<II>_it cfg inp) ! ?k))"
+  moreover have "x \<in> set (items ((Earley\<^sub>F_it cfg inp) ! ?k))"
     using x by (auto simp: items_def; metis One_nat_def i imageI nth_mem)
-  ultimately have "(\<exists>x \<in> set (items ((\<II>_it cfg inp) ! length inp)). is_finished cfg inp x)"
-    by (metis assms(1) is_finished_def k(1) wf_bins_\<II>_it wf_bins_kth_bin)    
-  hence "earley_recognized_it (\<II>_it cfg inp) cfg inp"
+  ultimately have "(\<exists>x \<in> set (items ((Earley\<^sub>F_it cfg inp) ! length inp)). is_finished cfg inp x)"
+    by (metis assms(1) is_finished_def k(1) wf_bins_Earley\<^sub>F_it wf_bins_kth_bin)    
+  hence "earley_recognized_it (Earley\<^sub>F_it cfg inp) cfg inp"
     using earley_recognized_it_def by blast
   thus ?thesis
     using correctness_list assms by blast
 qed
 
-theorem termination_build_tree_\<II>_it:
+theorem termination_build_tree_Earley\<^sub>F_it:
   assumes "wf_\<G> cfg" "nonempty_derives cfg" "derives cfg [\<SS> cfg] inp"
-  shows "\<exists>fs. build_trees cfg inp (\<II>_it cfg inp) = Some fs"
+  shows "\<exists>fs. build_trees cfg inp (Earley\<^sub>F_it cfg inp) = Some fs"
 proof -
-  let ?k = "length (\<II>_it cfg inp) - 1"
-  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((\<II>_it cfg inp)!?k))"
-  have "\<forall>f \<in> set finished. (\<II>_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
+  let ?k = "length (Earley\<^sub>F_it cfg inp) - 1"
+  define finished where finished_def: "finished = filter_with_index (is_finished cfg inp) (items ((Earley\<^sub>F_it cfg inp)!?k))"
+  have "\<forall>f \<in> set finished. (Earley\<^sub>F_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
   proof standard
     fix f
     assume a: "f \<in> set finished"
     then obtain x i where *: "(x,i) = f"
       by (metis surj_pair)
-    have "sound_ptrs inp (\<II>_it cfg inp)"
-      using sound_mono_ptrs_\<II>_it assms by blast
-    moreover have "?k < length (\<II>_it cfg inp)"
-      by (simp add: \<II>_it_def assms(1))
-    moreover have "i < length ((\<II>_it cfg inp)!?k)"
+    have "sound_ptrs inp (Earley\<^sub>F_it cfg inp)"
+      using sound_mono_ptrs_Earley\<^sub>F_it assms by blast
+    moreover have "?k < length (Earley\<^sub>F_it cfg inp)"
+      by (simp add: Earley\<^sub>F_it_def assms(1))
+    moreover have "i < length ((Earley\<^sub>F_it cfg inp)!?k)"
       using index_filter_with_index_lt_length a * items_def finished_def by (metis length_map)
-    ultimately show "(\<II>_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
+    ultimately show "(Earley\<^sub>F_it cfg inp, inp, ?k, snd f, {snd f}) \<in> wellformed_forest_ptrs"
       using * unfolding wellformed_forest_ptrs_def by auto
   qed
-  hence "\<forall>fso \<in> set (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished). \<exists>fs. fso = Some fs"
+  hence "\<forall>fso \<in> set (map (\<lambda>(_, i). build_trees' (Earley\<^sub>F_it cfg inp) inp ?k i {i}) finished). \<exists>fs. fso = Some fs"
     using build_trees'_termination by fastforce
-  then obtain fss where fss: "Some fss = those (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished)"
+  then obtain fss where fss: "Some fss = those (map (\<lambda>(_, i). build_trees' (Earley\<^sub>F_it cfg inp) inp ?k i {i}) finished)"
     by (smt (verit, best) those_Some)
-  then obtain fs where fs: "Some fs = map_option concat (those (map (\<lambda>(_, i). build_trees' (\<II>_it cfg inp) inp ?k i {i}) finished))"
+  then obtain fs where fs: "Some fs = map_option concat (those (map (\<lambda>(_, i). build_trees' (Earley\<^sub>F_it cfg inp) inp ?k i {i}) finished))"
     by (metis map_option_eq_Some)
   show ?thesis
     using finished_def fss fs build_trees_def by (metis (full_types))

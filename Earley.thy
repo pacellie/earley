@@ -116,8 +116,8 @@ definition recognizing :: "'a item set \<Rightarrow> 'a cfg \<Rightarrow> 'a sen
 
 inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set"
   for \<G> :: "'a cfg" and \<omega> :: "'a sentence" where
-    Init: "r \<in> set (\<RR> \<G>) \<Longrightarrow> fst r = \<SS> \<G>
-    \<Longrightarrow> Item r 0 0 0 \<in> Earley \<G> \<omega>"
+    Init: "r \<in> set (\<RR> \<G>) \<Longrightarrow> fst r = \<SS> \<G> \<Longrightarrow>
+      Item r 0 0 0 \<in> Earley \<G> \<omega>"
   | Scan: "x = Item r b i j \<Longrightarrow> x \<in> Earley \<G> \<omega> \<Longrightarrow>
     \<omega>!j = a \<Longrightarrow> j < length \<omega> \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
       Item r (b + 1) i (j + 1) \<in> Earley \<G> \<omega>"
@@ -125,8 +125,8 @@ inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item 
     r' \<in> set (\<RR> \<G>) \<Longrightarrow> next_symbol x = Some (rule_head r') \<Longrightarrow>
       Item r' 0 j j \<in> Earley \<G> \<omega>"
   | Complete: "x = Item r\<^sub>x b\<^sub>x i j \<Longrightarrow> x \<in> Earley \<G> \<omega> \<Longrightarrow> y = Item r\<^sub>y b\<^sub>y j k \<Longrightarrow> y \<in> Earley \<G> \<omega> \<Longrightarrow>
-    is_complete y \<Longrightarrow> next_symbol x = Some (item_rule_head y) \<Longrightarrow>
-      Item r\<^sub>x (b\<^sub>x + 1) i k \<in> Earley \<G> \<omega>"
+      is_complete y \<Longrightarrow> next_symbol x = Some (item_rule_head y) \<Longrightarrow>
+        Item r\<^sub>x (b\<^sub>x + 1) i k \<in> Earley \<G> \<omega>"
 
 
 subsection \<open>Well-formedness\<close>
@@ -429,7 +429,7 @@ qed
 
 subsection \<open>Correctness\<close>
 
-corollary correctness_Earley:
+theorem correctness_Earley:
   assumes "wf_\<G> \<G>" "is_word \<G> \<omega>"
   shows "recognizing (Earley \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
   using assms soundness_Earley completeness_Earley by blast
