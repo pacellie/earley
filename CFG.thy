@@ -39,7 +39,7 @@ syntax
   "derives1" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
 
 definition derivations1 :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) sentence \<times> ('a, 'b) sentence) set" where
-  "derivations1 \<G> \<equiv> { (u,v) | u v. derives1 \<G> u v }"
+  "derivations1 \<G> \<equiv> { (u,v) | u v. \<G> \<turnstile> u \<Rightarrow> v }"
 
 definition derivations :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) sentence \<times> ('a, 'b) sentence) set" where 
   "derivations \<G> \<equiv> (derivations1 \<G>)^*"

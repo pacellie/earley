@@ -10,7 +10,7 @@ type_synonym ('a, 'b) derivation = "(nat \<times> ('a, 'b) rule) list"
 lemma is_word_empty: "is_word []" by (auto simp add: is_word_def)
 
 lemma derives1_implies_derives[simp]:
-  "derives1 \<G> a b \<Longrightarrow> derives \<G> a b"
+  "\<G> \<turnstile> a \<Rightarrow> b \<Longrightarrow> derives \<G> a b"
   by (auto simp add: derives_def derivations_def derivations1_def)
 
 lemma derives_trans:
@@ -18,13 +18,13 @@ lemma derives_trans:
   by (auto simp add: derives_def derivations_def)
 
 lemma derives1_eq_derivations1:
-  "derives1 \<G> x y = ((x, y) \<in> derivations1 \<G>)"
+  "(\<G> \<turnstile> x \<Rightarrow> y) = ((x, y) \<in> derivations1 \<G>)"
   by (simp add: derivations1_def)
 
 lemma derives_induct[consumes 1, case_names Base Step]:
   assumes derives: "derives \<G> a b"
   assumes Pa: "P a"
-  assumes induct: "\<And>y z. derives \<G> a y \<Longrightarrow> derives1 \<G> y z \<Longrightarrow> P y \<Longrightarrow> P z"
+  assumes induct: "\<And>y z. derives \<G> a y \<Longrightarrow> \<G> \<turnstile> y \<Rightarrow> z \<Longrightarrow> P y \<Longrightarrow> P z"
   shows "P b"
 proof -
   note rtrancl_lemma = rtrancl_induct[where a = a and b = b and r = "derivations1 \<G>" and P=P]
@@ -42,10 +42,10 @@ lemma Derives1_split:
   "Derives1 \<G> u i r v \<Longrightarrow> \<exists> x y. u = x @ [fst r] @ y \<and> v = x @ (snd r) @ y \<and> length x = i"
   by (metis Derives1_def fst_conv snd_conv)
 
-lemma Derives1_implies_derives1: "Derives1 \<G> u i r v \<Longrightarrow> derives1 \<G> u v"
+lemma Derives1_implies_derives1: "Derives1 \<G> u i r v \<Longrightarrow> \<G> \<turnstile> u \<Rightarrow> v"
   by (auto simp add: Derives1_def derives1_def)
 
-lemma derives1_implies_Derives1: "derives1 \<G> u v \<Longrightarrow> \<exists> i r. Derives1 \<G> u i r v"
+lemma derives1_implies_Derives1: "\<G> \<turnstile> u \<Rightarrow> v \<Longrightarrow> \<exists> i r. Derives1 \<G> u i r v"
   by (auto simp add: Derives1_def derives1_def)
 
 fun Derivation :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) derivation \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
@@ -156,7 +156,7 @@ lemma Derivation_append_rewrite:
   using assms Derivation_append' Derivation_prepend Derivation_implies_append by fast
 
 lemma derives1_if_valid_rule:
-  "(N, \<alpha>) \<in> set (\<RR> \<G>) \<Longrightarrow> derives1 \<G> [N] \<alpha>"
+  "(N, \<alpha>) \<in> set (\<RR> \<G>) \<Longrightarrow> \<G> \<turnstile> [N] \<Rightarrow> \<alpha>"
   unfolding derives1_def
   apply (rule_tac exI[where x="[]"])
   apply (rule_tac exI[where x="[]"])

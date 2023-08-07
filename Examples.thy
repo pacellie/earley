@@ -49,7 +49,7 @@ proof (rule ccontr)
   assume "\<not> \<epsilon>_free \<G>"
   then obtain N \<alpha> where *: "(N, \<alpha>) \<in> set (\<RR> \<G>)" "rule_body (N, \<alpha>) = []"
     unfolding \<epsilon>_free_def by auto
-  hence "derives1 \<G> [N] []"
+  hence "\<G> \<turnstile> [N] \<Rightarrow> []"
     unfolding derives1_def rule_body_def by auto
   hence "derives \<G> [N] []"
     by auto
