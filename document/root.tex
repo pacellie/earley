@@ -1,38 +1,57 @@
-\documentclass[11pt,a4paper]{article}
-\usepackage[T1]{fontenc}
+\documentclass[a4paper,UKenglish,cleveref,autoref]{lipics-v2021}
+\usepackage[utf8]{inputenc}
+
 \usepackage{isabelle,isabellesym}
-
-% this should be the last package used
-\usepackage{pdfsetup}
-
-% urls in roman style, theory text in math-similar italics
-\urlstyle{rm}
 \isabellestyle{it}
 
+\isadroptag{theory}
+\isafoldtag{proof}
+
+
+\title{Isabelle document preparation with Dagstuhl LIPIcs style}
+
+\author{Makarius Wenzel}{Augsburg, Germany \and \url{https://sketis.net}}{}{https://orcid.org/0000-0002-3753-8280}{}
+\authorrunning{M. Wenzel}
+
+\Copyright{}
+
+\ccsdesc[100]{General and reference~General literature}
+\ccsdesc[100]{General and reference}
+
+\keywords{Document preparation}
+
+\category{}
+
+\nolinenumbers
+
+%\hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
+
+%Editor-only macros:: begin (do not touch as author)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\EventEditors{John Q. Open and Joan R. Access}
+\EventNoEds{2}
+\EventLongTitle{42nd Conference on Very Important Topics (CVIT 2016)}
+\EventShortTitle{CVIT 2016}
+\EventAcronym{CVIT}
+\EventYear{2016}
+\EventDate{December 24--27, 2016}
+\EventLocation{Little Whinging, United Kingdom}
+\EventLogo{}
+\SeriesVolume{42}
+\ArticleNo{23}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
 
-\title{Earley}
-\author{Martin Rau}
 \maketitle
 
 \begin{abstract}
-In 1968 Earley \cite{Earley:1970} introduced his parsing algorithm capable of parsing all context-free grammars in cubic
-space and time. This entry contains a formalization of an executable Earley parser. We base our development on Jones' \cite{Jones:1972}
-extensive paper proof of Earley's recognizer and the formalization of context-free grammars
-and derivations of Obua \cite{Obua:2017} \cite{LocalLexing-AFP}. We implement and prove correct a functional recognizer modeling Earley's
-original imperative implementation and extend it with the necessary data structures to enable the construction
-of parse trees following the work of Scott \cite{Scott:2008}. We then develop a functional algorithm that
-builds a single parse tree and prove its correctness. Finally, we generalize this approach to an algorithm
-for a complete parse forest and prove soundness.
+Isabelle is a formal document preparation system. This example shows how to
+use it together with the Dagstuhl LIPIcs style.
 \end{abstract}
 
-\tableofcontents
-
-% include generated text of all theories
 \input{session}
 
-\bibliographystyle{abbrv}
+\bibliographystyle{plainurl} %the mandatory bibstyle (e.g. from texlive-bibtex-extra)
 \bibliography{root}
 
 \end{document}
