@@ -476,7 +476,7 @@ lemma bin_upds_eq_items:
   apply (induction es arbitrary: b)
    apply (auto simp: set_items_bin_upd set_items_bin_upds)
    apply (simp add: items_def)
-  by (metis Un_iff Un_subset_iff items_def list.simps(9) set_subset_Cons)
+  by (metis Un_upper2 bin_upds.simps(2) in_mono set_items_bin_upds sup.orderE)
 
 lemma bin_eq_items_bin_upd:
   "item e \<in> set (items b) \<Longrightarrow> items (bin_upd e b) = items b"

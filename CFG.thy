@@ -33,7 +33,10 @@ definition derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarro
   "derives1 \<G> u v \<equiv> \<exists> x y N \<alpha>. 
     u = x @ [N] @ y \<and>
     v = x @ \<alpha> @ y \<and>
-    (N, \<alpha>) \<in> set (\<RR> \<G>)"  
+    (N, \<alpha>) \<in> set (\<RR> \<G>)"
+
+syntax
+  "derives1" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
 
 definition derivations1 :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) sentence \<times> ('a, 'b) sentence) set" where
   "derivations1 \<G> \<equiv> { (u,v) | u v. derives1 \<G> u v }"
@@ -43,5 +46,8 @@ definition derivations :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) sentence \<times
 
 definition derives :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
   "derives \<G> u v \<equiv> ((u, v) \<in> derivations \<G>)"
+
+syntax
+  "derives" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow>\<^sup>* _" [1000,0] 1000)
 
 end

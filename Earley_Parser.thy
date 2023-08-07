@@ -570,7 +570,7 @@ fun wf_item_tree :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a,
     (\<forall>t \<in> set ts. wf_rule_tree \<G> t))"
 
 definition wf_yield_tree :: "('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) tree \<Rightarrow> bool" where
-  "wf_yield_tree \<omega> x t \<longleftrightarrow> yield_tree t = slice (item_origin x) (item_end x) \<omega>"
+  "wf_yield_tree \<omega> x t \<longleftrightarrow> yield_tree t = \<omega>\<lbrakk>item_origin x..item_end x\<rparr>"
 
 datatype ('a, 'b) forest =
   FLeaf "('a, 'b) symbol"
@@ -1140,16 +1140,16 @@ proof -
           by simp
         also have "... = concat (map yield_tree ts) @ [\<omega>!(k-1)]"
           by simp
-        also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre))) \<omega> @ [\<omega>!(k-1)]"
+        also have "... = \<omega>\<lbrakk>item_origin (item (bs!(k-1)!pre))..item_end (item (bs!(k-1)!pre))\<rparr> @ [\<omega>!(k-1)]"
           using IH by (simp add: wf_yield_tree_def)
-        also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre)) + 1) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item (bs!(k-1)!pre))..item_end (item (bs!(k-1)!pre)) + 1\<rparr>"
           using slice_append_nth wf \<open>k > 0\<close> prems(8)
           by (metis diff_less le_eq_less_or_eq less_imp_diff_less less_numeral_extra(1))
-        also have "... = slice (item_origin (item e)) (item_end (item (bs!(k-1)!pre)) + 1) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item (bs!(k-1)!pre)) + 1\<rparr>"
           using scans unfolding scans_def inc_item_def by simp
-        also have "... = slice (item_origin (item e)) k \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..k\<rparr>"
           using scans wf unfolding scans_def by (metis Suc_diff_1 Suc_eq_plus1 bounds(1))
-        also have "... = slice (item_origin (item e)) (item_end (item e)) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item e)\<rparr>"
           using wf by auto
         finally show ?thesis
           using wf_yield_tree_def entry prems(9) simp by force
@@ -1193,14 +1193,14 @@ proof -
           by (simp add: Nts_red)
         also have "... = concat (map yield_tree ts) @ yield_tree (Branch N_red ts_red)"
           by simp
-        also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k'!pre))) \<omega> @ 
-          slice (item_origin (item (bs!k!red))) (item_end (item (bs!k!red))) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item (bs!k'!pre))..item_end (item (bs!k'!pre))\<rparr> @ 
+          \<omega>\<lbrakk>item_origin (item (bs!k!red))..item_end (item (bs!k!red))\<rparr>"
           using IH_pre IH_r by (simp add: wf_yield_tree_def)
-        also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k!red))) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item (bs!k'!pre))..item_end (item (bs!k!red))\<rparr>"
           using slice_concat wf1 completes_def completes by (metis (no_types, lifting))
-        also have "... = slice (item_origin (item e)) (item_end (item (bs!k!red))) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item (bs!k!red))\<rparr>"
           using completes unfolding completes_def inc_item_def by simp
-        also have "... = slice (item_origin (item e)) (item_end (item e)) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item e)\<rparr>"
           using wf2 entry by presburger
         finally show ?thesis
           using wf_yield_tree_def entry prems(9) simp by force
@@ -1245,7 +1245,7 @@ proof -
     using wf_item_tree t by simp
   have root: "root_tree t = \<SS> \<G>"
     using finished t \<open>N = item_rule_head x\<close> by (auto simp: is_finished_def)
-  have "yield_tree t = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) \<omega>"
+  have "yield_tree t = \<omega>\<lbrakk>item_origin (item (bs!?k!i))..item_end (item (bs!?k!i))\<rparr>"
     using k i assms(1) wf_trees_input wf_yield_tree_build_tree' wf_yield_tree_def *(2) by (metis (no_types, lifting))
   hence yield: "yield_tree t = \<omega>"
     using finished x unfolding is_finished_def by simp
@@ -2245,16 +2245,16 @@ proof -
           by (simp add: ts)
         also have "... = concat (map yield_tree ts) @ [\<omega>!(k-1)]"
           by simp
-        also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre))) \<omega> @ [\<omega>!(k-1)]"
+        also have "... = \<omega>\<lbrakk>item_origin (item (bs!(k-1)!pre))..item_end (item (bs!(k-1)!pre))\<rparr> @ [\<omega>!(k-1)]"
           using IH by (simp add: wf_yield_tree_def)
-        also have "... = slice (item_origin (item (bs!(k-1)!pre))) (item_end (item (bs!(k-1)!pre)) + 1) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item (bs!(k-1)!pre))..item_end (item (bs!(k-1)!pre)) + 1\<rparr>"
           using slice_append_nth transform \<open>k > 0\<close> prems(8)
           by (metis diff_less le_eq_less_or_eq less_imp_diff_less less_numeral_extra(1))
-        also have "... = slice (item_origin (item e)) (item_end (item (bs!(k-1)!pre)) + 1) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item (bs!(k-1)!pre)) + 1\<rparr>"
           using scans unfolding scans_def inc_item_def by simp
-        also have "... = slice (item_origin (item e)) k \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..k\<rparr>"
           using scans transform unfolding scans_def by (metis Suc_diff_1 Suc_eq_plus1 bounds(1))
-        also have "... = slice (item_origin (item e)) (item_end (item e)) \<omega>"
+        also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item e)\<rparr>"
           using transform by auto
         finally show ?thesis
           using wf_yield_tree_def entry by blast
@@ -2371,14 +2371,14 @@ proof -
                 by (simp add: ts tsx(1))
               also have "... = concat (map yield_tree ts0) @ yield_tree (Branch N_red ts)"
                 by simp
-              also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k'!pre))) \<omega> @ 
-                slice (item_origin (item (bs!k!red))) (item_end (item (bs!k!red))) \<omega>"
+              also have "... = \<omega>\<lbrakk>item_origin (item (bs!k'!pre))..item_end (item (bs!k'!pre))\<rparr> @ 
+                \<omega>\<lbrakk>item_origin (item (bs!k!red))..item_end (item (bs!k!red))\<rparr>"
                 using IH_pre IH_r by (simp add: wf_yield_tree_def)
-              also have "... = slice (item_origin (item (bs!k'!pre))) (item_end (item (bs!k!red))) \<omega>"
+              also have "... = \<omega>\<lbrakk>item_origin (item (bs!k'!pre))..item_end (item (bs!k!red))\<rparr>"
                 using slice_concat wf1 completes_def completes by (metis (no_types, lifting))
-              also have "... = slice (item_origin (item e)) (item_end (item (bs!k!red))) \<omega>"
+              also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item (bs!k!red))\<rparr>"
                 using completes unfolding completes_def inc_item_def by simp
-              also have "... = slice (item_origin (item e)) (item_end (item e)) \<omega>"
+              also have "... = \<omega>\<lbrakk>item_origin (item e)..item_end (item e)\<rparr>"
                 using wf2 entry by presburger
               finally show "wf_yield_tree \<omega> (item (bs!k!i)) t"
                 using wf_yield_tree_def entry by blast
@@ -2447,7 +2447,7 @@ proof -
     using wf_item_tree ts by simp
   have root: "root_tree t = \<SS> \<G>"
     using finished ts \<open>N = item_rule_head x\<close> by (auto simp: is_finished_def)
-  have "yield_tree t = slice (item_origin (item (bs!?k!i))) (item_end (item (bs!?k!i))) \<omega>"
+  have "yield_tree t = \<omega>\<lbrakk>item_origin (item (bs!?k!i))..item_end (item (bs!?k!i))\<rparr>"
     using k i assms(1,6) wf wf_yield_tree_build_trees' wf_yield_tree_def *(2) fss(3) by (smt (verit, best))
   hence yield: "yield_tree t = \<omega>"
     using finished x unfolding is_finished_def by simp

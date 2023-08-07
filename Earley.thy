@@ -5,40 +5,43 @@ begin
 
 section \<open>Slices\<close>
 
-fun slice :: "nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
-  "slice _ _ [] = []"
-| "slice _ 0 (x#xs) = []"
-| "slice 0 (Suc b) (x#xs) = x # slice 0 b xs"
-| "slice (Suc a) (Suc b) (x#xs) = slice a b xs"
+fun slice :: "'a list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a list" where
+  "slice [] _ _ = []"
+| "slice _ _ 0 = []"
+| "slice (x#xs) 0 (Suc b) = x # slice xs 0 b"
+| "slice (x#xs) (Suc a) (Suc b) = slice xs a b"
+
+syntax
+  "slice" :: "'a list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a list" ("_\<lbrakk>_.. _\<rparr>" [1000,0] 1000)
 
 lemma slice_drop_take:
-  "slice a b xs = drop a (take b xs)"
-  by (induction a b xs rule: slice.induct) auto
+  "xs\<lbrakk>a..b\<rparr> = drop a (take b xs)"
+  by (induction xs a b rule: slice.induct) auto
 
 lemma slice_append_aux:
-  "Suc b \<le> c \<Longrightarrow> slice (Suc b) c (x # xs) = slice b (c-1) xs"
+  "Suc b \<le> c \<Longrightarrow> (x#xs)\<lbrakk>Suc b..c\<rparr> = xs\<lbrakk>b..c-1\<rparr>"
   using Suc_le_D by fastforce
 
 lemma slice_concat:
-  "a \<le> b \<Longrightarrow> b \<le> c \<Longrightarrow> slice a b xs @ slice b c xs = slice a c xs"
-  apply (induction a b xs arbitrary: c rule: slice.induct)
+  "a \<le> b \<Longrightarrow> b \<le> c \<Longrightarrow> xs\<lbrakk>a.. b\<rparr> @ xs\<lbrakk>b..c\<rparr> = xs\<lbrakk>a..c\<rparr>"
+  apply (induction xs a b arbitrary: c rule: slice.induct)
      apply (auto simp: slice_append_aux)
   using Suc_le_D by fastforce
 
 lemma slice_concat_Ex:
-  "a \<le> c \<Longrightarrow> slice a c xs = ys @ zs \<Longrightarrow> \<exists>b. ys = slice a b xs \<and> zs = slice b c xs \<and> a \<le> b \<and> b \<le> c"
-proof (induction a c xs arbitrary: ys zs rule: slice.induct)
-  case (3 b x xs)
+  "a \<le> c \<Longrightarrow> xs\<lbrakk>a..c\<rparr> = ys @ zs \<Longrightarrow> \<exists>b. ys = xs\<lbrakk>a..b\<rparr> \<and> zs = xs\<lbrakk>b..c\<rparr> \<and> a \<le> b \<and> b \<le> c"
+proof (induction xs a c arbitrary: ys zs rule: slice.induct)
+  case (3 x xs b)
   show ?case
   proof (cases ys)
     case Nil
-    then obtain zs' where "x # slice 0 b xs = x # zs'" "x # zs' = zs"
+    then obtain zs' where "x # xs\<lbrakk>0..b\<rparr> = x # zs'" "x # zs' = zs"
       using "3.prems"(2) by auto
     thus ?thesis
       using Nil by force
   next
     case (Cons y ys')
-    then obtain ys' where "x # slice 0 b xs = x # ys' @ zs" "x # ys' = ys"
+    then obtain ys' where "x # xs\<lbrakk>0..b\<rparr> = x # ys' @ zs" "x # ys' = ys"
       using "3.prems"(2) by auto
     thus ?thesis
       using "3.IH"[of ys' zs] by force
@@ -50,25 +53,25 @@ next
 qed auto
 
 lemma slice_nth:
-  "a < length xs \<Longrightarrow> slice a (a+1) xs = [xs!a]"
+  "a < length xs \<Longrightarrow> xs\<lbrakk>a..a+1\<rparr> = [xs!a]"
   unfolding slice_drop_take
   by (metis Cons_nth_drop_Suc One_nat_def diff_add_inverse drop_take take_Suc_Cons take_eq_Nil)
 
 lemma slice_append_nth:
-  "a \<le> b \<Longrightarrow> b < length xs \<Longrightarrow> slice a b xs @ [xs!b] = slice a (b+1) xs"
+  "a \<le> b \<Longrightarrow> b < length xs \<Longrightarrow> xs\<lbrakk>a..b\<rparr> @ [xs!b] = xs\<lbrakk>a..b+1\<rparr>"
   by (metis le_add1 slice_concat slice_nth)
 
 lemma slice_empty:
-  "b \<le> a \<Longrightarrow> slice a b xs = []"
+  "b \<le> a \<Longrightarrow> xs\<lbrakk>a..b\<rparr> = []"
   by (simp add: slice_drop_take)
 
 lemma slice_id[simp]:
-  "slice 0 (length xs) xs = xs"
+  "xs\<lbrakk>0..length xs\<rparr> = xs"
   by (simp add: slice_drop_take)
 
 lemma slice_singleton:
-  "b \<le> length xs \<Longrightarrow> [x] = slice a b xs \<Longrightarrow> b = a + 1"
-  by (induction a b xs rule: slice.induct) (auto simp: slice_drop_take)
+  "b \<le> length xs \<Longrightarrow> [x] = xs\<lbrakk>a..b\<rparr> \<Longrightarrow> b = a + 1"
+  by (induction xs a b rule: slice.induct) (auto simp: slice_drop_take)
 
 
 section \<open>Earley recognizer\<close>
@@ -170,7 +173,7 @@ lemma wf_Earley:
 subsection \<open>Soundness\<close>
 
 definition sound_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
-  "sound_item \<G> \<omega> x \<equiv> derives \<G> [item_rule_head x] (slice (item_origin x) (item_end x) \<omega> @ item_\<beta> x)"
+  "sound_item \<G> \<omega> x \<equiv> derives \<G> [item_rule_head x] (\<omega>\<lbrakk>item_origin x..item_end x\<rparr> @ item_\<beta> x)"
 
 lemma sound_Init:
   assumes "r \<in> set (\<RR> \<G>)" "fst r = \<SS> \<G>"
@@ -194,9 +197,9 @@ proof -
   obtain item_\<beta>' where *: "item_\<beta> x = a # item_\<beta>'" "item_\<beta> x' = item_\<beta>'"
     using assms(1,6) apply (auto simp: item_defs next_symbol_def is_complete_def split: if_splits)
     by (metis Cons_nth_drop_Suc leI)
-  have "slice i j \<omega> @ item_\<beta> x = slice i (j+1) \<omega> @ item_\<beta>'"
+  have "\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x = \<omega>\<lbrakk>i..j+1\<rparr> @ item_\<beta>'"
     using * assms(1,2,4,5) by (auto simp: slice_append_nth wf_item_def)
-  moreover have "derives \<G> [item_rule_head x] (slice i j \<omega> @ item_\<beta> x)"
+  moreover have "derives \<G> [item_rule_head x] (\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x)"
     using assms(1,3) sound_item_def by force
   ultimately show ?thesis
     using assms(1) * by (auto simp: item_defs sound_item_def)
@@ -214,26 +217,26 @@ lemma sound_Complete:
   assumes "is_complete y" "next_symbol x = Some (item_rule_head y)"
   shows "sound_item \<G> \<omega> (Item r\<^sub>x (b\<^sub>x + 1) i k)"
 proof -
-  have "derives \<G> [item_rule_head y] (slice j k \<omega>)"
+  have "derives \<G> [item_rule_head y] (\<omega>\<lbrakk>j..k\<rparr>)"
     using assms(4,6,7) by (auto simp: sound_item_def is_complete_def item_defs)
-  then obtain E where E: "Derivation \<G> [item_rule_head y] E (slice j k \<omega>)"
+  then obtain E where E: "Derivation \<G> [item_rule_head y] E (\<omega>\<lbrakk>j..k\<rparr>)"
     using derives_implies_Derivation by blast
-  have "derives \<G> [item_rule_head x] (slice i j \<omega> @ item_\<beta> x)"
+  have "derives \<G> [item_rule_head x] (\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x)"
     using assms(1,3,4) by (auto simp: sound_item_def)
   moreover have 0: "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"
     using assms(8) apply (auto simp: next_symbol_def is_complete_def item_defs split: if_splits)
     by (metis drop_eq_Nil hd_drop_conv_nth leI list.collapse)
   ultimately obtain D where D: 
-    "Derivation \<G> [item_rule_head x] D (slice i j \<omega> @ [item_rule_head y] @ (tl (item_\<beta> x)))"
+    "Derivation \<G> [item_rule_head x] D (\<omega>\<lbrakk>i..j\<rparr> @ [item_rule_head y] @ (tl (item_\<beta> x)))"
     using derives_implies_Derivation by (metis append_Cons append_Nil)
   obtain F where F:
-    "Derivation \<G> [item_rule_head x] F (slice i j \<omega> @ slice j k \<omega> @ tl (item_\<beta> x))"
+    "Derivation \<G> [item_rule_head x] F (\<omega>\<lbrakk>i..j\<rparr> @ \<omega>\<lbrakk>j..k\<rparr> @ tl (item_\<beta> x))"
     using Derivation_append_rewrite D E by blast
   moreover have "i \<le> j"
     using assms(1,2) wf_item_def by force
   moreover have "j \<le> k"
     using assms(4,5) wf_item_def by force
-  ultimately have "derives \<G> [item_rule_head x] (slice i k \<omega> @ tl (item_\<beta> x))"
+  ultimately have "derives \<G> [item_rule_head x] (\<omega>\<lbrakk>i..k\<rparr> @ tl (item_\<beta> x))"
     by (metis Derivation_implies_derives append.assoc slice_concat)
   thus "sound_item \<G> \<omega> (Item r\<^sub>x (b\<^sub>x + 1) i k)"
     using assms(1,4) by (auto simp: sound_item_def item_defs drop_Suc tl_drop)
@@ -280,13 +283,13 @@ definition partially_completed :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> 
   "partially_completed k \<G> \<omega> E P \<equiv> \<forall>r b i' i j x a D.
     i \<le> j \<and> j \<le> k \<and> k \<le> length \<omega> \<and>
     x = Item r b i' i \<and> x \<in> E \<and> next_symbol x = Some a \<and>
-    Derivation \<G> [a] D (slice i j \<omega>) \<and> P D \<longrightarrow>
+    Derivation \<G> [a] D \<omega>\<lbrakk>i..j\<rparr> \<and> P D \<longrightarrow>
     Item r (b+1) i' j \<in> E"
 
 lemma partially_completed_upto:
   assumes "j \<le> k" "k \<le> length \<omega>"
   assumes "x = Item (N,\<alpha>) d i j" "x \<in> I" "\<forall>x \<in> I. wf_item \<G> \<omega> x"
-  assumes "Derivation \<G> (item_\<beta> x) D (slice j k \<omega>)"
+  assumes "Derivation \<G> (item_\<beta> x) D \<omega>\<lbrakk>j..k\<rparr>"
   assumes "partially_completed k \<G> \<omega> I (\<lambda>D'. length D' \<le> length D)"
   shows "Item (N,\<alpha>) (length \<alpha>) i k \<in> I"
   using assms
@@ -296,9 +299,9 @@ proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
     using Nil(1,4) unfolding item_\<alpha>_def item_\<beta>_def item_rule_body_def rule_body_def by simp
   hence "x = Item (N,\<alpha>) (length \<alpha>) i j"
     using Nil.hyps Nil.prems(3-5) unfolding wf_item_def item_defs by auto
-  have "Derivation \<G> [] D (slice j k \<omega>)"
+  have "Derivation \<G> [] D \<omega>\<lbrakk>j..k\<rparr>"
     using Nil.hyps Nil.prems(6) by auto
-  hence "slice j k \<omega> = []"
+  hence "\<omega>\<lbrakk>j..k\<rparr> = []"
     using Derivation_from_empty by blast
   hence "j = k"
     unfolding slice_drop_take using Nil.prems(1,2) by simp
@@ -307,10 +310,10 @@ proof (induction "item_\<beta> x" arbitrary: d i j k N \<alpha> x D)
 next
   case (Cons b bs)
   obtain j' E F where *: 
-    "Derivation \<G> [b] E (slice j j' \<omega>)"
-    "Derivation \<G> bs F (slice j' k \<omega>)"
+    "Derivation \<G> [b] E \<omega>\<lbrakk>j..j'\<rparr>"
+    "Derivation \<G> bs F \<omega>\<lbrakk>j'..k\<rparr>"
     "j \<le> j'" "j' \<le> k" "length E \<le> length D" "length F \<le> length D"
-    using Derivation_concat_split[of \<G> "[b]" bs D "slice j k \<omega>"] slice_concat_Ex
+    using Derivation_concat_split[of \<G> "[b]" bs D "\<omega>\<lbrakk>j..k\<rparr>"] slice_concat_Ex
     using Cons.hyps(2) Cons.prems(1,6)
     by (smt (verit, ccfv_threshold) Cons_eq_appendI append_self_conv2)
   have "next_symbol x = Some b"
@@ -337,14 +340,14 @@ proof (standard, standard, standard, standard, standard, standard, standard, sta
     "i \<le> j \<and> j \<le> k \<and> k \<le> length \<omega> \<and>
      x = Item r b i' i \<and> x \<in> Earley \<G> \<omega> \<and>
      next_symbol x = Some a \<and>
-     Derivation \<G> [a] D (slice i j \<omega>) \<and> True"
+     Derivation \<G> [a] D \<omega>\<lbrakk>i..j\<rparr> \<and> True"
   thus "Item r (b + 1) i' j \<in> Earley \<G> \<omega>"
   proof (induction "length D" arbitrary: r b i' i j x a D rule: nat_less_induct)
     case 1
     show ?case
     proof cases
       assume "D = []"
-      hence "[a] = slice i j \<omega>"
+      hence "[a] = \<omega>\<lbrakk>i..j\<rparr>"
         using "1.prems" by force
       moreover have "j \<le> length \<omega>"
         using le_trans "1.prems" by blast
@@ -353,7 +356,7 @@ proof (standard, standard, standard, standard, standard, standard, standard, sta
       hence "i < length \<omega>"
         using \<open>j \<le> length \<omega>\<close> discrete by blast
       hence "\<omega>!i = a"
-        using slice_nth \<open>[a] = slice i j \<omega>\<close> \<open>j = i + 1\<close> by fastforce
+        using slice_nth \<open>[a] = \<omega>\<lbrakk>i..j\<rparr>\<close> \<open>j = i + 1\<close> by fastforce
       hence "Item r (b + 1) i' j \<in> Earley \<G> \<omega>"
         using Earley.Scan "1.prems" \<open>i < length \<omega>\<close> \<open>j = i + 1\<close> by metis
       thus ?thesis
@@ -362,7 +365,7 @@ proof (standard, standard, standard, standard, standard, standard, standard, sta
       assume "\<not> D = []"
       then obtain d D' where "D = d # D'"
         by (meson List.list.exhaust)
-      then obtain \<alpha> where *: "Derives1 \<G> [a] (fst d) (snd d) \<alpha>" "Derivation \<G> \<alpha> D' (slice i j \<omega>)"
+      then obtain \<alpha> where *: "Derives1 \<G> [a] (fst d) (snd d) \<alpha>" "Derivation \<G> \<alpha> D' \<omega>\<lbrakk>i..j\<rparr>"
         using "1.prems" by auto
       hence rule: "(a, \<alpha>) \<in> set (\<RR> \<G>)" "fst d = 0" "snd d = (a ,\<alpha>)"
         using *(1) unfolding Derives1_def by (simp add: Cons_eq_append_conv)+
@@ -382,7 +385,7 @@ proof (standard, standard, standard, standard, standard, standard, standard, sta
           unfolding partially_completed_def using "1.hyps" order_le_less_trans by (smt (verit, best))
         hence "partially_completed j \<G> \<omega> (Earley \<G> \<omega>) (\<lambda>E. length E \<le> length D')"
           unfolding partially_completed_def using "1.prems" by force
-        moreover have "Derivation \<G> (item_\<beta> y) D' (slice i j \<omega>)"
+        moreover have "Derivation \<G> (item_\<beta> y) D' \<omega>\<lbrakk>i..j\<rparr>"
           using *(2) by (auto simp: item_defs y_def)
         moreover have "y \<in> Earley \<G> \<omega>"
           using y_def "1.prems" rule by (auto simp: item_defs Earley.Predict)
@@ -418,7 +421,7 @@ proof -
     unfolding partially_completed_def by blast
   have 1: "x \<in> Earley \<G> \<omega>"
     using x_def Earley.Init *(1) by fastforce
-  have 2: "Derivation \<G> (item_\<beta> x) D (slice 0 (length \<omega>) \<omega>)"
+  have 2: "Derivation \<G> (item_\<beta> x) D \<omega>\<lbrakk>0..length \<omega>\<rparr>"
     using *(2) x_def by (simp add: item_defs)
   have "Item (\<SS> \<G>,\<alpha>) (length \<alpha>) 0 (length \<omega>) \<in> Earley \<G> \<omega>"
     using partially_completed_upto[OF _ _ _ _ _ 2 0] wf_Earley 1 x_def by auto
