@@ -122,7 +122,7 @@ definition wf_bins :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow
   "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < length bs. wf_bin \<G> \<omega> k (bs!k)"
 
 definition nonempty_derives :: "('a, 'b) cfg \<Rightarrow> bool" where
-  "nonempty_derives \<G> \<equiv> \<forall>s. \<not> derives \<G> [s] []"
+  "nonempty_derives \<G> \<equiv> \<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []"
 
 definition Init\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
   "Init\<^sub>L \<G> \<omega> \<equiv>
@@ -1450,7 +1450,7 @@ lemma Earley\<^sub>L_sub_Earley\<^sub>F:
 
 theorem soundness_Earley\<^sub>L:
   assumes "wf_\<G> \<G>" "recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega>"
-  shows "derives \<G> [\<SS> \<G>] \<omega>"
+  shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
   using assms Earley\<^sub>L_sub_Earley\<^sub>F recognizing_def soundness_Earley\<^sub>F by (meson subsetD)
 
 
@@ -1469,7 +1469,7 @@ lemma impossible_complete_item:
   assumes "is_complete x"  "item_origin x = k" "item_end x = k" "nonempty_derives \<G>"
   shows False
 proof -
-  have "derives \<G> [item_rule_head x] []"
+  have "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>* []"
     using assms(3-6) by (simp add: slice_empty is_complete_def sound_item_def item_\<beta>_def )
   moreover have "is_nonterminal (item_rule_head x)"
     using assms(1,2) unfolding wf_item_def item_rule_head_def rule_head_def
@@ -2313,7 +2313,7 @@ lemma Earley\<^sub>F_sub_Earley\<^sub>L:
   using assms Earley\<^sub>F_bins_sub_Earley\<^sub>L_bins Earley\<^sub>F_def Earley\<^sub>L_def by (metis le_refl)
 
 theorem completeness_Earley\<^sub>L:
-  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<omega>" "wf_\<G> \<G>" "nonempty_derives \<G>"
+  assumes "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>" "is_word \<omega>" "wf_\<G> \<G>" "nonempty_derives \<G>"
   shows "recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega>"
   using assms Earley\<^sub>F_sub_Earley\<^sub>L Earley\<^sub>L_sub_Earley\<^sub>F completeness_Earley\<^sub>F by (metis subset_antisym)
 
@@ -2327,7 +2327,7 @@ theorem Earley_eq_Earley\<^sub>L:
 
 theorem correctness_Earley\<^sub>L:
   assumes "wf_\<G> \<G>" "is_word \<omega>" "nonempty_derives \<G>"
-  shows "recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
+  shows "recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
   using assms Earley_eq_Earley\<^sub>L correctness_Earley by fastforce
 
 end

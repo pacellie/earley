@@ -1262,7 +1262,7 @@ corollary wf_rule_root_yield_tree_build_tree_Earley\<^sub>L:
 
 theorem correctness_build_tree_Earley\<^sub>L:
   assumes "wf_\<G> \<G>" "is_word \<omega>" "nonempty_derives \<G>"
-  shows "(\<exists>t. build_tree \<G> \<omega> (Earley\<^sub>L \<G> \<omega>) = Some t) \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>" (is "?L \<longleftrightarrow> ?R")
+  shows "(\<exists>t. build_tree \<G> \<omega> (Earley\<^sub>L \<G> \<omega>) = Some t) \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>" (is "?L \<longleftrightarrow> ?R")
 proof standard
   assume *: ?L
   let ?k = "length (Earley\<^sub>L \<G> \<omega>) - 1"
@@ -2466,7 +2466,7 @@ corollary wf_rule_root_yield_tree_build_trees_Earley\<^sub>L:
 theorem soundness_build_trees_Earley\<^sub>L:
   assumes "wf_\<G> \<G>" "is_word \<omega>" "nonempty_derives \<G>"
   assumes "build_trees \<G> \<omega> (Earley\<^sub>L \<G> \<omega>) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "derives \<G> [\<SS> \<G>] \<omega>"
+  shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
 proof -
   let ?k = "length (Earley\<^sub>L \<G> \<omega>) - 1"
   define finished where finished_def: "finished = filter_with_index (is_finished \<G> \<omega>) (items ((Earley\<^sub>L \<G> \<omega>)!?k))"
@@ -2494,7 +2494,7 @@ proof -
 qed
 
 theorem termination_build_tree_Earley\<^sub>L:
-  assumes "wf_\<G> \<G>" "nonempty_derives \<G>" "derives \<G> [\<SS> \<G>] \<omega>"
+  assumes "wf_\<G> \<G>" "nonempty_derives \<G>" "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
   shows "\<exists>fs. build_trees \<G> \<omega> (Earley\<^sub>L \<G> \<omega>) = Some fs"
 proof -
   let ?k = "length (Earley\<^sub>L \<G> \<omega>) - 1"

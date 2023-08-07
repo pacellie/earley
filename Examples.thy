@@ -39,11 +39,11 @@ proof (induction "length D" arbitrary: a D rule: nat_less_induct)
 qed
 
 lemma \<epsilon>_free_impl_non_empty_deriv:
-  "\<epsilon>_free \<G> \<Longrightarrow> \<forall>s. \<not> derives \<G> [s] []"
+  "\<epsilon>_free \<G> \<Longrightarrow> \<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []"
   using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation by (metis not_Cons_self2)
 
 lemma nonempty_deriv_impl_\<epsilon>_free:
-  assumes "\<forall>s. \<not> derives \<G> [s] []"
+  assumes "\<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []"
   shows "\<epsilon>_free \<G>"
 proof (rule ccontr)
   assume "\<not> \<epsilon>_free \<G>"
@@ -51,14 +51,14 @@ proof (rule ccontr)
     unfolding \<epsilon>_free_def by auto
   hence "\<G> \<turnstile> [N] \<Rightarrow> []"
     unfolding derives1_def rule_body_def by auto
-  hence "derives \<G> [N] []"
+  hence "\<G> \<turnstile> [N] \<Rightarrow>\<^sup>* []"
     by auto
   thus False
     using assms(1) by blast
 qed
 
 lemma nonempty_deriv_iff_\<epsilon>_free:
-  shows "(\<forall>s. \<not> derives \<G> [s] []) \<longleftrightarrow> \<epsilon>_free \<G>"
+  shows "(\<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []) \<longleftrightarrow> \<epsilon>_free \<G>"
   using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free by blast
 
 section \<open>Example 1: Addition\<close>
@@ -96,7 +96,7 @@ lemma nonempty_derives1:
   by (auto simp: \<epsilon>_free_def cfg1_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness1:
-  "recognizing (bins (Earley\<^sub>L cfg1 inp1)) cfg1 inp1 \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  "recognizing (bins (Earley\<^sub>L cfg1 inp1)) cfg1 inp1 \<longleftrightarrow> cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
   using correctness_Earley\<^sub>L wf_\<G>1 is_word_inp1 nonempty_derives1 by blast
 
 lemma wf_tree1:
@@ -105,7 +105,7 @@ lemma wf_tree1:
   using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_tree_Earley\<^sub>L by blast
 
 lemma correctness_tree1:
-  "(\<exists>t. build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t) \<longleftrightarrow> derives cfg1 [\<SS> cfg1] inp1"
+  "(\<exists>t. build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t) \<longleftrightarrow> cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
   using correctness_build_tree_Earley\<^sub>L is_word_inp1 nonempty_derives1 wf_\<G>1 by blast
 
 lemma wf_trees1:
@@ -115,7 +115,7 @@ lemma wf_trees1:
 
 lemma soundness_trees1:
   assumes "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "derives cfg1 [\<SS> cfg1] inp1"
+  shows "cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
   using assms is_word_inp1 nonempty_derives1 soundness_build_trees_Earley\<^sub>L wf_\<G>1 by blast
 
 section \<open>Example 2: Cyclic reduction pointers\<close>
@@ -154,7 +154,7 @@ lemma nonempty_derives2:
   by (auto simp: \<epsilon>_free_def cfg2_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness2:
-  "recognizing (bins (Earley\<^sub>L cfg2 inp2)) cfg2 inp2 \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  "recognizing (bins (Earley\<^sub>L cfg2 inp2)) cfg2 inp2 \<longleftrightarrow> cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
   using correctness_Earley\<^sub>L wf_\<G>2 is_word_inp2 nonempty_derives2 by blast
 
 lemma wf_tree2:
@@ -163,7 +163,7 @@ lemma wf_tree2:
   using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_tree_Earley\<^sub>L by blast
 
 lemma correctness_tree2:
-  "(\<exists>t. build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t) \<longleftrightarrow> derives cfg2 [\<SS> cfg2] inp2"
+  "(\<exists>t. build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t) \<longleftrightarrow> cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
   using correctness_build_tree_Earley\<^sub>L is_word_inp2 nonempty_derives2 wf_\<G>2 by blast
 
 lemma wf_trees2:
@@ -173,7 +173,7 @@ lemma wf_trees2:
 
 lemma soundness_trees2:
   assumes "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "derives cfg2 [\<SS> cfg2] inp2"
+  shows "cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
   using assms is_word_inp2 nonempty_derives2 soundness_build_trees_Earley\<^sub>L wf_\<G>2 by blast
 
 end

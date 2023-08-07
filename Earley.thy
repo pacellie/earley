@@ -173,7 +173,7 @@ lemma wf_Earley:
 subsection \<open>Soundness\<close>
 
 definition sound_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
-  "sound_item \<G> \<omega> x \<equiv> derives \<G> [item_rule_head x] (\<omega>\<lbrakk>item_origin x..item_end x\<rparr> @ item_\<beta> x)"
+  "sound_item \<G> \<omega> x \<equiv> \<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>* (\<omega>\<lbrakk>item_origin x..item_end x\<rparr> @ item_\<beta> x)"
 
 lemma sound_Init:
   assumes "r \<in> set (\<RR> \<G>)" "fst r = \<SS> \<G>"
@@ -182,7 +182,7 @@ proof -
   let ?x = "Item r 0 0 0"
   have "(item_rule_head ?x, item_\<beta> ?x) \<in> set (\<RR> \<G>)"
     using assms(1) by (simp add: item_defs)
-  hence "derives \<G> [item_rule_head ?x] (item_\<beta> ?x)"
+  hence "\<G> \<turnstile> [item_rule_head ?x] \<Rightarrow>\<^sup>* (item_\<beta> ?x)"
     using derives_if_valid_rule by metis
   thus "sound_item \<G> \<omega> ?x"
     unfolding sound_item_def by (simp add: slice_empty)
@@ -199,7 +199,7 @@ proof -
     by (metis Cons_nth_drop_Suc leI)
   have "\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x = \<omega>\<lbrakk>i..j+1\<rparr> @ item_\<beta>'"
     using * assms(1,2,4,5) by (auto simp: slice_append_nth wf_item_def)
-  moreover have "derives \<G> [item_rule_head x] (\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x)"
+  moreover have "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>* (\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x)"
     using assms(1,3) sound_item_def by force
   ultimately show ?thesis
     using assms(1) * by (auto simp: item_defs sound_item_def)
@@ -217,11 +217,11 @@ lemma sound_Complete:
   assumes "is_complete y" "next_symbol x = Some (item_rule_head y)"
   shows "sound_item \<G> \<omega> (Item r\<^sub>x (b\<^sub>x + 1) i k)"
 proof -
-  have "derives \<G> [item_rule_head y] (\<omega>\<lbrakk>j..k\<rparr>)"
+  have "\<G> \<turnstile> [item_rule_head y] \<Rightarrow>\<^sup>* (\<omega>\<lbrakk>j..k\<rparr>)"
     using assms(4,6,7) by (auto simp: sound_item_def is_complete_def item_defs)
   then obtain E where E: "Derivation \<G> [item_rule_head y] E (\<omega>\<lbrakk>j..k\<rparr>)"
     using derives_implies_Derivation by blast
-  have "derives \<G> [item_rule_head x] (\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x)"
+  have "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>* (\<omega>\<lbrakk>i..j\<rparr> @ item_\<beta> x)"
     using assms(1,3,4) by (auto simp: sound_item_def)
   moreover have 0: "item_\<beta> x = (item_rule_head y) # tl (item_\<beta> x)"
     using assms(8) apply (auto simp: next_symbol_def is_complete_def item_defs split: if_splits)
@@ -236,7 +236,7 @@ proof -
     using assms(1,2) wf_item_def by force
   moreover have "j \<le> k"
     using assms(4,5) wf_item_def by force
-  ultimately have "derives \<G> [item_rule_head x] (\<omega>\<lbrakk>i..k\<rparr> @ tl (item_\<beta> x))"
+  ultimately have "\<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>* (\<omega>\<lbrakk>i..k\<rparr> @ tl (item_\<beta> x))"
     by (metis Derivation_implies_derives append.assoc slice_concat)
   thus "sound_item \<G> \<omega> (Item r\<^sub>x (b\<^sub>x + 1) i k)"
     using assms(1,4) by (auto simp: sound_item_def item_defs drop_Suc tl_drop)
@@ -266,7 +266,7 @@ qed
 
 theorem soundness_Earley:
   assumes "recognizing (Earley \<G> \<omega>) \<G> \<omega>"
-  shows "derives \<G> [\<SS> \<G>] \<omega>"
+  shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
 proof -
   obtain x where x: "x \<in> Earley \<G> \<omega>" "is_finished \<G> \<omega> x"
     using assms recognizing_def by blast
@@ -409,7 +409,7 @@ lemma partially_completed_Earley:
   by (simp add: partially_completed_Earley_k)
 
 theorem completeness_Earley:
-  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
+  assumes "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
   shows "recognizing (Earley \<G> \<omega>) \<G> \<omega>"
 proof -
   obtain \<alpha> D where *: "(\<SS> \<G> ,\<alpha>) \<in> set (\<RR> \<G>)" "Derivation \<G> \<alpha> D \<omega>"
@@ -434,7 +434,7 @@ subsection \<open>Correctness\<close>
 
 theorem correctness_Earley:
   assumes "wf_\<G> \<G>" "is_word \<omega>"
-  shows "recognizing (Earley \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
+  shows "recognizing (Earley \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
   using assms soundness_Earley completeness_Earley by blast
 
 

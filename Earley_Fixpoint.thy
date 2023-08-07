@@ -275,7 +275,7 @@ lemma Earley\<^sub>F_sub_Earley:
 
 theorem soundness_Earley\<^sub>F:
   assumes "recognizing (Earley\<^sub>F \<G> \<omega>) \<G> \<omega>"
-  shows "derives \<G> [\<SS> \<G>] \<omega>"
+  shows "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
   using soundness_Earley Earley\<^sub>F_sub_Earley assms recognizing_def by (metis subsetD)
 
 
@@ -493,7 +493,7 @@ proof -
 qed
 
 theorem completeness_Earley\<^sub>F:
-  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
+  assumes "\<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
   shows "recognizing (Earley\<^sub>F \<G> \<omega>) \<G> \<omega>"
   using assms Earley_sub_Earley\<^sub>F Earley\<^sub>F_sub_Earley completeness_Earley by (metis subset_antisym)
 
@@ -506,7 +506,7 @@ theorem Earley_eq_Earley\<^sub>F:
 
 theorem correctness_Earley\<^sub>F:
   assumes "wf_\<G> \<G>" "is_word \<omega>"
-  shows "recognizing (Earley\<^sub>F \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
+  shows "recognizing (Earley\<^sub>F \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> \<G> \<turnstile> [\<SS> \<G>] \<Rightarrow>\<^sup>* \<omega>"
   using assms Earley_eq_Earley\<^sub>F correctness_Earley by fastforce
 
 end

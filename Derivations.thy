@@ -10,11 +10,11 @@ type_synonym ('a, 'b) derivation = "(nat \<times> ('a, 'b) rule) list"
 lemma is_word_empty: "is_word []" by (auto simp add: is_word_def)
 
 lemma derives1_implies_derives[simp]:
-  "\<G> \<turnstile> a \<Rightarrow> b \<Longrightarrow> derives \<G> a b"
+  "\<G> \<turnstile> a \<Rightarrow> b \<Longrightarrow> \<G> \<turnstile> a \<Rightarrow>\<^sup>* b"
   by (auto simp add: derives_def derivations_def derivations1_def)
 
 lemma derives_trans:
-  "derives \<G> a b \<Longrightarrow> derives \<G> b c \<Longrightarrow> derives \<G> a c"
+  "\<G> \<turnstile> a \<Rightarrow>\<^sup>* b \<Longrightarrow> \<G> \<turnstile> b \<Rightarrow>\<^sup>* c \<Longrightarrow> \<G> \<turnstile> a \<Rightarrow>\<^sup>* c"
   by (auto simp add: derives_def derivations_def)
 
 lemma derives1_eq_derivations1:
@@ -22,9 +22,9 @@ lemma derives1_eq_derivations1:
   by (simp add: derivations1_def)
 
 lemma derives_induct[consumes 1, case_names Base Step]:
-  assumes derives: "derives \<G> a b"
+  assumes derives: "\<G> \<turnstile> a \<Rightarrow>\<^sup>* b"
   assumes Pa: "P a"
-  assumes induct: "\<And>y z. derives \<G> a y \<Longrightarrow> \<G> \<turnstile> y \<Rightarrow> z \<Longrightarrow> P y \<Longrightarrow> P z"
+  assumes induct: "\<And>y z. \<G> \<turnstile> a \<Rightarrow>\<^sup>* y \<Longrightarrow> \<G> \<turnstile> y \<Rightarrow> z \<Longrightarrow> P y \<Longrightarrow> P z"
   shows "P b"
 proof -
   note rtrancl_lemma = rtrancl_induct[where a = a and b = b and r = "derivations1 \<G>" and P=P]
@@ -52,7 +52,7 @@ fun Derivation :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('
   "Derivation _ a [] b = (a = b)"
 | "Derivation \<G> a (d#D) b = (\<exists> x. Derives1 \<G> a (fst d) (snd d) x \<and> Derivation \<G> x D b)"
 
-lemma Derivation_implies_derives: "Derivation \<G> a D b \<Longrightarrow> derives \<G> a b"
+lemma Derivation_implies_derives: "Derivation \<G> a D b \<Longrightarrow> \<G> \<turnstile> a \<Rightarrow>\<^sup>* b"
 proof (induct D arbitrary: a b)
   case Nil thus ?case 
     by (simp add: derives_def derivations_def)
@@ -61,9 +61,9 @@ next
   note ihyps = this
   from ihyps have "\<exists> x. Derives1 \<G> a (fst d) (snd d) x \<and> Derivation \<G> x D b" by auto
   then obtain x where "Derives1 \<G> a (fst d) (snd d) x" and xb: "Derivation \<G> x D b" by blast
-  with Derives1_implies_derives1 have d1: "derives \<G> a x" by fastforce
-  from ihyps xb have d2:"derives \<G> x b" by simp
-  show "derives \<G> a b" by (rule derives_trans[OF d1 d2])
+  with Derives1_implies_derives1 have d1: "\<G> \<turnstile> a \<Rightarrow>\<^sup>* x" by fastforce
+  from ihyps xb have d2:"\<G> \<turnstile> x \<Rightarrow>\<^sup>* b" by simp
+  show "\<G> \<turnstile> a \<Rightarrow>\<^sup>* b" by (rule derives_trans[OF d1 d2])
 qed 
 
 lemma Derivation_Derives1: "Derivation \<G> a S y \<Longrightarrow> Derives1 \<G> y i r z \<Longrightarrow> Derivation \<G> a (S@[(i,r)]) z"
@@ -74,7 +74,7 @@ next
     by (metis Derivation.simps(2) append_Cons) 
 qed
 
-lemma derives_implies_Derivation: "derives \<G> a b \<Longrightarrow> \<exists> D. Derivation \<G> a D b"
+lemma derives_implies_Derivation: "\<G> \<turnstile> a \<Rightarrow>\<^sup>* b \<Longrightarrow> \<exists> D. Derivation \<G> a D b"
 proof (induct rule: derives_induct)
   case Base
   show ?case by (rule exI[where x="[]"], simp)
@@ -163,7 +163,7 @@ lemma derives1_if_valid_rule:
   by simp
 
 lemma derives_if_valid_rule:
-  "(N, \<alpha>) \<in> set (\<RR> \<G>) \<Longrightarrow> derives \<G> [N] \<alpha>"
+  "(N, \<alpha>) \<in> set (\<RR> \<G>) \<Longrightarrow> \<G> \<turnstile> [N] \<Rightarrow>\<^sup>* \<alpha>"
   using derives1_if_valid_rule by fastforce
 
 lemma Derivation_from_empty:
