@@ -8,49 +8,49 @@ section \<open>Earley recognizer\<close>
 
 subsection \<open>Earley fixpoint\<close>
 
-definition init_item :: "'a rule \<Rightarrow> nat \<Rightarrow> 'a item" where
+definition init_item :: "('a, 'b) rule \<Rightarrow> nat \<Rightarrow> ('a, 'b) item" where
   "init_item r k \<equiv> Item r 0 k k"
 
-definition inc_item :: "'a item \<Rightarrow> nat \<Rightarrow> 'a item" where
+definition inc_item :: "('a, 'b) item \<Rightarrow> nat \<Rightarrow> ('a, 'b) item" where
   "inc_item x k \<equiv> Item (item_rule x) (item_dot x + 1) (item_origin x) k"
 
-definition bin :: "'a item set \<Rightarrow> nat \<Rightarrow> 'a item set" where
+definition bin :: "('a, 'b) item set \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
   "bin I k \<equiv> { x . x \<in> I \<and> item_end x = k }"
 
-definition Init\<^sub>F :: "'a cfg \<Rightarrow> 'a item set" where
+definition Init\<^sub>F :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) item set" where
   "Init\<^sub>F \<G> \<equiv> { init_item r 0 | r. r \<in> set (\<RR> \<G>) \<and> fst r = (\<SS> \<G>) }"
 
-definition Scan\<^sub>F :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
+definition Scan\<^sub>F :: "nat \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Scan\<^sub>F k \<omega> I \<equiv> { inc_item x (k+1) | x a.
     x \<in> bin I k \<and>
     \<omega>!k = a \<and>
     k < length \<omega> \<and>
     next_symbol x = Some a }"
 
-definition Predict\<^sub>F :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
+definition Predict\<^sub>F :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Predict\<^sub>F k \<G> I \<equiv> { init_item r k | r x.
     r \<in> set (\<RR> \<G>) \<and>
     x \<in> bin I k \<and>
     next_symbol x = Some (rule_head r) }"
 
-definition Complete\<^sub>F :: "nat \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
+definition Complete\<^sub>F :: "nat \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Complete\<^sub>F k I \<equiv> { inc_item x k | x y.
     x \<in> bin I (item_origin y) \<and>
     y \<in> bin I k \<and>
     is_complete y \<and>
     next_symbol x = Some (item_rule_head y) }"
 
-definition Earley\<^sub>F_bin_step :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
+definition Earley\<^sub>F_bin_step :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F_bin_step k \<G> \<omega> I \<equiv> I \<union> Scan\<^sub>F k \<omega> I \<union> Complete\<^sub>F k I \<union> Predict\<^sub>F k \<G> I"
 
-definition Earley\<^sub>F_bin :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> 'a item set" where
+definition Earley\<^sub>F_bin :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F_bin k \<G> \<omega> I \<equiv> limit (Earley\<^sub>F_bin_step k \<G> \<omega>) I"
 
-fun Earley\<^sub>F_bins :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set" where
+fun Earley\<^sub>F_bins :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F_bins 0 \<G> \<omega> = Earley\<^sub>F_bin 0 \<G> \<omega> (Init\<^sub>F \<G>)"
 | "Earley\<^sub>F_bins (Suc n) \<G> \<omega> = Earley\<^sub>F_bin (Suc n) \<G> \<omega> (Earley\<^sub>F_bins n \<G> \<omega>)"
 
-definition Earley\<^sub>F :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set" where
+definition Earley\<^sub>F :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F \<G> \<omega> \<equiv> Earley\<^sub>F_bins (length \<omega>) \<G> \<omega>"
 
 
@@ -68,12 +68,12 @@ lemma Earley\<^sub>F_bin_step_continuous:
   "continuous (Earley\<^sub>F_bin_step k \<G> \<omega>)"
   unfolding continuous_def
 proof (standard, standard, standard)
-  fix C :: "nat \<Rightarrow> 'a item set"
+  fix C :: "nat \<Rightarrow> ('a, 'b) item set"
   assume "chain C"
   thus "chain (Earley\<^sub>F_bin_step k \<G> \<omega> \<circ> C)"
     unfolding chain_def Earley\<^sub>F_bin_step_def by (auto simp: Scan\<^sub>F_def Predict\<^sub>F_def Complete\<^sub>F_def bin_def subset_eq)
 next
-  fix C :: "nat \<Rightarrow> 'a item set"
+  fix C :: "nat \<Rightarrow> ('a, 'b) item set"
   assume *: "chain C"
   show "Earley\<^sub>F_bin_step k \<G> \<omega> (natUnion C) = natUnion (Earley\<^sub>F_bin_step k \<G> \<omega> \<circ> C)"
     unfolding natUnion_def
@@ -89,7 +89,7 @@ next
           using * unfolding chain_def Earley\<^sub>F_bin_step_def Complete\<^sub>F_def bin_def
           apply auto
         proof -
-          fix y :: "'a item" and z :: "'a item" and n :: nat and m :: nat
+          fix y :: "('a, 'b) item" and z :: "('a, 'b) item" and n :: nat and m :: nat
           assume a1: "is_complete z"
           assume a2: "item_end y = item_origin z"
           assume a3: "y \<in> C n"
@@ -281,10 +281,10 @@ theorem soundness_Earley\<^sub>F:
 
 subsection \<open>Completeness\<close>
 
-definition prev_symbol :: "'a item \<Rightarrow> 'a option" where
+definition prev_symbol :: "('a, 'b) item \<Rightarrow> ('a, 'b) symbol option" where
   "prev_symbol x \<equiv> if item_dot x = 0 then None else Some (item_rule_body x ! (item_dot x - 1))"
 
-definition base :: "'a sentence \<Rightarrow> 'a item set \<Rightarrow> nat \<Rightarrow> 'a item set" where
+definition base :: "('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
   "base \<omega> I k \<equiv> { x . x \<in> I \<and> item_end x = k \<and> k > 0 \<and> prev_symbol x = Some (\<omega>!(k-1)) }"
 
 lemma Earley\<^sub>F_bin_sub_Earley\<^sub>F_bin:
@@ -378,7 +378,7 @@ lemma Earley_base_sub_Earley\<^sub>F_bin:
   assumes "Init\<^sub>F \<G> \<subseteq> I"
   assumes "\<forall>k' < k. bin (Earley \<G> \<omega>) k' \<subseteq> I"
   assumes "base \<omega> (Earley \<G> \<omega>) k \<subseteq> I"
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>"
   shows "base \<omega> (Earley \<G> \<omega>) (k+1) \<subseteq> bin (Earley\<^sub>F_bin k \<G> \<omega> I) (k+1)"
 proof standard
   fix x
@@ -421,9 +421,9 @@ proof standard
     have "l-1 < length \<omega>"
       using Complete.prems(6) base_def wf_Earley wf_item_def
       by (metis (mono_tags, lifting) CollectD add.right_neutral add_Suc_right add_diff_cancel_right' item.sel(4) less_eq_Suc_le plus_1_eq_Suc)
-    hence "is_terminal \<G> (\<omega>!(l-1))"
+    hence "is_terminal (\<omega>!(l-1))"
       using Complete.prems(5) is_word_is_terminal by blast
-    moreover have "is_nonterminal \<G> (item_rule_head y)"
+    moreover have "is_nonterminal (item_rule_head y)"
       using Complete.hyps(3,4) Complete.prems(4) wf_Earley wf_item_def
       by (metis item_rule_head_def prod.collapse rule_head_def rule_nonterminal_type)
     moreover have "prev_symbol (Item r\<^sub>x (b\<^sub>x+1) i l) = next_symbol x"
@@ -439,7 +439,7 @@ proof standard
 qed
 
 lemma Earley\<^sub>F_bin_k_sub_Earley\<^sub>F_bins:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>" "k \<le> n"
+  assumes "wf_\<G> \<G>" "is_word \<omega>" "k \<le> n"
   shows "bin (Earley \<G> \<omega>) k \<subseteq> Earley\<^sub>F_bins n \<G> \<omega>"
   using assms
 proof (induction n arbitrary: k)
@@ -483,7 +483,7 @@ next
 qed
 
 lemma Earley_sub_Earley\<^sub>F:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>"
   shows "Earley \<G> \<omega> \<subseteq> Earley\<^sub>F \<G> \<omega>"
 proof -
   have "\<forall>k \<le> length \<omega>. bin (Earley \<G> \<omega>) k \<subseteq> Earley\<^sub>F \<G> \<omega>"
@@ -493,19 +493,19 @@ proof -
 qed
 
 theorem completeness_Earley\<^sub>F:
-  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<G> \<omega>" "wf_\<G> \<G>"
+  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
   shows "recognizing (Earley\<^sub>F \<G> \<omega>) \<G> \<omega>"
   using assms Earley_sub_Earley\<^sub>F Earley\<^sub>F_sub_Earley completeness_Earley by (metis subset_antisym)
 
 subsection \<open>Correctness\<close>
 
 theorem Earley_eq_Earley\<^sub>F:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>"
   shows "Earley \<G> \<omega> = Earley\<^sub>F \<G> \<omega>"
   using Earley_sub_Earley\<^sub>F Earley\<^sub>F_sub_Earley assms by blast
 
 theorem correctness_Earley\<^sub>F:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>"
   shows "recognizing (Earley\<^sub>F \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
   using assms Earley_eq_Earley\<^sub>F correctness_Earley by fastforce
 

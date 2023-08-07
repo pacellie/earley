@@ -75,47 +75,47 @@ section \<open>Earley recognizer\<close>
 
 subsection \<open>Earley items\<close>
 
-definition rule_head :: "'a rule \<Rightarrow> 'a" where
+definition rule_head :: "('a, 'b) rule \<Rightarrow> ('a, 'b) symbol" where
   "rule_head \<equiv> fst"
 
-definition rule_body :: "'a rule \<Rightarrow> 'a list" where
+definition rule_body :: "('a, 'b) rule \<Rightarrow> ('a, 'b) sentence" where
   "rule_body \<equiv> snd"
 
-datatype 'a item = 
-  Item (item_rule: "'a rule") (item_dot : nat) (item_origin : nat) (item_end : nat)
+datatype ('a, 'b) item = 
+  Item (item_rule: "('a, 'b) rule") (item_dot : nat) (item_origin : nat) (item_end : nat)
 
-definition item_rule_head :: "'a item \<Rightarrow> 'a" where
+definition item_rule_head :: "('a, 'b) item \<Rightarrow> ('a, 'b) symbol" where
   "item_rule_head x \<equiv> rule_head (item_rule x)"
 
-definition item_rule_body :: "'a item \<Rightarrow> 'a sentence" where
+definition item_rule_body :: "('a, 'b) item \<Rightarrow> ('a, 'b) sentence" where
   "item_rule_body x \<equiv> rule_body (item_rule x)"
 
-definition item_\<alpha> :: "'a item \<Rightarrow> 'a sentence" where
+definition item_\<alpha> :: "('a, 'b) item \<Rightarrow> ('a, 'b) sentence" where
   "item_\<alpha> x \<equiv> take (item_dot x) (item_rule_body x)"
 
-definition item_\<beta> :: "'a item \<Rightarrow> 'a sentence" where 
+definition item_\<beta> :: "('a, 'b) item \<Rightarrow> ('a, 'b) sentence" where 
   "item_\<beta> x \<equiv> drop (item_dot x) (item_rule_body x)"
 
-definition is_complete :: "'a item \<Rightarrow> bool" where
+definition is_complete :: "('a, 'b) item \<Rightarrow> bool" where
   "is_complete x \<equiv> item_dot x \<ge> length (item_rule_body x)"
 
-definition next_symbol :: "'a item \<Rightarrow> 'a option" where
+definition next_symbol :: "('a, 'b) item \<Rightarrow> ('a, 'b) symbol option" where
   "next_symbol x \<equiv> if is_complete x then None else Some (item_rule_body x ! item_dot x)"
 
 lemmas item_defs = item_rule_head_def item_rule_body_def item_\<alpha>_def item_\<beta>_def rule_head_def rule_body_def
 
-definition is_finished :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
+definition is_finished :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
   "is_finished \<G> \<omega> x \<equiv>
     item_rule_head x = \<SS> \<G> \<and>
     item_origin x = 0 \<and>
     item_end x = length \<omega> \<and> 
     is_complete x"
 
-definition recognizing :: "'a item set \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+definition recognizing :: "('a, 'b) item set \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
   "recognizing I \<G> \<omega> \<equiv> \<exists>x \<in> I. is_finished \<G> \<omega> x"
 
-inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set"
-  for \<G> :: "'a cfg" and \<omega> :: "'a sentence" where
+inductive_set Earley :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set"
+  for \<G> :: "('a, 'b) cfg" and \<omega> :: "('a, 'b) sentence" where
     Init: "r \<in> set (\<RR> \<G>) \<Longrightarrow> fst r = \<SS> \<G> \<Longrightarrow>
       Item r 0 0 0 \<in> Earley \<G> \<omega>"
   | Scan: "x = Item r b i j \<Longrightarrow> x \<in> Earley \<G> \<omega> \<Longrightarrow>
@@ -131,7 +131,7 @@ inductive_set Earley :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item 
 
 subsection \<open>Well-formedness\<close>
 
-definition wf_item :: "'a cfg \<Rightarrow> 'a sentence => 'a item \<Rightarrow> bool" where 
+definition wf_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence => ('a, 'b) item \<Rightarrow> bool" where 
   "wf_item \<G> \<omega> x \<equiv>
     item_rule x \<in> set (\<RR> \<G>) \<and> 
     item_dot x \<le> length (item_rule_body x) \<and>
@@ -169,7 +169,7 @@ lemma wf_Earley:
 
 subsection \<open>Soundness\<close>
 
-definition sound_item :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item \<Rightarrow> bool" where
+definition sound_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
   "sound_item \<G> \<omega> x \<equiv> derives \<G> [item_rule_head x] (slice (item_origin x) (item_end x) \<omega> @ item_\<beta> x)"
 
 lemma sound_Init:
@@ -276,7 +276,7 @@ qed
 
 subsection \<open>Completeness\<close>
 
-definition partially_completed :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a item set \<Rightarrow> ('a derivation \<Rightarrow> bool) \<Rightarrow> bool" where
+definition partially_completed :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> (('a, 'b) derivation \<Rightarrow> bool) \<Rightarrow> bool" where
   "partially_completed k \<G> \<omega> E P \<equiv> \<forall>r b i' i j x a D.
     i \<le> j \<and> j \<le> k \<and> k \<le> length \<omega> \<and>
     x = Item r b i' i \<and> x \<in> E \<and> next_symbol x = Some a \<and>
@@ -368,13 +368,13 @@ proof (standard, standard, standard, standard, standard, standard, standard, sta
         using *(1) unfolding Derives1_def by (simp add: Cons_eq_append_conv)+
       show ?thesis
       proof cases
-        assume "is_terminal \<G> a"
-        have "is_nonterminal \<G> a"
-          using rule by (simp add: assms)
+        assume "is_terminal a"
+        have "is_nonterminal a"
+          using rule assms by force
         thus ?thesis
-          using \<open>is_terminal \<G> a\<close> is_terminal_nonterminal by (metis assms)
+          using \<open>is_terminal a\<close> is_terminal_nonterminal by (metis assms)
       next
-        assume "\<not> is_terminal \<G> a"
+        assume "\<not> is_terminal a"
         define y where y_def: "y = Item (a ,\<alpha>) 0 i i"
         have "length D' < length D"
           using \<open>D = d # D'\<close> by fastforce
@@ -406,7 +406,7 @@ lemma partially_completed_Earley:
   by (simp add: partially_completed_Earley_k)
 
 theorem completeness_Earley:
-  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<G> \<omega>" "wf_\<G> \<G>"
+  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
   shows "recognizing (Earley \<G> \<omega>) \<G> \<omega>"
 proof -
   obtain \<alpha> D where *: "(\<SS> \<G> ,\<alpha>) \<in> set (\<RR> \<G>)" "Derivation \<G> \<alpha> D \<omega>"
@@ -430,7 +430,7 @@ qed
 subsection \<open>Correctness\<close>
 
 theorem correctness_Earley:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>"
   shows "recognizing (Earley \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
   using assms soundness_Earley completeness_Earley by blast
 
@@ -441,7 +441,7 @@ lemma finiteness_empty:
   "set (\<RR> \<G>) = {} \<Longrightarrow> finite { x | x. wf_item \<G> \<omega> x }"
   unfolding wf_item_def by simp
 
-fun item_intro :: "'a rule \<times> nat \<times> nat \<times> nat \<Rightarrow> 'a item" where
+fun item_intro :: "('a, 'b) rule \<times> nat \<times> nat \<times> nat \<Rightarrow> ('a, 'b) item" where
   "item_intro (rule, dot, origin, ends) = Item rule dot origin ends" 
 
 lemma finiteness_nonempty:

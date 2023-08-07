@@ -4,7 +4,7 @@ begin
 
 section \<open>Epsilon productions\<close>
 
-definition \<epsilon>_free :: "'a cfg \<Rightarrow> bool" where
+definition \<epsilon>_free :: "('a, 'b) cfg \<Rightarrow> bool" where
   "\<epsilon>_free \<G> \<longleftrightarrow> (\<forall>r \<in> set (\<RR> \<G>). rule_body r \<noteq> [])"
 
 lemma \<epsilon>_free_impl_non_empty_sentence_deriv:
@@ -39,11 +39,11 @@ proof (induction "length D" arbitrary: a D rule: nat_less_induct)
 qed
 
 lemma \<epsilon>_free_impl_non_empty_deriv:
-  "\<epsilon>_free \<G> \<Longrightarrow> \<forall>N \<in> set (\<NN> \<G>). \<not> derives \<G> [N] []"
+  "\<epsilon>_free \<G> \<Longrightarrow> \<forall>s. \<not> derives \<G> [s] []"
   using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation by (metis not_Cons_self2)
 
 lemma nonempty_deriv_impl_\<epsilon>_free:
-  assumes "\<forall>N \<in> set (\<NN> \<G>). \<not> derives \<G> [N] []" "\<forall>(N, \<alpha>) \<in> set (\<RR> \<G>). N \<in> set (\<NN> \<G>)"
+  assumes "\<forall>s. \<not> derives \<G> [s] []"
   shows "\<epsilon>_free \<G>"
 proof (rule ccontr)
   assume "\<not> \<epsilon>_free \<G>"
@@ -53,52 +53,42 @@ proof (rule ccontr)
     unfolding derives1_def rule_body_def by auto
   hence "derives \<G> [N] []"
     by auto
-  moreover have "N \<in> set (\<NN> \<G>)"
-    using *(1) assms(2) by blast
-  ultimately show False
+  thus False
     using assms(1) by blast
 qed
 
 lemma nonempty_deriv_iff_\<epsilon>_free:
-  assumes "\<forall>(N, \<alpha>) \<in> set (\<RR> \<G>). N \<in> set (\<NN> \<G>)"
-  shows "(\<forall>N \<in> set (\<NN> \<G>). \<not> derives \<G> [N] []) \<longleftrightarrow> \<epsilon>_free \<G>"
-  using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free[OF _ assms] by blast
+  shows "(\<forall>s. \<not> derives \<G> [s] []) \<longleftrightarrow> \<epsilon>_free \<G>"
+  using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free by blast
 
 section \<open>Example 1: Addition\<close>
 
-datatype t1 = x | plus
-datatype n1 = S
-datatype s1 = Terminal t1 | Nonterminal n1
+datatype T1 = x | plus
+datatype N1 = S
 
-definition nonterminals1 :: "s1 list" where
-  "nonterminals1 = [Nonterminal S]"
-
-definition terminals1 :: "s1 list" where
-  "terminals1 = [Terminal x, Terminal plus]"
-
-definition rules1 :: "s1 rule list" where
+definition rules1 :: "(T1, N1) rule list" where
   "rules1 = [
-    (Nonterminal S, [Terminal x]),
-    (Nonterminal S, [Nonterminal S, Terminal plus, Nonterminal S])
+    (NT S, [T x]),
+    (NT S, [NT S, T plus, NT S])
   ]"
 
-definition start_symbol1 :: s1 where
-  "start_symbol1 = Nonterminal S"
+definition start_symbol1 :: "(T1, N1) symbol" where
+  "start_symbol1 = NT S"
 
-definition cfg1 :: "s1 cfg" where
-  "cfg1 = CFG nonterminals1 terminals1 rules1 start_symbol1"
+definition cfg1 :: "(T1, N1) cfg" where
+  "cfg1 = CFG rules1 start_symbol1"
 
-definition inp1 :: "s1 list" where
-  "inp1 = [Terminal x, Terminal plus, Terminal x, Terminal plus, Terminal x]"
+definition inp1 :: "(T1, N1) sentence" where
+  "inp1 = [T x, T plus, T x, T plus, T x]"
 
-lemmas cfg1_defs = cfg1_def nonterminals1_def terminals1_def rules1_def start_symbol1_def
+lemmas cfg1_defs = cfg1_def rules1_def start_symbol1_def
 
 lemma wf_\<G>1:
   "wf_\<G> cfg1"
-  by (auto simp: wf_\<G>_defs cfg1_defs)
+  by (auto simp: wf_\<G>_def cfg1_defs)
 
 lemma is_word_inp1:
-  "is_word cfg1 inp1"
+  "is_word inp1"
   by (auto simp: is_word_def is_terminal_def cfg1_defs inp1_def)
 
 lemma nonempty_derives1:
@@ -130,40 +120,33 @@ lemma soundness_trees1:
 
 section \<open>Example 2: Cyclic reduction pointers\<close>
 
-datatype t2 = x
-datatype n2 = A | B
-datatype s2 = Terminal t2 | Nonterminal n2
+datatype T2 = x
+datatype N2 = A | B
 
-definition nonterminals2 :: "s2 list" where
-  "nonterminals2 = [Nonterminal A, Nonterminal B]"
-
-definition terminals2 :: "s2 list" where
-  "terminals2 = [Terminal x]"
-
-definition rules2 :: "s2 rule list" where
+definition rules2 :: "(T2, N2) rule list" where
   "rules2 = [
-    (Nonterminal B, [Nonterminal A]),
-    (Nonterminal A, [Nonterminal B]),
-    (Nonterminal A, [Terminal x])
+    (NT B, [NT A]),
+    (NT A, [NT B]),
+    (NT A, [T x])
   ]"
 
-definition start_symbol2 :: s2 where
-  "start_symbol2 = Nonterminal A"
+definition start_symbol2 :: "(T2, N2) symbol" where
+  "start_symbol2 = NT A"
 
-definition cfg2 :: "s2 cfg" where
-  "cfg2 = CFG nonterminals2 terminals2 rules2 start_symbol2"
+definition cfg2 :: "(T2, N2) cfg" where
+  "cfg2 = CFG rules2 start_symbol2"
 
-definition inp2 :: "s2 list" where
-  "inp2 = [Terminal x]"
+definition inp2 :: "(T2, N2) sentence" where
+  "inp2 = [T x]"
 
-lemmas cfg2_defs = cfg2_def nonterminals2_def terminals2_def rules2_def start_symbol2_def
+lemmas cfg2_defs = cfg2_def rules2_def start_symbol2_def
 
 lemma wf_\<G>2:
   "wf_\<G> cfg2"
-  by (auto simp: wf_\<G>_defs cfg2_defs)
+  by (auto simp: wf_\<G>_def cfg2_defs)
 
 lemma is_word_inp2:
-  "is_word cfg2 inp2"
+  "is_word inp2"
   by (auto simp: is_word_def is_terminal_def cfg2_defs inp2_def)
 
 lemma nonempty_derives2:

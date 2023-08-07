@@ -88,68 +88,68 @@ datatype pointer =
   | Pre nat \<comment>\<open>pre\<close>
   | PreRed "nat \<times> nat \<times> nat" "(nat \<times> nat \<times> nat) list" \<comment>\<open>k', pre, red\<close>
 
-datatype 'a entry =
-  Entry (item : "'a item") (pointer : pointer)
+datatype ('a, 'b) entry =
+  Entry (item : "('a, 'b) item") (pointer : pointer)
 
-type_synonym 'a bin = "'a entry list"
-type_synonym 'a bins = "'a bin list"
+type_synonym ('a, 'b) bin = "('a, 'b) entry list"
+type_synonym ('a, 'b) bins = "('a, 'b) bin list"
 
-definition items :: "'a bin \<Rightarrow> 'a item list" where
+definition items :: "('a, 'b) bin \<Rightarrow> ('a, 'b) item list" where
   "items b \<equiv> map item b"
 
-definition pointers :: "'a bin \<Rightarrow> pointer list" where
+definition pointers :: "('a, 'b) bin \<Rightarrow> pointer list" where
   "pointers b \<equiv> map pointer b"
 
-definition bins_eq_items :: "'a bins \<Rightarrow> 'a bins \<Rightarrow> bool" where
+definition bins_eq_items :: "('a, 'b) bins \<Rightarrow> ('a, 'b) bins \<Rightarrow> bool" where
   "bins_eq_items bs0 bs1 \<equiv> map items bs0 = map items bs1"
 
-definition bins :: "'a bins \<Rightarrow> 'a item set" where
+definition bins :: "('a, 'b) bins \<Rightarrow> ('a, 'b) item set" where
   "bins bs \<equiv> \<Union> { set (items (bs!k)) | k. k < length bs }"
 
-definition bin_upto :: "'a bin \<Rightarrow> nat \<Rightarrow> 'a item set" where
+definition bin_upto :: "('a, 'b) bin \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
   "bin_upto b i \<equiv> { items b ! j | j. j < i \<and> j < length (items b) }"
 
-definition bins_upto :: "'a bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a item set" where
+definition bins_upto :: "('a, 'b) bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
   "bins_upto bs k i \<equiv> \<Union> { set (items (bs ! l)) | l. l < k } \<union> bin_upto (bs ! k) i"
 
-definition wf_bin_items :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a item list \<Rightarrow> bool" where
+definition wf_bin_items :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) item list \<Rightarrow> bool" where
   "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item \<G> \<omega> x \<and> item_end x = k"
 
-definition wf_bin :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a bin \<Rightarrow> bool" where
+definition wf_bin :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) bin \<Rightarrow> bool" where
   "wf_bin \<G> \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items \<G> \<omega> k (items b)"
 
-definition wf_bins :: "'a cfg \<Rightarrow> 'a list \<Rightarrow> 'a bins \<Rightarrow> bool" where
+definition wf_bins :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> bool" where
   "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < length bs. wf_bin \<G> \<omega> k (bs!k)"
 
-definition nonempty_derives :: "'a cfg \<Rightarrow> bool" where
-  "nonempty_derives \<G> \<equiv> \<forall>N. N \<in> set (\<NN> \<G>) \<longrightarrow> \<not> derives \<G> [N] []"
+definition nonempty_derives :: "('a, 'b) cfg \<Rightarrow> bool" where
+  "nonempty_derives \<G> \<equiv> \<forall>s. \<not> derives \<G> [s] []"
 
-definition Init\<^sub>L :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+definition Init\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
   "Init\<^sub>L \<G> \<omega> \<equiv>
     let rs = filter (\<lambda>r. rule_head r = \<SS> \<G>) (\<RR> \<G>) in
     let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
     let bs = replicate (length \<omega> + 1) ([]) in
     bs[0 := b0]"
 
-definition Scan\<^sub>L :: "nat \<Rightarrow> 'a sentence \<Rightarrow> 'a  \<Rightarrow> 'a item \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+definition Scan\<^sub>L :: "nat \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) symbol  \<Rightarrow> ('a, 'b) item \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry list" where
   "Scan\<^sub>L k \<omega> a x pre \<equiv>
     if \<omega>!k = a then
       let x' = inc_item x (k+1) in
       [Entry x' (Pre pre)]
     else []"
 
-definition Predict\<^sub>L :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a \<Rightarrow> 'a entry list" where
+definition Predict\<^sub>L :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) symbol \<Rightarrow> ('a, 'b) entry list" where
   "Predict\<^sub>L k \<G> X \<equiv>
     let rs = filter (\<lambda>r. rule_head r = X) (\<RR> \<G>) in
     map (\<lambda>r. (Entry (init_item r k) Null)) rs"
 
-definition Complete\<^sub>L :: "nat \<Rightarrow> 'a item \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list" where
+definition Complete\<^sub>L :: "nat \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry list" where
   "Complete\<^sub>L k y bs red \<equiv>
     let orig = bs ! (item_origin y) in
     let is = filter_with_index (\<lambda>x. next_symbol x = Some (item_rule_head y)) (items orig) in
     map (\<lambda>(x, pre). (Entry (inc_item x k) (PreRed (item_origin y, pre, red) []))) is"
 
-fun bin_upd :: "'a entry \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
+fun bin_upd :: "('a, 'b) entry \<Rightarrow> ('a, 'b) bin \<Rightarrow> ('a, 'b) bin" where
   "bin_upd e' [] = [e']"
 | "bin_upd e' (e#es) = (
     case (e', e) of
@@ -160,14 +160,14 @@ fun bin_upd :: "'a entry \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
         if item e' = item e then e # es
         else e # bin_upd e' es)"
 
-fun bin_upds :: "'a entry list \<Rightarrow> 'a bin \<Rightarrow> 'a bin" where
+fun bin_upds :: "('a, 'b) entry list \<Rightarrow> ('a, 'b) bin \<Rightarrow> ('a, 'b) bin" where
   "bin_upds [] b = b"
 | "bin_upds (e#es) b = bin_upds es (bin_upd e b)"
 
-definition bins_upd :: "'a bins \<Rightarrow> nat \<Rightarrow> 'a entry list \<Rightarrow> 'a bins" where
+definition bins_upd :: "('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry list \<Rightarrow> ('a, 'b) bins" where
   "bins_upd bs k es \<equiv> bs[k := bin_upds es (bs!k)]"
 
-partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> nat \<Rightarrow> 'a bins" where
+partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L_bin' k \<G> \<omega> bs i = (
     if i \<ge> length (items (bs ! k)) then bs
     else
@@ -175,7 +175,7 @@ partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> 'a cfg \<Ri
       let bs' =
         case next_symbol x of
           Some a \<Rightarrow>
-            if is_terminal \<G> a then
+            if is_terminal a then
               if k < length \<omega> then bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x i)
               else bs
             else bins_upd bs k (Predict\<^sub>L k \<G> a)
@@ -184,14 +184,14 @@ partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> 'a cfg \<Ri
 
 declare Earley\<^sub>L_bin'.simps[code]
 
-definition Earley\<^sub>L_bin :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins \<Rightarrow> 'a bins" where
+definition Earley\<^sub>L_bin :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L_bin k \<G> \<omega> bs \<equiv> Earley\<^sub>L_bin' k \<G> \<omega> bs 0"
 
-fun Earley\<^sub>L_bins :: "nat \<Rightarrow> 'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+fun Earley\<^sub>L_bins :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L_bins 0 \<G> \<omega> = Earley\<^sub>L_bin 0 \<G> \<omega> (Init\<^sub>L \<G> \<omega>)"
 | "Earley\<^sub>L_bins (Suc n) \<G> \<omega> = Earley\<^sub>L_bin (Suc n) \<G> \<omega> (Earley\<^sub>L_bins n \<G> \<omega>)"
 
-definition Earley\<^sub>L :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a bins" where
+definition Earley\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L \<G> \<omega> \<equiv> Earley\<^sub>L_bins (length \<omega>) \<G> \<omega>"
 
 
@@ -675,7 +675,7 @@ lemma distinct_Scan\<^sub>L:
 
 lemma distinct_Predict\<^sub>L:
   "wf_\<G> \<G> \<Longrightarrow> distinct (items (Predict\<^sub>L k \<G> X))"
-  unfolding Predict\<^sub>L_def wf_\<G>_defs by (auto simp: init_item_def rule_head_def distinct_map inj_on_def items_def)
+  unfolding Predict\<^sub>L_def wf_\<G>_def by (auto simp: init_item_def rule_head_def distinct_map inj_on_def items_def)
 
 lemma inj_on_inc_item:
   "\<forall>x \<in> A. item_end x = l \<Longrightarrow> inj_on (\<lambda>x. inc_item x k) A"
@@ -722,7 +722,7 @@ lemma wf_bins_Scan\<^sub>L:
 lemma wf_bins_Predict\<^sub>L:
   assumes "wf_bins \<G> \<omega> bs" "k < length bs" "k \<le> length \<omega>" "wf_\<G> \<G>"
   shows "\<forall>y \<in> set (items (Predict\<^sub>L k \<G> X)). wf_item \<G> \<omega> y \<and> item_end y = k"
-  using assms by (auto simp: Predict\<^sub>L_def wf_item_def wf_bins_def wf_bin_def init_item_def wf_\<G>_defs items_def)
+  using assms by (auto simp: Predict\<^sub>L_def wf_item_def wf_bins_def wf_bin_def init_item_def wf_\<G>_def items_def)
 
 lemma wf_item_inc_item:
   assumes "wf_item \<G> \<omega> x" "next_symbol x = Some a" "item_origin x \<le> k" "k \<le> length \<omega>"
@@ -766,10 +766,10 @@ lemma Ex_wf_bins:
   apply (rule exI[where x="0"])
   apply (rule exI[where x="[[]]"])
   apply (rule exI[where x="[]"])
-  apply (auto simp: wf_bins_def wf_bin_def wf_\<G>_defs wf_bin_items_def items_def split: prod.splits)
-  by (metis cfg.sel distinct.simps(1) empty_iff empty_set inf_bot_right list.set_intros(1))
+  apply (auto simp: wf_bins_def wf_bin_def wf_\<G>_def wf_bin_items_def items_def split: prod.splits)
+  by (metis cfg.sel distinct.simps(1) empty_iff empty_set)
 
-definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set" where
+definition wf_earley_input :: "(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sentence \<times> ('a, 'b) bins) set" where
   "wf_earley_input = {
     (k, \<G>, \<omega>, bs) | k \<G> \<omega> bs.
       k \<le> length \<omega> \<and>
@@ -778,7 +778,7 @@ definition wf_earley_input :: "(nat \<times> 'a cfg \<times> 'a sentence \<times
       wf_bins \<G> \<omega> bs
   }"
 
-typedef 'a wf_bins = "wf_earley_input::(nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins) set"
+typedef ('a, 'b) wf_bins = "wf_earley_input::(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sentence \<times> ('a, 'b) bins) set"
   morphisms from_wf_bins to_wf_bins
   using Ex_wf_bins by (auto simp: wf_earley_input_def)
 
@@ -813,7 +813,7 @@ qed
 lemma wf_earley_input_Scan\<^sub>L:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input" "\<not> length (items (bs ! k)) \<le> i"
   assumes "x = items (bs ! k) ! i" "next_symbol x = Some a"
-  assumes "is_terminal \<G> a" "k < length \<omega>"
+  assumes "is_terminal a" "k < length \<omega>"
   shows "(k, \<G>, \<omega>, bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x pre)) \<in> wf_earley_input"
 proof -
   have *: "k \<le> length \<omega>" "length bs = length \<omega> + 1" "wf_\<G> \<G>" "wf_bins \<G> \<omega> bs"
@@ -829,7 +829,7 @@ qed
 
 lemma wf_earley_input_Predict\<^sub>L:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input" "\<not> length (items (bs ! k)) \<le> i"
-  assumes "x = items (bs ! k) ! i" "next_symbol x = Some a" "\<not> is_terminal \<G> a"
+  assumes "x = items (bs ! k) ! i" "next_symbol x = Some a" "\<not> is_terminal a"
   shows "(k, \<G>, \<omega>, bins_upd bs k (Predict\<^sub>L k \<G> a)) \<in> wf_earley_input"
 proof -
   have *: "k \<le> length \<omega>" "length bs = length \<omega> + 1" "wf_\<G> \<G>" "wf_bins \<G> \<omega> bs"
@@ -842,7 +842,7 @@ proof -
     by (simp add: *(1-3) wf_earley_input_def)
 qed
 
-fun earley_measure :: "nat \<times> 'a cfg \<times> 'a sentence \<times> 'a bins \<Rightarrow> nat \<Rightarrow> nat" where
+fun earley_measure :: "nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sentence \<times> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> nat" where
   "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_item \<G> \<omega> x \<and> item_end x = k } - i"
 
 lemma Earley\<^sub>L_bin'_simps[simp]:
@@ -850,11 +850,11 @@ lemma Earley\<^sub>L_bin'_simps[simp]:
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = None \<Longrightarrow>
     Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> (bins_upd bs k (Complete\<^sub>L k x bs i)) (i+1)"
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
-    is_terminal \<G> a \<Longrightarrow> k < length \<omega> \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> (bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x i)) (i+1)"
+    is_terminal a \<Longrightarrow> k < length \<omega> \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> (bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x i)) (i+1)"
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
-    is_terminal \<G> a \<Longrightarrow> \<not> k < length \<omega> \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> bs (i+1)"
+    is_terminal a \<Longrightarrow> \<not> k < length \<omega> \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> bs (i+1)"
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
-    \<not> is_terminal \<G> a \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> (bins_upd bs k (Predict\<^sub>L k \<G> a)) (i+1)"
+    \<not> is_terminal a \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> (bins_upd bs k (Predict\<^sub>L k \<G> a)) (i+1)"
   by (subst Earley\<^sub>L_bin'.simps, simp)+
 
 lemma Earley\<^sub>L_bin'_induct[case_names Base Complete\<^sub>F Scan\<^sub>F Pass Predict\<^sub>F]:
@@ -863,13 +863,13 @@ lemma Earley\<^sub>L_bin'_induct[case_names Base Complete\<^sub>F Scan\<^sub>F P
   assumes complete: "\<And>k \<G> \<omega> bs i x. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
             next_symbol x = None \<Longrightarrow> P k \<G> \<omega> (bins_upd bs k (Complete\<^sub>L k x bs i)) (i+1) \<Longrightarrow> P k \<G> \<omega> bs i"
   assumes scan: "\<And>k \<G> \<omega> bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = Some a \<Longrightarrow> is_terminal \<G> a \<Longrightarrow> k < length \<omega> \<Longrightarrow>
+            next_symbol x = Some a \<Longrightarrow> is_terminal a \<Longrightarrow> k < length \<omega> \<Longrightarrow>
             P k \<G> \<omega> (bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x i)) (i+1) \<Longrightarrow> P k \<G> \<omega> bs i"
   assumes pass: "\<And>k \<G> \<omega> bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = Some a \<Longrightarrow> is_terminal \<G> a \<Longrightarrow> \<not> k < length \<omega> \<Longrightarrow>
+            next_symbol x = Some a \<Longrightarrow> is_terminal a \<Longrightarrow> \<not> k < length \<omega> \<Longrightarrow>
             P k \<G> \<omega> bs (i+1) \<Longrightarrow> P k \<G> \<omega> bs i"
   assumes predict: "\<And>k \<G> \<omega> bs i x a. \<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs ! k) ! i \<Longrightarrow>
-            next_symbol x = Some a \<Longrightarrow> \<not> is_terminal \<G> a \<Longrightarrow>
+            next_symbol x = Some a \<Longrightarrow> \<not> is_terminal a \<Longrightarrow>
             P k \<G> \<omega> (bins_upd bs k (Predict\<^sub>L k \<G> a)) (i+1) \<Longrightarrow> P k \<G> \<omega> bs i"
   shows "P k \<G> \<omega> bs i"
   using assms(1)
@@ -921,7 +921,7 @@ proof (induction n\<equiv>"earley_measure (k, \<G>, \<omega>, bs) i" arbitrary: 
         by blast
       show ?thesis
       proof cases
-        assume a3: "is_terminal \<G> a"
+        assume a3: "is_terminal a"
         show ?thesis
         proof cases
           assume a4: "k < length \<omega>"
@@ -963,7 +963,7 @@ proof (induction n\<equiv>"earley_measure (k, \<G>, \<omega>, bs) i" arbitrary: 
             using 1 a1 a3 a4 a_def pass by simp
         qed
       next
-        assume a3: "\<not> is_terminal \<G> a"
+        assume a3: "\<not> is_terminal a"
         let ?bs' = "bins_upd bs k (Predict\<^sub>L k \<G> a)"
         have wf_bins': "wf_bins \<G> \<omega> ?bs'"
           using wf_bins_Predict\<^sub>L distinct_Predict\<^sub>L wf(1,3,4) wf_bins_bins_upd k x by metis
@@ -1115,7 +1115,7 @@ proof -
   let ?b0 = "map (\<lambda>r. (Entry (init_item r 0) Null)) ?rs"
   let ?bs = "replicate (length \<omega> + 1) ([])"
   have "distinct (items ?b0)"
-    using assms unfolding wf_bin_def wf_item_def wf_\<G>_def distinct_rules_def items_def
+    using assms unfolding wf_bin_def wf_item_def wf_\<G>_def items_def
     by (auto simp: init_item_def distinct_map inj_on_def)
   moreover have "\<forall>x \<in> set (items ?b0). wf_item \<G> \<omega> x \<and> item_end x = 0"
     using assms unfolding wf_bin_def wf_item_def by (auto simp: init_item_def items_def)
@@ -1397,7 +1397,8 @@ next
   ultimately have "bins (Earley\<^sub>L_bin' k \<G> \<omega> bs i) \<subseteq> Earley\<^sub>F_bin k \<G> \<omega> (I \<union> Scan\<^sub>F k \<omega> I)"
     using Scan\<^sub>F.IH Scan\<^sub>F.hyps by simp
   thus ?case
-    using Scan\<^sub>F_Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_sub_mono Earley\<^sub>F_bin_idem by (metis le_supI order_trans)
+    using Scan\<^sub>F_Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_sub_mono Earley\<^sub>F_bin_idem
+    by (metis Un_subset_iff subset_trans)
 next
   case (Pass k \<G> \<omega> bs i x a)
   thus ?case
@@ -1415,7 +1416,8 @@ next
   ultimately have "bins (Earley\<^sub>L_bin' k \<G> \<omega> bs i)  \<subseteq> Earley\<^sub>F_bin k \<G> \<omega> (I \<union> Predict\<^sub>F k \<G> I)"
     using Predict\<^sub>F.IH Predict\<^sub>F.hyps by simp
   thus ?case
-    using Predict\<^sub>F_Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_sub_mono Earley\<^sub>F_bin_idem by (metis le_supI order_trans)
+    using Predict\<^sub>F_Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_mono Earley\<^sub>F_bin_sub_mono Earley\<^sub>F_bin_idem
+    by (metis Un_subset_iff subset_trans)
 qed
 
 lemma Earley\<^sub>L_bin_sub_Earley\<^sub>F_bin:
@@ -1469,7 +1471,7 @@ lemma impossible_complete_item:
 proof -
   have "derives \<G> [item_rule_head x] []"
     using assms(3-6) by (simp add: slice_empty is_complete_def sound_item_def item_\<beta>_def )
-  moreover have "is_nonterminal \<G> (item_rule_head x)"
+  moreover have "is_nonterminal (item_rule_head x)"
     using assms(1,2) unfolding wf_item_def item_rule_head_def rule_head_def
     by (metis prod.collapse rule_nonterminal_type)
   ultimately show ?thesis
@@ -1477,7 +1479,7 @@ proof -
 qed
 
 lemma Complete\<^sub>F_Un_eq_terminal:
-  assumes "next_symbol z = Some a" "is_terminal \<G> a" "\<forall>x \<in> I. wf_item \<G> \<omega> x" "wf_item \<G> \<omega> z" "wf_\<G> \<G>"
+  assumes "next_symbol z = Some a" "is_terminal a" "\<forall>x \<in> I. wf_item \<G> \<omega> x" "wf_item \<G> \<omega> z" "wf_\<G> \<G>"
   shows "Complete\<^sub>F k (I \<union> {z}) = Complete\<^sub>F k I"
 proof (rule ccontr)
   assume "Complete\<^sub>F k (I \<union> {z}) \<noteq> Complete\<^sub>F k I"
@@ -1491,7 +1493,7 @@ proof (rule ccontr)
   show False
   proof (cases "x = z")
     case True
-    have "is_nonterminal \<G> (item_rule_head y)"
+    have "is_nonterminal (item_rule_head y)"
       using *(5,6) assms(1,3-5)
       apply (auto simp: wf_item_def bin_def item_rule_head_def rule_head_def next_symbol_def)
       by (metis prod.exhaust_sel rule_nonterminal_type)
@@ -1657,7 +1659,7 @@ qed simp_all
 lemma Earley\<^sub>F_bin_step_sub_Earley\<^sub>L_bin':
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "Earley\<^sub>F_bin_step k \<G> \<omega> (bins_upto bs k i) \<subseteq> bins bs"
-  assumes "\<forall>x \<in> bins bs. sound_item \<G> \<omega> x" "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "\<forall>x \<in> bins bs. sound_item \<G> \<omega> x" "is_word \<omega>" "nonempty_derives \<G>"
   shows "Earley\<^sub>F_bin_step k \<G> \<omega> (bins bs) \<subseteq> bins (Earley\<^sub>L_bin' k \<G> \<omega> bs i)"
   using assms
 proof (induction i rule: Earley\<^sub>L_bin'_induct[OF assms(1), case_names Base Complete\<^sub>F Scan\<^sub>F Pass Predict\<^sub>F])
@@ -1908,7 +1910,7 @@ next
     also have "... \<subseteq> bins bs"
       using Complete\<^sub>F_Earley\<^sub>F_bin_step_mono Predict\<^sub>F.prems(2) by blast
     finally show ?thesis
-      using bins_bins_upd Predict\<^sub>F.prems(1,2,3) wf_earley_input_elim by (metis Un_upper1 dual_order.trans)
+      using bins_bins_upd Predict\<^sub>F.prems(1,2,3) wf_earley_input_elim by blast
   qed
   ultimately have "Earley\<^sub>F_bin_step k \<G> \<omega> (bins ?bs') \<subseteq> bins (Earley\<^sub>L_bin' k \<G> \<omega> ?bs' (i+1))"
     using Predict\<^sub>F.IH Predict\<^sub>F.prems sound wf Earley\<^sub>F_bin_step_def bins_upto_sub_bins
@@ -1924,7 +1926,7 @@ qed
 lemma Earley\<^sub>F_bin_step_sub_Earley\<^sub>L_bin:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "Earley\<^sub>F_bin_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs"
-  assumes "\<forall>x \<in> bins bs. sound_item \<G> \<omega> x" "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "\<forall>x \<in> bins bs. sound_item \<G> \<omega> x" "is_word \<omega>" "nonempty_derives \<G>"
   shows "Earley\<^sub>F_bin_step k \<G> \<omega> (bins bs) \<subseteq> bins (Earley\<^sub>L_bin k \<G> \<omega> bs)"
   using assms Earley\<^sub>F_bin_step_sub_Earley\<^sub>L_bin' Earley\<^sub>L_bin_def by metis
 
@@ -2240,7 +2242,7 @@ lemma Earley\<^sub>L_bin_idem:
 lemma funpower_Earley\<^sub>F_bin_step_sub_Earley\<^sub>L_bin:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "Earley\<^sub>F_bin_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs" "\<forall>x \<in> bins bs. sound_item \<G> \<omega> x"
-  assumes "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "is_word \<omega>" "nonempty_derives \<G>"
   shows "funpower (Earley\<^sub>F_bin_step k \<G> \<omega>) n (bins bs) \<subseteq> bins (Earley\<^sub>L_bin k \<G> \<omega> bs)"
   using assms
 proof (induction n)
@@ -2264,13 +2266,13 @@ qed
 lemma Earley\<^sub>F_bin_sub_Earley\<^sub>L_bin:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"
   assumes "Earley\<^sub>F_bin_step k \<G> \<omega> (bins_upto bs k 0) \<subseteq> bins bs" "\<forall>x \<in> bins bs. sound_item \<G> \<omega> x"
-  assumes "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "is_word \<omega>" "nonempty_derives \<G>"
   shows "Earley\<^sub>F_bin k \<G> \<omega> (bins bs) \<subseteq> bins (Earley\<^sub>L_bin k \<G> \<omega> bs)"
   using assms funpower_Earley\<^sub>F_bin_step_sub_Earley\<^sub>L_bin Earley\<^sub>F_bin_def elem_limit_simp by fastforce
 
 lemma Earley\<^sub>F_bins_sub_Earley\<^sub>L_bins:
   assumes "k \<le> length \<omega>" "wf_\<G> \<G>"
-  assumes "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "is_word \<omega>" "nonempty_derives \<G>"
   shows "Earley\<^sub>F_bins k \<G> \<omega> \<subseteq> bins (Earley\<^sub>L_bins k \<G> \<omega>)"
   using assms
 proof (induction k)
@@ -2306,12 +2308,12 @@ next
 qed
 
 lemma Earley\<^sub>F_sub_Earley\<^sub>L:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>" "nonempty_derives \<G>"
   shows "Earley\<^sub>F \<G> \<omega> \<subseteq> bins (Earley\<^sub>L \<G> \<omega>)"
   using assms Earley\<^sub>F_bins_sub_Earley\<^sub>L_bins Earley\<^sub>F_def Earley\<^sub>L_def by (metis le_refl)
 
 theorem completeness_Earley\<^sub>L:
-  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<G> \<omega>" "wf_\<G> \<G>" "nonempty_derives \<G>"
+  assumes "derives \<G> [\<SS> \<G>] \<omega>" "is_word \<omega>" "wf_\<G> \<G>" "nonempty_derives \<G>"
   shows "recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega>"
   using assms Earley\<^sub>F_sub_Earley\<^sub>L Earley\<^sub>L_sub_Earley\<^sub>F completeness_Earley\<^sub>F by (metis subset_antisym)
 
@@ -2319,12 +2321,12 @@ theorem completeness_Earley\<^sub>L:
 subsection \<open>Correctness\<close>
 
 theorem Earley_eq_Earley\<^sub>L:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>" "nonempty_derives \<G>"
   shows "Earley \<G> \<omega> = bins (Earley\<^sub>L \<G> \<omega>)"
   using assms Earley\<^sub>F_sub_Earley\<^sub>L Earley\<^sub>L_sub_Earley\<^sub>F Earley_eq_Earley\<^sub>F by blast
 
 theorem correctness_Earley\<^sub>L:
-  assumes "wf_\<G> \<G>" "is_word \<G> \<omega>" "nonempty_derives \<G>"
+  assumes "wf_\<G> \<G>" "is_word \<omega>" "nonempty_derives \<G>"
   shows "recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega> \<longleftrightarrow> derives \<G> [\<SS> \<G>] \<omega>"
   using assms Earley_eq_Earley\<^sub>L correctness_Earley by fastforce
 

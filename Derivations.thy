@@ -5,9 +5,9 @@ begin
 
 section \<open>Adjusted content from AFP/LocalLexing\<close>
 
-type_synonym 'a derivation = "(nat \<times> 'a rule) list"
+type_synonym ('a, 'b) derivation = "(nat \<times> ('a, 'b) rule) list"
 
-lemma is_word_empty: "is_word \<G> []" by (auto simp add: is_word_def)
+lemma is_word_empty: "is_word []" by (auto simp add: is_word_def)
 
 lemma derives1_implies_derives[simp]:
   "derives1 \<G> a b \<Longrightarrow> derives \<G> a b"
@@ -32,7 +32,7 @@ proof -
     by (metis derives_def derivations_def derives1_eq_derivations1)
 qed
 
-definition Derives1 :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> nat \<Rightarrow> 'a rule \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+definition Derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) rule \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
   "Derives1 \<G> u i r v \<equiv> \<exists> x y N \<alpha>. 
     u = x @ [N] @ y \<and>
     v = x @ \<alpha> @ y \<and>
@@ -48,7 +48,7 @@ lemma Derives1_implies_derives1: "Derives1 \<G> u i r v \<Longrightarrow> derive
 lemma derives1_implies_Derives1: "derives1 \<G> u v \<Longrightarrow> \<exists> i r. Derives1 \<G> u i r v"
   by (auto simp add: Derives1_def derives1_def)
 
-fun Derivation :: "'a cfg \<Rightarrow> 'a sentence \<Rightarrow> 'a derivation \<Rightarrow> 'a sentence \<Rightarrow> bool" where
+fun Derivation :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) derivation \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
   "Derivation _ a [] b = (a = b)"
 | "Derivation \<G> a (d#D) b = (\<exists> x. Derives1 \<G> a (fst d) (snd d) x \<and> Derivation \<G> x D b)"
 
@@ -86,16 +86,16 @@ next
   from Derivation_Derives1[OF ay yz] show ?case by auto
 qed
 
-lemma rule_nonterminal_type[simp]: "wf_\<G> \<G> \<Longrightarrow> (N, \<alpha>) \<in> set (\<RR> \<G>) \<Longrightarrow> is_nonterminal \<G> N"
-  by (auto simp add: is_nonterminal_def wf_\<G>_defs)
+lemma rule_nonterminal_type[simp]: "wf_\<G> \<G> \<Longrightarrow> (N, \<alpha>) \<in> set (\<RR> \<G>) \<Longrightarrow> is_nonterminal N"
+  by (auto simp add: is_nonterminal_def wf_\<G>_def)
 
 lemma [elim]: "Derives1 \<G> a i r b \<Longrightarrow> r \<in> set (\<RR> \<G>)"
   using Derives1_def by metis
 
-lemma is_terminal_nonterminal: "wf_\<G> \<G> \<Longrightarrow> is_terminal \<G> x \<Longrightarrow> is_nonterminal \<G> x \<Longrightarrow> False"
-  by (auto simp: wf_\<G>_defs disjoint_iff is_nonterminal_def is_terminal_def)
+lemma is_terminal_nonterminal: "wf_\<G> \<G> \<Longrightarrow> is_terminal x \<Longrightarrow> is_nonterminal x \<Longrightarrow> False"
+  by (auto simp: wf_\<G>_def disjoint_iff is_nonterminal_def is_terminal_def)
 
-lemma is_word_is_terminal: "i < length u \<Longrightarrow> is_word \<G> u \<Longrightarrow> is_terminal \<G> (u ! i)"
+lemma is_word_is_terminal: "i < length u \<Longrightarrow> is_word u \<Longrightarrow> is_terminal (u!i)"
   using is_word_def by force
 
 lemma Derivation_append: "Derivation \<G> a (D@E) c = (\<exists> b. Derivation \<G> a D b \<and> Derivation \<G> b E c)"
@@ -235,7 +235,7 @@ next
 qed
 
 lemma Derivation_\<SS>1:
-  assumes "Derivation \<G> [\<SS> \<G>] D \<omega>" "is_word \<G> \<omega>" "wf_\<G> \<G>"
+  assumes "Derivation \<G> [\<SS> \<G>] D \<omega>" "is_word \<omega>" "wf_\<G> \<G>"
   shows "\<exists>\<alpha> E. Derivation \<G> \<alpha> E \<omega> \<and> (\<SS> \<G>,\<alpha>) \<in> set (\<RR> \<G>)"
 proof (cases D)
   case Nil
@@ -246,8 +246,7 @@ next
   then obtain \<alpha> where "Derives1 \<G> [\<SS> \<G>] (fst d) (snd d) \<alpha>" "Derivation \<G> \<alpha> D \<omega>"
     using assms by auto
   hence "(\<SS> \<G>, \<alpha>) \<in> set (\<RR> \<G>)"
-    unfolding Derives1_def
-    by (metis List.append.right_neutral List.list.discI append_eq_Cons_conv append_is_Nil_conv nth_Cons_0 self_append_conv2)
+    unfolding Derives1_def by (simp add: Cons_eq_append_conv)
   thus ?thesis
     using \<open>Derivation \<G> \<alpha> D \<omega>\<close> by auto
 qed
