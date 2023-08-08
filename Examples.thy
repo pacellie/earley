@@ -174,6 +174,11 @@ definition inp2 :: "(T2, N2) word" where
 
 lemmas cfg2_defs = cfg2_def rules2_def start_symbol2_def
 
+value "Earley\<^sub>L cfg2 inp2"
+value "recognizing_code (Earley\<^sub>L cfg2 inp2) cfg2 inp2"
+value "build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2)"
+value "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2)"
+
 lemma wf_\<G>2:
   "wf_\<G> cfg2"
   by (auto simp: wf_\<G>_def cfg2_defs)
