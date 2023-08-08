@@ -174,11 +174,11 @@ partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> ('a, 'b) cf
       let x = items (bs!k) ! i in
       let bs' =
         case next_symbol x of
-          Some a \<Rightarrow>
-            if is_terminal a then
-              if k < length \<omega> then bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x i)
-              else bs
-            else bins_upd bs k (Predict\<^sub>L k \<G> a)
+          Some a \<Rightarrow> (
+            case a of
+              T _ \<Rightarrow> if k < length \<omega> then bins_upd bs (k+1) (Scan\<^sub>L k \<omega> a x i)
+                     else bs
+            | NT _ \<Rightarrow> bins_upd bs k (Predict\<^sub>L k \<G> a))
         | None \<Rightarrow> bins_upd bs k (Complete\<^sub>L k x bs i)
       in Earley\<^sub>L_bin' k \<G> \<omega> bs' (i+1))"
 
@@ -855,7 +855,7 @@ lemma Earley\<^sub>L_bin'_simps[simp]:
     is_terminal a \<Longrightarrow> \<not> k < length \<omega> \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> bs (i+1)"
   "\<not> i \<ge> length (items (bs ! k)) \<Longrightarrow> x = items (bs!k) ! i \<Longrightarrow> next_symbol x = Some a \<Longrightarrow>
     \<not> is_terminal a \<Longrightarrow> Earley\<^sub>L_bin' k \<G> \<omega> bs i = Earley\<^sub>L_bin' k \<G> \<omega> (bins_upd bs k (Predict\<^sub>L k \<G> a)) (i+1)"
-  by (subst Earley\<^sub>L_bin'.simps, simp)+
+  by (subst Earley\<^sub>L_bin'.simps, auto simp: is_terminal_def split: symbol.split)+
 
 lemma Earley\<^sub>L_bin'_induct[case_names Base Complete\<^sub>F Scan\<^sub>F Pass Predict\<^sub>F]:
   assumes "(k, \<G>, \<omega>, bs) \<in> wf_earley_input"

@@ -61,6 +61,34 @@ lemma nonempty_deriv_iff_\<epsilon>_free:
   shows "(\<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []) \<longleftrightarrow> \<epsilon>_free \<G>"
   using \<epsilon>_free_impl_non_empty_deriv nonempty_deriv_impl_\<epsilon>_free by blast
 
+section \<open>recognizing executable code\<close>
+
+definition recognizing_code :: "('a, 'b) bins \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+  "recognizing_code bs \<G> \<omega> \<equiv> \<exists>x \<in> set (items (bs ! length \<omega>)). is_finished \<G> \<omega> x"
+
+lemma recognizing_code_iff_recognizing:
+  assumes "wf_bins \<G> \<omega> bs" "length bs = length \<omega> + 1"
+  shows "recognizing_code bs \<G> \<omega> \<longleftrightarrow> recognizing (bins bs) \<G> \<omega>" (is "?L \<longleftrightarrow> ?R")
+proof standard
+  assume ?L
+  then obtain x where "x \<in> set (items (bs ! length \<omega>))" "is_finished \<G> \<omega> x"
+    using assms(1) unfolding recognizing_code_def by blast
+  moreover have "x \<in> bins bs"
+    using assms(2) kth_bin_sub_bins \<open>x \<in> set (items (bs ! length \<omega>))\<close> by (metis (no_types, lifting) less_add_one subsetD)
+  ultimately show ?R
+    unfolding recognizing_def by blast
+next
+  assume ?R
+  thus ?L
+    using assms wf_item_in_kth_bin unfolding recognizing_code_def recognizing_def is_finished_def by blast
+qed
+
+corollary recognizing_code_iff_recognizing_Earley\<^sub>L:
+  assumes "wf_\<G> \<G>"
+  shows "recognizing_code (Earley\<^sub>L \<G> \<omega>) \<G> \<omega> \<longleftrightarrow> recognizing (bins (Earley\<^sub>L \<G> \<omega>)) \<G> \<omega>"
+  using recognizing_code_iff_recognizing assms wf_bins_Earley\<^sub>L length_Earley\<^sub>L_bins length_bins_Init\<^sub>L
+  by (metis Earley\<^sub>L_def nle_le)
+
 section \<open>Example 1: Addition\<close>
 
 datatype T1 = x | plus
@@ -83,6 +111,11 @@ definition inp1 :: "(T1, N1) sentence" where
 
 lemmas cfg1_defs = cfg1_def rules1_def start_symbol1_def
 
+value "Earley\<^sub>L cfg1 inp1"
+value "recognizing_code (Earley\<^sub>L cfg1 inp1) cfg1 inp1"
+value "build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1)"
+value "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1)"
+
 lemma wf_\<G>1:
   "wf_\<G> cfg1"
   by (auto simp: wf_\<G>_def cfg1_defs)
@@ -96,8 +129,8 @@ lemma nonempty_derives1:
   by (auto simp: \<epsilon>_free_def cfg1_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness1:
-  "recognizing (bins (Earley\<^sub>L cfg1 inp1)) cfg1 inp1 \<longleftrightarrow> cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
-  using correctness_Earley\<^sub>L wf_\<G>1 is_word_inp1 nonempty_derives1 by blast
+  "recognizing_code (Earley\<^sub>L cfg1 inp1) cfg1 inp1 \<longleftrightarrow> cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
+  using correctness_Earley\<^sub>L wf_\<G>1 is_word_inp1 nonempty_derives1 recognizing_code_iff_recognizing_Earley\<^sub>L by blast
 
 lemma wf_tree1:
   assumes "build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t"
@@ -154,8 +187,8 @@ lemma nonempty_derives2:
   by (auto simp: \<epsilon>_free_def cfg2_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
 lemma correctness2:
-  "recognizing (bins (Earley\<^sub>L cfg2 inp2)) cfg2 inp2 \<longleftrightarrow> cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
-  using correctness_Earley\<^sub>L wf_\<G>2 is_word_inp2 nonempty_derives2 by blast
+  "recognizing_code (Earley\<^sub>L cfg2 inp2) cfg2 inp2 \<longleftrightarrow> cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
+  using correctness_Earley\<^sub>L wf_\<G>2 is_word_inp2 nonempty_derives2 recognizing_code_iff_recognizing_Earley\<^sub>L by blast
 
 lemma wf_tree2:
   assumes "build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t"
