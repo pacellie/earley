@@ -8,7 +8,7 @@ datatype ('a, 'b) symbol = T 'a | NT 'b
 
 type_synonym ('a, 'b) rule = "('a, 'b) symbol \<times> ('a, 'b) symbol list"
 
-type_synonym ('a, 'b) sentence = "('a, 'b) symbol list"
+type_synonym ('a, 'b) word = "('a, 'b) symbol list"
 
 datatype ('a, 'b) cfg =
    CFG (\<RR> : "('a, 'b) rule list") (\<SS> : "('a, 'b) symbol")
@@ -26,10 +26,10 @@ lemma is_nonterminal_startsymbol:
   "wf_\<G> \<G> \<Longrightarrow> is_nonterminal (\<SS> \<G>)"
   by (simp add: is_nonterminal_def wf_\<G>_def)
 
-definition is_word :: "('a, 'b) sentence \<Rightarrow> bool" where
+definition is_word :: "('a, 'b) word \<Rightarrow> bool" where
   "is_word \<omega> \<equiv> \<forall>x \<in> set \<omega>. is_terminal x"
 
-definition derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+definition derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) word \<Rightarrow> bool" where
   "derives1 \<G> u v \<equiv> \<exists> x y N \<alpha>. 
     u = x @ [N] @ y \<and>
     v = x @ \<alpha> @ y \<and>
@@ -38,13 +38,13 @@ definition derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarro
 syntax
   "derives1" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
 
-definition derivations1 :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) sentence \<times> ('a, 'b) sentence) set" where
-  "derivations1 \<G> \<equiv> { (u,v) | u v. \<G> \<turnstile> u \<Rightarrow> v }"
+definition derivations1 :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) word \<times> ('a, 'b) word) set" where
+  "derivations1 \<G> \<equiv> { (u,v) . \<G> \<turnstile> u \<Rightarrow> v }"
 
-definition derivations :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) sentence \<times> ('a, 'b) sentence) set" where 
+definition derivations :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) word \<times> ('a, 'b) word) set" where 
   "derivations \<G> \<equiv> (derivations1 \<G>)^*"
 
-definition derives :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+definition derives :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) word \<Rightarrow> bool" where
   "derives \<G> u v \<equiv> ((u, v) \<in> derivations \<G>)"
 
 syntax

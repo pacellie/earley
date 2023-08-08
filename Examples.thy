@@ -7,7 +7,7 @@ section \<open>Epsilon productions\<close>
 definition \<epsilon>_free :: "('a, 'b) cfg \<Rightarrow> bool" where
   "\<epsilon>_free \<G> \<longleftrightarrow> (\<forall>r \<in> set (\<RR> \<G>). rule_body r \<noteq> [])"
 
-lemma \<epsilon>_free_impl_non_empty_sentence_deriv:
+lemma \<epsilon>_free_impl_non_empty_word_deriv:
   "\<epsilon>_free \<G> \<Longrightarrow> a \<noteq> [] \<Longrightarrow> \<not> Derivation \<G> a D []"
 proof (induction "length D" arbitrary: a D rule: nat_less_induct)
   case 1
@@ -40,7 +40,7 @@ qed
 
 lemma \<epsilon>_free_impl_non_empty_deriv:
   "\<epsilon>_free \<G> \<Longrightarrow> \<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []"
-  using \<epsilon>_free_impl_non_empty_sentence_deriv derives_implies_Derivation by (metis not_Cons_self2)
+  using \<epsilon>_free_impl_non_empty_word_deriv derives_implies_Derivation by (metis not_Cons_self2)
 
 lemma nonempty_deriv_impl_\<epsilon>_free:
   assumes "\<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []"
@@ -63,7 +63,7 @@ lemma nonempty_deriv_iff_\<epsilon>_free:
 
 section \<open>recognizing executable code\<close>
 
-definition recognizing_code :: "('a, 'b) bins \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+definition recognizing_code :: "('a, 'b) bins \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> bool" where
   "recognizing_code bs \<G> \<omega> \<equiv> \<exists>x \<in> set (items (bs ! length \<omega>)). is_finished \<G> \<omega> x"
 
 lemma recognizing_code_iff_recognizing:
@@ -106,7 +106,7 @@ definition start_symbol1 :: "(T1, N1) symbol" where
 definition cfg1 :: "(T1, N1) cfg" where
   "cfg1 = CFG rules1 start_symbol1"
 
-definition inp1 :: "(T1, N1) sentence" where
+definition inp1 :: "(T1, N1) word" where
   "inp1 = [T x, T plus, T x, T plus, T x]"
 
 lemmas cfg1_defs = cfg1_def rules1_def start_symbol1_def
@@ -169,7 +169,7 @@ definition start_symbol2 :: "(T2, N2) symbol" where
 definition cfg2 :: "(T2, N2) cfg" where
   "cfg2 = CFG rules2 start_symbol2"
 
-definition inp2 :: "(T2, N2) sentence" where
+definition inp2 :: "(T2, N2) word" where
   "inp2 = [T x]"
 
 lemmas cfg2_defs = cfg2_def rules2_def start_symbol2_def

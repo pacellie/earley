@@ -81,7 +81,7 @@ subsection \<open>Earley items\<close>
 definition rule_head :: "('a, 'b) rule \<Rightarrow> ('a, 'b) symbol" where
   "rule_head \<equiv> fst"
 
-definition rule_body :: "('a, 'b) rule \<Rightarrow> ('a, 'b) sentence" where
+definition rule_body :: "('a, 'b) rule \<Rightarrow> ('a, 'b) word" where
   "rule_body \<equiv> snd"
 
 datatype ('a, 'b) item = 
@@ -90,13 +90,13 @@ datatype ('a, 'b) item =
 definition item_rule_head :: "('a, 'b) item \<Rightarrow> ('a, 'b) symbol" where
   "item_rule_head x \<equiv> rule_head (item_rule x)"
 
-definition item_rule_body :: "('a, 'b) item \<Rightarrow> ('a, 'b) sentence" where
+definition item_rule_body :: "('a, 'b) item \<Rightarrow> ('a, 'b) word" where
   "item_rule_body x \<equiv> rule_body (item_rule x)"
 
-definition item_\<alpha> :: "('a, 'b) item \<Rightarrow> ('a, 'b) sentence" where
+definition item_\<alpha> :: "('a, 'b) item \<Rightarrow> ('a, 'b) word" where
   "item_\<alpha> x \<equiv> take (item_dot x) (item_rule_body x)"
 
-definition item_\<beta> :: "('a, 'b) item \<Rightarrow> ('a, 'b) sentence" where 
+definition item_\<beta> :: "('a, 'b) item \<Rightarrow> ('a, 'b) word" where 
   "item_\<beta> x \<equiv> drop (item_dot x) (item_rule_body x)"
 
 definition is_complete :: "('a, 'b) item \<Rightarrow> bool" where
@@ -107,18 +107,18 @@ definition next_symbol :: "('a, 'b) item \<Rightarrow> ('a, 'b) symbol option" w
 
 lemmas item_defs = item_rule_head_def item_rule_body_def item_\<alpha>_def item_\<beta>_def rule_head_def rule_body_def
 
-definition is_finished :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
+definition is_finished :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
   "is_finished \<G> \<omega> x \<equiv>
     item_rule_head x = \<SS> \<G> \<and>
     item_origin x = 0 \<and>
     item_end x = length \<omega> \<and> 
     is_complete x"
 
-definition recognizing :: "('a, 'b) item set \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+definition recognizing :: "('a, 'b) item set \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> bool" where
   "recognizing I \<G> \<omega> \<equiv> \<exists>x \<in> I. is_finished \<G> \<omega> x"
 
-inductive_set Earley :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set"
-  for \<G> :: "('a, 'b) cfg" and \<omega> :: "('a, 'b) sentence" where
+inductive_set Earley :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set"
+  for \<G> :: "('a, 'b) cfg" and \<omega> :: "('a, 'b) word" where
     Init: "r \<in> set (\<RR> \<G>) \<Longrightarrow> fst r = \<SS> \<G> \<Longrightarrow>
       Item r 0 0 0 \<in> Earley \<G> \<omega>"
   | Scan: "x = Item r b i j \<Longrightarrow> x \<in> Earley \<G> \<omega> \<Longrightarrow>
@@ -134,7 +134,7 @@ inductive_set Earley :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarr
 
 subsection \<open>Well-formedness\<close>
 
-definition wf_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence => ('a, 'b) item \<Rightarrow> bool" where 
+definition wf_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word => ('a, 'b) item \<Rightarrow> bool" where 
   "wf_item \<G> \<omega> x \<equiv>
     item_rule x \<in> set (\<RR> \<G>) \<and> 
     item_dot x \<le> length (item_rule_body x) \<and>
@@ -172,7 +172,7 @@ lemma wf_Earley:
 
 subsection \<open>Soundness\<close>
 
-definition sound_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
+definition sound_item :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
   "sound_item \<G> \<omega> x \<equiv> \<G> \<turnstile> [item_rule_head x] \<Rightarrow>\<^sup>* (\<omega>\<lbrakk>item_origin x..item_end x\<rparr> @ item_\<beta> x)"
 
 lemma sound_Init:
@@ -279,7 +279,7 @@ qed
 
 subsection \<open>Completeness\<close>
 
-definition partially_completed :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> (('a, 'b) derivation \<Rightarrow> bool) \<Rightarrow> bool" where
+definition partially_completed :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set \<Rightarrow> (('a, 'b) derivation \<Rightarrow> bool) \<Rightarrow> bool" where
   "partially_completed k \<G> \<omega> E P \<equiv> \<forall>r b i' i j x a D.
     i \<le> j \<and> j \<le> k \<and> k \<le> length \<omega> \<and>
     x = Item r b i' i \<and> x \<in> E \<and> next_symbol x = Some a \<and>

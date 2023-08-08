@@ -11,7 +11,7 @@ subsection \<open>Pointer lemmas\<close>
 definition predicts :: "('a, 'b) item \<Rightarrow> bool" where
   "predicts x \<equiv> item_origin x = item_end x \<and> item_dot x = 0"
 
-definition scans :: "('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
+definition scans :: "('a, 'b) word \<Rightarrow> nat \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
   "scans \<omega> k x y \<equiv> y = inc_item x k \<and> (\<exists>a. next_symbol x = Some a \<and> \<omega>!(k-1) = a)"
 
 definition completes :: "nat \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) item \<Rightarrow> bool" where
@@ -21,7 +21,7 @@ definition completes :: "nat \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) 
 definition sound_null_ptr :: "('a, 'b) entry \<Rightarrow> bool" where
   "sound_null_ptr e \<equiv> (pointer e = Null \<longrightarrow> predicts (item e))"
 
-definition sound_pre_ptr :: "('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry \<Rightarrow> bool" where
+definition sound_pre_ptr :: "('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry \<Rightarrow> bool" where
   "sound_pre_ptr \<omega> bs k e \<equiv> \<forall>pre. pointer e = Pre pre \<longrightarrow>
     k > 0 \<and> pre < length (bs!(k-1)) \<and> scans \<omega> k (item (bs!(k-1)!pre)) (item e)"
 
@@ -29,7 +29,7 @@ definition sound_prered_ptr :: "('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('
   "sound_prered_ptr bs k e \<equiv> \<forall>p ps k' pre red. pointer e = PreRed p ps \<and> (k', pre, red) \<in> set (p#ps) \<longrightarrow>
     k' < k \<and> pre < length (bs!k') \<and> red < length (bs!k) \<and> completes k (item (bs!k'!pre)) (item e) (item (bs!k!red))"
 
-definition sound_ptrs :: "('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> bool" where
+definition sound_ptrs :: "('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> bool" where
   "sound_ptrs \<omega> bs \<equiv> \<forall>k < length bs. \<forall>e \<in> set (bs!k).
     sound_null_ptr e \<and> sound_pre_ptr \<omega> bs k e \<and> sound_prered_ptr bs k e"
 
@@ -549,7 +549,7 @@ datatype ('a, 'b) tree =
   Leaf "('a, 'b) symbol"
   | Branch "('a, 'b) symbol" "('a, 'b) tree list"
 
-fun yield_tree :: "('a, 'b) tree \<Rightarrow> ('a, 'b) sentence" where
+fun yield_tree :: "('a, 'b) tree \<Rightarrow> ('a, 'b) word" where
   "yield_tree (Leaf a) = [a]"
 | "yield_tree (Branch _ ts) = concat (map yield_tree ts)"
 
@@ -569,7 +569,7 @@ fun wf_item_tree :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a,
     N = item_rule_head x \<and> map root_tree ts = take (item_dot x) (item_rule_body x) \<and>
     (\<forall>t \<in> set ts. wf_rule_tree \<G> t))"
 
-definition wf_yield_tree :: "('a, 'b) sentence \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) tree \<Rightarrow> bool" where
+definition wf_yield_tree :: "('a, 'b) word \<Rightarrow> ('a, 'b) item \<Rightarrow> ('a, 'b) tree \<Rightarrow> bool" where
   "wf_yield_tree \<omega> x t \<longleftrightarrow> yield_tree t = \<omega>\<lbrakk>item_origin x..item_end x\<rparr>"
 
 datatype ('a, 'b) forest =
@@ -726,7 +726,7 @@ qed simp
 
 subsection \<open>Parse tree\<close>
 
-partial_function (option) build_tree' :: "('a, 'b) bins \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('a, 'b) tree option" where
+partial_function (option) build_tree' :: "('a, 'b) bins \<Rightarrow> ('a, 'b) word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('a, 'b) tree option" where
   "build_tree' bs \<omega> k i = (
     let e = bs!k!i in (
     case pointer e of
@@ -753,7 +753,7 @@ partial_function (option) build_tree' :: "('a, 'b) bins \<Rightarrow> ('a, 'b) s
 
 declare build_tree'.simps [code]
 
-definition build_tree :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) tree option" where
+definition build_tree :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) tree option" where
   "build_tree \<G> \<omega> bs = (
     let k = length bs - 1 in (
     case filter_with_index (\<lambda>x. is_finished \<G> \<omega> x) (items (bs!k)) of
@@ -780,7 +780,7 @@ lemma build_tree'_simps[simp]:
    build_tree' bs \<omega> k i = Some (Branch N (ts @ [t]))"
   by (subst build_tree'.simps, simp)+
 
-definition wf_tree_input :: "(('a, 'b) bins \<times> ('a, 'b) sentence \<times> nat \<times> nat) set" where
+definition wf_tree_input :: "(('a, 'b) bins \<times> ('a, 'b) word \<times> nat \<times> nat) set" where
   "wf_tree_input = {
     (bs, \<omega>, k, i) | bs \<omega> k i.
       sound_ptrs \<omega> bs \<and>
@@ -789,7 +789,7 @@ definition wf_tree_input :: "(('a, 'b) bins \<times> ('a, 'b) sentence \<times> 
       i < length (bs!k)
   }"
 
-fun build_tree'_measure :: "(('a, 'b) bins \<times> ('a, 'b) sentence \<times> nat \<times> nat) \<Rightarrow> nat" where
+fun build_tree'_measure :: "(('a, 'b) bins \<times> ('a, 'b) word \<times> nat \<times> nat) \<Rightarrow> nat" where
   "build_tree'_measure (bs, \<omega>, k, i) = foldl (+) 0 (map length (take k bs)) + i"
 
 lemma wf_tree_input_pre:
@@ -1537,7 +1537,7 @@ proof (induction xs arbitrary: vs)
   qed
 qed simp
 
-partial_function (option) build_trees' :: "('a, 'b) bins \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> ('a, 'b) forest list option" where
+partial_function (option) build_trees' :: "('a, 'b) bins \<Rightarrow> ('a, 'b) word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat set \<Rightarrow> ('a, 'b) forest list option" where
   "build_trees' bs \<omega> k i I = (
     let e = bs!k!i in (
     case pointer e of
@@ -1570,7 +1570,7 @@ partial_function (option) build_trees' :: "('a, 'b) bins \<Rightarrow> ('a, 'b) 
 
 declare build_trees'.simps [code]
 
-definition build_trees :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) forest list option" where
+definition build_trees :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) forest list option" where
   "build_trees \<G> \<omega> bs = (
     let k = length bs - 1 in
     let finished = filter_with_index (\<lambda>x. is_finished \<G> \<omega> x) (items (bs!k)) in
@@ -1584,7 +1584,7 @@ lemma build_forest'_simps[simp]:
     build_trees' bs \<omega> k i I = those (map (\<lambda>f. case f of FBranch N fss \<Rightarrow> Some (FBranch N (fss @ [[FLeaf (\<omega>!(k-1))]])) | _ \<Rightarrow> None) pres)"
   by (subst build_trees'.simps, simp)+
 
-definition wf_trees_input :: "(('a, 'b) bins \<times> ('a, 'b) sentence \<times> nat \<times> nat \<times> nat set) set" where
+definition wf_trees_input :: "(('a, 'b) bins \<times> ('a, 'b) word \<times> nat \<times> nat \<times> nat set) set" where
   "wf_trees_input = {
     (bs, \<omega>, k, i, I) | bs \<omega> k i I.
       sound_ptrs \<omega> bs \<and>
@@ -1594,7 +1594,7 @@ definition wf_trees_input :: "(('a, 'b) bins \<times> ('a, 'b) sentence \<times>
       i \<in> I
   }"
 
-fun build_forest'_measure :: "(('a, 'b) bins \<times> ('a, 'b) sentence \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
+fun build_forest'_measure :: "(('a, 'b) bins \<times> ('a, 'b) word \<times> nat \<times> nat \<times> nat set) \<Rightarrow> nat" where
   "build_forest'_measure (bs, \<omega>, k, i, I) = foldl (+) 0 (map length (take (k+1) bs)) - card I"
 
 lemma wf_trees_input_pre:

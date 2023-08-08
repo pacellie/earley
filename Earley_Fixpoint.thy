@@ -20,7 +20,7 @@ definition bin :: "('a, 'b) item set \<Rightarrow> nat \<Rightarrow> ('a, 'b) it
 definition Init\<^sub>F :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) item set" where
   "Init\<^sub>F \<G> \<equiv> { init_item r 0 | r. r \<in> set (\<RR> \<G>) \<and> fst r = (\<SS> \<G>) }"
 
-definition Scan\<^sub>F :: "nat \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
+definition Scan\<^sub>F :: "nat \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Scan\<^sub>F k \<omega> I \<equiv> { inc_item x (k+1) | x a.
     x \<in> bin I k \<and>
     \<omega>!k = a \<and>
@@ -40,17 +40,17 @@ definition Complete\<^sub>F :: "nat \<Rightarrow> ('a, 'b) item set \<Rightarrow
     is_complete y \<and>
     next_symbol x = Some (item_rule_head y) }"
 
-definition Earley\<^sub>F_bin_step :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
+definition Earley\<^sub>F_bin_step :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F_bin_step k \<G> \<omega> I \<equiv> I \<union> Scan\<^sub>F k \<omega> I \<union> Complete\<^sub>F k I \<union> Predict\<^sub>F k \<G> I"
 
-definition Earley\<^sub>F_bin :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
+definition Earley\<^sub>F_bin :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F_bin k \<G> \<omega> I \<equiv> limit (Earley\<^sub>F_bin_step k \<G> \<omega>) I"
 
-fun Earley\<^sub>F_bins :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set" where
+fun Earley\<^sub>F_bins :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F_bins 0 \<G> \<omega> = Earley\<^sub>F_bin 0 \<G> \<omega> (Init\<^sub>F \<G>)"
 | "Earley\<^sub>F_bins (Suc n) \<G> \<omega> = Earley\<^sub>F_bin (Suc n) \<G> \<omega> (Earley\<^sub>F_bins n \<G> \<omega>)"
 
-definition Earley\<^sub>F :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) item set" where
+definition Earley\<^sub>F :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) item set" where
   "Earley\<^sub>F \<G> \<omega> \<equiv> Earley\<^sub>F_bins (length \<omega>) \<G> \<omega>"
 
 
@@ -284,7 +284,7 @@ subsection \<open>Completeness\<close>
 definition prev_symbol :: "('a, 'b) item \<Rightarrow> ('a, 'b) symbol option" where
   "prev_symbol x \<equiv> if item_dot x = 0 then None else Some (item_rule_body x ! (item_dot x - 1))"
 
-definition base :: "('a, 'b) sentence \<Rightarrow> ('a, 'b) item set \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
+definition base :: "('a, 'b) word \<Rightarrow> ('a, 'b) item set \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
   "base \<omega> I k \<equiv> { x . x \<in> I \<and> item_end x = k \<and> k > 0 \<and> prev_symbol x = Some (\<omega>!(k-1)) }"
 
 lemma Earley\<^sub>F_bin_sub_Earley\<^sub>F_bin:

@@ -32,7 +32,7 @@ proof -
     by (metis derives_def derivations_def derives1_eq_derivations1)
 qed
 
-definition Derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) rule \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+definition Derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> nat \<Rightarrow> ('a, 'b) rule \<Rightarrow> ('a, 'b) word \<Rightarrow> bool" where
   "Derives1 \<G> u i r v \<equiv> \<exists> x y N \<alpha>. 
     u = x @ [N] @ y \<and>
     v = x @ \<alpha> @ y \<and>
@@ -48,7 +48,7 @@ lemma Derives1_implies_derives1: "Derives1 \<G> u i r v \<Longrightarrow> \<G> \
 lemma derives1_implies_Derives1: "\<G> \<turnstile> u \<Rightarrow> v \<Longrightarrow> \<exists> i r. Derives1 \<G> u i r v"
   by (auto simp add: Derives1_def derives1_def)
 
-fun Derivation :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) derivation \<Rightarrow> ('a, 'b) sentence \<Rightarrow> bool" where
+fun Derivation :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) derivation \<Rightarrow> ('a, 'b) word \<Rightarrow> bool" where
   "Derivation _ a [] b = (a = b)"
 | "Derivation \<G> a (d#D) b = (\<exists> x. Derives1 \<G> a (fst d) (snd d) x \<and> Derivation \<G> x D b)"
 

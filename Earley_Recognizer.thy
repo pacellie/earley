@@ -112,26 +112,26 @@ definition bin_upto :: "('a, 'b) bin \<Rightarrow> nat \<Rightarrow> ('a, 'b) it
 definition bins_upto :: "('a, 'b) bins \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('a, 'b) item set" where
   "bins_upto bs k i \<equiv> \<Union> { set (items (bs ! l)) | l. l < k } \<union> bin_upto (bs ! k) i"
 
-definition wf_bin_items :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) item list \<Rightarrow> bool" where
+definition wf_bin_items :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> nat \<Rightarrow> ('a, 'b) item list \<Rightarrow> bool" where
   "wf_bin_items \<G> \<omega> k xs \<equiv> \<forall>x \<in> set xs. wf_item \<G> \<omega> x \<and> item_end x = k"
 
-definition wf_bin :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> nat \<Rightarrow> ('a, 'b) bin \<Rightarrow> bool" where
+definition wf_bin :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> nat \<Rightarrow> ('a, 'b) bin \<Rightarrow> bool" where
   "wf_bin \<G> \<omega> k b \<equiv> distinct (items b) \<and> wf_bin_items \<G> \<omega> k (items b)"
 
-definition wf_bins :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> bool" where
+definition wf_bins :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> bool" where
   "wf_bins \<G> \<omega> bs \<equiv> \<forall>k < length bs. wf_bin \<G> \<omega> k (bs!k)"
 
 definition nonempty_derives :: "('a, 'b) cfg \<Rightarrow> bool" where
   "nonempty_derives \<G> \<equiv> \<forall>s. \<not> \<G> \<turnstile> [s] \<Rightarrow>\<^sup>* []"
 
-definition Init\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
+definition Init\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins" where
   "Init\<^sub>L \<G> \<omega> \<equiv>
     let rs = filter (\<lambda>r. rule_head r = \<SS> \<G>) (\<RR> \<G>) in
     let b0 = map (\<lambda>r. (Entry (init_item r 0) Null)) rs in
     let bs = replicate (length \<omega> + 1) ([]) in
     bs[0 := b0]"
 
-definition Scan\<^sub>L :: "nat \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) symbol  \<Rightarrow> ('a, 'b) item \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry list" where
+definition Scan\<^sub>L :: "nat \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) symbol  \<Rightarrow> ('a, 'b) item \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry list" where
   "Scan\<^sub>L k \<omega> a x pre \<equiv>
     if \<omega>!k = a then
       let x' = inc_item x (k+1) in
@@ -167,7 +167,7 @@ fun bin_upds :: "('a, 'b) entry list \<Rightarrow> ('a, 'b) bin \<Rightarrow> ('
 definition bins_upd :: "('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) entry list \<Rightarrow> ('a, 'b) bins" where
   "bins_upd bs k es \<equiv> bs[k := bin_upds es (bs!k)]"
 
-partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) bins" where
+partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L_bin' k \<G> \<omega> bs i = (
     if i \<ge> length (items (bs ! k)) then bs
     else
@@ -184,14 +184,14 @@ partial_function (tailrec) Earley\<^sub>L_bin' :: "nat \<Rightarrow> ('a, 'b) cf
 
 declare Earley\<^sub>L_bin'.simps[code]
 
-definition Earley\<^sub>L_bin :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) bins" where
+definition Earley\<^sub>L_bin :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L_bin k \<G> \<omega> bs \<equiv> Earley\<^sub>L_bin' k \<G> \<omega> bs 0"
 
-fun Earley\<^sub>L_bins :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
+fun Earley\<^sub>L_bins :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L_bins 0 \<G> \<omega> = Earley\<^sub>L_bin 0 \<G> \<omega> (Init\<^sub>L \<G> \<omega>)"
 | "Earley\<^sub>L_bins (Suc n) \<G> \<omega> = Earley\<^sub>L_bin (Suc n) \<G> \<omega> (Earley\<^sub>L_bins n \<G> \<omega>)"
 
-definition Earley\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) sentence \<Rightarrow> ('a, 'b) bins" where
+definition Earley\<^sub>L :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins" where
   "Earley\<^sub>L \<G> \<omega> \<equiv> Earley\<^sub>L_bins (length \<omega>) \<G> \<omega>"
 
 
@@ -769,7 +769,7 @@ lemma Ex_wf_bins:
   apply (auto simp: wf_bins_def wf_bin_def wf_\<G>_def wf_bin_items_def items_def split: prod.splits)
   by (metis cfg.sel distinct.simps(1) empty_iff empty_set)
 
-definition wf_earley_input :: "(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sentence \<times> ('a, 'b) bins) set" where
+definition wf_earley_input :: "(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) word \<times> ('a, 'b) bins) set" where
   "wf_earley_input = {
     (k, \<G>, \<omega>, bs) | k \<G> \<omega> bs.
       k \<le> length \<omega> \<and>
@@ -778,7 +778,7 @@ definition wf_earley_input :: "(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sent
       wf_bins \<G> \<omega> bs
   }"
 
-typedef ('a, 'b) wf_bins = "wf_earley_input::(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sentence \<times> ('a, 'b) bins) set"
+typedef ('a, 'b) wf_bins = "wf_earley_input::(nat \<times> ('a, 'b) cfg \<times> ('a, 'b) word \<times> ('a, 'b) bins) set"
   morphisms from_wf_bins to_wf_bins
   using Ex_wf_bins by (auto simp: wf_earley_input_def)
 
@@ -842,7 +842,7 @@ proof -
     by (simp add: *(1-3) wf_earley_input_def)
 qed
 
-fun earley_measure :: "nat \<times> ('a, 'b) cfg \<times> ('a, 'b) sentence \<times> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> nat" where
+fun earley_measure :: "nat \<times> ('a, 'b) cfg \<times> ('a, 'b) word \<times> ('a, 'b) bins \<Rightarrow> nat \<Rightarrow> nat" where
   "earley_measure (k, \<G>, \<omega>, bs) i = card { x | x. wf_item \<G> \<omega> x \<and> item_end x = k } - i"
 
 lemma Earley\<^sub>L_bin'_simps[simp]:
