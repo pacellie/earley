@@ -819,6 +819,7 @@ definition JSON_inp4 :: "(char, JSON_NT) word" where
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp4)" \<comment>\<open>585597\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp4) JSON_cfg JSON_inp4"
+
 value "build_tree JSON_cfg JSON_inp4 (Earley\<^sub>L JSON_cfg JSON_inp4)"
 value "build_trees JSON_cfg JSON_inp4 (Earley\<^sub>L JSON_cfg JSON_inp4)"
 
