@@ -1211,7 +1211,7 @@ proof -
     using assms(2) by blast
 qed
 
-theorem wf_rule_root_yield_tree_build_forest:
+theorem wf_rule_root_yield_tree_build_tree:
   assumes "wf_bins \<G> \<omega> bs" "sound_ptrs \<omega> bs" "mono_red_ptr bs" "length bs = length \<omega> + 1"
   assumes "build_tree \<G> \<omega> bs = Some t"
   shows "wf_rule_tree \<G> t \<and> root_tree t = \<SS> \<G> \<and> yield_tree t = \<omega>"
@@ -1257,7 +1257,7 @@ corollary wf_rule_root_yield_tree_build_tree_Earley\<^sub>L:
   assumes "wf_\<G> \<G>" "nonempty_derives \<G>"
   assumes "build_tree \<G> \<omega> (Earley\<^sub>L \<G> \<omega>) = Some t"
   shows "wf_rule_tree \<G> t \<and> root_tree t = \<SS> \<G> \<and> yield_tree t = \<omega>"
-  using assms wf_rule_root_yield_tree_build_forest wf_bins_Earley\<^sub>L sound_mono_ptrs_Earley\<^sub>L Earley\<^sub>L_def
+  using assms wf_rule_root_yield_tree_build_tree wf_bins_Earley\<^sub>L sound_mono_ptrs_Earley\<^sub>L Earley\<^sub>L_def
     length_Earley\<^sub>L_bins length_bins_Init\<^sub>L by (metis nle_le)
 
 theorem correctness_build_tree_Earley\<^sub>L:
