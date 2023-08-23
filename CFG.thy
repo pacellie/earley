@@ -36,7 +36,7 @@ definition derives1 :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> (
     (N, \<alpha>) \<in> set (\<RR> \<G>)"
 
 syntax
-  "derives1" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow> _" [1000,0] 1000)
+  "derives1" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow> _" [1000,0,0] 1000)
 
 definition derivations1 :: "('a, 'b) cfg \<Rightarrow> (('a, 'b) word \<times> ('a, 'b) word) set" where
   "derivations1 \<G> \<equiv> { (u,v) . \<G> \<turnstile> u \<Rightarrow> v }"
@@ -48,6 +48,6 @@ definition derives :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('
   "derives \<G> u v \<equiv> ((u, v) \<in> derivations \<G>)"
 
 syntax
-  "derives" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow>\<^sup>* _" [1000,0] 1000)
+  "derives" :: "('a, 'b) cfg \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> bool" ("_ \<turnstile> _ \<Rightarrow>\<^sup>* _" [1000,0,0] 1000)
 
 end
