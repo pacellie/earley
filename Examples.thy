@@ -1,5 +1,7 @@
 theory Examples
-  imports Earley_Parser
+  imports
+    Earley_Parser
+    "HOL-Library.Code_Target_Nat"
 begin
 
 section \<open>Epsilon productions\<close>
@@ -668,7 +670,6 @@ definition JSON_inp1 :: "(char, JSON_NT) word" where
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp1)" \<comment>\<open>77921\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp1) JSON_cfg JSON_inp1"
 value "build_tree JSON_cfg JSON_inp1 (Earley\<^sub>L JSON_cfg JSON_inp1)"
-value "build_trees JSON_cfg JSON_inp1 (Earley\<^sub>L JSON_cfg JSON_inp1)"
 
 definition JSON_inp2 :: "(char, JSON_NT) word" where
   \<open>JSON_inp2 = map T ''
@@ -688,7 +689,6 @@ definition JSON_inp2 :: "(char, JSON_NT) word" where
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp2)" \<comment>\<open>33720\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp2) JSON_cfg JSON_inp2"
 value "build_tree JSON_cfg JSON_inp2 (Earley\<^sub>L JSON_cfg JSON_inp2)"
-value "build_trees JSON_cfg JSON_inp2 (Earley\<^sub>L JSON_cfg JSON_inp2)"
 
 definition JSON_inp3 :: "(char, JSON_NT) word" where
   \<open>JSON_inp3 = map T ''
@@ -723,7 +723,6 @@ definition JSON_inp3 :: "(char, JSON_NT) word" where
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp3)" \<comment>\<open>74472\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp3) JSON_cfg JSON_inp3"
 value "build_tree JSON_cfg JSON_inp3 (Earley\<^sub>L JSON_cfg JSON_inp3)"
-value "build_trees JSON_cfg JSON_inp3 (Earley\<^sub>L JSON_cfg JSON_inp3)"
 
 definition JSON_inp4 :: "(char, JSON_NT) word" where
   \<open>JSON_inp4 = map T ''
@@ -819,9 +818,7 @@ definition JSON_inp4 :: "(char, JSON_NT) word" where
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp4)" \<comment>\<open>585597\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp4) JSON_cfg JSON_inp4"
-
 value "build_tree JSON_cfg JSON_inp4 (Earley\<^sub>L JSON_cfg JSON_inp4)"
-value "build_trees JSON_cfg JSON_inp4 (Earley\<^sub>L JSON_cfg JSON_inp4)"
 
 
 definition JSON_inp5 :: "(char, JSON_NT) word" where
@@ -858,6 +855,7 @@ definition JSON_inp5 :: "(char, JSON_NT) word" where
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp5)" \<comment>\<open>114506\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp5) JSON_cfg JSON_inp5"
 value "build_tree JSON_cfg JSON_inp5 (Earley\<^sub>L JSON_cfg JSON_inp5)"
-value "build_trees JSON_cfg JSON_inp5 (Earley\<^sub>L JSON_cfg JSON_inp5)"
+
+(* export_code Earley\<^sub>L recognizing_code build_tree build_trees JSON_cfg JSON_inp1 in OCaml *)
 
 end
