@@ -91,132 +91,187 @@ corollary recognizing_code_iff_recognizing_Earley\<^sub>L:
   using recognizing_code_iff_recognizing assms wf_bins_Earley\<^sub>L length_Earley\<^sub>L_bins length_bins_Init\<^sub>L
   by (metis Earley\<^sub>L_def nle_le)
 
-section \<open>Example 1: Addition\<close>
+definition size_bins :: "('a, 'b) bins \<Rightarrow> nat" where
+  "size_bins bs = fold (+) (map length bs) 0"
 
-datatype T1 = x | plus
-datatype N1 = S
+fun size_pointer :: "('a, 'b) entry \<Rightarrow> nat" where
+  "size_pointer (Entry _ (PreRed _ ps)) = 1 + length ps"
+| "size_pointer _ = 1"
 
-definition rules1 :: "(T1, N1) rule list" where
+definition size_pointers :: "('a, 'b) bins \<Rightarrow> nat" where
+  "size_pointers bs = fold (+) (map (\<lambda>b. fold (+) (map (\<lambda>e. size_pointer e) b) 0) bs) 0" 
+
+export_code Earley\<^sub>L build_tree size_bins in OCaml
+
+section \<open>Terminal, Non-terminals, Start symbol\<close>
+
+datatype T = a
+
+datatype N = S | X | Y | Z
+
+definition start_symbol :: "(T, N) symbol" where
+  "start_symbol = NT S"
+
+section \<open>O(n^3) ambiguous grammars\<close>
+
+subsection \<open>S -> SS | a\<close>
+
+definition rules1 :: "(T, N) rule list" where
   "rules1 = [
-    (NT S, [T x]),
-    (NT S, [NT S, T plus, NT S])
+    (NT S, [NT S, NT S]),
+    (NT S, [T a])
   ]"
 
-definition start_symbol1 :: "(T1, N1) symbol" where
-  "start_symbol1 = NT S"
+definition cfg1 :: "(T, N) cfg" where
+  "cfg1 = CFG rules1 start_symbol"
 
-definition cfg1 :: "(T1, N1) cfg" where
-  "cfg1 = CFG rules1 start_symbol1"
-
-definition inp1 :: "(T1, N1) word" where
-  "inp1 = [T x, T plus, T x, T plus, T x]"
-
-lemmas cfg1_defs = cfg1_def rules1_def start_symbol1_def
-
-value "Earley\<^sub>L cfg1 inp1"
-value "recognizing_code (Earley\<^sub>L cfg1 inp1) cfg1 inp1"
-value "build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1)"
-value "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1)"
+lemmas cfg1_defs = cfg1_def rules1_def start_symbol_def
 
 lemma wf_\<G>1:
   "wf_\<G> cfg1"
   by (auto simp: wf_\<G>_def cfg1_defs)
 
-lemma is_word_inp1:
-  "is_word inp1"
-  by (auto simp: is_word_def is_terminal_def cfg1_defs inp1_def)
-
 lemma nonempty_derives1:
   "nonempty_derives cfg1"
-  by (auto simp: \<epsilon>_free_def cfg1_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
+  by (auto simp: nonempty_derives_def cfg1_defs \<epsilon>_free_def \<epsilon>_free_impl_non_empty_deriv item_defs(6))
 
-lemma correctness1:
-  "recognizing_code (Earley\<^sub>L cfg1 inp1) cfg1 inp1 \<longleftrightarrow> cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
-  using correctness_Earley\<^sub>L wf_\<G>1 is_word_inp1 nonempty_derives1 recognizing_code_iff_recognizing_Earley\<^sub>L by blast
+export_code rules1 cfg1 in OCaml
 
-lemma wf_tree1:
-  assumes "build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t"
-  shows "wf_rule_tree cfg1 t \<and> root_tree t = \<SS> cfg1 \<and> yield_tree t = inp1"
-  using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_tree_Earley\<^sub>L by blast
+section \<open>O(n^2) unambiguous or bounded ambiguity\<close>
 
-lemma correctness_tree1:
-  "(\<exists>t. build_tree cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some t) \<longleftrightarrow> cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
-  using correctness_build_tree_Earley\<^sub>L is_word_inp1 nonempty_derives1 wf_\<G>1 by blast
+subsection \<open>S -> aS | a\<close>
 
-lemma wf_trees1:
-  assumes "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "wf_rule_tree cfg1 t \<and> root_tree t = \<SS> cfg1 \<and> yield_tree t = inp1"
-  using assms nonempty_derives1 wf_\<G>1 wf_rule_root_yield_tree_build_trees_Earley\<^sub>L by blast
-
-lemma soundness_trees1:
-  assumes "build_trees cfg1 inp1 (Earley\<^sub>L cfg1 inp1) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "cfg1 \<turnstile> [\<SS> cfg1] \<Rightarrow>\<^sup>* inp1"
-  using assms is_word_inp1 nonempty_derives1 soundness_build_trees_Earley\<^sub>L wf_\<G>1 by blast
-
-section \<open>Example 2: Cyclic reduction pointers\<close>
-
-datatype T2 = x
-datatype N2 = A | B
-
-definition rules2 :: "(T2, N2) rule list" where
+definition rules2 :: "(T, N) rule list" where
   "rules2 = [
-    (NT B, [NT A]),
-    (NT A, [NT B]),
-    (NT A, [T x])
+    (NT S, [T a, NT S]),
+    (NT S, [T a])
   ]"
 
-definition start_symbol2 :: "(T2, N2) symbol" where
-  "start_symbol2 = NT A"
+definition cfg2 :: "(T, N) cfg" where
+  "cfg2 = CFG rules2 start_symbol"
 
-definition cfg2 :: "(T2, N2) cfg" where
-  "cfg2 = CFG rules2 start_symbol2"
-
-definition inp2 :: "(T2, N2) word" where
-  "inp2 = [T x]"
-
-lemmas cfg2_defs = cfg2_def rules2_def start_symbol2_def
-
-value "Earley\<^sub>L cfg2 inp2"
-value "recognizing_code (Earley\<^sub>L cfg2 inp2) cfg2 inp2"
-value "build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2)"
-value "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2)"
+lemmas cfg2_defs = cfg2_def rules2_def start_symbol_def
 
 lemma wf_\<G>2:
   "wf_\<G> cfg2"
   by (auto simp: wf_\<G>_def cfg2_defs)
 
-lemma is_word_inp2:
-  "is_word inp2"
-  by (auto simp: is_word_def is_terminal_def cfg2_defs inp2_def)
-
 lemma nonempty_derives2:
   "nonempty_derives cfg2"
-  by (auto simp: \<epsilon>_free_def cfg2_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
+  by (auto simp: nonempty_derives_def cfg2_defs \<epsilon>_free_def \<epsilon>_free_impl_non_empty_deriv item_defs(6))
 
-lemma correctness2:
-  "recognizing_code (Earley\<^sub>L cfg2 inp2) cfg2 inp2 \<longleftrightarrow> cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
-  using correctness_Earley\<^sub>L wf_\<G>2 is_word_inp2 nonempty_derives2 recognizing_code_iff_recognizing_Earley\<^sub>L by blast
+subsection \<open>S -> aSa | a\<close>
 
-lemma wf_tree2:
-  assumes "build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t"
-  shows "wf_rule_tree cfg2 t \<and> root_tree t = \<SS> cfg2 \<and> yield_tree t = inp2"
-  using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_tree_Earley\<^sub>L by blast
+definition rules3 :: "(T, N) rule list" where
+  "rules3 = [
+    (NT S, [T a, NT S, T a]),
+    (NT S, [T a])
+  ]"
 
-lemma correctness_tree2:
-  "(\<exists>t. build_tree cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some t) \<longleftrightarrow> cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
-  using correctness_build_tree_Earley\<^sub>L is_word_inp2 nonempty_derives2 wf_\<G>2 by blast
+definition cfg3 :: "(T, N) cfg" where
+  "cfg3 = CFG rules3 start_symbol"
 
-lemma wf_trees2:
-  assumes "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "wf_rule_tree cfg2 t \<and> root_tree t = \<SS> cfg2 \<and> yield_tree t = inp2"
-  using assms nonempty_derives2 wf_\<G>2 wf_rule_root_yield_tree_build_trees_Earley\<^sub>L by blast
+lemmas cfg3_defs = cfg3_def rules3_def start_symbol_def
 
-lemma soundness_trees2:
-  assumes "build_trees cfg2 inp2 (Earley\<^sub>L cfg2 inp2) = Some fs" "f \<in> set fs" "t \<in> set (trees f)"
-  shows "cfg2 \<turnstile> [\<SS> cfg2] \<Rightarrow>\<^sup>* inp2"
-  using assms is_word_inp2 nonempty_derives2 soundness_build_trees_Earley\<^sub>L wf_\<G>2 by blast
+lemma wf_\<G>3:
+  "wf_\<G> cfg3"
+  by (auto simp: wf_\<G>_def cfg3_defs)
 
-section \<open>Example 3: JSON\<close>
+lemma nonempty_derives3:
+  "nonempty_derives cfg3"
+  by (auto simp: nonempty_derives_def cfg3_defs \<epsilon>_free_def \<epsilon>_free_impl_non_empty_deriv item_defs(6))
+
+section \<open>O(n) bounded state, non-right recursive LR(k) grammars\<close>
+
+subsection \<open>S -> Sa | a\<close>
+
+definition rules4 :: "(T, N) rule list" where
+  "rules4 = [
+    (NT S, [NT S, T a]),
+    (NT S, [T a])
+  ]"
+
+definition cfg4 :: "(T, N) cfg" where
+  "cfg4 = CFG rules4 start_symbol"
+
+lemmas cfg4_defs = cfg4_def rules4_def start_symbol_def
+
+lemma wf_\<G>4:
+  "wf_\<G> cfg4"
+  by (auto simp: wf_\<G>_def cfg4_defs)
+
+lemma nonempty_derives4:
+  "nonempty_derives cfg4"
+  by (auto simp: nonempty_derives_def cfg4_defs \<epsilon>_free_def \<epsilon>_free_impl_non_empty_deriv item_defs(6))
+
+subsection \<open>S -> SX, X -> Y | Z, Y -> a, Z -> a\<close>
+
+definition rules5 :: "(T, N) rule list" where
+  "rules5 = [
+    (NT S, [NT S, NT X]),
+    (NT S, [T a]),
+    (NT X, [NT Y]),
+    (NT X, [NT Z]),
+    (NT Y, [T a]),
+    (NT Z, [T a])
+  ]"
+
+definition cfg5 :: "(T, N) cfg" where
+  "cfg5 = CFG rules5 start_symbol"
+
+lemmas cfg5_defs = cfg5_def rules5_def start_symbol_def
+
+lemma wf_\<G>5:
+  "wf_\<G> cfg5"
+  by (auto simp: wf_\<G>_def cfg5_defs)
+
+lemma nonempty_derives5:
+  "nonempty_derives cfg5"
+  by (auto simp: nonempty_derives_def cfg5_defs \<epsilon>_free_def \<epsilon>_free_impl_non_empty_deriv item_defs(6))+
+
+section \<open>Input and Evaluation\<close>
+
+definition inp :: "(T, N) word" where
+  "inp = [T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
+    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a
+  ]"
+
+lemma is_word_inp:
+  "is_word inp"
+  by (auto simp: is_word_def is_terminal_def inp_def)
+
+value "size_bins (Earley\<^sub>L cfg1 inp)"
+value "size_pointers (Earley\<^sub>L cfg1 inp)"
+
+value "size_bins (Earley\<^sub>L cfg2 inp)"
+value "size_pointers (Earley\<^sub>L cfg2 inp)"
+
+value "size_bins (Earley\<^sub>L cfg3 inp)"
+value "size_pointers (Earley\<^sub>L cfg3 inp)"
+
+value "size_bins (Earley\<^sub>L cfg4 inp)"
+value "size_pointers (Earley\<^sub>L cfg4 inp)"
+
+value "size_bins (Earley\<^sub>L cfg5 inp)"
+value "size_pointers (Earley\<^sub>L cfg5 inp)"
+
+
+section \<open>JSON\<close>
 
 text\<open>
 
@@ -638,9 +693,6 @@ lemma nonempty_derives_JSON_cfg:
   "nonempty_derives JSON_cfg"
   by (auto simp: \<epsilon>_free_def JSON_cfg_defs rule_body_def nonempty_derives_def \<epsilon>_free_impl_non_empty_deriv)
 
-definition size_bins :: "('a, 'b) bins \<Rightarrow> nat" where
-  "size_bins bs = fold (+) (map length bs) 0"
-
 definition JSON_inp1 :: "(char, JSON_NT) word" where
   \<open>JSON_inp1 = map T ''
 {
@@ -855,7 +907,5 @@ definition JSON_inp5 :: "(char, JSON_NT) word" where
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp5)" \<comment>\<open>114506\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp5) JSON_cfg JSON_inp5"
 value "build_tree JSON_cfg JSON_inp5 (Earley\<^sub>L JSON_cfg JSON_inp5)"
-
-(* export_code Earley\<^sub>L recognizing_code build_tree build_trees JSON_cfg JSON_inp1 in OCaml *)
 
 end
