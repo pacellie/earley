@@ -91,18 +91,6 @@ corollary recognizing_code_iff_recognizing_Earley\<^sub>L:
   using recognizing_code_iff_recognizing assms wf_bins_Earley\<^sub>L length_Earley\<^sub>L_bins length_bins_Init\<^sub>L
   by (metis Earley\<^sub>L_def nle_le)
 
-definition size_bins :: "('a, 'b) bins \<Rightarrow> nat" where
-  "size_bins bs = fold (+) (map length bs) 0"
-
-fun size_pointer :: "('a, 'b) entry \<Rightarrow> nat" where
-  "size_pointer (Entry _ (PreRed _ ps)) = 1 + length ps"
-| "size_pointer _ = 1"
-
-definition size_pointers :: "('a, 'b) bins \<Rightarrow> nat" where
-  "size_pointers bs = fold (+) (map (\<lambda>b. fold (+) (map (\<lambda>e. size_pointer e) b) 0) bs) 0" 
-
-export_code Earley\<^sub>L build_tree size_bins in OCaml
-
 section \<open>Terminal, Non-terminals, Start symbol\<close>
 
 datatype T = a
@@ -134,8 +122,6 @@ lemma wf_\<G>1:
 lemma nonempty_derives1:
   "nonempty_derives cfg1"
   by (auto simp: nonempty_derives_def cfg1_defs \<epsilon>_free_def \<epsilon>_free_impl_non_empty_deriv item_defs(6))
-
-export_code rules1 cfg1 in OCaml
 
 section \<open>O(n^2) unambiguous or bounded ambiguity\<close>
 
@@ -236,24 +222,24 @@ definition inp :: "(T, N) word" where
     T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
     T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
     T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
-    T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a,
     T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a, T a
   ]"
 
 lemma is_word_inp:
   "is_word inp"
   by (auto simp: is_word_def is_terminal_def inp_def)
+
+definition size_bins :: "('a, 'b) bins \<Rightarrow> nat" where
+  "size_bins bs = fold (+) (map length bs) 0"
+
+fun size_pointer :: "('a, 'b) entry \<Rightarrow> nat" where
+  "size_pointer (Entry _ (PreRed _ ps)) = 1 + length ps"
+| "size_pointer _ = 1"
+
+definition size_pointers :: "('a, 'b) bins \<Rightarrow> nat" where
+  "size_pointers bs = fold (+) (map (\<lambda>b. fold (+) (map (\<lambda>e. size_pointer e) b) 0) bs) 0" 
+
+export_code Earley\<^sub>L build_tree rules1 cfg1 rules2 cfg2 rules3 cfg3 rules4 cfg4 rules5 cfg5 inp size_bins size_pointers in OCaml
 
 value "size_bins (Earley\<^sub>L cfg1 inp)"
 value "size_pointers (Earley\<^sub>L cfg1 inp)"
@@ -720,6 +706,7 @@ definition JSON_inp1 :: "(char, JSON_NT) word" where
   ''\<close>
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp1)" \<comment>\<open>77921\<close>
+value "size_pointers (Earley\<^sub>L JSON_cfg JSON_inp1)" \<comment>\<open>77921\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp1) JSON_cfg JSON_inp1"
 value "build_tree JSON_cfg JSON_inp1 (Earley\<^sub>L JSON_cfg JSON_inp1)"
 
@@ -739,6 +726,7 @@ definition JSON_inp2 :: "(char, JSON_NT) word" where
   ''\<close>
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp2)" \<comment>\<open>33720\<close>
+value "size_pointers (Earley\<^sub>L JSON_cfg JSON_inp2)" \<comment>\<open>33720\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp2) JSON_cfg JSON_inp2"
 value "build_tree JSON_cfg JSON_inp2 (Earley\<^sub>L JSON_cfg JSON_inp2)"
 
@@ -773,6 +761,7 @@ definition JSON_inp3 :: "(char, JSON_NT) word" where
   ''\<close>
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp3)" \<comment>\<open>74472\<close>
+value "size_pointers (Earley\<^sub>L JSON_cfg JSON_inp3)" \<comment>\<open>74472\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp3) JSON_cfg JSON_inp3"
 value "build_tree JSON_cfg JSON_inp3 (Earley\<^sub>L JSON_cfg JSON_inp3)"
 
@@ -869,6 +858,7 @@ definition JSON_inp4 :: "(char, JSON_NT) word" where
   ''\<close>
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp4)" \<comment>\<open>585597\<close>
+value "size_pointers (Earley\<^sub>L JSON_cfg JSON_inp4)" \<comment>\<open>585597\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp4) JSON_cfg JSON_inp4"
 value "build_tree JSON_cfg JSON_inp4 (Earley\<^sub>L JSON_cfg JSON_inp4)"
 
@@ -905,6 +895,7 @@ definition JSON_inp5 :: "(char, JSON_NT) word" where
   ''\<close>
 
 value "size_bins (Earley\<^sub>L JSON_cfg JSON_inp5)" \<comment>\<open>114506\<close>
+value "size_pointers (Earley\<^sub>L JSON_cfg JSON_inp5)" \<comment>\<open>114506\<close>
 value "recognizing_code (Earley\<^sub>L JSON_cfg JSON_inp5) JSON_cfg JSON_inp5"
 value "build_tree JSON_cfg JSON_inp5 (Earley\<^sub>L JSON_cfg JSON_inp5)"
 
