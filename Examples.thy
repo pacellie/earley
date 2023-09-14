@@ -239,7 +239,7 @@ fun size_pointer :: "('a, 'b) entry \<Rightarrow> nat" where
 definition size_pointers :: "('a, 'b) bins \<Rightarrow> nat" where
   "size_pointers bs = fold (+) (map (\<lambda>b. fold (+) (map (\<lambda>e. size_pointer e) b) 0) bs) 0" 
 
-export_code Earley\<^sub>L build_tree rules1 cfg1 rules2 cfg2 rules3 cfg3 rules4 cfg4 rules5 cfg5 inp size_bins size_pointers in OCaml
+export_code Earley\<^sub>L build_tree rules1 cfg1 rules2 cfg2 rules3 cfg3 rules4 cfg4 rules5 cfg5 inp size_bins size_pointers in Scala
 
 value "size_bins (Earley\<^sub>L cfg1 inp)"
 value "size_pointers (Earley\<^sub>L cfg1 inp)"
