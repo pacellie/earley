@@ -91,6 +91,105 @@ corollary recognizing_code_iff_recognizing_Earley\<^sub>L:
   using recognizing_code_iff_recognizing assms wf_bins_Earley\<^sub>L length_Earley\<^sub>L_bins length_bins_Init\<^sub>L
   by (metis Earley\<^sub>L_def nle_le)
 
+section \<open>Tail-recursive versions\<close>
+
+fun rev_it' :: "'a list \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "rev_it' acc [] = acc"
+| "rev_it' acc (x#xs) = rev_it' (x#acc) xs"
+
+definition rev_it :: "'a list \<Rightarrow> 'a list" where
+  "rev_it xs = rev_it' [] xs"
+
+lemma rev_conv_rev_it':
+  "rev xs @ acc = rev_it' acc xs"
+  by (induction acc xs rule: rev_it'.induct) auto
+
+lemma rev_conv_rev_it[code_unfold]:
+  "rev xs = rev_it xs"
+  unfolding rev_it_def using rev_conv_rev_it' append_Nil2 by metis
+
+fun filter_it' :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "filter_it' _ [] acc = rev_it acc"
+| "filter_it' P (x#xs) acc = (
+    if P x then filter_it' P xs (x#acc)
+    else filter_it' P xs acc
+  )"
+
+definition filter_it :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "filter_it P xs = filter_it' P xs []"
+
+lemma filter_conv_filter_it':
+  "rev acc @ filter P xs = filter_it' P xs acc"
+  by (induction xs arbitrary: acc)
+    (auto simp: rev_conv_rev_it, metis rev_conv_rev_it rev_conv_rev_it' rev_it'.simps(2))
+
+lemma filter_conv_filter_it[code_unfold]:
+  "filter P xs = filter_it P xs"
+  unfolding filter_it_def using filter_conv_filter_it' by (metis eq_Nil_appendI rev.simps(1))
+
+fun map_it' :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> 'b list" where
+  "map_it' _ [] acc = rev_it acc"
+| "map_it' f (x#xs) acc = map_it' f xs (f x # acc)"
+
+definition map_it :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a list \<Rightarrow> 'b list" where
+  "map_it f xs = map_it' f xs []"
+
+lemma map_conv_map_it':
+  "rev acc @ map f xs = map_it' f xs acc"
+  by (induction xs arbitrary: acc)
+    (auto simp: rev_conv_rev_it, metis rev_conv_rev_it rev_conv_rev_it' rev_it'.simps(2))
+
+lemma map_conv_map_it[code_unfold]:
+  "map f xs = map_it f xs"
+  unfolding map_it_def using map_conv_map_it' by (metis eq_Nil_appendI rev.simps(1))
+
+fun replicate_it' :: "nat \<Rightarrow> 'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "replicate_it' 0 _ acc = acc"
+| "replicate_it' (Suc n) x acc = replicate_it' n x (x#acc)"
+
+definition replicate_it :: "nat \<Rightarrow> 'a \<Rightarrow> 'a list" where
+  "replicate_it n x = replicate_it' n x []"
+
+lemma replicate_conv_replicate_it':
+  "replicate n x @ acc = replicate_it' n x acc"
+  by (induction n arbitrary: acc)
+    (auto, metis replicate_app_Cons_same)
+
+lemma replicate_conv_replicate_it[code_unfold]:
+  "replicate n xs = replicate_it n xs"
+  unfolding replicate_it_def using replicate_conv_replicate_it' by (metis append_Nil2)
+
+fun list_update_it' :: "'a list \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "list_update_it' [] _ _ acc = rev_it acc"
+| "list_update_it' (x#xs) n y acc = (
+    if n = 0 then rev_it acc @ y # xs
+    else list_update_it' xs (n-1) y (x#acc)
+  )"
+
+definition list_update_it :: "'a list \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a list" where
+  "list_update_it xs n y = list_update_it' xs n y []"
+
+lemma list_update_conv_list_update_it':
+  "rev acc @ list_update xs n x = list_update_it' xs n x acc"
+  by (induction xs arbitrary: n acc)
+    (auto simp: rev_conv_rev_it split: nat.split, metis rev_conv_rev_it rev_conv_rev_it' rev_it'.simps(2))
+
+lemma list_update_conv_list_update_it[code_unfold]:
+  "list_update xs n x = list_update_it xs n x"
+  unfolding list_update_it_def using list_update_conv_list_update_it' by (metis append_Nil rev.simps(1))
+
+function Earley\<^sub>L_bins_it :: "nat \<Rightarrow> ('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins \<Rightarrow> ('a, 'b) bins" where
+  "Earley\<^sub>L_bins_it n \<G> \<omega> bs = (
+    if n > length \<omega> then bs
+    else Earley\<^sub>L_bins_it (n+1) \<G> \<omega> (Earley\<^sub>L_bin n \<G> \<omega> bs)
+  )"
+  by pat_completeness auto
+termination Earley\<^sub>L_bins_it
+  by (relation "measure (\<lambda>(n, \<G>, \<omega>, bs). length \<omega> + 1 - n)") auto
+
+definition Earley\<^sub>L_it :: "('a, 'b) cfg \<Rightarrow> ('a, 'b) word \<Rightarrow> ('a, 'b) bins" where
+  "Earley\<^sub>L_it \<G> \<omega> \<equiv> Earley\<^sub>L_bins_it 0 \<G> \<omega> (Init\<^sub>L \<G> \<omega>)"
+
 section \<open>Terminal, Non-terminals, Start symbol\<close>
 
 datatype T = a
